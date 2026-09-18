@@ -29,10 +29,18 @@ import ProfileStatsServer from './ProfileStatsServer';
 
 type UserProfile = Database['public']['Tables']['users']['Row'];
 
-// ISR-safe: the server render contains only public profile data.
-// Viewer-specific UI (block buttons, connection button, invite sheet)
-// is computed client-side after hydration.
-export const revalidate = 60;
+// The server render deliberately contains ONLY public profile data. Viewer-
+// specific UI (block buttons, connection button, invite sheet, visibility
+// tier) is computed client-side after hydration.
+//
+// That discipline is worth keeping, but note it is not currently enforced by a
+// cache: this route reads cookies through createClient, so it renders per
+// request and the build lists it as `ƒ (Dynamic)`. It used to carry
+// `export const revalidate = 60`, which had no effect, and the word "ISR-safe"
+// described a cache that did not exist. The constraint becomes load-bearing the
+// moment anyone makes this route cacheable, which is plausible precisely
+// because the shell is public -- so keep the viewer-specific work on the client
+// regardless. See useVisibilityTier.ts for what goes wrong otherwise.
 
 interface ProfilePageProps {
   params: Promise<{ userId: string }>;

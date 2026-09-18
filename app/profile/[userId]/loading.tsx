@@ -11,9 +11,11 @@
  *   - The name/username line + location line
  *   - The 2x2 stats grid (the 4 stat cards users look at)
  *
- * With `export const revalidate = 60` on page.tsx, this loader only
- * shows on cache-miss requests. Most hits return directly from the
- * ISR cache and skip straight to the real page.
+ * This loader shows on EVERY navigation to this route. The page is dynamic --
+ * it reads cookies through createClient, so Next renders it per request and the
+ * build lists it as `ƒ (Dynamic)`. An earlier version of this comment claimed
+ * most hits returned from an ISR cache and skipped straight to the real page;
+ * the `revalidate = 60` it relied on had no cache to govern.
  */
 
 import { SkeletonProfile } from '@/components/Skeleton';

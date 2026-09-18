@@ -9,13 +9,33 @@ import { logError } from '@/lib/logger';
 /**
  * T-ATH1 step 7: what tier the current viewer occupies for the profile on screen.
  *
- * WHY THIS IS A CLIENT HOOK AND NOT A SERVER FETCH. /profile/[userId] sets
- * `export const revalidate = 60`, so its server render is ISR-cached and SHARED
- * ACROSS VIEWERS. A tier is a function of who is looking, so computing it on the
- * server would either be cached and served to the wrong viewer or defeat the
- * cache for everyone. Same class of failure as the nonce/ISR incident documented
- * in middleware.ts. The cached shell stays viewer-independent; this runs after
- * mount, as the viewer.
+ * WHY THIS IS A CLIENT HOOK AND NOT A SERVER FETCH.
+ *
+ * A tier is a function of WHO IS LOOKING. Resolving it in the server render
+ * puts viewer-specific data into a response that can be cached and handed to a
+ * different viewer. That is cache poisoning, and it is the same class of failure
+ * as the nonce/ISR incident documented in middleware.ts, where a per-request
+ * value baked into a cacheable response broke every subsequent hit.
+ *
+ * Read the state of the route honestly: /profile/[userId] renders PER REQUEST
+ * today, because `createClient()` awaits `cookies()` and that opts the route
+ * into dynamic rendering. The build lists it as `ƒ (Dynamic)`. An earlier
+ * version of this comment said the render was "ISR-cached and SHARED ACROSS
+ * VIEWERS" on the strength of an `export const revalidate = 60` that had no
+ * cache to govern; that setting has been removed.
+ *
+ * THE HOOK STAYS ON THE CLIENT ANYWAY, and this is not belt-and-braces. The
+ * page's whole design is that the server render carries only public profile
+ * data, which is exactly the property that makes the route a candidate for
+ * caching later -- a public shell is the obvious thing to put behind a cache
+ * when per-request rendering gets expensive. The day someone does that, either
+ * by dropping the cookie read from the shell or by splitting the route, a
+ * server-resolved tier becomes a viewer's private relationship served to
+ * strangers. Moving this to the server would trade a correct boundary for no
+ * measured gain and leave a trap for whoever optimises the route next.
+ *
+ * So: this runs after mount, as the viewer, and the server render stays
+ * viewer-independent whether or not anything is currently caching it.
  *
  * THE GATE IS `hasTrainedTogether`, NOT `tier === 3`. tierFor resolves a single
  * label for display and lets UPCOMING win over PAST, because two people training

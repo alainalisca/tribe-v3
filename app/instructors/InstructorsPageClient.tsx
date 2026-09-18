@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/lib/LanguageContext';
 import { logError } from '@/lib/logger';
 import BottomNav from '@/components/BottomNav';
@@ -27,13 +28,14 @@ import type { GymDirectoryEntry } from '@/lib/dal/gymDirectory';
  *   - Search + sport filter + sort state
  *   - Near-me geolocation lookup
  *   - Map view (dynamic Google Maps init)
- *   - Re-fetching client-side if the user triggers an explicit refresh
- *     (e.g. a hypothetical "pull to refresh" — currently the server
- *     payload is authoritative until the user navigates away)
+ *   - Retrying a failed server fetch via router.refresh(), which re-runs
+ *     the Server Component (the route is dynamic, so there is no cache to
+ *     defeat)
  *
- * The Server Component's fetch is the source of truth for initial
- * render. Client-side re-fetch is kept as an escape hatch but is NOT
- * invoked on mount, so we don't double-fetch for no reason.
+ * The Server Component's fetch is the source of truth. There is no
+ * client-side duplicate of fetchInstructors and no fetch on mount: the
+ * retry path refreshes the route instead, so there is only ever one place
+ * that knows how to load instructors.
  */
 
 type SortOption = 'most_sessions' | 'highest_rated' | 'newest' | 'nearest';
@@ -55,6 +57,20 @@ const getTranslations = (language: 'en' | 'es') => ({
   sortNewest: language === 'es' ? 'Más Nuevo' : 'Newest',
   sortNearest: language === 'es' ? 'Más Cerca' : 'Nearest',
   sort: language === 'es' ? 'Ordenar' : 'Sort',
+  // Three states, three messages. They used to share one, and the shared one
+  // said the viewer's search was the problem.
+  loadFailed: language === 'es' ? 'No pudimos cargar los instructores' : "We couldn't load instructors",
+  loadFailedDesc:
+    language === 'es'
+      ? 'Es un problema de nuestro lado, no de tu búsqueda.'
+      : 'This is a problem on our side, not with your search.',
+  retry: language === 'es' ? 'Intentar de nuevo' : 'Try again',
+  retrying: language === 'es' ? 'Intentando...' : 'Trying...',
+  noneYet: language === 'es' ? 'Aún no hay instructores' : 'No instructors yet',
+  noneYetDesc:
+    language === 'es'
+      ? 'Los instructores aparecen aquí cuando completan su perfil.'
+      : 'Instructors appear here once they complete their profile.',
   noInstructorsFound: language === 'es' ? 'No se encontraron instructores' : 'No instructors found',
   noInstructorsDesc:
     language === 'es'
@@ -70,10 +86,23 @@ const getTranslations = (language: 'en' | 'es') => ({
 
 interface InstructorsPageClientProps {
   initialInstructors: InstructorProfile[];
+  /**
+   * The server fetch failed, so `initialInstructors` being empty says nothing
+   * about the directory. Without this the page cannot tell three different
+   * situations apart, and used to show all three the same screen.
+   */
+  instructorsFailed: boolean;
   gyms: GymDirectoryEntry[];
+  gymsFailed: boolean;
 }
 
-export default function InstructorsPageClient({ initialInstructors, gyms }: InstructorsPageClientProps) {
+export default function InstructorsPageClient({
+  initialInstructors,
+  instructorsFailed,
+  gyms,
+  gymsFailed,
+}: InstructorsPageClientProps) {
+  const router = useRouter();
   const { language } = useLanguage();
   const t = getTranslations(language);
 
@@ -89,6 +118,18 @@ export default function InstructorsPageClient({ initialInstructors, gyms }: Inst
   const [userLng, setUserLng] = useState<number | null>(null);
   const [gettingLocation, setGettingLocation] = useState(false);
   const [mapLoaded, setMapLoaded] = useState(false);
+  const [retrying, setRetrying] = useState(false);
+
+  /**
+   * The route is dynamic (see the header comment in page.tsx), so refreshing it
+   * re-runs the Server Component and its fetches. That is the whole retry: no
+   * client-side duplicate of fetchInstructors, no second code path to keep in
+   * step with the DAL.
+   */
+  function retry() {
+    setRetrying(true);
+    router.refresh();
+  }
 
   useEffect(() => {
     filterAndSort();
@@ -359,9 +400,32 @@ export default function InstructorsPageClient({ initialInstructors, gyms }: Inst
           </div>
         )}
 
-        {/* Results — data is hydrated from the server, so we go straight to
-            the empty-state check without a loading skeleton. */}
-        {filtered.length === 0 ? (
+        {/* Results. Data is hydrated from the server, so there is no loading
+            skeleton -- but "nothing to show" has THREE causes and they need
+            three different screens. Offering Clear Search when the fetch failed
+            tells the user the failure is theirs, and clearing their filters
+            cannot fix it. Ordered most-specific first: a failure is a failure
+            whatever the filters say. */}
+        {instructorsFailed ? (
+          <div className="flex flex-col items-center justify-center min-h-[50vh] text-center p-6">
+            <div className="text-5xl mb-4">⚠️</div>
+            <h2 className="text-xl font-semibold text-theme-primary mb-2">{t.loadFailed}</h2>
+            <p className="text-sm text-theme-secondary mb-6">{t.loadFailedDesc}</p>
+            <Button
+              onClick={retry}
+              disabled={retrying}
+              className="px-6 py-2 bg-tribe-green text-slate-900 font-semibold hover:bg-tribe-green"
+            >
+              {retrying ? t.retrying : t.retry}
+            </Button>
+          </div>
+        ) : instructors.length === 0 ? (
+          <div className="flex flex-col items-center justify-center min-h-[50vh] text-center p-6">
+            <div className="text-5xl mb-4">🌱</div>
+            <h2 className="text-xl font-semibold text-theme-primary mb-2">{t.noneYet}</h2>
+            <p className="text-sm text-theme-secondary">{t.noneYetDesc}</p>
+          </div>
+        ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center min-h-[50vh] text-center p-6">
             <div className="text-5xl mb-4">🔍</div>
             <h2 className="text-xl font-semibold text-theme-primary mb-2">{t.noInstructorsFound}</h2>
