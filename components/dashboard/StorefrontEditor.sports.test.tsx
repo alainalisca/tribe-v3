@@ -38,6 +38,7 @@ function mount(over: Partial<Parameters<typeof StorefrontEditor>[0]> = {}) {
       userId="u1"
       language="en"
       initialBio="b"
+      initialShortBio=""
       initialTagline="t"
       initialSports={[]}
       initialSpecialties={[]}
