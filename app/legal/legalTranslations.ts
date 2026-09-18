@@ -585,7 +585,7 @@ const DATA_POLICY_CONTENT: Record<'en' | 'es', DataPolicyContent> = {
     title: 'Política de Tratamiento de Datos Personales (Ley 1581 de 2012)',
     pending: 'Política en preparación.',
     paragraphs: [
-      'Esta página va a contener la política completa de tratamiento de datos personales de Tribe, incluida la finalidad de la recoleccion, los derechos del titular y los canales de contacto.',
+      'Esta página va a contener la política completa de tratamiento de datos personales de Tribe, incluida la finalidad de la recolección, los derechos del titular y los canales de contacto.',
       'Mientras tanto, si dejaste tus datos en un pase y quieres que los eliminemos, escríbenos y lo hacemos.',
     ],
     contact: 'Contacto: tribe@aplusfitnessllc.com',
