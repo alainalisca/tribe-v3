@@ -35,6 +35,7 @@ const CONFIG = {
   slug: 'bullbox',
   partnerName: 'CrossFit BullBox',
   address: 'Cra 43G #25a-50, El Poblado, Medellín',
+  logoUrl: null,
   storefrontUserId: '0df617e9-7547-4a8d-a0b1-8be4d52a673a',
   headline: 'Tu primera clase gratis en BullBox',
   sub: 'CrossFit y HYROX en Ciudad del Río',

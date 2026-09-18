@@ -15,6 +15,7 @@ export interface PassConfig {
   slug: string;
   partnerName: string;
   address: string | null;
+  logoUrl: string | null;
   storefrontUserId: string | null;
   headline: string | null;
   sub: string | null;
@@ -26,7 +27,7 @@ export interface PassConfig {
 
 /** Explicit columns, never select('*') -- CONVENTIONS, and it keeps new columns out by default. */
 const PASS_CONFIG_COLUMNS =
-  'id, slug, business_name, address, user_id, pass_headline, pass_sub, pass_options, pass_active, lead_whatsapp, partner_lead_routing!inner(lead_email, lead_cc)';
+  'id, slug, business_name, address, logo_url, user_id, pass_headline, pass_sub, pass_options, pass_active, lead_whatsapp, partner_lead_routing!inner(lead_email, lead_cc)';
 
 interface RoutingRow {
   lead_email: string;
@@ -76,6 +77,7 @@ export async function fetchPassConfig(supabase: SupabaseClient, slug: string): P
     slug: String(row.slug),
     partnerName: String(row.business_name ?? ''),
     address: (row.address as string) ?? null,
+    logoUrl: (row.logo_url as string) ?? null,
     storefrontUserId: (row.user_id as string) ?? null,
     headline: (row.pass_headline as string) ?? null,
     sub: (row.pass_sub as string) ?? null,
