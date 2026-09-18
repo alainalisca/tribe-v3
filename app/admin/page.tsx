@@ -259,7 +259,7 @@ export default function AdminPage() {
                         ? `${pendingBulletinCount} ${pendingBulletinCount === 1 ? 'publicación pendiente' : 'publicaciones pendientes'} de revisión`
                         : `${pendingBulletinCount} post${pendingBulletinCount === 1 ? '' : 's'} awaiting review`
                       : language === 'es'
-                        ? 'Revisar y aprobar publicaciones del tablon comunitario'
+                        ? 'Revisar y aprobar publicaciones del tablón comunitario'
                         : 'Review and approve community bulletin posts'}
                   </p>
                 </div>
