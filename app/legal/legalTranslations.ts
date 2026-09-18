@@ -566,3 +566,46 @@ export function getSafetyContent(language: 'en' | 'es'): SafetyContent {
       'Most Tribe users are genuine people looking for training partners. By following these guidelines and trusting your instincts, you can enjoy safe, productive training sessions.',
   };
 }
+
+/**
+ * T-LEAD1 stub. The real policy text is being prepared.
+ *
+ * Kept beside the other legal copy rather than inline in the page so the
+ * component has no language ternary, matching getPrivacyContent above.
+ */
+export interface DataPolicyContent {
+  title: string;
+  pending: string;
+  paragraphs: string[];
+  contact: string;
+}
+
+const DATA_POLICY_CONTENT: Record<'en' | 'es', DataPolicyContent> = {
+  es: {
+    title: 'Política de Tratamiento de Datos Personales (Ley 1581 de 2012)',
+    pending: 'Política en preparación.',
+    paragraphs: [
+      'Esta página va a contener la política completa de tratamiento de datos personales de Tribe, incluida la finalidad de la recolección, los derechos del titular y los canales de contacto.',
+      'Mientras tanto, si dejaste tus datos en un pase y quieres que los eliminemos, escríbenos y lo hacemos.',
+    ],
+    contact: 'Contacto: tribe@aplusfitnessllc.com',
+  },
+  en: {
+    title: 'Personal Data Processing Policy (Law 1581 of 2012)',
+    pending: 'Policy in preparation.',
+    paragraphs: [
+      "This page will hold Tribe's full personal data processing policy, including the purpose of collection, the data subject's rights, and contact channels.",
+      'In the meantime, if you left your details on a pass and want them deleted, write to us and we will do it.',
+    ],
+    contact: 'Contact: tribe@aplusfitnessllc.com',
+  },
+};
+
+/**
+ * A keyed lookup rather than the `if (language === 'es')` the functions above
+ * use. Same output, and it does not add a fourth instance of the comparison
+ * UI-I01/UI-I02 are phasing out of this file.
+ */
+export function getDataPolicyContent(language: 'en' | 'es'): DataPolicyContent {
+  return DATA_POLICY_CONTENT[language] ?? DATA_POLICY_CONTENT.en;
+}

@@ -80,8 +80,18 @@ describe('the two lists stay separate', () => {
     }
   });
 
+  /**
+   * A pin, not a formality. Every prefix here switches OFF the install prompt
+   * and the feedback widget for a whole route tree, so the list growing by
+   * accident is a silent loss of two surfaces. Adding one should mean editing
+   * this line and saying why.
+   *
+   * /pase/ added for T-LEAD1: the visitor is standing in a gym holding a paper
+   * voucher and has never heard of Tribe, so an install wall or a bug reporter
+   * over the form costs the lead the page exists to capture.
+   */
   it('the public-share list is unchanged', () => {
-    expect([...PUBLIC_SHARE_ROUTE_PREFIXES]).toEqual(['/invite/', '/g/', '/i/']);
+    expect([...PUBLIC_SHARE_ROUTE_PREFIXES]).toEqual(['/invite/', '/g/', '/i/', '/pase/']);
   });
 
   it('every prefix in both lists ends with a slash', () => {

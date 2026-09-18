@@ -55,6 +55,7 @@ const publicPaths = [
   '/s', // public session share pages (/s/[id]) — must be viewable + scrapable without auth
   '/i', // public instructor share pages (/i/[id]) — must be viewable + scrapable without auth
   '/g', // public gym share pages (/g/[slug]) — bio-link destination; must be viewable + scrapable without auth
+  '/pase', // T-LEAD1 digital pass (/pase/[slug]) -- the QR on a printed voucher; the visitor has no account and may never make one
   '/about',
   '/faq',
   '/for-instructors',
@@ -72,6 +73,7 @@ const publicApiPaths = [
   '/api/payment/webhook/wompi', // Wompi webhook — HMAC SHA256 signature verified in the handler; no cookie.
   '/api/health', // LR-02: monitoring probes don't carry session cookies
   '/api/tribe-os-waitlist', // Public marketing form on the landing page; rate-limited by IP in the handler.
+  '/api/pase', // T-LEAD1 pass claim; unauthenticated by design, rate-limited by IP plus honeypot and time-on-page in the handler.
   '/api/og', // OG preview images for share cards; link scrapers (WhatsApp, etc.) carry no session cookie.
   // Internal server-to-server endpoints invoked via fetch() with an
   // `Authorization: Bearer ${CRON_SECRET}` header (NOT a cookie). Without

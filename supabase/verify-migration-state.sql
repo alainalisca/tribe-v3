@@ -1166,6 +1166,9 @@ select '169_delete_host_participant_rows',
             )
             then 'MISSING -- current_participants disagrees with the confirmed-row '
                  'count on at least one session'
+            else 'applied' end
+union all
+
 select '170_users_hide_from_attendee_lists',
        -- Three facts, all required. Checking only that the column exists would
        -- report 'applied' for exactly the 156 state: a column present and
@@ -1287,4 +1290,49 @@ where a.attrelid = to_regclass('public.partners_public')
     'tier', 'status', 'starts_at', 'expires_at',
     'auto_approve_roster', 'user_id'
   )
+
+union all
+-- T-LEAD1. The pass config lives on featured_partners; pass_active is the one
+-- column the page gates on, so its presence is the signal the migration ran.
+select '172_t_lead1_pass_config_and_routing',
+       case when exists (
+         select 1 from information_schema.columns
+         where table_schema = 'public' and table_name = 'featured_partners'
+           and column_name = 'pass_active'
+       ) and to_regclass('public.partner_lead_routing') is not null
+       then 'applied' else 'MISSING' end
+
+union all
+-- The half of 172 that is a security property rather than a schema one. The
+-- table existing proves nothing: created without its REVOKE it is born with
+-- anon holding ALL, because Supabase's default privileges grant it. Ask the
+-- capability question, the way 163's guard does.
+select 'GUARD_172_lead_routing_unreachable_by_anon',
+       case when to_regclass('public.partner_lead_routing') is null
+            then 'MISSING -- table absent'
+            when has_table_privilege('anon', 'public.partner_lead_routing', 'SELECT')
+              or has_table_privilege('authenticated', 'public.partner_lead_routing', 'SELECT')
+            then 'MISSING -- a client role can read the partner lead inbox'
+            else 'applied' end
+
+union all
+select '173_t_lead1_pass_leads',
+       case when to_regclass('public.pass_leads') is not null
+             and to_regprocedure('public.pass_is_active(uuid,text)') is not null
+       then 'applied' else 'MISSING' end
+
+union all
+-- anon must be able to file a lead and never read one. Both halves, because
+-- either one alone passing is a different broken product: no INSERT means the
+-- form silently fails, and SELECT means every stranger's phone number is
+-- readable with the key that ships in the client bundle.
+select 'GUARD_173_pass_leads_insert_only_for_anon',
+       case when to_regclass('public.pass_leads') is null
+            then 'MISSING -- table absent'
+            when has_table_privilege('anon', 'public.pass_leads', 'SELECT')
+            then 'MISSING -- anon can read pass_leads'
+            when not has_table_privilege('anon', 'public.pass_leads', 'INSERT')
+            then 'MISSING -- anon cannot file a lead'
+            else 'applied' end
+
 order by migration;

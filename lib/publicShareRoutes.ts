@@ -9,6 +9,11 @@
  *   /invite/  the growth mechanic's front door
  *   /g/       a gym's public page -- the destination of an Instagram bio link
  *   /i/       an instructor's public page, same funnel
+ *   /pase/    the digital pass, reached by scanning a QR on a printed voucher
+ *
+ * /pase/ is the strongest case on the list. The visitor is standing in a gym
+ * with a paper voucher and has never heard of Tribe; an install wall or a bug
+ * reporter three seconds in costs the lead the whole page exists to capture.
  *
  * ONE list, consumed by IOSInstallPrompt and FeedbackWidget, so the next public
  * route is registered in one place rather than two. Both previously carried
@@ -22,13 +27,13 @@
  * booking it needs the app, so the install prompt there is arguably doing its
  * job. That judgement is recorded in NAV-02.
  */
-export const PUBLIC_SHARE_ROUTE_PREFIXES = ['/invite/', '/g/', '/i/'] as const;
+export const PUBLIC_SHARE_ROUTE_PREFIXES = ['/invite/', '/g/', '/i/', '/pase/'] as const;
 
 /**
  * True on a public share route.
  *
  * Prefix match INCLUDING the trailing slash, so nothing else is swept up:
- * /instructors, /groups/1 and /invitations all fail it.
+ * /instructors, /groups/1, /invitations and /pases all fail it.
  */
 export function isPublicShareRoute(pathname: string | null | undefined): boolean {
   return matchesPrefix(pathname, PUBLIC_SHARE_ROUTE_PREFIXES);
