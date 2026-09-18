@@ -58,13 +58,13 @@ const getTranslations = (language: 'en' | 'es') => ({
   noInstructorsFound: language === 'es' ? 'No se encontraron instructores' : 'No instructors found',
   noInstructorsDesc:
     language === 'es'
-      ? 'Intenta ajustar tu busqueda o vuelve mas tarde'
+      ? 'Intenta ajustar tu búsqueda o vuelve más tarde'
       : 'Try adjusting your search or check back later',
   mapView: language === 'es' ? 'Mapa' : 'Map',
   listView: language === 'es' ? 'Lista' : 'List',
-  nearMe: language === 'es' ? 'Cerca de mi' : 'Near Me',
+  nearMe: language === 'es' ? 'Cerca de mí' : 'Near Me',
   gettingLocation: language === 'es' ? 'Obteniendo ubicación...' : 'Getting location...',
-  clearSearch: language === 'es' ? 'Limpiar Busqueda' : 'Clear Search',
+  clearSearch: language === 'es' ? 'Limpiar Búsqueda' : 'Clear Search',
   all: language === 'es' ? 'Todos' : 'All',
 });
 

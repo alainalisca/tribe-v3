@@ -31,7 +31,7 @@ export const morningMotivationMessages: BilingualMessage[] = [
   },
   {
     en: { title: 'Fresh Start!', body: 'Begin your day with a group workout - find one now.' },
-    es: { title: 'Nuevo Comienzo!', body: 'Empieza tu dia con un entrenamiento grupal.' },
+    es: { title: 'Nuevo Comienzo!', body: 'Empieza tu día con un entrenamiento grupal.' },
   },
   {
     en: { title: 'Morning Energy!', body: 'Training partners boost your motivation by 60%.' },
@@ -156,7 +156,7 @@ export const weeklyRecapMessages: BilingualMessage[] = [
   },
   {
     en: { title: 'Week Highlights!', body: 'Most active day: {{day}}. Top sport: {{sport}}.' },
-    es: { title: 'Destacados de la Semana!', body: 'Dia mas activo: {{day}}. Deporte top: {{sport}}.' },
+    es: { title: 'Destacados de la Semana!', body: 'Día más activo: {{day}}. Deporte top: {{sport}}.' },
   },
   {
     en: { title: 'Tribe Growing!', body: 'You connected with {{new_connections}} new training partners.' },

@@ -303,7 +303,7 @@ export function getPrivacyContent(language: 'en' | 'es'): PrivacyContent {
         {
           heading: '5. Retencion de Datos',
           paragraphs: [
-            'Conservamos sus datos mientras su cuenta este activa. Después de eliminar su cuenta, retenemos los datos durante 30 días para fines de recuperacion y luego los eliminamos permanentemente. Algunos datos pueden retenerse por mas tiempo si la ley lo requiere.',
+            'Conservamos sus datos mientras su cuenta este activa. Después de eliminar su cuenta, retenemos los datos durante 30 días para fines de recuperación y luego los eliminamos permanentemente. Algunos datos pueden retenerse por más tiempo si la ley lo requiere.',
           ],
         },
         {

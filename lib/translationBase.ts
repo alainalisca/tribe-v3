@@ -215,7 +215,7 @@ export const baseEs: Record<keyof typeof baseEn, string> = {
   away: 'de distancia',
   startingSoon: 'EMPIEZA PRONTO',
   live: 'en vivo',
-  more: 'mas',
+  more: 'más',
 
   // Mis Sesiones
   hosting: 'Organizando',

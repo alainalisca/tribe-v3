@@ -253,6 +253,28 @@ Both numbers are true statements about _something_. Only one is a statement abou
 
 Same family as the instrument findings ([[the `[^<>]` and `vercel ls` entries above]]), and the mechanism is the mirror image: there the tool could not see everything that was there, here the tool saw more than the user ever would. A number that is too big reads exactly as confidently as a number that is too small.
 
+**A FOURTH INSTANCE, and the clearest: 157 was the number of Spanish strings the guard could SEE, not the number that exist.**
+
+The accent sweep on 2026-09-17 reported 157 strings and shipped a CI guard over them. Two days' worth of confidence in that number was misplaced in two independent ways, both found by reading one file's copy by eye.
+
+**Hole 1, the word list is an allow-list by inversion.** `REQUIRES_ACCENT` held **60 words**. It enumerates what to CHECK, so every Spanish word nobody thought of may lose its accent with the guard green. Found live in the `/instructors` empty state, a screen that had been read several times that day: `busqueda`, `mas`, `mi`. The most damning was `recuperacion` in the legal copy -- the seed already held **nineteen** `-ción` words, so the family was obviously known, and this one still slipped, because the seed lists words rather than the rule.
+
+**Hole 2, a fifth source shape was never scanned.** Pattern (c) was `/language\s*===\s*'es'\s*\?\s*'([^']*)'/` -- it requires a STRING after the `?`. The codebase also writes
+
+```ts
+return language === 'es'
+  ? { pageTitle: 'Ayudanos a Mejorar', title: 'Titulo', ... }
+  : { ... }
+```
+
+an object literal, which that pattern matches not at all. Measured: **254 Spanish strings across 15 files** are invisible to the guard in this shape, and **3 of them violate words already in the seed** (`Titulo`, `Descripcion`, `descripcion` in `app/feedback/useFeedback.ts`). Those three are the proof the shape hole is real rather than theoretical: the guard had the rule and could not see the string.
+
+So the real Spanish surface is at least **411** strings, and "157 covered" described the instrument.
+
+**`mi` is the floor of the whole approach, and it is worth knowing where the floor is.** `mi` (possessive, "mi perfil") and `mí` (stressed pronoun, "cerca de mí") are different words. Seeding `mi -> mí` would fail on every "mi sesión" in the app. **No word list of any size catches `Cerca de mi`** -- it needs the grammatical role, not the spelling. It is in `DELIBERATELY_EXCLUDED` with that reasoning, so the next person knows it was considered and not missed.
+
+**The rule.** When a sweep returns a count, that count is a property of the sweep until you have shown otherwise. Before quoting it: enumerate the SHAPES the source can take and prove the scanner sees each one (one mutation per shape -- the rule that already found two holes here), and say plainly whether the matching is a rule or a list, because a list is an allow-list wearing the other way round. Same family as `[^<>]` breaking on `=>`, `vercel ls` writing status to stderr, and counting instructors without the gates the page applies -- **four instances in two days of a number that described the tool rather than the thing.**
+
 **And record equivalent mutants rather than quietly dropping them.** `setSessions(null)` → `setSessions([])` in `ProfileUpcomingSessions` cannot be killed: both render nothing and both still log. That is not a coverage gap and no test should claim to cover it — say so, and note what would make the difference observable (here, adding an empty state).
 
 **`tierFor` resolves a LABEL, not an entitlement — never gate on `tier === 3`.**
