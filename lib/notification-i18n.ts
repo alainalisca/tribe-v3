@@ -119,8 +119,8 @@ const TEMPLATES: Record<TemplateKey, Template> = {
       body: '{{name}} left your {{sport}} session',
     },
     es: {
-      title: '👋 Alguien salio',
-      body: '{{name}} salio de tu sesión de {{sport}}',
+      title: '👋 Alguien salió',
+      body: '{{name}} salió de tu sesión de {{sport}}',
     },
   },
   // T-NOTIF1: recipient = athlete (host approved their join request).

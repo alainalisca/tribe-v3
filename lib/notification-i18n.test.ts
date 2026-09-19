@@ -116,7 +116,7 @@ describe('notificationCopy', () => {
     it('ES does not contain the English verb "left"', () => {
       const { body } = notificationCopy('leave', 'es', { name: 'Ana', sport: 'Running' });
       expect(body).not.toContain('left');
-      expect(body).toContain('salio');
+      expect(body).toContain('salió'); // accented: these two tests pinned the misspelling until 2026-09-18
       expect(body).toContain('Ana');
     });
   });

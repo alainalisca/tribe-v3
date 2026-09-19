@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { LOCAL_EVENT_SPORTS } from '@/lib/localEventSports';
 import { useLanguage } from '@/lib/LanguageContext';
 import { logError } from '@/lib/logger';
 
@@ -27,7 +28,7 @@ interface LocalFitnessEvent {
   is_active: boolean;
 }
 
-const SPORTS = ['running', 'cycling', 'hiking', 'yoga', 'crossfit', 'swimming'] as const;
+const SPORTS = LOCAL_EVENT_SPORTS;
 
 const SPORT_LABELS: Record<string, { en: string; es: string; icon: string }> = {
   all: { en: 'All', es: 'Todos', icon: '🎯' },
@@ -37,6 +38,13 @@ const SPORT_LABELS: Record<string, { en: string; es: string; icon: string }> = {
   yoga: { en: 'Yoga', es: 'Yoga', icon: '🧘' },
   crossfit: { en: 'CrossFit', es: 'CrossFit', icon: '💪' },
   swimming: { en: 'Swimming', es: 'Natación', icon: '🏊' },
+  // These four were writable by the admin form and had no chip here, so events
+  // filed under them were reachable only under "All". migration 021 seeds four
+  // multi-sport rows and one calisthenics row: 5 of its 20 events.
+  calisthenics: { en: 'Calisthenics', es: 'Calistenia', icon: '🤸' },
+  'multi-sport': { en: 'Multi-sport', es: 'Multideporte', icon: '🏅' },
+  skateboarding: { en: 'Skateboarding', es: 'Skateboarding', icon: '🛹' },
+  parkour: { en: 'Parkour', es: 'Parkour', icon: '🧗' },
 };
 
 export default function LocalFitnessEventsSection({ language }: LocalFitnessEventsSectionProps) {

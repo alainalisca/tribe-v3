@@ -249,6 +249,6 @@ describe('POST /api/sessions/notify-join', () => {
     expect(res.status).toBe(200);
     const sent = JSON.parse(fetchSpy.mock.calls[0][1].body as string);
     expect(sent.body).not.toContain('left');
-    expect(sent.body).toContain('salio');
+    expect(sent.body).toContain('salió'); // accented: these two tests pinned the misspelling until 2026-09-18
   });
 });

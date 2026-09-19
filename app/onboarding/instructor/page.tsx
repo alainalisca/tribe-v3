@@ -162,10 +162,13 @@ const getTranslations = (language: 'en' | 'es') => ({
   changeBanner: language === 'es' ? 'Cambiar' : 'Change',
   removeBanner: language === 'es' ? 'Quitar' : 'Remove',
   storefrontPreview: language === 'es' ? 'Vista previa de tu vitrina' : 'Your storefront preview',
-  previewNote:
-    language === 'es'
-      ? 'Así se verá tu vitrina en /storefront/tu-id'
-      : 'This is how your storefront looks at /storefront/your-id',
+  // The path is deliberately NOT named. It used to read `/storefront/your-id`
+  // with the literal placeholder shipped to the user. The real id IS in scope
+  // here (`userId`), but T-AUD21 also asks whether the path shown should be the
+  // storefront or the profile, given the two-page split. That is an open product
+  // question, so this says nothing about the path rather than encoding an answer
+  // to it. Same wording decision as app/profile/edit/page.tsx.
+  previewNote: language === 'es' ? 'Así se verá tu vitrina' : 'This is how your storefront looks',
   // Navigation
   back: language === 'es' ? 'Atrás' : 'Back',
   next: language === 'es' ? 'Siguiente' : 'Next',

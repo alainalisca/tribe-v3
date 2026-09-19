@@ -63,6 +63,19 @@ export const RULE_CANNOT_DECIDE: Readonly<Record<string, string>> = {
   titulo: 'título', // `titulo` = "I title" (titular); we always mean the noun
   pagina: 'página', // `pagina` = "he/she paginates"
   numero: 'número', // `numero` = "I number"
+  /**
+   * `salio` was found by shape (f) of the extractor on 2026-09-18 and the rule
+   * STILL could not flag it: dictionary-es accepts `salio` as a word, so the
+   * "not Spanish, but an accenting of it is" test never fires. Two independent
+   * blindnesses stacked on one sentence in app/global-error.tsx -- the
+   * extractor could not see the string, and the rule could not judge it. Fixing
+   * only the extractor would have left "Algo salio mal" shipping and the guard
+   * green, which is the failure this whole file is about.
+   *
+   * There is no reading where the unaccented form is what Tribe means: the
+   * preterite is `salió`, and `salio` is not a word anyone writes on purpose.
+   */
+  salio: 'salió',
   ultimo: 'último', // `ultimo` = "I finalise" (ultimar)
   ultima: 'última', // same verb, third person
   ademas: 'además',

@@ -78,9 +78,43 @@ export const metadata: Metadata = {
   },
 };
 
+/**
+ * The document language is STATIC, and the inline script below corrects it.
+ *
+ * It was `lang="en"` with the script correcting after hydration, which served
+ * the wrong value to crawlers, link unfurlers and screen readers that read the
+ * attribute as the document loads. 740475b fixed that by reading
+ * Accept-Language in this layout, and its reasoning was explicit:
+ *
+ *   "Reading headers() opts the route into dynamic rendering. That costs
+ *    nothing here: createClient() awaits cookies(), so every route in this app
+ *    is already f (Dynamic) in the build output"
+ *
+ * THE PREMISE WAS WRONG, AND IT WAS MEASURABLE AT THE TIME. The build before
+ * that commit emitted 79 static routes, including `/`. Reading headers() in
+ * the ROOT layout opts in every route underneath it, so the count fell to 2:
+ * robots.txt and sitemap.xml, the only two that render no React. The home page
+ * stopped being prerendered, `.next/server/app/index.html` stopped existing,
+ * and the bundle budget that measures it started failing with "run the build
+ * first" on every pull request.
+ *
+ * WHY STATIC "es" RATHER THAN THE OLD "en". The accessibility fix 740475b was
+ * reaching for is real, and it does not need a request. Spanish is what this
+ * app defaults to (detectPreferredLanguage: Spanish unless the browser asks
+ * for English first) and the audience is Colombian, so the static value is
+ * right for the common case and wrong strictly less often than `en` was. The
+ * script below still corrects a stored choice, exactly as before.
+ *
+ * WHAT THIS GIVES UP, deliberately: an English-first browser now receives
+ * lang="es" in the unhydrated frame instead of lang="en". That is one wrong
+ * attribute for the minority case, against every route in the app losing
+ * prerendering. If server-side negotiation is wanted back, it belongs in
+ * middleware, which already runs per request and can set the attribute
+ * without dragging the static build down with it.
+ */
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={jakartaSans.variable} suppressHydrationWarning>
+    <html lang="es" className={jakartaSans.variable} suppressHydrationWarning>
       <head>
         {/* Theme FOUC guard — runs before paint/hydration. Reads the
             saved preference (default light), resolves "system", and sets
@@ -100,8 +134,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             Note this cannot do for text what the theme guard does for colour.
             The theme is a CSS class, so a script can fix it before paint; the
             copy is React state, so the first server rendered frame is still
-            English until the provider hydrates. This sets the document
-            language, which is a real correctness fix on its own. */}
+            the default until the provider hydrates. This CORRECTS the document
+            language when the stored choice differs from the static value the
+            document was served with. */}
         <script
           dangerouslySetInnerHTML={{
             __html: `(function(){try{var l=localStorage.getItem('language');if(l==='en'||l==='es'){document.documentElement.lang=l;}}catch(e){}})();`,
