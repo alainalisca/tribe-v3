@@ -21,6 +21,14 @@ All new code MUST:
 - Follow the fixed header spacing conventions in CONVENTIONS.md
 - Be under 300 lines per file (split into focused components/modules if larger)
 
+### Working agreements
+
+**Commit before you experiment. `git stash -u` followed by `git checkout -- .` on a dirty tree is unrecoverable.**
+
+A revert test needed a clean tree, so the working tree was stashed, modified, popped, and then reset with `git checkout -- .` — which discarded the popped changes. About an hour of uncommitted work went with it, and it survived only because an unrelated `/tmp` copy happened to exist. The stash was gone: `pop` had already consumed it.
+
+Any experiment that needs a clean tree needs a **commit** first, not a stash. A commit is recoverable from the reflog even after a hard reset; a popped stash that is then discarded is not recoverable by anything. This is the same reason each approved gate gets its own commit rather than accumulating in the working tree — uncommitted work has no history to fall back to, and the moment you most want to throw away local changes is the moment you are least able to tell which ones are yours.
+
 ## Skills
 
 Project-specific skills live in `.claude/skills/`. Before writing code in a domain (API routes, components, migrations, tests, i18n, etc.), read the relevant `SKILL.md` file for enforced patterns and checklists. Run `/session-briefing` at the start of a new session to get oriented.
@@ -243,6 +251,24 @@ Adding a sports chip row to the instructor storefront editor was nearly a data-l
 - An allow-list **with** a rot test, where the exempted cases are real and enumerable (this guard; `DELIBERATELY_EXCLUDED` in `lib/i18n/spanishAccents.ts`, which carries the RAE-2010 citation for `este`/`solo`).
 - **No allow-list at all**, where exemptions would accumulate faster than anyone audits them. The unresolved-key warning in `useTranslations`' `pick` fallback was shipped with none for exactly this reason: an allowlist there would have filled up with keys nobody re-checked, and the guard's whole value is that it fires on a key shape rather than on a list of known-bad keys. The two decisions are the same judgement, not a contradiction -- take the allow-list only when you can commit to proving each entry still earns its place.
 
+**AN EXEMPTION WITHOUT A REASON IS A SUPPRESSION NOBODY CAN AUDIT — AND IT IS ROT'S WORSE SIBLING.**
+
+The rot test asks whether an entry **still** earns its place. It cannot ask whether an entry **ever** earned it.
+
+`'unete'` sat in `LEAVE_UNACCENTED` with no comment, between two entries that each carry a full paragraph of justification. `únete` is an imperative and always takes the accent, so the exemption is simply wrong — and it silenced the guard over **13 occurrences across three files**. A rot test would have passed it forever, because the word does keep appearing: the entry kept "earning its place" by continuing to suppress a real defect.
+
+**The tell was visible without knowing any Spanish.** Every neighbouring entry explains itself. That one did not. An entry added to make a guard green looks exactly like this — no reason, because there was no reason, only a red suite and a deadline.
+
+**Every exemption carries its reason inline, and an entry with no reason is a defect regardless of whether it happens to be correct.** The reason is not documentation of the decision; it _is_ the decision, and it is the only thing a later reader can check. An unexplained entry cannot be audited, cannot be distinguished from a mistake, and cannot be removed by anyone who is not willing to re-derive it from scratch — so in practice it never is.
+
+When reviewing an allow-list, read it for **missing comments first**, before reading the entries. The gap is the finding.
+
+**WHEN A GUARD KEEPS FLAGGING AFTER YOU BELIEVE YOU HAVE FIXED IT, YOUR SEARCH WAS NARROWER THAN THE GUARD'S.**
+
+Chasing `unete`, the count went **3, then 7, then 13** across three passes. Each time the fix looked complete, the guard still flagged, and it read as the guard being stubborn. It was not: `grep unete` missed capitalised `Unete`, and a directory-scoped grep missed `hooks/` and the other translation tables. The guard was lowercasing every word and walking the whole repo — a wider net than any of the three searches used to satisfy it.
+
+The instinct on a persistent flag is to doubt the check. **Invert it: the check is enumerating something, and you are sampling.** Ask what its corpus is and reproduce that corpus before concluding it is wrong. Same finding as the instrument-reach family, from the other side — there the tool's reach was too narrow and its number too small; here the human's reach was too narrow and the tool was right.
+
 **A count measured without the gates the page actually applies is a different number from the one a user sees, and both look equally authoritative in a commit message.**
 
 Issue 1's commit messages say the sport filter took chip-reachable instructors from **4 of 15 to 11**. The real figures are **3 of 11 to 10**, and 11 once migration 171 applies. The measurement queried `users_discoverable` and counted rows whose `sports` array held a canonical sport. `/instructors` does three more things before rendering: it excludes organization accounts (T-GYM1, keyed on `featured_partners.business_type`), it drops anyone failing the five-field T-PROF1 completeness gate, and only then does it filter. Skipping those put **Leo Garcia** in the "now reachable" list -- he is a `gym` account and has never appeared on that page at all.
@@ -431,6 +457,18 @@ The seed was, by construction, a list of words someone had already noticed were 
 This is the **eighth** instance of the instrument-reach family, and the first where the instrument was _selected_ on a misaddressed measurement rather than merely _reporting_ one. The earlier seven distorted what was found. This one distorted what was adopted, which is more expensive because it is the decision everything downstream rests on, and nothing re-examines a choice that was justified once.
 
 The dictionary was kept, and it is still worth having — it makes `LEAVE_UNACCENTED` auditable and it did catch `busqueda`. What changed is the claim made for it: it is a filter over a hand-maintained list, not a replacement for one. The work is done by the both-ways discriminator in `i18nGuards.test.ts`, which asks a question the corpus can answer without judging Spanish at all.
+
+**A GUARD THAT SCANS A DIRECTORY CONTAINING ITS OWN CONFIGURATION WILL FIND ITS CONFIGURATION.**
+
+The both-ways accent arm scans every source file under the repo root for Spanish strings. `lib/i18n/spanishAccents.ts` is one of those files, and it holds `LEAVE_UNACCENTED` — a list of the exact unaccented word forms the guard exists to reason about. So the literal `'unete'` in the exemption list entered the corpus as if it were product copy, and the pair `unete`/`únete` stayed flagged **after every real occurrence in the product had been corrected**. The instrument had counted itself as data.
+
+`stripComments` does not catch this. The existing guard already strips prose, because an earlier version flagged `t('fields.photo')` inside its own explanatory comment. This is a step past that: the contamination is a **string literal in executing code**, indistinguishable from product copy by any textual rule.
+
+**What caught it is the part worth keeping.** Not review, not reading the file — a **revert test whose expected outcome did not arrive**. Fix the defect, expect the flag to clear, and it did not. Nothing else in the session would have found it; the guard was green in every ordinary run and simply wrong about one word.
+
+So the value of a revert is not only proving a check can fail. **A revert with an unexpected result is a finding about the instrument**, and it is the only routine moment when a guard is asked to explain itself. When a revert does not do what you predicted, stop and account for the difference before adjusting the prediction.
+
+Before writing a guard that walks a tree, ask what of the guard's own apparatus lives inside that tree: config, fixtures, allow-lists, seed data, the test file itself. Exclude it by path, explicitly, with the reason.
 
 ### Database Schema
 
