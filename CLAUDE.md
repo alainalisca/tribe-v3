@@ -352,6 +352,22 @@ The Spanish accent work changed `Natación` and `Fútbol` in **both** `lib/sport
 
 If a change has to be applied twice to take effect, stop and ask why there are two. The second edit is the codebase telling you where the real defect is, and it is the cheapest moment to notice — you already have both files open.
 
+**A MIGRATION NUMBER IS CLAIMED BY WHOEVER MERGES FIRST — RE-READ `origin/main` IMMEDIATELY BEFORE CHOOSING ONE.**
+
+On 2026-09-18 two sessions working the same repo both wrote a migration `172`. One built `172_reviews_self_review_policy.sql` on a branch forked at `5cc7420`; the other merged T-LEAD1 to `main` at 09:18 that morning and took **172 and 173**. Neither re-read `main` before numbering. Nothing warned: the files never touch the same table, the branches never conflict, and each is internally consistent.
+
+**Read `origin/main` at the moment you choose the number, not at branch time.** The gap between forking and writing is exactly where a parallel session lands — the first branch had been cut, rehearsed, applied and verified in that window. A number inferred from the local branch describes the repo as it was when you forked, which is the one moment it is guaranteed not to still be true.
+
+```bash
+git fetch origin && git ls-tree --name-only origin/main supabase/migrations/ | tail -5
+```
+
+Rehearsal and capture filenames carry the number too, so they collide silently alongside it.
+
+**It surfaced only because the merge was attempted rather than assumed.** The branch had been reported merge-ready; `git merge` is what printed the second `172`. A branch is not merged because it is finished, and "ready to merge" is a claim about the branch, not about `main`. Run the merge — the collision costs one rename when caught there, and becomes two files named `172_*.sql` in `supabase/migrations/` the moment it is not.
+
+The number moves, not the record: rename, then state in the header what it was applied as and why it changed. An applied migration renumbered in silence is worse than the collision.
+
 ### Database Schema
 
 Core tables in `supabase/schema.sql`:
