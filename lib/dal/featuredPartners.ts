@@ -98,8 +98,17 @@ export async function fetchActivePartners(supabase: SupabaseClient, limit = 5): 
     const { data, error } = await supabase
       .from('featured_partners')
       .select(
-        'id, user_id, slug, business_name, business_type, description, description_es, logo_url, banner_url, website_url, phone, address, lat, lng, specialties, tier, status, starts_at, expires_at, monthly_fee_cents, currency, total_impressions, total_clicks, total_bookings, min_sessions_per_month, min_rating, created_at, updated_at, display_order, auto_approve_roster, user:users(avatar_url)'
+        'id, user_id, slug, business_name, business_type, description, description_es, logo_url, banner_url, website_url, phone, address, lat, lng, specialties, tier, status, starts_at, expires_at, monthly_fee_cents, currency, total_impressions, total_clicks, total_bookings, min_sessions_per_month, min_rating, created_at, updated_at, display_order, auto_approve_roster, user:users!inner(avatar_url, is_test_account)'
       )
+      // T-GYM7: `users!inner` + the embedded filter drops partners whose owner
+      // account is flagged as a seeded/test account (migration 052), the same
+      // shape as fetchPartnerInstructors and gym_revenue_totals.
+      // `!inner` matters twice: it applies the filter, and it drops a partner
+      // whose owner row is gone rather than surfacing it with a null user.
+      // The embed requests ONLY granted columns -- avatar_url and
+      // is_test_account are both outside the 067/113/115/118 revokes. An
+      // ungranted column does not degrade the embed, it fails the whole read.
+      .eq('user.is_test_account', false)
       .eq('status', 'active')
       // display_order is editorial placement and sorts ahead of everything
       // (161). tier stays below it so a commercial field never doubles as
@@ -274,8 +283,17 @@ export async function fetchAllPartners(supabase: SupabaseClient): Promise<DalRes
     const { data, error } = await supabase
       .from('featured_partners')
       .select(
-        'id, user_id, slug, business_name, business_type, description, description_es, logo_url, banner_url, website_url, phone, address, lat, lng, specialties, tier, status, starts_at, expires_at, monthly_fee_cents, currency, total_impressions, total_clicks, total_bookings, min_sessions_per_month, min_rating, created_at, updated_at, display_order, auto_approve_roster, user:users(avatar_url)'
+        'id, user_id, slug, business_name, business_type, description, description_es, logo_url, banner_url, website_url, phone, address, lat, lng, specialties, tier, status, starts_at, expires_at, monthly_fee_cents, currency, total_impressions, total_clicks, total_bookings, min_sessions_per_month, min_rating, created_at, updated_at, display_order, auto_approve_roster, user:users!inner(avatar_url, is_test_account)'
       )
+      // T-GYM7: `users!inner` + the embedded filter drops partners whose owner
+      // account is flagged as a seeded/test account (migration 052), the same
+      // shape as fetchPartnerInstructors and gym_revenue_totals.
+      // `!inner` matters twice: it applies the filter, and it drops a partner
+      // whose owner row is gone rather than surfacing it with a null user.
+      // The embed requests ONLY granted columns -- avatar_url and
+      // is_test_account are both outside the 067/113/115/118 revokes. An
+      // ungranted column does not degrade the embed, it fails the whole read.
+      .eq('user.is_test_account', false)
       .order('created_at', { ascending: false })
       .limit(200);
 
