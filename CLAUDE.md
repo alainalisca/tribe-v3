@@ -458,6 +458,24 @@ This is the **eighth** instance of the instrument-reach family, and the first wh
 
 The dictionary was kept, and it is still worth having — it makes `LEAVE_UNACCENTED` auditable and it did catch `busqueda`. What changed is the claim made for it: it is a filter over a hand-maintained list, not a replacement for one. The work is done by the both-ways discriminator in `i18nGuards.test.ts`, which asks a question the corpus can answer without judging Spanish at all.
 
+**AND THE SHARPEST INSTANCE, BECAUSE IT WAS ACTED ON RATHER THAN RECORDED: "THIS ROUTE IS DYNAMIC" IS NOT "THIS APP IS DYNAMIC".**
+
+`headers()` was added to the root layout to serve the right `lang` in the first frame. The justification, written into the commit and into the report that got it approved, was that it cost nothing because _"every route in this app is already `ƒ (Dynamic)`"_. That was never measured. It was carried over from the `/instructors` investigation, where it was true of **one route**, and generalised to all of them.
+
+**The build had 79 static routes. The change took it to 2** — `robots.txt` and `sitemap.xml`, the only two rendering no React.
+
+**The two claims differ by one word and by 77 routes**, and that is why nothing caught it. "This route is dynamic" and "this app is dynamic" read as the same sentence at a glance, and the second is the kind of claim that sounds like background knowledge rather than a measurement anyone owes evidence for. `npm run build` prints the static/dynamic table. It takes one command. Nobody ran it, including the author of the claim.
+
+**A fact measured over one route describes one route.** Before reusing a measurement as a premise somewhere else, say out loud what population it was taken over, and re-measure if the new population is larger. This is the same error as adopting a tool on a benchmark computed over the seed — the difference is only that this one was _acted on_, so it shipped.
+
+**AND THE FAILURE IT CAUSED WAS SCOPED TO A TRIGGER NOBODY WATCHES.**
+
+The consequence was that `/` stopped prerendering, so `.next/server/app/index.html` stopped existing, so the home-page bundle budget failed with "run the build first". It failed **only on `pull_request` runs and never on `push`**, because a `pull_request` build is the branch merged into main while a `push` build is the branch alone. So main's own workflow stayed green while every PR opened against it went red, and the breakage looked like a property of whichever PR surfaced it.
+
+**"Main is green" is a claim about what main's workflow runs, not about main.** A check that fires on only one trigger is invisible from the other. When a failure appears on PRs but not on main, or on one environment but not another, the first question is which triggers run which checks — not which PR introduced it. And when adding a check that depends on build artefacts, know which triggers produce those artefacts, because a check that cannot run is indistinguishable from a check that passes.
+
+Found and reverted by a parallel session in `01bd163`, which kept most of the value by making the static `lang` `"es"` instead of `"en"` — wrong strictly less often, with no request needed — and named middleware as the right home if per-request negotiation is ever wanted.
+
 **A GUARD THAT SCANS A DIRECTORY CONTAINING ITS OWN CONFIGURATION WILL FIND ITS CONFIGURATION.**
 
 The both-ways accent arm scans every source file under the repo root for Spanish strings. `lib/i18n/spanishAccents.ts` is one of those files, and it holds `LEAVE_UNACCENTED` — a list of the exact unaccented word forms the guard exists to reason about. So the literal `'unete'` in the exemption list entered the corpus as if it were product copy, and the pair `unete`/`únete` stayed flagged **after every real occurrence in the product had been corrected**. The instrument had counted itself as data.
