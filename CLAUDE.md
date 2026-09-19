@@ -488,6 +488,24 @@ So the value of a revert is not only proving a check can fail. **A revert with a
 
 Before writing a guard that walks a tree, ask what of the guard's own apparatus lives inside that tree: config, fixtures, allow-lists, seed data, the test file itself. Exclude it by path, explicitly, with the reason.
 
+**A MECHANICAL REWRITE CAN PRODUCE A CLASS THAT DOES NOT EXIST, WHICH IS NOT A WRONG VALUE BUT NO VALUE, APPLIED SILENTLY.**
+
+Migrating 54 screens from hardcoded `pb-32` to a `.pb-nav` utility, a find-and-replace over `pb-\d+` also hit `lg:pb-24` and produced **`lg:pb-nav`**. Tailwind variant prefixes compose with Tailwind utilities; `.pb-nav` is a plain CSS class in `globals.css`. `lg:pb-nav` therefore matches nothing, generates nothing, and applies **no padding at all** at that breakpoint.
+
+Nothing reports this. It is not a build error, not a type error, not a lint error, and not a wrong number that looks odd in review — it is an absent rule. The class name reads correctly to a human scanning the diff, which is the whole problem.
+
+The same pass also rewrote `pb-40` and `lg:pb-24` **inside the comments explaining them**, turning prose into a description of a class that does not exist.
+
+**After a mechanical rewrite, enumerate the syntactic positions the original token appeared in and check what the replacement produces in each — not just the common one.** For a Tailwind class that is at least: bare in a `className`, under a responsive or state variant, inside `clsx`/template interpolation, in an `@apply`, and in prose. A replacement that is valid in the common position can be inert, invalid, or meaningless in the others, and the failure mode of "inert" is the one nothing will tell you about.
+
+**WRITE THE GUARD WITH THE MIGRATION, NOT AFTER IT, BECAUSE THEY FAIL DIFFERENTLY ON THE SAME FILE.**
+
+The guard for this migration was written in the same change and immediately found a screen the migration had missed: `app/challenges/[id]/page.tsx` has **two** `min-h-screen` page-root branches, and the regex pass rewrote one and left `pb-12` on the error state — 48px against a 122px requirement.
+
+That is not luck, it is the point. **The migration was mechanical and the guard was not.** A regex sweep is thorough about the pattern it matches and blind to everything shaped differently — a second return branch, a variant prefix, a template literal. A guard written from the requirement enumerates a _population_ (every file rendering `<BottomNav>`) and asks a question of each. The two have uncorrelated blind spots, which is exactly why running them together finds things neither finds alone.
+
+Written afterwards, the guard would have been built to pass against the migrated tree, and `pb-12` would have looked like a screen the guard simply did not cover. **A guard written after a migration tends to encode the migration's blind spots as its scope.**
+
 ### Database Schema
 
 Core tables in `supabase/schema.sql`:
