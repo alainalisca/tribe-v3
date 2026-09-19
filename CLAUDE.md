@@ -418,6 +418,20 @@ This is worse than an uncovered defect. An uncovered defect is silent; this one 
 
 **When a test asserts a literal string from user-facing copy, it is asserting that copy is correct.** The assertion is only ever as good as the copy was on the day it was written, and nothing re-examines it afterwards. Prefer asserting the property the test actually means — here, that the English verb is absent, not that a particular Spanish spelling is present. Where a literal is genuinely the clearest expression, say in a comment which file owns that string, so the next person changing the copy knows a test is holding the other end.
 
+**AN INSTRUMENT CHOSEN ON A NUMBER THAT MEASURED THE WRONG POPULATION.**
+
+The Spanish dictionary was adopted on the strength of **"45 of 64 hand-seeded words become derivable"**. That number is true, and it measured **the hand list**. The question it was taken to answer was whether the dictionary could replace hand-maintained accent knowledge across Tribe's Spanish — a question about **the corpus**.
+
+Measured against the corpus a day later: 4,354 strings, 2,088 distinct unaccented words, and the rule discriminates **3 of them**. Everything else falls in a blind zone where `dictionary-es` accepts both spellings and the rule is structurally silent. Both numbers are correct. Only one answers the question that was asked.
+
+The seed was, by construction, a list of words someone had already noticed were ambiguous and worth writing down. Asking how many of _those_ a dictionary can derive is close to asking how well it handles the cases selected for being handleable. 70% on that population says nothing about the 2,088.
+
+**Before adopting a tool on a benchmark, name the population the benchmark was computed over and check it is the population you will run against.** A number computed over the seed, the sample, the fixtures, or the known-failures list is a statement about that set. The tool will not be run against that set; it will be run against everything.
+
+This is the **eighth** instance of the instrument-reach family, and the first where the instrument was _selected_ on a misaddressed measurement rather than merely _reporting_ one. The earlier seven distorted what was found. This one distorted what was adopted, which is more expensive because it is the decision everything downstream rests on, and nothing re-examines a choice that was justified once.
+
+The dictionary was kept, and it is still worth having — it makes `LEAVE_UNACCENTED` auditable and it did catch `busqueda`. What changed is the claim made for it: it is a filter over a hand-maintained list, not a replacement for one. The work is done by the both-ways discriminator in `i18nGuards.test.ts`, which asks a question the corpus can answer without judging Spanish at all.
+
 ### Database Schema
 
 Core tables in `supabase/schema.sql`:
