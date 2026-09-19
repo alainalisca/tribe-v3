@@ -46,7 +46,7 @@ export function getTermsContent(language: 'en' | 'es'): TermsContent {
           list: [
             'Tener al menos 18 años de edad (o la mayoría de edad legal en su jurisdicción, si es mayor);',
             'Tener la capacidad legal para celebrar contratos vinculantes; y',
-            'Usar la Plataforma unicamente con fines lícitos y en cumplimiento de todas las leyes aplicables.',
+            'Usar la Plataforma únicamente con fines lícitos y en cumplimiento de todas las leyes aplicables.',
           ],
         },
         {
