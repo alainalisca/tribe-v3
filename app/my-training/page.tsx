@@ -190,7 +190,7 @@ export default function MyTrainingPage() {
   const totalHeatmapCount = Object.values(heatmap).reduce((a, b) => a + b, 0);
 
   return (
-    <div className="min-h-screen pb-24 bg-stone-50 dark:bg-tribe-dark text-theme-primary">
+    <div className="min-h-screen pb-nav bg-stone-50 dark:bg-tribe-dark text-theme-primary">
       <div className="max-w-3xl mx-auto px-4 pt-6 space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">

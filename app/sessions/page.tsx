@@ -55,7 +55,7 @@ export default function SessionsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-stone-50 dark:bg-tribe-mid pb-32">
+    <div className="min-h-screen bg-stone-50 dark:bg-tribe-mid pb-nav">
       <div
         ref={fixedAreaRef}
         className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-stone-200 dark:bg-tribe-dark border-b border-stone-300 dark:border-black"

@@ -114,7 +114,7 @@ export default function TribePlusPage() {
   }
 
   return (
-    <div className="min-h-screen pb-24 bg-theme-page text-theme-primary">
+    <div className="min-h-screen pb-nav bg-theme-page text-theme-primary">
       <div className="max-w-xl mx-auto px-4 pt-8 space-y-8">
         <div className="text-center space-y-3">
           <div className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-[#84cc16] text-slate-900 text-xs font-bold tracking-widest">

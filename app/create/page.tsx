@@ -357,7 +357,7 @@ function CreateSessionPageInner() {
   if (createdSessionId) {
     const shareUrl = getSessionShareUrl(createdSessionId);
     return (
-      <div className="min-h-screen bg-theme-page pb-32">
+      <div className="min-h-screen bg-theme-page pb-nav">
         <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-theme-card border-b border-theme">
           <div className="max-w-2xl md:max-w-4xl mx-auto h-14 flex items-center px-4">
             <Link href="/">
@@ -449,7 +449,7 @@ function CreateSessionPageInner() {
   const today = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`;
 
   return (
-    <div className="min-h-screen bg-theme-page pb-32">
+    <div className="min-h-screen bg-theme-page pb-nav">
       <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-theme-card border-b border-theme">
         <div className="max-w-2xl md:max-w-4xl mx-auto h-14 flex items-center px-4">
           <Link href="/">

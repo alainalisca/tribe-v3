@@ -95,7 +95,7 @@ export default function NotificationPreferencesPage() {
   };
 
   return (
-    <div className="min-h-screen pb-24 bg-theme-page text-theme-primary">
+    <div className="min-h-screen pb-nav bg-theme-page text-theme-primary">
       <div className="max-w-xl mx-auto px-4 pt-6 space-y-6">
         <div className="flex items-center gap-2">
           <Bell className="w-5 h-5 text-[#A3E635]" />

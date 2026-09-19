@@ -166,7 +166,7 @@ export default function SearchPage() {
   const tabResults = results[activeTab];
 
   return (
-    <div className="min-h-screen bg-theme-page pb-32">
+    <div className="min-h-screen bg-theme-page pb-nav">
       {/* Fixed Header + Search + Tabs */}
       <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-theme-card">
         {/* Title Bar */}

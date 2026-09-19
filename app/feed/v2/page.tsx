@@ -74,7 +74,7 @@ export default function FeedV2Page() {
   };
 
   return (
-    <div className="min-h-screen pb-24 bg-theme-page text-theme-primary">
+    <div className="min-h-screen pb-nav bg-theme-page text-theme-primary">
       <div className="max-w-2xl mx-auto px-4 pt-6 space-y-4">
         <h1 className="text-2xl font-extrabold">{t.title}</h1>
 

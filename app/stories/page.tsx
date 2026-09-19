@@ -42,7 +42,7 @@ export default function StoriesPage() {
   const StoryViewer = StoryViewerComp;
 
   return (
-    <div className="min-h-screen pb-32 bg-stone-50 dark:bg-tribe-mid">
+    <div className="min-h-screen pb-nav bg-stone-50 dark:bg-tribe-mid">
       <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-stone-200 dark:bg-tribe-dark border-b border-stone-300 dark:border-black">
         <div className="max-w-2xl md:max-w-4xl mx-auto h-14 flex items-center gap-4 px-4">
           <Link href="/">

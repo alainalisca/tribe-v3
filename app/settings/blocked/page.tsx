@@ -85,7 +85,7 @@ export default function BlockedUsersPage() {
   }
 
   return (
-    <div className="min-h-screen pb-24 bg-white dark:bg-tribe-dark text-stone-900 dark:text-white">
+    <div className="min-h-screen pb-nav bg-white dark:bg-tribe-dark text-stone-900 dark:text-white">
       <div className="max-w-xl mx-auto px-4 pt-6 space-y-6">
         <div className="flex items-center gap-2">
           <ShieldOff className="w-5 h-5 text-tribe-green" />

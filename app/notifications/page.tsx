@@ -117,7 +117,7 @@ export default function NotificationsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-stone-50 dark:bg-tribe-mid pb-32">
+    <div className="min-h-screen bg-stone-50 dark:bg-tribe-mid pb-nav">
       {/* Fixed header */}
       <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-white dark:bg-tribe-card border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-2xl md:max-w-4xl mx-auto h-14 flex items-center justify-between px-4">

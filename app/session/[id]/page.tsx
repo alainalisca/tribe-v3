@@ -121,7 +121,7 @@ export default function SessionDetailPage() {
     // confusing "not found" page on top of a session that exists.
     const isTrulyNotFound = d.loadError === 'session_not_found';
     return (
-      <div className="min-h-screen bg-theme-page pb-32">
+      <div className="min-h-screen bg-theme-page pb-nav">
         <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-theme-header border-b border-theme">
           <div className="max-w-2xl md:max-w-4xl mx-auto h-14 flex items-center gap-3 px-4">
             <Link href="/" className="p-2 -ml-2 min-w-[44px] min-h-[44px] flex items-center justify-center">
@@ -204,7 +204,7 @@ export default function SessionDetailPage() {
     d.photoType === 'location' ? d.session.photos : d.recapPhotos.map((p: RecapPhotoWithUser) => p.photo_url);
 
   return (
-    <div className="min-h-screen bg-theme-page pb-32">
+    <div className="min-h-screen bg-theme-page pb-nav">
       {d.lightboxOpen && currentPhotos && (
         <PhotoLightbox photos={currentPhotos} initialIndex={d.currentPhotoIndex} onClose={() => history.back()} />
       )}
