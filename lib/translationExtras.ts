@@ -318,7 +318,7 @@ export const extEs: Record<keyof typeof extEn, string> = {
   addToCalendarIcsDownloaded: 'Archivo de calendario descargado. Ábrelo para agregar la sesión.',
 
   // Error page
-  somethingWentWrong: 'Algo salio mal',
+  somethingWentWrong: 'Algo salió mal',
   dontWorryDataSafe: 'No te preocupes, tus datos están a salvo.',
   tryAgain: 'Intentar de Nuevo',
 

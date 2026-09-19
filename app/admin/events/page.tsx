@@ -13,19 +13,12 @@ import type { LocalFitnessEvent, LocalEventInsert } from '@/lib/dal/localEvents'
 import { showSuccess, showError } from '@/lib/toast';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import ConfirmDialog from '@/components/ConfirmDialog';
+import { LOCAL_EVENT_SPORTS } from '@/lib/localEventSports';
 
-const SPORT_OPTIONS = [
-  'running',
-  'cycling',
-  'hiking',
-  'yoga',
-  'crossfit',
-  'calisthenics',
-  'swimming',
-  'multi-sport',
-  'skateboarding',
-  'parkour',
-] as const;
+// Shared with the public chip row in LocalFitnessEventsSection. They were two
+// literals and they disagreed: this form could write four values that no chip
+// could select. See lib/localEventSports.ts.
+const SPORT_OPTIONS = LOCAL_EVENT_SPORTS;
 
 const EVENT_TYPES = ['recurring', 'one-time', 'series'] as const;
 const RECURRENCE_PATTERNS = ['weekly', 'monthly', 'yearly'] as const;

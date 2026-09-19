@@ -75,6 +75,32 @@ const KNOWN_RIVAL_LISTS: Record<string, string> = {
   // display values rather than a choice offered to anyone, but still a third
   // vocabulary, and the suggestions land in venues.suggested_sports.
   'app/api/venues/nearby/route.ts': 'venue category to suggested sports, own ticket',
+
+  // ── Found 2026-09-18, only after this guard stopped comparing case-sensitively.
+  // All three write or read a FOREIGN column with its own lowercase value
+  // domain. Aligning them to SPORTS_LIST would not unify a vocabulary, it would
+  // break a query: `.eq('sport_type', 'Jiu-Jitsu')` matches nothing in a column
+  // whose values are `running` and `multi-sport`.
+
+  // The one place the local_fitness_events vocabulary is declared. It used to be
+  // two literals that disagreed (the admin form wrote 10 values, the public chip
+  // row read 6), which is the Issue 1 defect inside the second vocabulary. Now
+  // both sides import this module, so the list is single-source WITHIN its own
+  // domain rather than merged into Tribe's.
+  'lib/localEventSports.ts': 'local_fitness_events.sport_type domain, single-sourced for that table',
+
+  // A keyword MATCHER against third-party Eventbrite titles, not a vocabulary
+  // offered to anyone. It deliberately carries both spellings of 'futbol' and
+  // 'fútbol' for the same reason it stays lowercase: accenting or Title Casing
+  // a matcher against foreign text silently stops it matching. Never listed
+  // here before, because case-sensitive membership could not see it either.
+  'app/api/events/eventbrite/route.ts': 'keyword matcher against third-party titles, must not be canonicalised',
+
+  // popular_routes.sport_type carries a DATABASE CHECK CONSTRAINT limiting it to
+  // exactly ('running','cycling','hiking') -- migration 016_popular_routes.sql:7.
+  // The component offers exactly those three. Not drift: the narrowest correct
+  // list, enforced by the database.
+  'components/PopularRoutesSection.tsx': 'popular_routes.sport_type, pinned by a CHECK constraint to 3 values',
 };
 
 /**
@@ -92,7 +118,19 @@ const CONSUMERS = [
   'components/TrainingPreferencesForm.tsx',
 ];
 
-const SPORTS = new Set<string>(SPORTS_LIST as readonly string[]);
+/**
+ * CASE-INSENSITIVE ON PURPOSE, and this was a real blind spot rather than a
+ * refinement. SPORTS_LIST is Title Case, so a Set of it matched only rivals
+ * that already spelled sports the canonical way -- which is close to saying it
+ * could only find the copies that were not really diverging. Three lowercase
+ * vocabularies sat in `app/` and `components/` through the sweep that found the
+ * other five, invisible for no reason except casing.
+ *
+ * A guard that tests conformance to a canonical FORM is blind to exactly the
+ * non-conforming instance it exists to catch. Fold the form away before
+ * comparing.
+ */
+const SPORTS = new Set<string>(SPORTS_LIST.map((s) => s.toLowerCase()));
 
 function stripComments(source: string): string {
   return source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
@@ -131,7 +169,7 @@ function sportListsIn(source: string): string[] {
     const flat = literal.replace(/\s+/g, ' ');
     if (!BARE_STRINGS.test(flat)) continue;
     const names = [...flat.matchAll(/['"]([^'"\n]+)['"]/g)].map((m) => m[1]);
-    const hits = new Set(names.filter((nm) => SPORTS.has(nm)));
+    const hits = new Set(names.filter((nm) => SPORTS.has(nm.toLowerCase())));
     if (hits.size >= MIN_SPORTS_FOR_A_LIST) found.push(flat.slice(0, 120));
   }
   return found;

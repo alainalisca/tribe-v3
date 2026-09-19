@@ -30,7 +30,7 @@ export function useFeedbackTranslations(language: string) {
         reportBugDesc: 'Encontraste algo roto? Avísanos para que lo podamos arreglar!',
         bugTitlePlaceholder: 'Breve descripción del error',
         whatHappened: 'Que paso?',
-        whatHappenedPlaceholder: 'Describe lo que salio mal...',
+        whatHappenedPlaceholder: 'Describe lo que salió mal...',
         stepsToReproduce: 'Pasos para reproducir (opcional)',
         stepsPlaceholder: '1. Ir a...\n2. Hacer clic en...\n3. Ver error...',
         severity: 'Gravedad',
