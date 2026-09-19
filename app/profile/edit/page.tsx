@@ -631,8 +631,8 @@ export default function EditProfilePage() {
                   <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
                     <p className="text-xs text-stone-700 dark:text-gray-300">
                       {language === 'es'
-                        ? 'Tu escaparate es tu página pública en /storefront/tu-id. Los atletas te descubren aquí.'
-                        : 'Your storefront is your public page at /storefront/your-id. Athletes discover you here.'}
+                        ? 'Tu escaparate es tu página pública. Los atletas te descubren aquí.'
+                        : 'Your storefront is your public page. Athletes discover you here.'}
                     </p>
                   </div>
 
