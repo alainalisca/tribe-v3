@@ -384,6 +384,26 @@ This is the second time: the `as unknown as Session[]` on the storefront card (2
 
 The type checker is the only thing that knows whether a fixture matches what the function reads. `as never`, `as unknown as X` and `as any` each turn that check off at exactly the moment it is load-bearing, because a fixture is a claim about a shape and nothing else verifies it. **Type the fixture, never cast it.** If it will not typecheck, the fixture is wrong — which is the finding, not an obstacle to the test.
 
+**A GUARD THAT TESTS MEMBERSHIP AGAINST A CANONICAL FORM CAN ONLY SEE RIVALS ALREADY USING THAT FORM.**
+
+Two guards, same blindness, found the same afternoon.
+
+`sports.singleSource.test.ts` built `new Set(SPORTS_LIST)` and asked whether an array's elements were members. `SPORTS_LIST` is Title Case. Three lowercase vocabularies sat in `app/` and `components/` through the sweep that found the other five — invisible for no reason except casing. Case-folding the comparison surfaced **five** files, not the three that had been found by hand.
+
+`i18nGuards.test.ts` recognised five source shapes and every one keyed on an `es` marker: an `es:` property, `language === 'es'`, a `...Es` export. `app/global-error.tsx` has none, and cannot — it renders when the layout tree is broken, so the provider may be what died, and it prints both languages as sibling JSX nodes. The guard passed 8 of 8 over "Algo salio mal" for as long as it existed.
+
+Both reported green over precisely the divergence they were written to catch. A canonical-form check is a test for _near_-copies; the dangerous copy is the one that drifted furthest, and it drifted out of the guard's reach on the way.
+
+**When a guard checks conformance to a shape, ask what a NON-conforming instance looks like.** That is the thing it is blind to, and it is also the thing you are looking for. Write the answer down as a rival entry or as a new shape, and never as a silent assumption that everything worth finding resembles what you already have.
+
+**Corollary, from the same afternoon: fixing the instrument can reveal the rule is blind too.** With shape (f) added, `salio` still did not flag, because `dictionary-es` accepts it — the "not Spanish, but an accenting of it is" rule could never fire. Two independent blindnesses stacked on one string, and fixing only the visible one would have left it shipping under a green guard. When a guard starts seeing a case and still passes it, that is a second finding, not a success.
+
+**THIS IS THE DOMINANT FAILURE MODE IN THIS CODEBASE, NOT A RECURRING COINCIDENCE.**
+
+Instances, in two days: the `[^<>]` regex that broke on `=>`; `vercel ls` writing the status column to stderr while the monitor read stdout; the accent sweep that saw 109 of 411 strings because it knew three of five shapes; the ASCII-folded dictionary that could not fail on `busqueda`; the harness that dropped three test files and reported green; the sports guard above; the accent extractor above. **Seven, of which the last two are the fourth and fifth to surface in this single sweep.**
+
+Stop treating each one as a surprise. The prior should now be that **an instrument's number describes the instrument** until something independent says otherwise — a mutation, a second measurement taken a different way, or a probe of a case the instrument claims does not exist. Budget for that check on every guard, before trusting what it reports.
+
 ### Database Schema
 
 Core tables in `supabase/schema.sql`:
