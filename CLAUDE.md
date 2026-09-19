@@ -368,6 +368,22 @@ Rehearsal and capture filenames carry the number too, so they collide silently a
 
 The number moves, not the record: rename, then state in the header what it was applied as and why it changed. An applied migration renumbered in silence is worse than the collision.
 
+**"NO CODE CHANGED" IS NOT THE SAME CLAIM AS "NO TEST READS THIS".**
+
+Migration 174 was merged and pushed without running the suite, on the reasoning that the merge brought in only SQL and therefore could not affect tests. `main` was red for the rest of the session. `supabase/verify-migration-state.test.ts` **enumerates `supabase/migrations/`** and fails when a migration has no branch in `verify-migration-state.sql`, so a file containing nothing executable broke a test by existing.
+
+A test that enumerates a directory, counts files, or reads a manifest has no diff to inspect. Reading the diff and concluding "nothing here can fail" only works for tests that import the changed code, and you do not know which tests those are until they run.
+
+**The full suite runs on every merge, whatever the diff looks like.** `npm run test:complete` is the way to know it ran — it compares files-run against files-on-disk, so a green summary is a claim about the tests that exist and not only the ones that happened to load. See [[the harness-undercounting entry above]].
+
+**A CAST IN A TEST FIXTURE REMOVES THE ONE CHECK THAT WOULD TELL YOU THE FIXTURE IS WRONG.**
+
+A test written for the T-AUD15 share separator built its fixture with invented field names (`hostName`, `location`, `startTime`) and silenced the resulting type error with `as never`. `buildSessionShareText` reads `instructorName`, `neighborhood` and `time`, so it received `undefined` for all three, and **the separator under test was never exercised on a full string.** The test passed on a two-token string. Only a deliberately wrong expectation exposed it.
+
+This is the second time: the `as unknown as Session[]` on the storefront card (2026-08-23) hid four phantom fields the same way.
+
+The type checker is the only thing that knows whether a fixture matches what the function reads. `as never`, `as unknown as X` and `as any` each turn that check off at exactly the moment it is load-bearing, because a fixture is a claim about a shape and nothing else verifies it. **Type the fixture, never cast it.** If it will not typecheck, the fixture is wrong — which is the finding, not an obstacle to the test.
+
 ### Database Schema
 
 Core tables in `supabase/schema.sql`:
