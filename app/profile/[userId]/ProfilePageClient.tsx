@@ -155,7 +155,7 @@ export default function ProfilePageClient({ userId, initialProfile, statsSlot }:
   // null (not-found case, which falls through to the next branch).
   if (!profile)
     return (
-      <div className="min-h-screen bg-stone-50 dark:bg-tribe-mid pb-32">
+      <div className="min-h-screen bg-stone-50 dark:bg-tribe-mid pb-nav">
         <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-white dark:bg-tribe-card border-b border-gray-200 dark:border-gray-700">
           <div className="max-w-2xl md:max-w-4xl mx-auto h-14 flex items-center gap-3 px-4">
             <Button
@@ -187,7 +187,7 @@ export default function ProfilePageClient({ userId, initialProfile, statsSlot }:
   const sports = profile.sports || [];
 
   return (
-    <div className="min-h-screen bg-theme-page pb-32">
+    <div className="min-h-screen bg-theme-page pb-nav">
       <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-theme-card border-b border-theme">
         <div className="max-w-2xl md:max-w-4xl mx-auto h-14 flex items-center justify-between px-4">
           <div className="flex items-center">

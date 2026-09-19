@@ -85,7 +85,7 @@ export default function HomePage() {
   }
 
   return (
-    <div className="min-h-screen pb-32 bg-stone-50 dark:bg-tribe-mid">
+    <div className="min-h-screen pb-nav bg-stone-50 dark:bg-tribe-mid">
       {/* The single first-run sequence (T-ONB1). There used to be two: a
           four-slide OnboardingModal and this tour, which fired in sequence and
           then the tour again when the modal closed. The modal is gone; its one

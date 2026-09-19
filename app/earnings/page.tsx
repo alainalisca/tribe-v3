@@ -286,7 +286,7 @@ export default function EarningsPage() {
 
   if (user && !user.is_instructor) {
     return (
-      <div className="min-h-screen bg-theme-page pb-32">
+      <div className="min-h-screen bg-theme-page pb-nav">
         <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-theme-card border-b border-theme">
           <div className="max-w-2xl md:max-w-4xl mx-auto h-14 flex items-center px-4">
             <Link href="/profile">
@@ -328,7 +328,7 @@ export default function EarningsPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-theme-page flex flex-col items-center justify-center p-4 pb-32">
+      <div className="min-h-screen bg-theme-page flex flex-col items-center justify-center p-4 pb-nav">
         <Card className="border-red-200 bg-red-50 dark:bg-red-900/20 w-full max-w-2xl">
           <CardContent className="pt-6">
             <p className="text-theme-primary font-semibold mb-4">{error}</p>
@@ -342,7 +342,7 @@ export default function EarningsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-theme-page pb-32">
+    <div className="min-h-screen bg-theme-page pb-nav">
       {/* Header */}
       <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-theme-card border-b border-theme">
         <div className="max-w-2xl md:max-w-4xl mx-auto h-14 flex items-center px-4">

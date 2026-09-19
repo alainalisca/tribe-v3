@@ -222,7 +222,7 @@ export default function ChallengePage() {
 
   if (!challenge) {
     return (
-      <div className="min-h-screen bg-theme-page pb-12">
+      <div className="min-h-screen bg-theme-page pb-nav">
         <div className="max-w-2xl md:max-w-4xl mx-auto p-4 md:p-6 text-center pt-20">
           <p className="text-theme-secondary">{strings.error}</p>
           <button onClick={() => router.back()} className="mt-4 text-tribe-green font-semibold hover:underline">
@@ -237,7 +237,7 @@ export default function ChallengePage() {
     challenge.target_value > 0 ? Math.min(((userProgress?.progress || 0) / challenge.target_value) * 100, 100) : 0;
 
   return (
-    <div className="min-h-screen bg-theme-page pb-20">
+    <div className="min-h-screen bg-theme-page pb-nav">
       {/* Header */}
       <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-theme-card border-b border-theme">
         <div className="max-w-2xl md:max-w-4xl mx-auto h-14 flex items-center px-4">

@@ -93,7 +93,7 @@ export default function PaymentConfirmPage() {
   const t = (en: string, es: string) => (language === 'es' ? es : en);
 
   return (
-    <div className="min-h-screen bg-stone-50 dark:bg-tribe-mid pb-32">
+    <div className="min-h-screen bg-stone-50 dark:bg-tribe-mid pb-nav">
       <div className="max-w-md mx-auto pt-20 px-6">
         {state === 'loading' && (
           <div className="text-center space-y-4">

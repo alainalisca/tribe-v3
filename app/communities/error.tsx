@@ -19,7 +19,7 @@ export default function CommunitiesError({ error, reset }: { error: Error & { di
   }, [error]);
 
   return (
-    <div className="min-h-screen bg-white dark:bg-tribe-surface pb-24">
+    <div className="min-h-screen bg-white dark:bg-tribe-surface pb-nav">
       <div className="sticky top-0 safe-area-top bg-white dark:bg-tribe-surface border-b border-gray-200 dark:border-tribe-mid z-40">
         <div className="max-w-2xl md:max-w-4xl mx-auto px-4 pt-4 pb-4">
           <h1 className="text-2xl font-bold text-theme-primary">Communities</h1>

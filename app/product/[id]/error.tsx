@@ -21,7 +21,7 @@ export default function ProductError({ error, reset }: { error: Error & { digest
   }, [error]);
 
   return (
-    <div className="min-h-screen bg-theme-page pb-32">
+    <div className="min-h-screen bg-theme-page pb-nav">
       <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-theme-card border-b border-theme">
         <div className="max-w-2xl md:max-w-4xl mx-auto h-14 flex items-center px-4">
           <button onClick={() => history.back()} className="mr-3" aria-label="Go back">

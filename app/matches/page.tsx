@@ -41,7 +41,7 @@ export default function MatchesPage() {
   }
 
   return (
-    <div className="min-h-screen pb-32 bg-stone-50 dark:bg-tribe-mid">
+    <div className="min-h-screen pb-nav bg-stone-50 dark:bg-tribe-mid">
       <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-stone-200 dark:bg-tribe-dark border-b border-stone-300 dark:border-black">
         <div className="max-w-2xl md:max-w-4xl mx-auto h-14 flex items-center px-4">
           <h1 className="text-2xl font-bold text-tribe-dark dark:text-white">{t('matches')}</h1>

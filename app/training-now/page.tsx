@@ -42,7 +42,7 @@ export default function TrainingNowPage() {
   if (!user) return null;
 
   return (
-    <div className="min-h-screen bg-stone-100 dark:bg-tribe-surface pb-32">
+    <div className="min-h-screen bg-stone-100 dark:bg-tribe-surface pb-nav">
       {/* Header */}
       <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-tribe-green border-b border-lime-600">
         <div className="max-w-2xl md:max-w-4xl mx-auto h-14 flex items-center gap-3 px-4">

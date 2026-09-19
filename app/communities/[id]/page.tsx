@@ -315,7 +315,7 @@ export default function CommunityDetailPage() {
 
   if (loading || !community) {
     return (
-      <div className="min-h-screen bg-white dark:bg-tribe-surface pb-24">
+      <div className="min-h-screen bg-white dark:bg-tribe-surface pb-nav">
         <div className="max-w-2xl md:max-w-4xl mx-auto px-4 py-8">
           <div className="h-64">
             <SkeletonCard />
@@ -332,7 +332,7 @@ export default function CommunityDetailPage() {
     : { background: 'linear-gradient(135deg, #A3E635, #9EE551)' };
 
   return (
-    <div className="min-h-screen bg-white dark:bg-tribe-surface pb-24">
+    <div className="min-h-screen bg-white dark:bg-tribe-surface pb-nav">
       {/* Header */}
       <div className="sticky top-0 safe-area-top bg-white dark:bg-tribe-surface border-b border-gray-200 dark:border-tribe-mid z-40">
         <div className="max-w-2xl md:max-w-4xl mx-auto px-4 py-4 flex items-center gap-3">

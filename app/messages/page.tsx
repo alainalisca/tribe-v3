@@ -26,7 +26,7 @@ function MessagesContent() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-stone-50 dark:bg-tribe-mid pb-32">
+      <div className="min-h-screen bg-stone-50 dark:bg-tribe-mid pb-nav">
         <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-stone-200 dark:bg-tribe-dark border-b border-stone-300 dark:border-black">
           <div className="max-w-2xl md:max-w-4xl mx-auto h-14 flex items-center px-4">
             <h1 className="text-xl font-bold text-stone-900 dark:text-white">{t('messages')}</h1>
@@ -70,7 +70,7 @@ function MessagesContent() {
   const isEmpty = !hasSessionConversations && !hasDirectConversations;
 
   return (
-    <div className="min-h-screen bg-stone-50 dark:bg-tribe-mid pb-32">
+    <div className="min-h-screen bg-stone-50 dark:bg-tribe-mid pb-nav">
       <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-stone-200 dark:bg-tribe-dark border-b border-stone-300 dark:border-black">
         <div className="max-w-2xl md:max-w-4xl mx-auto h-14 flex items-center px-4">
           <h1 className="text-xl font-bold text-stone-900 dark:text-white">{t('messages')}</h1>

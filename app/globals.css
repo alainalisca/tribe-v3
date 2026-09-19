@@ -285,6 +285,36 @@ body {
     }
   }
 
+  /* ── PAGE CLEARANCE FOR THE BOTTOM NAV, DERIVED FROM THE SAME VARIABLE ───
+     Every screen that renders <BottomNav> must clear it. Before this class,
+     53 of the 55 such screens hardcoded a Tailwind literal instead:
+
+       pb-32 (128px)  42 screens
+       pb-24  (96px)  10 screens
+       pb-20  (80px)   1 screen
+
+     The clearance actually needed is the nav's own height PLUS the 24px the
+     Create button is raised above it by `-mt-6`:
+
+       88px + max(env(safe-area-inset-bottom), 34px)
+
+     which is 122px on an iPhone home indicator and more on Android gesture
+     navigation. So pb-24 and pb-20 were short by 26px and 42px AT EVERY
+     INSET -- they have been wrong since they were written, not since
+     viewport-fit=cover started resolving the inset to a real value. pb-32
+     cleared by 6px and loses that margin on any device reporting more
+     than 40px.
+
+     --bottom-nav-h was introduced to fix exactly this class of bug and only
+     two callers were ever migrated. This class is the missing half.
+
+     1.5rem of breathing room on top of the nav so content does not sit flush
+     against it. lib/__tests__/bottomNavClearance.test.ts asserts no screen
+     rendering BottomNav uses a pb-* literal. */
+  .pb-nav {
+    padding-bottom: calc(var(--bottom-nav-h) + 1.5rem);
+  }
+
   /* Use max() to ensure at least 34px on mobile for home indicator */
   /* !important needed to override other padding styles */
   .safe-area-bottom {

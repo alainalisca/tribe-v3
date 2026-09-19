@@ -169,7 +169,7 @@ export default function InstructorDiscoverPage() {
   };
 
   return (
-    <div className="min-h-screen pb-24 bg-stone-50 dark:bg-tribe-dark text-theme-primary">
+    <div className="min-h-screen pb-nav bg-stone-50 dark:bg-tribe-dark text-theme-primary">
       <div className="max-w-2xl mx-auto px-4 pt-6 space-y-5">
         <div className="flex items-center gap-3">
           <Link

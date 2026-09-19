@@ -17,7 +17,7 @@ export default function NotFound() {
   const es = language === 'es';
 
   return (
-    <div className="min-h-screen bg-theme-page pb-32 flex flex-col">
+    <div className="min-h-screen bg-theme-page pb-nav flex flex-col">
       <div className="flex-1 flex items-center justify-center px-6">
         <div className="text-center max-w-sm">
           <div className="mx-auto mb-4 w-14 h-14 rounded-full bg-tribe-green/15 flex items-center justify-center">
