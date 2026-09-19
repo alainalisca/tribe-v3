@@ -28,6 +28,8 @@ import { execSync } from 'node:child_process';
 
 const HOME_HTML = '.next/server/app/index.html';
 const CHUNKS_DIR = '.next/static/chunks';
+/** Present whenever a build ran, whatever it decided to prerender. */
+const BUILD_DIR = '.next/server/app';
 
 function scriptRefs(htmlPath) {
   const html = fs.readFileSync(htmlPath, 'utf8');
@@ -42,8 +44,34 @@ function bytesOf(ref) {
   }
 }
 
+// Two very different failures used to share one message.
+//
+// "run the build first" is true when nothing has been built. It is badly
+// misleading when the build ran fine and simply stopped prerendering the home
+// page, which is what happened when 740475b added headers() to the root
+// layout: every route in the app became request-time rendered, this file
+// vanished, and the CI failure read as though someone had forgotten a step.
+// It cost a pull request a red check that had nothing to do with its changes.
 if (!fs.existsSync(HOME_HTML)) {
-  console.error(`::error::${HOME_HTML} not found — run the build first.`);
+  const buildRan = fs.existsSync(BUILD_DIR);
+
+  if (!buildRan) {
+    console.error(`::error::${HOME_HTML} not found and ${BUILD_DIR} does not exist. Run the build first.`);
+    process.exit(1);
+  }
+
+  console.error(
+    `::error::The home page is no longer prerendered. The build ran and produced ${BUILD_DIR}, but it did not emit ${HOME_HTML}, so / is now rendered at request time instead of statically. This gate measures the scripts a prerendered home page references, so it has nothing to read.`
+  );
+  console.error(
+    '::error::The usual cause is a request-time API reaching the root layout or the home page: headers(), cookies(), draftMode(), connection(), searchParams, or an explicit `export const dynamic`. In app/layout.tsx any of those opts in EVERY route underneath it, not only the one that uses it.'
+  );
+  console.error(
+    '::error::Confirm it in the build output: the route table should show / as "o" (Static). If it shows "f" (Dynamic), that is this failure. Worked example: commit 740475b introduced it and its revert restored 79 static routes.'
+  );
+  console.error(
+    '::error::Fix the rendering rather than this gate. A dynamic home page is a real regression in what an athlete on 4G downloads, which is the thing the budget exists to protect.'
+  );
   process.exit(1);
 }
 
