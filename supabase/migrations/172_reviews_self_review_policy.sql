@@ -88,7 +88,7 @@
 -- ---------------------------------------------------------------------------
 -- PART C: two rating repairs
 -- ---------------------------------------------------------------------------
---   Darian    eaff348f  stored 5 / 1  ->  NULL / 0   (his only review is the
+--   Darian    eaff348f  stored 5 / 1  ->  0 / 0      (his only review is the
 --                                                     self-review being deleted)
 --   Caroline  1848555a  stored 0 / 0  ->  5.00 / 2   WRONG TODAY, independent
 --                                                     of the self-review
@@ -112,8 +112,12 @@
 -- total_reviews > 0 -- and is a one-line follow-up, not this migration.
 --
 -- The values are RECOMPUTED from public.reviews rather than written as
--- literals, so the file cannot encode a stale average. avg() over zero rows
--- returns NULL, which is exactly Darian's case.
+-- literals, so the file cannot encode a stale average. THE EXPRESSION IS THE
+-- TRIGGER'S, CHARACTER FOR CHARACTER: COALESCE(avg(rating)::DECIMAL(3,2), 0).
+-- A bare avg() over zero rows returns NULL, which is exactly Darian's case
+-- after Part C -- and writing that NULL is the divergence this file exists to
+-- prevent. The drift assertion below uses the same expression for the same
+-- reason.
 --
 -- THE TRIGGER IS FIXED HERE, AND IT HAS TO BE.
 --
@@ -306,7 +310,7 @@ BEGIN
          total_reviews  = sub.n
     FROM (
       SELECT t.id,
-             (SELECT round(avg(r.rating)::numeric, 2) FROM public.reviews r WHERE r.host_id = t.id) AS avg_rating,
+             (SELECT COALESCE(avg(r.rating)::DECIMAL(3,2), 0) FROM public.reviews r WHERE r.host_id = t.id) AS avg_rating,
              (SELECT count(*)                          FROM public.reviews r WHERE r.host_id = t.id) AS n
       FROM (VALUES (k_darian), (k_caroline)) AS t(id)
     ) sub
@@ -326,7 +330,7 @@ BEGIN
   FROM (SELECT DISTINCT host_id FROM public.reviews) h
   JOIN public.users u ON u.id = h.host_id
   WHERE u.total_reviews IS DISTINCT FROM (SELECT count(*) FROM public.reviews r WHERE r.host_id = h.host_id)
-     OR u.average_rating IS DISTINCT FROM (SELECT round(avg(r.rating)::numeric, 2) FROM public.reviews r WHERE r.host_id = h.host_id);
+     OR u.average_rating IS DISTINCT FROM (SELECT COALESCE(avg(r.rating)::DECIMAL(3,2), 0) FROM public.reviews r WHERE r.host_id = h.host_id);
 
   IF v_drift <> 0 THEN
     RAISE EXCEPTION
@@ -387,5 +391,5 @@ SELECT
   (SELECT count(*) FROM (SELECT DISTINCT host_id FROM public.reviews) h
      JOIN public.users u ON u.id = h.host_id
     WHERE u.total_reviews IS DISTINCT FROM (SELECT count(*) FROM public.reviews r WHERE r.host_id = h.host_id)
-       OR u.average_rating IS DISTINCT FROM (SELECT round(avg(r.rating)::numeric,2) FROM public.reviews r WHERE r.host_id = h.host_id)
+       OR u.average_rating IS DISTINCT FROM (SELECT COALESCE(avg(r.rating)::DECIMAL(3,2), 0) FROM public.reviews r WHERE r.host_id = h.host_id)
   )                                                                        AS drifted_hosts;
