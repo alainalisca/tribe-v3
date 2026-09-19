@@ -122,10 +122,28 @@
 -- diverge from the trigger on Darian's very next review. Two writers
 -- disagreeing about the same column is the defect this whole thread is about.
 --
--- KNOWN CONSEQUENCE, recorded rather than left to be rediscovered: a
--- zero-review instructor now sorts among the 5-star ones on /instructors. The
--- fix belongs in the DAL, not in the data -- sort or filter on
--- total_reviews > 0 -- and is a one-line follow-up, not this migration.
+-- THE CONSEQUENCE THIS PARAGRAPH ORIGINALLY CLAIMED DOES NOT EXIST, and the
+-- correction is kept rather than deleted. It said a zero-review instructor
+-- would now sort among the 5-star ones on /instructors, and named a DAL
+-- follow-up on total_reviews > 0. MEASURED 2026-09-18 across every consumer
+-- of average_rating, 0 and NULL are indistinguishable:
+--
+--   Three places reach the column in a query. Two order it DESC NULLS LAST
+--   (lib/dal/instructors.ts:79 and :187), where a 0 and a NULL both sort last.
+--   The third filters .gte('average_rating', 4.0) (lib/dal/spotlight.ts:166),
+--   which excludes both.
+--
+--   No display can tell them apart either. fetchInstructors maps
+--   `row.average_rating ?? 0` (:133) before anything downstream sees it, and
+--   every render is gated on a falsy rating, `> 0`, `!= null && > 0`, or
+--   `reviews === 0` (InstructorCard's RatingStars returns the "no rating"
+--   label on the review count, not the average).
+--
+-- So 0-not-NULL was the right call for the reason given -- agreeing with the
+-- trigger -- and it costs nothing. The sort argument was wrong on both sides:
+-- NULL would not have sorted better, because NULLS LAST puts it exactly where
+-- the 0 goes. The claim was asserted from the shape of `nullsFirst: false`
+-- without reading what NULLS LAST does to a zero.
 --
 -- The values are RECOMPUTED from public.reviews rather than written as
 -- literals, so the file cannot encode a stale average. THE EXPRESSION IS THE

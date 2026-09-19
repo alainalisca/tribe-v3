@@ -285,6 +285,7 @@ POR QUÉ ESTE TICKET ESTÁ SEPARADO DE [GYM-06]: el argumento de «mitad del emb
 NOTA: el recorrido verificado en producción el 2026-09-13 (`/g/bullbox/` -> clase -> `/s/<id>`) se completa **sin salir del navegador y sin muro de login**. Si se decide suprimir el prompt aquí, ese recorrido no cambia; si se decide dejarlo, el visitante lo encuentra en el segundo paso.
 
 ACEPTACIÓN: decisión escrita en este ticket, y `PUBLIC_SHARE_ROUTE_PREFIXES` (o el conjunto que consuma `IOSInstallPrompt`) refleja lo decidido, con el test que fija esa ausencia/presencia actualizado en consecuencia.
+
 ### [T-GYM5] Subida de logo y banner para partners, y captura de lat/lng en el formulario
 
 - **Área:** Producto · **Prioridad:** Alta · **Estado:** Por hacer
@@ -1146,6 +1147,34 @@ ACTUALIZACIÓN del ticket (user*follows y payment_confirmed_by): esos dos YA fue
 VERIFICADO EN VIVO vs repo: estas 19 tablas existen en producción y NINGÚN archivo bajo supabase/ las crea: payments, messages, chat_messages, push_subscriptions, push_notifications, instructor_posts, post_likes, boost_campaigns, promo_codes, promo_redemptions, service_packages, storefront_media, session_attendance, reported_users, reported_messages, user_feedback, bug_reports, clipper_videos, clipper_clips. Migraciones posteriores las ALTERan o les ponen triggers (031, 063, 068, 100, 110) y 011 tiene FK a instructor_posts, así que un rebuild desde cero falla. Además ~60 columnas usadas por la app no tienen ADD COLUMN (lista completa en el reporte F §4B: users.instructor_bio, storefront*_, certifications, years*experience, photos, sports, banned, username...; sessions.latitude/longitude, is_paid, price_cents, join_policy, visibility, payment_instructions...; session_participants.guest*_, payment\_\*). Y la tabla remota supabase_migrations.schema_migrations está VACÍA (`supabase migration list --linked`): todo se aplicó a mano por el SQL editor y la CLI no puede saber qué está aplicado.
 FIX: seguir el patrón de captura 143-147: por grupo de tablas, dump de information_schema.columns + pg_constraint + pg_policies y emitir CREATE TABLE IF NOT EXISTS / ADD COLUMN IF NOT EXISTS + probes en el verifier. Registrar las migraciones aplicadas en schema_migrations para que `supabase migration list` refleje la realidad.
 ACEPTACIÓN: `supabase db reset` local desde migraciones produce un esquema donde todos los `.from('...')` de la app resuelven; `supabase migration list --linked` muestra Local=Remote.
+
+ACTUALIZACIÓN 2026-09-18 (desde T-AUD12 / migración 174) — `public.reviews` es el
+caso concreto y urgente, y ya tiene la consulta de captura escrita:
+`supabase/captures/capture_reviews_live.sql` (un solo result set con UNION ALL,
+secciones rls/column/constraint/index/policy/grant/trigger/function).
+
+`supabase/migrations/add_reviews.sql` NO está aplicado y contradice a producción
+en TRES puntos medidos en el catálogo vivo el 2026-09-18:
+
+1. La política INSERT del archivo lleva `AND host_id != auth.uid()`. Esa cláusula
+   nunca estuvo en la base: `policies_mentioning_host_id` = 0.
+2. El archivo nombra la función `update_host_average_rating`. La viva se llama
+   `update_host_rating`. Por eso la captura busca `name ILIKE 'host%rating'`, para
+   que un tercer nombre no se esconda.
+3. `prosecdef` = false en vivo: el trigger corría como invoker y su `UPDATE users`
+   no acertaba ninguna fila para ningún reviewer que no fuera el host.
+
+La migración 174 ya CAMBIÓ dos de esas tres cosas en producción (reemplazó la
+política INSERT por `reviews_insert_participant_not_host` y recreó
+`update_host_rating` con SECURITY DEFINER). CONSECUENCIA PARA LA CAPTURA: la
+captura del 2026-09-18 por la mañana describe el estado ANTERIOR. La migración de
+captura que salga de esto debe emitir lo que hay AHORA (post-174), no lo de esa
+corrida, o el repo volverá a discrepar con la base el día que se escriba. Volver a
+correr `capture_reviews_live.sql` antes de escribirla.
+
+`add_reviews.sql` vive fuera de la serie numerada; una vez capturado el estado
+real, ese archivo debe borrarse o marcarse como histórico, porque hoy cualquiera
+que lo lea concluye que el hueco de self-review estaba cerrado desde siempre.
 
 ### [NAT-01] Enviar a las tiendas el cambio nativo de geolocalización pendiente desde julio (la app instalada no puede pedir ubicación)
 
