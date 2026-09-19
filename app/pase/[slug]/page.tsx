@@ -52,8 +52,26 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   };
 }
 
-/** Organizations are squares, people are circles (T-GYM1). A pass partner is a business. */
-function PartnerLogo({ config }: { config: PassConfig }) {
+/**
+ * The partner hero: whose offer this is, said once and said clearly.
+ *
+ * It was a 48px rounded square in the header beside the Tribe wordmark, where
+ * it read as an avatar. The page is reached by scanning a QR on a paper
+ * voucher inside a gym, so the visitor arrives already holding that gym's
+ * branding, and the page has to match what is in their hand before it asks
+ * them for a phone number.
+ *
+ * SHAPE. T-GYM1: organizations are squares, people are circles. PassConfig
+ * does not carry the field that decides it. featured_partners.business_type
+ * does exist and answers the question ('gym' and 'studio' are organizations,
+ * 'independent' is a person), but it is not in the select that builds
+ * PassConfig, and plumbing it through belongs in lib/dal/passLeads.ts rather
+ * than here. So this is a rounded square for every partner today, which is
+ * right for the three live rows the pass serves and wrong the day an
+ * independent instructor gets one. The one-line fix when that happens is to
+ * add business_type to PASS_CONFIG_COLUMNS and branch on it here.
+ */
+function PartnerHero({ config }: { config: PassConfig }) {
   const initials = config.partnerName
     .split(/\s+/)
     .slice(0, 2)
@@ -61,19 +79,29 @@ function PartnerLogo({ config }: { config: PassConfig }) {
     .join('');
 
   return (
-    <div className="h-12 w-12 overflow-hidden rounded-xl bg-white/10 ring-1 ring-white/20">
-      {config.logoUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element -- Supabase storage host; next/image would need a loader entry for a URL that varies per partner row
-        <img
-          src={config.logoUrl}
-          alt={config.partnerName}
-          className="h-full w-full object-cover"
-          width={48}
-          height={48}
-        />
-      ) : (
-        <span className="flex h-full w-full items-center justify-center text-sm font-bold text-white">{initials}</span>
-      )}
+    // Stacks under 360px: the logo plus a two-word business name does not fit
+    // beside itself on a 320px phone, and a wrapped name next to a 96px block
+    // looks like a mistake rather than a layout.
+    <div className="mb-6 flex flex-col items-start gap-4 min-[360px]:flex-row min-[360px]:items-center">
+      <div className="h-24 w-24 shrink-0 overflow-hidden rounded-2xl bg-white/10 shadow-lg shadow-black/30 ring-2 ring-tribe-green">
+        {config.logoUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element -- Supabase storage host; next/image would need a loader entry for a URL that varies per partner row
+          <img
+            src={config.logoUrl}
+            alt={config.partnerName}
+            className="h-full w-full object-cover"
+            width={96}
+            height={96}
+          />
+        ) : (
+          <span className="flex h-full w-full items-center justify-center text-2xl font-bold text-white">
+            {initials}
+          </span>
+        )}
+      </div>
+      {/* The name only. pass_sub already renders under the h1 below, and
+          repeating it here would say the same line twice on one screen. */}
+      <p className="text-xl font-bold leading-tight text-white">{config.partnerName}</p>
     </div>
   );
 }
@@ -119,10 +147,11 @@ export default async function PasePage({ params }: PageProps) {
   return (
     <main className="min-h-screen bg-tribe-dark px-4 py-8">
       <div className="mx-auto w-full max-w-[430px]">
-        <header className="mb-8 flex items-center justify-between gap-4">
+        <header className="mb-8">
           <Wordmark />
-          <PartnerLogo config={config} />
         </header>
+
+        <PartnerHero config={config} />
 
         <div className="mb-6">
           <h1 className="text-3xl font-extrabold leading-tight text-white">
