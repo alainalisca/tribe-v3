@@ -128,7 +128,9 @@ export function buildSessionShareText(data: SessionShareData, language: 'en' | '
   const line1 = parts.join(' ');
   const line2 = details.join(' · ');
 
-  return `${line1} — ${line2}`;
+  // ` · ` and not an em dash: em dashes are banned across the product, and the
+  // details line already joins with ` · `, so one separator reads uniformly.
+  return `${line1} · ${line2}`;
 }
 
 export function buildInstructorShareText(data: InstructorShareData, language: 'en' | 'es' = 'en'): string {
