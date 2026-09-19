@@ -1335,4 +1335,42 @@ select 'GUARD_173_pass_leads_insert_only_for_anon',
             then 'MISSING -- anon cannot file a lead'
             else 'applied' end
 
+union all
+-- 174 changed three things that can each drift back independently, so each is
+-- read separately rather than folded into one 'applied'.
+select '174_reviews_self_review_policy',
+       case when exists (select 1 from pg_policies
+                          where schemaname = 'public' and tablename = 'reviews'
+                            and cmd = 'INSERT' and with_check like '%creator_id%')
+             and coalesce((select prosecdef from pg_proc
+                            where oid = 'public.update_host_rating()'::regprocedure), false)
+       then 'applied' else 'MISSING' end
+
+union all
+-- The host exclusion is the point of the policy. A policy that mentions
+-- creator_id but lost the `auth.uid() <> creator_id` clause reads as applied
+-- above while the self-review hole is open again.
+select 'GUARD_174_reviews_insert_excludes_the_host',
+       case when not exists (select 1 from pg_policies
+                              where schemaname = 'public' and tablename = 'reviews' and cmd = 'INSERT')
+            then 'MISSING -- no INSERT policy on public.reviews'
+            when not exists (select 1 from pg_policies
+                              where schemaname = 'public' and tablename = 'reviews' and cmd = 'INSERT'
+                                and with_check like '%<>%creator_id%')
+            then 'MISSING -- INSERT policy does not exclude the session creator'
+            when exists (select 1 from public.reviews where reviewer_id = host_id)
+            then 'MISSING -- a self-review row exists'
+            else 'applied' end
+
+union all
+-- TRUNCATE escapes RLS entirely, so no policy above can substitute for it.
+-- Supabase re-grants to anon on new objects by default, which is how this one
+-- got there; it can come back the same way.
+select 'GUARD_174_reviews_truncate_revoked',
+       case when has_table_privilege('anon', 'public.reviews', 'TRUNCATE')
+            then 'MISSING -- anon holds TRUNCATE on public.reviews'
+            when has_table_privilege('authenticated', 'public.reviews', 'TRUNCATE')
+            then 'MISSING -- authenticated holds TRUNCATE on public.reviews'
+            else 'applied' end
+
 order by migration;
