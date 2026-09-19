@@ -384,7 +384,13 @@ This is the second time: the `as unknown as Session[]` on the storefront card (2
 
 The type checker is the only thing that knows whether a fixture matches what the function reads. `as never`, `as unknown as X` and `as any` each turn that check off at exactly the moment it is load-bearing, because a fixture is a claim about a shape and nothing else verifies it. **Type the fixture, never cast it.** If it will not typecheck, the fixture is wrong — which is the finding, not an obstacle to the test.
 
-**A GUARD THAT TESTS MEMBERSHIP AGAINST A CANONICAL FORM CAN ONLY SEE RIVALS ALREADY USING THAT FORM.**
+**A GUARD THAT STARTS SEEING A CASE AND STILL PASSES IT IS A SECOND FINDING, NOT A SUCCESS.**
+
+Fixing an instrument's reach tells you nothing about its judgement, and the two fail independently. When a guard is extended to cover a case it was blind to and the case still passes, do not book that as coverage restored — ask whether the rule can decide the case at all, because a widened blind spot and a rule that cannot fire look identical from the outside: green.
+
+The worked instance is below, and the rest of this entry is how both halves came to be blind at once.
+
+**A guard that tests membership against a canonical form can only see rivals already using that form.**
 
 Two guards, same blindness, found the same afternoon.
 
@@ -396,13 +402,21 @@ Both reported green over precisely the divergence they were written to catch. A 
 
 **When a guard checks conformance to a shape, ask what a NON-conforming instance looks like.** That is the thing it is blind to, and it is also the thing you are looking for. Write the answer down as a rival entry or as a new shape, and never as a silent assumption that everything worth finding resembles what you already have.
 
-**Corollary, from the same afternoon: fixing the instrument can reveal the rule is blind too.** With shape (f) added, `salio` still did not flag, because `dictionary-es` accepts it — the "not Spanish, but an accenting of it is" rule could never fire. Two independent blindnesses stacked on one string, and fixing only the visible one would have left it shipping under a green guard. When a guard starts seeing a case and still passes it, that is a second finding, not a success.
+**The worked instance.** With shape (f) added, `salio` still did not flag, because `dictionary-es` accepts it — the "not Spanish, but an accenting of it is" rule could never fire on it. Two independent blindnesses stacked on one string: the extractor could not see it, and the rule could not judge it. Fixing only the visible half would have left the string shipping under a guard that now claimed to cover it.
 
 **THIS IS THE DOMINANT FAILURE MODE IN THIS CODEBASE, NOT A RECURRING COINCIDENCE.**
 
 Instances, in two days: the `[^<>]` regex that broke on `=>`; `vercel ls` writing the status column to stderr while the monitor read stdout; the accent sweep that saw 109 of 411 strings because it knew three of five shapes; the ASCII-folded dictionary that could not fail on `busqueda`; the harness that dropped three test files and reported green; the sports guard above; the accent extractor above. **Seven, of which the last two are the fourth and fifth to surface in this single sweep.**
 
 Stop treating each one as a surprise. The prior should now be that **an instrument's number describes the instrument** until something independent says otherwise — a mutation, a second measurement taken a different way, or a probe of a case the instrument claims does not exist. Budget for that check on every guard, before trusting what it reports.
+
+**A TEST CAN ENCODE THE BUG AS ITS ASSERTION, SO THE SUITE DEFENDS THE DEFECT AND FIXING IT LOOKS LIKE BREAKING SOMETHING.**
+
+`notification-i18n.test.ts:119` and `notify-join/route.test.ts:252` both asserted `toContain('salio')`. Their intent was sound — check that the Spanish leave-notification does not fall back to the English verb "left" — and to express it they pinned a literal from the copy. The copy was misspelled, so the assertion made the misspelling the contract. When the accent guard finally caught `salio`, the fix turned two green tests red, and the suite was arguing for the defect.
+
+This is worse than an uncovered defect. An uncovered defect is silent; this one has a test standing behind it, and the obvious reading of a red suite is that the change was wrong.
+
+**When a test asserts a literal string from user-facing copy, it is asserting that copy is correct.** The assertion is only ever as good as the copy was on the day it was written, and nothing re-examines it afterwards. Prefer asserting the property the test actually means — here, that the English verb is absent, not that a particular Spanish spelling is present. Where a literal is genuinely the clearest expression, say in a comment which file owns that string, so the next person changing the copy knows a test is holding the other end.
 
 ### Database Schema
 
