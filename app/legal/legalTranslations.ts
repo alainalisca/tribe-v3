@@ -496,7 +496,13 @@ export function getSafetyContent(language: 'en' | 'es'): SafetyContent {
       reportingSteps: [
         'Sal de la situación inmediatamente si te sientes inseguro',
         'Bloquea y reporta al usuario en la aplicación',
-        'Contacta a las autoridades locales si estas en peligro inmediato',
+        // FIXED IMMEDIATELY, NOT HELD FOR SPANISH REVIEW, and the reason is the
+        // string. This is the safety page telling someone to call the authorities.
+        // `estas` (these) versus `estás` (you are) is unambiguous -- there is no
+        // reading of this sentence where the bare form is right -- and a review
+        // cycle is the wrong latency for the one string a reader reaches while in
+        // danger. Every other accent defect found the same way went to Ana.
+        'Contacta a las autoridades locales si estás en peligro inmediato',
         'Enviasnos un correo con los detalles:',
       ],
       emergencyTitle: '🚨 En una Emergencia',

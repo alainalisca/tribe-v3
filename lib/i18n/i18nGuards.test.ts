@@ -411,6 +411,173 @@ describe('Spanish accents', () => {
   });
 });
 
+/**
+ * THE BOTH-WAYS DISCRIMINATOR.
+ *
+ * WHY THIS ARM EXISTS, AND WHY IT MATTERS MORE THAN THE RULE ABOVE. Measured
+ * over the whole Spanish corpus on 2026-09-19: 4,354 strings, 2,088 distinct
+ * unaccented words.
+ *
+ *   words the RULE can decide (dictionary-es rejects the bare form) ......... 3
+ *   words in its BLIND ZONE (dictionary accepts bare AND accented) ........ 174
+ *   of those, covered by the hand lists .................................... 11
+ *
+ * The rule discriminates THREE words in the entire corpus. It is not the
+ * mechanism and never was; the hand list is, and it had been growing one
+ * discovery at a time without anyone knowing what it was carrying.
+ *
+ * 163 uncovered is not 163 defects. Most are `abajo`/`abajó`, `caso`/`casó`:
+ * the bare form is right and the accented form is a preterite that never
+ * appears in UI copy. Judging those one by one is a Spanish review, not a test.
+ *
+ * So this arm asks a question the corpus can answer by itself: DOES TRIBE
+ * WRITE THIS WORD BOTH WAYS? A word spelled two ways in one product is
+ * self-contradicting evidence rather than an opinion about Spanish. It found
+ * ten pairs, five of them real defects, with no judgement required.
+ *
+ * THE PREDICATE NEEDED REFINING, THOUGH, AND HONESTLY SO. "Contradicts itself"
+ * is not the same as "appears both ways": `estas` and `estás` are DIFFERENT
+ * WORDS -- "these" and "you are" -- and a product using both is correct, not
+ * inconsistent. Five of the ten pairs are that. So this arm still needs a hand
+ * list, and the honest claim is narrower than "no hand list": it is that
+ * HOMOGRAPHS is a better list to maintain than the alternative. It holds real
+ * facts about Spanish rather than guesses at Tribe's intent, it only needs an
+ * entry when both spellings actually ship, and it is bounded by usage instead
+ * of by the dictionary's ambiguity -- six entries against 163 candidates.
+ */
+const HOMOGRAPHS: Record<string, string> = {
+  // The interrogative/exclamative accent. Spanish accents these words when they
+  // ASK and leaves them bare when they connect, so a product that uses both is
+  // correct, and one that uses only one of them is the suspicious case.
+  cuando: 'cuándo', // "cuando llegues" vs "¿cuándo?"
+  que: 'qué', // "la sesión que elegiste" vs "¿qué pasó?"
+  como: 'cómo', // "como anfitrión" vs "¿cómo funciona?"
+  cual: 'cuál', // "el cual" vs "¿cuál?"
+  donde: 'dónde', // "donde entrenas" vs "¿dónde?"
+  quien: 'quién', // "quien reserve" vs "¿quién?"
+
+  // Different words, not different registers.
+  esta: 'está', // "esta sesión" (this) vs "está llena" (it is)
+  este: 'esté', // "este mes" (this) vs "cuando esté listo" (subjunctive)
+  estas: 'estás', // "estas recomendaciones" (these) vs "estás en peligro" (you are)
+  aun: 'aún', // "aun así" (even) vs "aún no" (yet)
+
+  // Noun versus third-person preterite. Both forms are used and both correct.
+  pago: 'pagó', // "el pago" (the payment) vs "pagó" (they paid)
+  paso: 'pasó', // "el paso" (the step) vs "pasó" (it happened)
+  cambio: 'cambió', // "el cambio" (the change) vs "cambió" (it changed)
+  cuanto: 'cuánto', // "en cuanto" (as soon as) takes no accent; "¿cuánto?" does
+  publica: 'pública', // "se publica" (is published) vs "página pública"
+};
+
+/**
+ * AN EXEMPTION IS A BLIND SPOT, AND THIS ONE HAS A KNOWN COST. Listing `esta`
+ * as a homograph is correct -- both forms are real and Tribe needs both -- but
+ * it means this arm cannot see "Tu tribu esta entrenando sin ti", which is a
+ * genuine missing accent in lib/motivationalMessageData.ts. It is on Ana's pile
+ * with the rest rather than being silently covered by the entry above.
+ *
+ * Every entry in HOMOGRAPHS buys a blind spot of exactly this shape. Add one
+ * only when both forms genuinely ship, and say in the comment what it costs.
+ */
+/**
+ * Defects this arm found that are Spanish COPY, so they go to Ana rather than
+ * being corrected on Claude's judgement -- the same rule as escaparate/vitrina.
+ * Listed, not exempted: the second test below fails if an entry stops
+ * offending, so a fix must delete its line rather than leave a stale exemption.
+ *
+ * `estas` is NOT here. That one string was fixed immediately; see
+ * app/legal/legalTranslations.ts for why.
+ */
+const AWAITING_SPANISH_REVIEW: Record<string, string> = {
+  // NOT LISTED, AND THE REASON IS THE ARM'S LIMIT: "Tu viaje fitness continua."
+  // (-> continúa, lib/motivationalMessageData.ts) is a real defect that this
+  // arm CANNOT see, because `continúa` never appears anywhere in the corpus --
+  // there is no contradiction to detect when only the wrong spelling ships.
+  // It went to Ana as copy. This arm finds the words Tribe disagrees with
+  // itself about; it is not a substitute for reading the Spanish.
+  genero: '"Filtrar por genero" -> género (lib/translationBase.ts)',
+  unete: '"Vuelve y unete!" x3 -> únete, an imperative that ALWAYS carries it (lib/motivationalMessageData.ts)',
+  invalida: '"Invitación invalida" -> inválida (lib/translationExtras.ts)',
+  revisara: '"Un admin la revisara." -> revisará (recapPhotosHelpers.ts, translationExtras.ts)',
+  veras: '"veras sus solicitudes aquí" -> verás (you will see)',
+  sera: '"Tu información sera compartida" -> será',
+  expiro: '"Esta invitación ya expiro." -> expiró (hooks/sessionActionTypes.ts:61)',
+};
+
+describe('Spanish spelled both ways', () => {
+  // Uses the module-level `spell` from the top-level beforeAll above; the
+  // dictionary is loaded once for the file, not once per describe.
+  function pairsInCorpus(): Map<string, string[]> {
+    const all = flattenJson(JSON.parse(fs.readFileSync(path.join(ROOT, 'messages/es.json'), 'utf8')));
+    for (const file of sourceFiles(ROOT)) {
+      const rel = path.relative(ROOT, file);
+      // THE GUARD'S OWN VOCABULARY IS NOT TRIBE'S COPY. spanishAccents.ts holds
+      // LEAVE_UNACCENTED and RULE_CANNOT_DECIDE, which are lists of the exact
+      // unaccented forms this file exists to reason about. Scanning it made the
+      // arm read its own exemption list as product text: `unete` lives there,
+      // so the pair `unete`/`únete` stayed flagged even after every real use of
+      // it was corrected, and the arm was reporting on itself.
+      //
+      // Caught only because a revert test fixed all three real occurrences and
+      // the flag did not clear. stripComments does not help here: these are
+      // string literals in code, not prose.
+      if (rel === path.join('lib', 'i18n', 'spanishAccents.ts')) continue;
+      all.push(...spanishStrings(rel, stripComments(fs.readFileSync(file, 'utf8'))));
+    }
+    const words = new Set<string>();
+    for (const { value } of all) for (const w of wordsIn(value)) words.add(w.toLowerCase());
+
+    const pairs = new Map<string, string[]>();
+    for (const w of words) {
+      if (deaccent(w) !== w) continue; // only bare forms start a pair
+      const seen = accentCandidates(w).filter((c) => spell.correct(c) && words.has(c));
+      if (seen.length) pairs.set(w, seen);
+    }
+    return pairs;
+  }
+
+  it('no word is spelled two ways unless it is a known homograph', () => {
+    const pairs = pairsInCorpus();
+    const offenders: string[] = [];
+    for (const [bare, accented] of pairs) {
+      if (bare in HOMOGRAPHS) continue;
+      if (bare in AWAITING_SPANISH_REVIEW) continue;
+      offenders.push(`${bare} / ${accented.join(', ')}`);
+    }
+    expect(
+      offenders,
+      `These words appear in Tribe's Spanish BOTH accented and unaccented:\n\n  ` +
+        offenders.join('\n  ') +
+        `\n\nOne of the two spellings is wrong, and the corpus says so without ` +
+        `anyone having to judge Spanish. This is the arm that does the work: ` +
+        `the accent RULE can only decide 3 words in 2,088, because dictionary-es ` +
+        `accepts both spellings of almost everything.\n\nIf both forms are ` +
+        `genuinely different words (estas/estás), add them to HOMOGRAPHS with ` +
+        `the distinction. If one is a defect in COPY, fix it or list it in ` +
+        `AWAITING_SPANISH_REVIEW for Ana.\n`
+    ).toEqual([]);
+  });
+
+  it('every listed pair still occurs, so no exemption outlives its defect', () => {
+    const pairs = pairsInCorpus();
+    const stale: string[] = [];
+    for (const bare of Object.keys(AWAITING_SPANISH_REVIEW)) {
+      if (!pairs.has(bare)) stale.push(`${bare} is no longer spelled both ways (${AWAITING_SPANISH_REVIEW[bare]})`);
+    }
+    for (const bare of Object.keys(HOMOGRAPHS)) {
+      if (!pairs.has(bare)) stale.push(`${bare} is no longer spelled both ways (homograph: ${HOMOGRAPHS[bare]})`);
+    }
+    expect(
+      stale,
+      `Stale entries. A fix must DELETE its line rather than leave an exemption ` +
+        `behind that no longer describes anything:\n\n  ` +
+        stale.join('\n  ') +
+        `\n`
+    ).toEqual([]);
+  });
+});
+
 describe('translation keys resolve', () => {
   const en = JSON.parse(fs.readFileSync(path.join(ROOT, 'messages/en.json'), 'utf8'));
 
