@@ -361,7 +361,6 @@ describe('POST /api/payment/create', () => {
     vi.mocked(getPaymentGateway).mockReturnValue('wompi' as never);
     vi.mocked(createWompiTransaction).mockResolvedValue({
       redirect_url: 'https://checkout.wompi.co/p/tip',
-      transaction_id: 'txn_tip_1',
     } as never);
 
     const res = await POST(
@@ -426,7 +425,6 @@ describe('POST /api/payment/create', () => {
     vi.mocked(getPaymentGateway).mockReturnValue('wompi' as never);
     vi.mocked(createWompiTransaction).mockResolvedValue({
       redirect_url: 'https://checkout.wompi.co/p/abc',
-      transaction_id: 'txn_1',
     } as never);
 
     const res = await POST(request({ session_id: 'sess-2' }));
