@@ -1,6 +1,6 @@
--- 172_reviews_self_review_policy_REHEARSAL.sql
+-- 174_reviews_self_review_policy_REHEARSAL.sql
 --
--- Rehearsal for 172_reviews_self_review_policy.sql. Run in the Supabase SQL
+-- Rehearsal for 174_reviews_self_review_policy.sql. Run in the Supabase SQL
 -- editor. Everything is inside BEGIN ... ROLLBACK; production is not modified.
 -- ONE result set of PASS/FAIL rows, because the editor shows only the last
 -- statement's result.
@@ -86,7 +86,7 @@ BEGIN
   BEGIN
     SELECT count(*), max(policyname), max(with_check) INTO v_policies, v_name, v_check
       FROM pg_policies WHERE schemaname='public' AND tablename='reviews' AND cmd='INSERT';
-    IF v_policies <> 1 THEN RAISE EXCEPTION '172 ABORTED: expected 1 INSERT policy but found %', v_policies; END IF;
+    IF v_policies <> 1 THEN RAISE EXCEPTION '174 ABORTED: expected 1 INSERT policy but found %', v_policies; END IF;
 
     EXECUTE format('DROP POLICY %I ON public.reviews', v_name);
     CREATE POLICY reviews_insert_participant_not_host ON public.reviews FOR INSERT TO authenticated
@@ -111,7 +111,7 @@ BEGIN
 
     DELETE FROM public.reviews WHERE id = k_review;
     GET DIAGNOSTICS v_rows = ROW_COUNT;
-    IF v_rows <> 1 THEN RAISE EXCEPTION '172 ABORTED: deleted % reviews', v_rows; END IF;
+    IF v_rows <> 1 THEN RAISE EXCEPTION '174 ABORTED: deleted % reviews', v_rows; END IF;
 
     UPDATE public.users u SET average_rating = sub.a, total_reviews = sub.n
       FROM (SELECT t.id,
@@ -120,7 +120,7 @@ BEGIN
             FROM (VALUES (k_darian),(k_caroline)) AS t(id)) sub
      WHERE u.id = sub.id;
     GET DIAGNOSTICS v_rows = ROW_COUNT;
-    IF v_rows <> 2 THEN RAISE EXCEPTION '172 ABORTED: repaired % rows', v_rows; END IF;
+    IF v_rows <> 2 THEN RAISE EXCEPTION '174 ABORTED: repaired % rows', v_rows; END IF;
 
     REVOKE TRUNCATE ON public.reviews FROM anon, authenticated;
 
@@ -439,11 +439,11 @@ BEGIN
     SELECT count(*) INTO v_policies FROM pg_policies
       WHERE schemaname='public' AND tablename='reviews' AND cmd='INSERT';
     IF v_policies <> 1 THEN
-      RAISE EXCEPTION '172 ABORTED: expected exactly 1 INSERT policy on public.reviews but found %', v_policies;
+      RAISE EXCEPTION '174 ABORTED: expected exactly 1 INSERT policy on public.reviews but found %', v_policies;
     END IF;
     RAISE EXCEPTION 'GUARD_DID_NOT_FIRE';
   EXCEPTION WHEN OTHERS THEN
-    f1m := SQLERRM; f1 := SQLERRM LIKE '172 ABORTED: expected exactly 1 INSERT policy%but found 2%';
+    f1m := SQLERRM; f1 := SQLERRM LIKE '174 ABORTED: expected exactly 1 INSERT policy%but found 2%';
   END;
 
   BEGIN  -- F2: a second self-review row
@@ -452,11 +452,11 @@ BEGIN
     VALUES (k_session, k_caroline, k_caroline, 4);
     SELECT count(*) INTO v_selfs FROM public.reviews WHERE reviewer_id = host_id;
     IF v_selfs <> 1 THEN
-      RAISE EXCEPTION '172 ABORTED: expected exactly 1 self-review row but found %', v_selfs;
+      RAISE EXCEPTION '174 ABORTED: expected exactly 1 self-review row but found %', v_selfs;
     END IF;
     RAISE EXCEPTION 'GUARD_DID_NOT_FIRE';
   EXCEPTION WHEN OTHERS THEN
-    f2m := SQLERRM; f2 := SQLERRM LIKE '172 ABORTED: expected exactly 1 self-review row%but found 2%';
+    f2m := SQLERRM; f2 := SQLERRM LIKE '174 ABORTED: expected exactly 1 self-review row%but found 2%';
   END;
 
   BEGIN  -- F3: the one self-review is not the measured row
@@ -465,11 +465,11 @@ BEGIN
     PERFORM 1 FROM public.reviews
       WHERE id = k_review AND session_id = k_session AND reviewer_id = host_id AND host_id = k_darian;
     IF NOT FOUND THEN
-      RAISE EXCEPTION '172 ABORTED: the one self-review row is not the row that was measured.';
+      RAISE EXCEPTION '174 ABORTED: the one self-review row is not the row that was measured.';
     END IF;
     RAISE EXCEPTION 'GUARD_DID_NOT_FIRE';
   EXCEPTION WHEN OTHERS THEN
-    f3m := SQLERRM; f3 := SQLERRM LIKE '172 ABORTED: the one self-review row is not the row that was measured%';
+    f3m := SQLERRM; f3 := SQLERRM LIKE '174 ABORTED: the one self-review row is not the row that was measured%';
   END;
 
   BEGIN  -- F4: the UNIQUE (session_id, reviewer_id) constraint is gone
@@ -478,11 +478,11 @@ BEGIN
       WHERE conrelid='public.reviews'::regclass AND contype='u'
         AND pg_get_constraintdef(oid) ILIKE '%(session_id, reviewer_id)%';
     IF NOT FOUND THEN
-      RAISE EXCEPTION '172 ABORTED: the UNIQUE (session_id, reviewer_id) constraint on public.reviews is missing.';
+      RAISE EXCEPTION '174 ABORTED: the UNIQUE (session_id, reviewer_id) constraint on public.reviews is missing.';
     END IF;
     RAISE EXCEPTION 'GUARD_DID_NOT_FIRE';
   EXCEPTION WHEN OTHERS THEN
-    f4m := SQLERRM; f4 := SQLERRM LIKE '172 ABORTED: the UNIQUE (session_id, reviewer_id) constraint%is missing%';
+    f4m := SQLERRM; f4 := SQLERRM LIKE '174 ABORTED: the UNIQUE (session_id, reviewer_id) constraint%is missing%';
   END;
 
   INSERT INTO reh_probe VALUES

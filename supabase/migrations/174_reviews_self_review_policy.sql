@@ -1,8 +1,24 @@
--- 172_reviews_self_review_policy.sql
+-- 174_reviews_self_review_policy.sql
 --
 -- T-AUD12, database half. Closes self-review and review misattribution at the
 -- RLS layer, removes the one self-review row on production, and repairs the two
 -- users.average_rating values that are wrong today.
+--
+-- APPLIED TO PRODUCTION 2026-09-18, and verified: every *_ok column true,
+-- reviews 6 rows to 5, Darian 0.00 / 0, Caroline 5.00 / 2, drifted_hosts 0.
+--
+-- IT WAS APPLIED UNDER THE FILENAME 172_reviews_self_review_policy.sql, and is
+-- renumbered to 174 here. T-LEAD1 merged migrations 172 AND 173 to main at
+-- 09:18 the same morning, from a branch cut in parallel with this one, and this
+-- branch was built on a fork that predated it without re-reading main. Two
+-- files named 172_*.sql is exactly the drift this series exists to prevent, so
+-- the number moves rather than the record being quietly overwritten. Nothing in
+-- the body changed: the only edits were 172 -> 174 in the filename, the abort
+-- strings and the NOTICE prefixes, none of which executed on the applied run.
+--
+-- The lesson is not the number. A migration number is claimed by whichever
+-- branch merges first, and a branch that never re-reads main cannot see the
+-- claim. Re-read main before numbering, and again before merging.
 --
 -- WHY THIS EXISTS AT ALL: BOTH GUARDS WERE HELD SHUT BY THE SAME DATA MIGRATION.
 --
@@ -188,12 +204,12 @@ BEGIN
 
   IF v_policies <> 1 THEN
     RAISE EXCEPTION
-      '172 ABORTED: expected exactly 1 INSERT policy on public.reviews (measured 2026-09-18) but found %. '
+      '174 ABORTED: expected exactly 1 INSERT policy on public.reviews (measured 2026-09-18) but found %. '
       'Do not guess which to replace: re-read pg_policies and re-scope this migration.', v_policies;
   END IF;
 
   IF v_check LIKE '%creator_id%' THEN
-    RAISE NOTICE '172: the INSERT policy already references creator_id -- already applied. Skipping Part A.';
+    RAISE NOTICE '174: the INSERT policy already references creator_id -- already applied. Skipping Part A.';
   ELSE
     EXECUTE format('DROP POLICY %I ON public.reviews', v_name);
 
@@ -216,7 +232,7 @@ BEGIN
         AND auth.uid() <> (SELECT s.creator_id FROM public.sessions s WHERE s.id = reviews.session_id)
       );
 
-    RAISE NOTICE '172: replaced INSERT policy % on public.reviews.', v_name;
+    RAISE NOTICE '174: replaced INSERT policy % on public.reviews.', v_name;
   END IF;
 
   -- ── Part B: the rating trigger's function ───────────────────────────────
@@ -257,9 +273,9 @@ BEGIN
   $fn$;
 
   IF NOT (SELECT prosecdef FROM pg_proc WHERE oid = 'public.update_host_rating()'::regprocedure) THEN
-    RAISE EXCEPTION '172 ABORTED: update_host_rating() is still not SECURITY DEFINER after the replace.';
+    RAISE EXCEPTION '174 ABORTED: update_host_rating() is still not SECURITY DEFINER after the replace.';
   END IF;
-  RAISE NOTICE '172: update_host_rating() recreated as SECURITY DEFINER.';
+  RAISE NOTICE '174: update_host_rating() recreated as SECURITY DEFINER.';
 
   -- ── Part C: the one self-review row ─────────────────────────────────────
   -- reviews carries UNIQUE (session_id, reviewer_id), so a person can hold at
@@ -272,17 +288,17 @@ BEGIN
      AND pg_get_constraintdef(oid) ILIKE '%(session_id, reviewer_id)%';
   IF NOT FOUND THEN
     RAISE EXCEPTION
-      '172 ABORTED: the UNIQUE (session_id, reviewer_id) constraint on public.reviews is missing. '
+      '174 ABORTED: the UNIQUE (session_id, reviewer_id) constraint on public.reviews is missing. '
       'The one-review-per-person-per-session guarantee this migration relies on does not hold.';
   END IF;
 
   SELECT count(*) INTO v_selfs FROM public.reviews WHERE reviewer_id = host_id;
 
   IF v_selfs = 0 THEN
-    RAISE NOTICE '172: no self-review rows -- already applied, or a fresh rebuild.';
+    RAISE NOTICE '174: no self-review rows -- already applied, or a fresh rebuild.';
   ELSIF v_selfs <> 1 THEN
     RAISE EXCEPTION
-      '172 ABORTED: expected exactly 1 self-review row (measured on production 2026-09-18) but found %. '
+      '174 ABORTED: expected exactly 1 self-review row (measured on production 2026-09-18) but found %. '
       'A row appeared since the measurement. Re-measure before applying; do NOT widen the predicate.', v_selfs;
   ELSE
     -- The single row must be the one that was measured, by BOTH ids.
@@ -290,16 +306,16 @@ BEGIN
      WHERE id = k_review AND session_id = k_session AND reviewer_id = host_id AND host_id = k_darian;
     IF NOT FOUND THEN
       RAISE EXCEPTION
-        '172 ABORTED: the one self-review row is not the row that was measured. '
+        '174 ABORTED: the one self-review row is not the row that was measured. '
         'Expected id % on session % for host %. Re-read the row and re-scope.', k_review, k_session, k_darian;
     END IF;
 
     DELETE FROM public.reviews WHERE id = k_review;
     GET DIAGNOSTICS v_rows = ROW_COUNT;
     IF v_rows <> 1 THEN
-      RAISE EXCEPTION '172 ABORTED: expected to delete 1 review but deleted %.', v_rows;
+      RAISE EXCEPTION '174 ABORTED: expected to delete 1 review but deleted %.', v_rows;
     END IF;
-    RAISE NOTICE '172: deleted the self-review row.';
+    RAISE NOTICE '174: deleted the self-review row.';
   END IF;
 
   -- ── Part D: the two rating repairs ──────────────────────────────────────
@@ -319,7 +335,7 @@ BEGIN
 
   IF v_rows <> 2 THEN
     RAISE EXCEPTION
-      '172 ABORTED: expected to repair exactly 2 users rows (Darian and Caroline) but updated %. '
+      '174 ABORTED: expected to repair exactly 2 users rows (Darian and Caroline) but updated %. '
       'A target user is missing.', v_rows;
   END IF;
 
@@ -334,7 +350,7 @@ BEGIN
 
   IF v_drift <> 0 THEN
     RAISE EXCEPTION
-      '172 ABORTED: % host(s) still have an average_rating inconsistent with public.reviews after the repair. '
+      '174 ABORTED: % host(s) still have an average_rating inconsistent with public.reviews after the repair. '
       'The repair was scoped to two rows; a third has drifted, so re-measure before applying.', v_drift;
   END IF;
 
@@ -349,10 +365,10 @@ BEGIN
 
   IF has_table_privilege('anon', 'public.reviews', 'TRUNCATE')
      OR has_table_privilege('authenticated', 'public.reviews', 'TRUNCATE') THEN
-    RAISE EXCEPTION '172 ABORTED: TRUNCATE on public.reviews is still held after the revoke.';
+    RAISE EXCEPTION '174 ABORTED: TRUNCATE on public.reviews is still held after the revoke.';
   END IF;
 
-  RAISE NOTICE '172: repaired 2 rating rows, revoked TRUNCATE; all hosts now agree with public.reviews.';
+  RAISE NOTICE '174: repaired 2 rating rows, revoked TRUNCATE; all hosts now agree with public.reviews.';
 END $$;
 
 -- ---------------------------------------------------------------------------
