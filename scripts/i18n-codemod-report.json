@@ -5546,24 +5546,6 @@
       ],
       "manual": []
     },
-    "components/NearbyEvents.tsx": {
-      "namespace": "c.NearbyEvents",
-      "safe": [
-        {
-          "line": 81,
-          "key": "en",
-          "en": "en",
-          "es": "es"
-        },
-        {
-          "line": 337,
-          "key": "en2",
-          "en": "en",
-          "es": "es"
-        }
-      ],
-      "manual": []
-    },
     "components/OnboardingModal.tsx": {
       "namespace": "c.OnboardingModal",
       "safe": [

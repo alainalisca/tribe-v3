@@ -1,3 +1,4 @@
+import { headers } from 'next/headers';
 import { Plus_Jakarta_Sans } from 'next/font/google';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { Toaster } from 'react-hot-toast';
@@ -78,9 +79,38 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+/**
+ * The document language, decided on the SERVER from Accept-Language.
+ *
+ * It was hardcoded `lang="en"` with the inline script below correcting it after
+ * hydration. That left the wrong value in the first painted frame and in
+ * everything that never hydrates: crawlers, link unfurlers, and every
+ * screen reader that reads the attribute as the document loads. On a product
+ * whose users are Colombian by default, the served document claimed English.
+ *
+ * Reading headers() opts the route into dynamic rendering. That costs nothing
+ * here: `createClient()` awaits `cookies()`, so every route in this app is
+ * already `ƒ (Dynamic)` in the build output -- the same finding that made
+ * `export const revalidate` inert on /instructors.
+ *
+ * Matches detectPreferredLanguage() in lib/LanguageContext: SPANISH UNLESS THE
+ * BROWSER EXPLICITLY ASKS FOR ENGLISH FIRST. The client script still runs and
+ * still wins, because a stored choice beats a header guess.
+ */
+function languageFromHeaders(accept: string | null): 'en' | 'es' {
+  if (!accept) return 'es';
+  for (const part of accept.split(',')) {
+    const tag = part.split(';')[0].trim().toLowerCase();
+    if (tag.startsWith('es')) return 'es';
+    if (tag.startsWith('en')) return 'en';
+  }
+  return 'es';
+}
+
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const lang = languageFromHeaders((await headers()).get('accept-language'));
   return (
-    <html lang="en" className={jakartaSans.variable} suppressHydrationWarning>
+    <html lang={lang} className={jakartaSans.variable} suppressHydrationWarning>
       <head>
         {/* Theme FOUC guard — runs before paint/hydration. Reads the
             saved preference (default light), resolves "system", and sets
@@ -100,8 +130,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             Note this cannot do for text what the theme guard does for colour.
             The theme is a CSS class, so a script can fix it before paint; the
             copy is React state, so the first server rendered frame is still
-            English until the provider hydrates. This sets the document
-            language, which is a real correctness fix on its own. */}
+            English until the provider hydrates. This CORRECTS the document
+            language when the stored choice differs from the Accept-Language
+            guess the server rendered; the server now gets the common case
+            right on the first frame, which is what crawlers and unhydrated
+            reads see. */}
         <script
           dangerouslySetInnerHTML={{
             __html: `(function(){try{var l=localStorage.getItem('language');if(l==='en'||l==='es'){document.documentElement.lang=l;}}catch(e){}})();`,

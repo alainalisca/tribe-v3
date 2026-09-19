@@ -48,6 +48,20 @@ type PromoCode = {
   currency: string | null;
 };
 
+/**
+ * A sport name from a query string, resolved to the exact canonical key.
+ * Case-insensitive and punctuation-insensitive, so `crossfit`, `CrossFit`,
+ * `jiu-jitsu` and `jiujitsu` all land on the real key. Returns null when
+ * nothing matches, which leaves the field empty rather than prefilling a value
+ * the picker cannot show.
+ */
+function canonicalSport(input: string | null): string | null {
+  if (!input) return null;
+  const fold = (v: string) => v.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const target = fold(input);
+  return Object.keys(sportTranslations).find((k) => fold(k) === target) ?? null;
+}
+
 export default function CreateSessionPage() {
   return (
     <Suspense fallback={<div className="min-h-screen bg-theme-page" />}>
@@ -129,7 +143,13 @@ function CreateSessionPageInner() {
     if (qSport || qTitle || qLocation || qLat || qLng) {
       setFormData((prev) => ({
         ...prev,
-        ...(qSport ? { sport: qSport.charAt(0).toUpperCase() + qSport.slice(1) } : {}),
+        // Resolved against the canonical keys, NOT capitalised. This was
+        // `qSport.charAt(0).toUpperCase() + qSport.slice(1)`, which turns
+        // `crossfit` into `Crossfit` -- and the key is `CrossFit`, so the sport
+        // silently failed to preselect for the one sport most likely to arrive
+        // from a deep link. Capitalising is a guess at a casing convention;
+        // matching the vocabulary is not.
+        ...(canonicalSport(qSport) ? { sport: canonicalSport(qSport) as string } : {}),
         ...(qTitle || qLocation ? { location: qTitle || qLocation || '' } : {}),
         ...(qLat ? { latitude: parseFloat(qLat) } : {}),
         ...(qLng ? { longitude: parseFloat(qLng) } : {}),

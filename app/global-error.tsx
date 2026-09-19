@@ -47,12 +47,12 @@ export default function GlobalError({ error, reset }: { error: Error & { digest?
             <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>😵</div>
             <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '0.25rem' }}>Something went wrong</h2>
             <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '0.5rem', color: '#78716c' }}>
-              Algo salio mal
+              Algo salió mal
             </h2>
             <p style={{ color: '#78716c', marginBottom: '1.5rem', fontSize: '0.875rem', lineHeight: '1.5' }}>
               Don&apos;t worry, your data is safe.
               <br />
-              No te preocupes, tus datos estan a salvo.
+              No te preocupes, tus datos están a salvo.
             </p>
             <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
               <button

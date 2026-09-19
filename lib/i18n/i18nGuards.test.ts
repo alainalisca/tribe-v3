@@ -66,6 +66,33 @@ function literals(src: string): string[] {
   return [...src.matchAll(/(['"`])((?:(?!\1)[^\\]|\\.)*)\1/g)].map((m) => m[2]);
 }
 
+/**
+ * Unambiguously Spanish function words. Shared-with-English forms (a, no, si,
+ * es, o, y, en, un) are excluded on purpose: they are what would let an English
+ * sentence in, and an English sentence in this shape is a false positive that
+ * costs a real exemption to silence.
+ */
+const SPANISH_MARKERS = new Set(
+  (
+    'el la los las del al se su sus tu tus te lo que con para por más mas muy ya pero como ' +
+    'cuando donde todo todos toda todas algo nada mal tuyo una unas unos está están estan ' +
+    'estar tiene hay este esta esto eso esa ese nos nuestro sin sobre desde hasta aquí aqui'
+  ).split(' ')
+);
+
+/**
+ * True when a marker-free text node is Spanish. Requires TWO markers rather
+ * than one, because a single shared word ("la", "no") appears in English copy
+ * often enough to matter. An accented character or Spanish punctuation settles
+ * it on its own, since neither occurs in this codebase's English.
+ */
+function looksSpanish(text: string): boolean {
+  if (/[¿¡áéíóúüñÁÉÍÓÚÜÑ]/.test(text)) return true;
+  const words = text.toLowerCase().match(/[a-záéíóúüñ]+/g) ?? [];
+  if (words.length < 3) return false;
+  return words.filter((w) => SPANISH_MARKERS.has(w)).length >= 2;
+}
+
 /** The Spanish-bearing regions of one file, per (b), (c) and (d) above. */
 function spanishStrings(rel: string, src: string): { value: string; where: string }[] {
   const out: { value: string; where: string }[] = [];
@@ -118,6 +145,47 @@ function spanishStrings(rel: string, src: string): { value: string; where: strin
     }
     for (const v of literals(src.slice(m.index! + m[0].length, i))) out.push({ value: v, where: at(m.index!) });
   }
+
+  // (f) SPANISH WITH NO `es` MARKER AT ALL.
+  //
+  // Every shape above keys on an `es` marker: an `es:` property, a
+  // `language === 'es'` test, a `...Es` export. app/global-error.tsx has none.
+  // It cannot: it renders when the layout tree is broken, so the language
+  // provider may be the thing that died, and it prints BOTH languages as
+  // sibling JSX nodes rather than choosing one.
+  //
+  //     <h2>Something went wrong</h2>
+  //     <h2>Algo salio mal</h2>
+  //
+  // The guard passed 8 of 8 over `salio` and `estan` for as long as they
+  // existed, because it was looking for a marker that is deliberately absent.
+  // This is the whole family in one line: a guard that tests conformance to a
+  // shape is blind to exactly the non-conforming instance it exists to catch.
+  //
+  // So this shape reads TEXT rather than markers, and lets the accent rule do
+  // the deciding. Two sources, both marker-free:
+  //   - JSX text nodes, the run between `>` and `<` with no braces or tags
+  //   - `{es ? '...' : '...'}`, a local-variable shorthand used in 7 files
+  //     that `language === 'es'` never matches
+  //
+  // A JSX text node carries no marker saying which language it is, so this
+  // shape has to decide. The first version of it did not, on the reasoning that
+  // the accent rule is self-limiting -- a word only flags if dictionary-es
+  // rejects it AND some accenting of it is accepted, which English should not
+  // reach. MEASURED, AND WRONG: it flagged Record -> récord, continue ->
+  // continúe, max -> máx, value -> valúe and num -> núm off English JSX. Those
+  // are not exemptions to add; putting them in LEAVE_UNACCENTED would blind the
+  // other five shapes to real Spanish. The discriminator belongs here.
+  //
+  // So a text node is read as Spanish only on TWO unambiguous markers, and
+  // ambiguity is resolved against including it. Words shared with English (a,
+  // no, si, es, o, y, en, un) are deliberately NOT markers.
+  for (const m of src.matchAll(/>([^<>{}]{3,})</g)) {
+    const text = m[1].trim();
+    if (text && looksSpanish(text)) out.push({ value: text, where: at(m.index!) });
+  }
+  for (const m of src.matchAll(/es\s*\?\s*(['"])((?:(?!\1)[^\\]|\\.)*)\1/g))
+    out.push({ value: m[2], where: at(m.index!) });
 
   // (d) if (language === 'es') { ... }
   for (const m of src.matchAll(/if \(language === 'es'\) \{/g)) {
