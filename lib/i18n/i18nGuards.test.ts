@@ -468,6 +468,18 @@ const HOMOGRAPHS: Record<string, string> = {
   cambio: 'cambió', // "el cambio" (the change) vs "cambió" (it changed)
   cuanto: 'cuánto', // "en cuanto" (as soon as) takes no accent; "¿cuánto?" does
   publica: 'pública', // "se publica" (is published) vs "página pública"
+
+  // Surfaced by T-LEGAL1, when the data policy introduced the accented half of
+  // each pair and gave the arm something to contradict. Both are the
+  // noun-or-adjective versus verb shape the block above already covers.
+  //
+  // COST, per the rule at the top of this list: the arm can no longer see a
+  // missing accent on either bare form. For `acepto` that means a third person
+  // preterite written without one ("el titular acepto") reads as clean, and
+  // for `perdida` a real "pérdida" written bare does too. Both are on Ana's
+  // pile as ordinary proofreading rather than covered by this entry.
+  acepto: 'aceptó', // "Entiendo y acepto" (I accept) vs "que el titular aceptó" (they accepted)
+  perdida: 'pérdida', // "Conexión perdida" (lost, adj.) vs "adulteración, pérdida" (loss, noun)
 };
 
 /**
