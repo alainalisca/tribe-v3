@@ -30,6 +30,19 @@ export interface FeaturedPartner {
   /** Editorial placement, highest first (161). 0 = unplaced. */
   display_order: number;
   /**
+   * Whether /pase/[slug] serves this partner's free-class pass (172).
+   *
+   * Selected so the in-app entry points can decide whether to render without a
+   * second round trip (T-LEAD2). Verified readable by anon and authenticated
+   * before adding it: featured_partners is under column-level SELECT grants,
+   * and an ungranted column fails the WHOLE read rather than returning null --
+   * which here would blank the home feed banner and every storefront at once.
+   *
+   * NOT the full answer to "is the pass servable". fetchPassConfig also
+   * requires a partner_lead_routing row, which no client role can read.
+   */
+  pass_active: boolean;
+  /**
    * The partner account's own avatar, embedded so the banner can fall back to
    * it when logo_url is null -- the same chain the storefront header and the
    * discover tile use. Without it BullBox showed a "CB" monogram in the feed
@@ -98,7 +111,7 @@ export async function fetchActivePartners(supabase: SupabaseClient, limit = 5): 
     const { data, error } = await supabase
       .from('featured_partners')
       .select(
-        'id, user_id, slug, business_name, business_type, description, description_es, logo_url, banner_url, website_url, phone, address, lat, lng, specialties, tier, status, starts_at, expires_at, monthly_fee_cents, currency, total_impressions, total_clicks, total_bookings, min_sessions_per_month, min_rating, created_at, updated_at, display_order, auto_approve_roster, user:users(avatar_url)'
+        'id, user_id, slug, business_name, business_type, description, description_es, logo_url, banner_url, website_url, phone, address, lat, lng, specialties, tier, status, starts_at, expires_at, monthly_fee_cents, currency, total_impressions, total_clicks, total_bookings, min_sessions_per_month, min_rating, created_at, updated_at, display_order, auto_approve_roster, pass_active, user:users(avatar_url)'
       )
       .eq('status', 'active')
       // display_order is editorial placement and sorts ahead of everything
@@ -128,7 +141,7 @@ export async function fetchPartnerByUserId(
     const { data, error } = await supabase
       .from('featured_partners')
       .select(
-        'id, user_id, slug, business_name, business_type, description, description_es, logo_url, banner_url, website_url, phone, address, lat, lng, specialties, tier, status, starts_at, expires_at, monthly_fee_cents, currency, total_impressions, total_clicks, total_bookings, min_sessions_per_month, min_rating, created_at, updated_at, display_order, auto_approve_roster, user:users(avatar_url)'
+        'id, user_id, slug, business_name, business_type, description, description_es, logo_url, banner_url, website_url, phone, address, lat, lng, specialties, tier, status, starts_at, expires_at, monthly_fee_cents, currency, total_impressions, total_clicks, total_bookings, min_sessions_per_month, min_rating, created_at, updated_at, display_order, auto_approve_roster, pass_active, user:users(avatar_url)'
       )
       .eq('user_id', userId)
       .maybeSingle();
@@ -150,7 +163,7 @@ export async function fetchPartnerById(
     const { data, error } = await supabase
       .from('featured_partners')
       .select(
-        'id, user_id, slug, business_name, business_type, description, description_es, logo_url, banner_url, website_url, phone, address, lat, lng, specialties, tier, status, starts_at, expires_at, monthly_fee_cents, currency, total_impressions, total_clicks, total_bookings, min_sessions_per_month, min_rating, created_at, updated_at, display_order, auto_approve_roster, user:users(avatar_url)'
+        'id, user_id, slug, business_name, business_type, description, description_es, logo_url, banner_url, website_url, phone, address, lat, lng, specialties, tier, status, starts_at, expires_at, monthly_fee_cents, currency, total_impressions, total_clicks, total_bookings, min_sessions_per_month, min_rating, created_at, updated_at, display_order, auto_approve_roster, pass_active, user:users(avatar_url)'
       )
       .eq('id', partnerId)
       .maybeSingle();
@@ -274,7 +287,7 @@ export async function fetchAllPartners(supabase: SupabaseClient): Promise<DalRes
     const { data, error } = await supabase
       .from('featured_partners')
       .select(
-        'id, user_id, slug, business_name, business_type, description, description_es, logo_url, banner_url, website_url, phone, address, lat, lng, specialties, tier, status, starts_at, expires_at, monthly_fee_cents, currency, total_impressions, total_clicks, total_bookings, min_sessions_per_month, min_rating, created_at, updated_at, display_order, auto_approve_roster, user:users(avatar_url)'
+        'id, user_id, slug, business_name, business_type, description, description_es, logo_url, banner_url, website_url, phone, address, lat, lng, specialties, tier, status, starts_at, expires_at, monthly_fee_cents, currency, total_impressions, total_clicks, total_bookings, min_sessions_per_month, min_rating, created_at, updated_at, display_order, auto_approve_roster, pass_active, user:users(avatar_url)'
       )
       .order('created_at', { ascending: false })
       .limit(200);

@@ -17,6 +17,7 @@ import StorefrontEmpty from '@/components/storefront/StorefrontEmpty';
 import BlockReportControls from '@/components/BlockReportControls';
 import { useStorefrontData } from './useStorefrontData';
 import GymStorefrontHeader from '@/components/storefront/GymStorefrontHeader';
+import PassEntryButton from '@/components/storefront/PassEntryButton';
 
 export default function StorefrontPage() {
   const params = useParams();
@@ -208,6 +209,26 @@ export default function StorefrontPage() {
           />
         ) : (
           <StorefrontHero instructor={instructor} language={lang} />
+        )}
+
+        {/* T-LEAD2: the in-app way into the free-class pass, directly under the
+            storefront header.
+
+            MOUNTED HERE RATHER THAN INSIDE GymStorefrontHeader, and that is the
+            whole point of the placement. The header only renders for
+            business_type gym/studio, so mounting it there would have made the
+            entry point gym-only -- reintroducing at the call site exactly the
+            assumption hasClaimablePass() was written to avoid. A partner is
+            eligible because pass_active is true, not because it is an
+            organisation, and an independent trainer with a pass gets the same
+            button under the person hero.
+
+            Renders nothing without partnerData, without a pass, or for the
+            owner; PassEntryButton makes all three decisions itself. */}
+        {d.partnerData && (
+          <div className="px-4 md:px-6 mt-4 max-w-xl mx-auto lg:max-w-none">
+            <PassEntryButton partner={d.partnerData} partnerName={d.partnerData.business_name} isOwner={isOwn} />
+          </div>
         )}
 
         {!hasContent ? (

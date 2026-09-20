@@ -92,6 +92,66 @@ export default function PaseForm({ slug, partnerName, options, consentText, cons
     setClaimed(readStoredPass(slug));
   }, [slug]);
 
+  /**
+   * Prefill name and email for a signed-in member (T-LEAD2).
+   *
+   * The in-app entry points send Tribe's own users here, and asking someone who
+   * is already signed in to retype their name and email is the kind of friction
+   * that loses a lead for no reason.
+   *
+   * THE FORM STAYS ANONYMOUS. This reads the session for two field values and
+   * changes nothing else: the claim is still an unauthenticated POST, the row
+   * still has no user id on it, and CONSENT IS STILL REQUIRED. Being logged in
+   * to Tribe is not consent to hand a phone number to a third party, so the
+   * checkbox is untouched on purpose -- the data leaves Tribe either way.
+   *
+   * WHATSAPP IS NEVER PREFILLED, even when the account has a number. It is the
+   * one field the partner will actually use to make contact, and a silently
+   * inherited value the person did not look at is how a lead gets a number that
+   * is no longer theirs.
+   *
+   * Functional updates, not plain sets: this resolves a network round trip
+   * after mount, and someone on a fast connection can be typing by then.
+   * Overwriting what they have already entered would be worse than no prefill.
+   *
+   * The import is dynamic so the Supabase client is not in the critical path of
+   * a page whose whole job is to render fast for a stranger standing in a gym.
+   * A failure here costs the prefill and nothing else, which is why it resolves
+   * to no-op rather than surfacing anything.
+   */
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const { createClient } = await import('@/lib/supabase/client');
+        const supabase = createClient();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        // The expected case on this route: nobody is signed in. Not an error.
+        if (!user || cancelled) return;
+
+        if (user.email) setEmail((prev) => prev || user.email!);
+
+        // public.users.name is readable by authenticated; users.email is NOT
+        // (revoked in T-SEC5), which is why the address above comes from the
+        // auth session rather than from this row.
+        const { data: profile } = await supabase.from('users').select('name').eq('id', user.id).maybeSingle();
+        if (cancelled) return;
+        const name = (profile?.name as string | undefined) || (user.user_metadata?.name as string | undefined);
+        if (name) setName((prev) => prev || name);
+      } catch (err) {
+        // Deliberately console rather than logError: this module is shared with
+        // the logged-out pass page and a prefill failure is not a product
+        // failure. It must never block or surface anything to the visitor.
+        console.error('[PaseForm] session prefill failed', err);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   function validate(): boolean {
     const errors: FieldErrors = {};
     const trimmed = name.trim();

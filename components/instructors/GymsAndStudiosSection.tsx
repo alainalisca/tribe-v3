@@ -21,13 +21,14 @@
  * the instructor card shows stars.
  */
 import Link from 'next/link';
-import { Building2, MapPin, Calendar } from 'lucide-react';
+import { Building2, MapPin, Calendar, Ticket } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { useTranslations } from '@/lib/i18n/useTranslations';
 import { trackEvent } from '@/lib/analytics';
 import { neighborhoodFromAddress } from '@/lib/sessionLocation';
 import { partnerMonogram } from '@/lib/partnerIdentity';
 import type { GymDirectoryEntry } from '@/lib/dal/gymDirectory';
+import { PASS_ENTRY_CODES, hasClaimablePass, passEntryUrl } from '@/lib/pase/entryPoint';
 
 interface Props {
   gyms: GymDirectoryEntry[];
@@ -98,6 +99,25 @@ export default function GymsAndStudiosSection({ gyms }: Props) {
                     </div>
                   )}
                 </div>
+
+                {/* T-LEAD2. A SEPARATE LINK, NOT A NESTED ONE. The card's only
+                    navigation is the "Ver gimnasio" button below, so the pill
+                    can be its own anchor without an anchor-inside-an-anchor,
+                    and tapping anywhere else on the card still does exactly
+                    what it did before. Sits above the primary button so the
+                    two destinations read as a choice rather than a stack. */}
+                {hasClaimablePass(gym) && (
+                  <Link
+                    href={passEntryUrl(gym.slug, PASS_ENTRY_CODES.card)}
+                    onClick={() => trackEvent('pass_entry_tapped', { surface: 'card', code: PASS_ENTRY_CODES.card })}
+                    // Green as a fill behind tribe-dark text. tribe-green is
+                    // 1.65:1 on white as small copy and never carries a label.
+                    className="mb-2 inline-flex items-center gap-1 self-center rounded-full bg-tribe-green px-3 py-1 text-xs font-bold text-tribe-dark"
+                  >
+                    <Ticket className="w-3 h-3" aria-hidden="true" />
+                    {t('passPill')}
+                  </Link>
+                )}
 
                 <Link
                   href={`/storefront/${gym.user_id}`}

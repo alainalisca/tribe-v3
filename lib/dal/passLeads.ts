@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { logError } from '@/lib/logger';
+import { ORGANIZATION_TYPES } from '@/lib/dal/gymVenue';
 
 /**
  * Data access for the digital pass. SERVICE-ROLE ONLY.
@@ -14,6 +15,18 @@ export interface PassConfig {
   partnerId: string;
   slug: string;
   partnerName: string;
+  /**
+   * What the partner IS, so the pass page can draw the right shape (T-GYM1:
+   * organizations are squares, people are circles).
+   *
+   * Carried as the raw column rather than a precomputed boolean so the page
+   * decides with the same vocabulary every other surface uses. The CHECK on
+   * featured_partners.business_type also permits 'academy' and 'club', which
+   * ORGANIZATION_TYPES does not list -- so both fall to the circle today. That
+   * gap is inherited deliberately: it is wrong in exactly one place if it is
+   * wrong, rather than differently wrong here than on /instructors.
+   */
+  businessType: string | null;
   address: string | null;
   logoUrl: string | null;
   storefrontUserId: string | null;
@@ -27,7 +40,7 @@ export interface PassConfig {
 
 /** Explicit columns, never select('*') -- CONVENTIONS, and it keeps new columns out by default. */
 const PASS_CONFIG_COLUMNS =
-  'id, slug, business_name, address, logo_url, user_id, pass_headline, pass_sub, pass_options, pass_active, lead_whatsapp, partner_lead_routing!inner(lead_email, lead_cc)';
+  'id, slug, business_name, business_type, address, logo_url, user_id, pass_headline, pass_sub, pass_options, pass_active, lead_whatsapp, partner_lead_routing!inner(lead_email, lead_cc)';
 
 interface RoutingRow {
   lead_email: string;
@@ -76,6 +89,7 @@ export async function fetchPassConfig(supabase: SupabaseClient, slug: string): P
     partnerId: String(row.id),
     slug: String(row.slug),
     partnerName: String(row.business_name ?? ''),
+    businessType: (row.business_type as string) ?? null,
     address: (row.address as string) ?? null,
     logoUrl: (row.logo_url as string) ?? null,
     storefrontUserId: (row.user_id as string) ?? null,
@@ -86,6 +100,19 @@ export async function fetchPassConfig(supabase: SupabaseClient, slug: string): P
     leadEmail: routing.lead_email,
     leadCc: routing.lead_cc ?? [],
   };
+}
+
+/**
+ * Is this partner an organization rather than a person?
+ *
+ * The one place the pass page's avatar shape is decided. Imported from
+ * gymVenue rather than redeclared: a second copy of the organization list is
+ * the defect CLAUDE.md records under SPORTS_LIST, where five independent
+ * declarations of one vocabulary drifted until an instructor could not tag his
+ * own sport.
+ */
+export function isOrganizationPartner(config: Pick<PassConfig, 'businessType'>): boolean {
+  return (ORGANIZATION_TYPES as readonly string[]).includes(config.businessType ?? '');
 }
 
 /**
