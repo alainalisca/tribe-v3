@@ -225,13 +225,14 @@ async function fetchPartnerNames(supabase: SupabaseClient): Promise<DalResult<Ma
  * lead is already a member, and a false "si" would send him into a
  * conversation with the wrong assumption about who he is talking to.
  *
- * Reads every live account's id and email rather than filtering on the page's
- * 50 addresses, because users_email_key indexes `email` raw and PostgREST
- * cannot express lower(email) in a filter -- an .in() on the raw values would
- * silently miss a lead who typed their address in a different case, which is
- * the whole class of miss this is meant to catch. 111 users today, two narrow
- * columns. The fix at scale is an index on lower(email) plus a filtered read,
- * and it does not belong here yet.
+ * Reads the email of every live account rather than filtering on the page's 50
+ * addresses, because users_email_key indexes `email` raw and PostgREST cannot
+ * express lower(email) in a filter -- an .in() on the raw values would silently
+ * miss a lead who typed their address in a different case, which is the whole
+ * class of miss this is meant to catch. One narrow column over 98 live accounts
+ * (counted on production 2026-09-20 with deleted_at IS NULL, which is the same
+ * filter the select below applies). The fix at scale is an index on
+ * lower(email) plus a filtered read, and it does not belong here yet.
  */
 async function fetchAccountEmails(
   supabase: SupabaseClient,
