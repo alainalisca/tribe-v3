@@ -4,11 +4,19 @@
 -- BEGIN ... ROLLBACK; production is not modified. ONE result set of PASS/FAIL
 -- rows, because the editor shows only the last statement's result.
 --
--- RUN AFTER 175 IS APPLIED. Part E converts branches that 175 captures, so the
--- before-arms below need the pre-176 function present to have something to
--- measure.
+-- RUN AFTER 175 IS APPLIED, AND BEFORE 176. This rehearsal APPLIES 176's own
+-- statements inside the transaction and rolls them back; it does not require
+-- 176 to be applied already. The first draft did require that, which made it a
+-- post-apply verification rather than a rehearsal -- it could only have told us
+-- 176 worked after we had already run it.
 --
--- Part A  the migration body runs clean
+-- WHERE THE DDL LIVES. 176's statements are applied ONCE at the top of the DO
+-- block, OUTSIDE any subtransaction, so every arm below sees them. The outer
+-- ROLLBACK undoes all of it. Arms that need the PRE-176 behaviour (B1, B3)
+-- reinstall the old body inside their own subtransaction, which unwinds back
+-- to 176's version on the sentinel raise.
+--
+-- Part A  the migration body applies clean
 -- Part B  THE SILENT REVERTS, before and after. B1/B2 and B3/B4 are PAIRS.
 -- Part C  the RPC works end to end as a real authenticated non-admin
 -- Part D  lead_* denied to a caller, still permitted to service-role
@@ -82,21 +90,129 @@ BEGIN
     RAISE EXCEPTION 'REHEARSAL ABORTED: need two non-admin users and did not find them.';
   END IF;
 
-  -- ── Part A: the whole migration body applies ────────────────────────────
+  -- ── Part A: APPLY 176's BODY, here, inside the transaction ──────────────
+  -- Not in a subtransaction: these objects must survive for every arm below.
+  -- The outer ROLLBACK is what removes them.
   BEGIN
-    -- (the migration's own statements are applied by running 176 itself; this
-    -- arm only asserts the objects it should leave behind)
-    IF to_regprocedure('public.reach_out_to_athlete(uuid)') IS NULL THEN
-      RAISE EXCEPTION '176 not applied: reach_out_to_athlete(uuid) missing. Apply 176 first.';
-    END IF;
+    -- A1 of 176
+    CREATE OR REPLACE FUNCTION public.reach_out_to_athlete(p_athlete_id uuid)
+     RETURNS TABLE (credits_remaining integer)
+     LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public'
+    AS $fn$
+    DECLARE
+      v_instructor uuid := auth.uid();
+      v_verified boolean; v_tier text; v_remaining integer;
+    BEGIN
+      IF v_instructor IS NULL THEN
+        RAISE EXCEPTION 'Not signed in' USING ERRCODE = 'insufficient_privilege';
+      END IF;
+      SELECT u.is_verified_instructor, u.lead_tier, coalesce(u.lead_credits_remaining, 0)
+        INTO v_verified, v_tier, v_remaining
+        FROM public.users u WHERE u.id = v_instructor;
+      IF NOT coalesce(v_verified, false) THEN
+        RAISE EXCEPTION 'Only verified instructors can reach out' USING ERRCODE = 'insufficient_privilege';
+      END IF;
+      IF v_remaining <= 0 AND v_tier IS DISTINCT FROM 'unlimited' THEN
+        RAISE EXCEPTION 'No credits remaining this month' USING ERRCODE = 'insufficient_privilege';
+      END IF;
+      BEGIN
+        INSERT INTO public.lead_reaches (instructor_id, athlete_id) VALUES (v_instructor, p_athlete_id);
+      EXCEPTION WHEN unique_violation THEN
+        RAISE EXCEPTION 'You already reached this athlete' USING ERRCODE = 'unique_violation';
+      END;
+      IF v_tier = 'unlimited' THEN RETURN QUERY SELECT 9999; RETURN; END IF;
+      UPDATE public.users SET lead_credits_remaining = greatest(0, v_remaining - 1)
+       WHERE id = v_instructor;
+      RETURN QUERY SELECT greatest(0, v_remaining - 1);
+    END; $fn$;
+    REVOKE ALL ON FUNCTION public.reach_out_to_athlete(uuid) FROM PUBLIC, anon;
+    GRANT EXECUTE ON FUNCTION public.reach_out_to_athlete(uuid) TO authenticated;
+
+    -- B of 176. NOT SECURITY DEFINER, deliberately: it must observe
+    -- current_user as the surrounding context sees it.
+    CREATE OR REPLACE FUNCTION public.prevent_lead_fields_self_update()
+     RETURNS trigger LANGUAGE plpgsql SET search_path TO 'public'
+    AS $fn$
+    BEGIN
+      IF auth.uid() IS NULL OR current_user IS DISTINCT FROM session_user THEN
+        RETURN NEW;
+      END IF;
+      IF is_app_admin_uid(auth.uid()) THEN RETURN NEW; END IF;
+      IF NEW.lead_credits_remaining IS DISTINCT FROM OLD.lead_credits_remaining THEN
+        RAISE EXCEPTION 'lead_credits_remaining can only be changed by reach_out_to_athlete(), the monthly reset, or an admin'
+          USING ERRCODE = 'insufficient_privilege';
+      END IF;
+      IF NEW.lead_credits_reset_at IS DISTINCT FROM OLD.lead_credits_reset_at THEN
+        RAISE EXCEPTION 'lead_credits_reset_at can only be changed by the monthly reset or an admin'
+          USING ERRCODE = 'insufficient_privilege';
+      END IF;
+      IF NEW.lead_tier IS DISTINCT FROM OLD.lead_tier THEN
+        RAISE EXCEPTION 'lead_tier can only be changed by an admin'
+          USING ERRCODE = 'insufficient_privilege';
+      END IF;
+      RETURN NEW;
+    END; $fn$;
+    DROP TRIGGER IF EXISTS users_lead_fields_guard ON public.users;
+    CREATE TRIGGER users_lead_fields_guard BEFORE UPDATE ON public.users
+      FOR EACH ROW EXECUTE FUNCTION public.prevent_lead_fields_self_update();
+
+    -- C of 176
+    DROP POLICY IF EXISTS "instructors_own_reaches" ON public.lead_reaches;
+    CREATE POLICY lead_reaches_select_own ON public.lead_reaches
+      FOR SELECT TO authenticated USING (auth.uid() = instructor_id);
+    CREATE POLICY lead_reaches_insert_own ON public.lead_reaches
+      FOR INSERT TO authenticated WITH CHECK (auth.uid() = instructor_id);
+
+    -- D of 176
+    CREATE OR REPLACE FUNCTION public.prevent_deleted_at_self_update()
+     RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public'
+    AS $fn$
+    BEGIN
+      IF NEW.deleted_at IS DISTINCT FROM OLD.deleted_at THEN
+        IF auth.uid() IS NOT NULL AND NOT is_app_admin_uid(auth.uid()) THEN
+          RAISE EXCEPTION 'deleted_at can only be changed by the account deletion route or an admin'
+            USING ERRCODE = 'insufficient_privilege';
+        END IF;
+      END IF;
+      RETURN NEW;
+    END; $fn$;
+    DROP TRIGGER IF EXISTS users_deleted_at_guard ON public.users;
+    CREATE TRIGGER users_deleted_at_guard BEFORE UPDATE ON public.users
+      FOR EACH ROW EXECUTE FUNCTION public.prevent_deleted_at_self_update();
+
+    -- E of 176: the two silent reverts become RAISE
+    CREATE OR REPLACE FUNCTION public.protect_verified_instructor()
+     RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public'
+    AS $fn$
+    BEGIN
+      IF NEW.is_verified_instructor IS DISTINCT FROM OLD.is_verified_instructor THEN
+        IF auth.uid() IS NOT NULL AND NOT COALESCE((SELECT is_admin FROM public.users WHERE id = auth.uid()), false) THEN
+          RAISE EXCEPTION 'is_verified_instructor can only be changed by an admin'
+            USING ERRCODE = 'insufficient_privilege';
+        END IF;
+      END IF;
+      IF NEW.total_earnings_cents IS DISTINCT FROM OLD.total_earnings_cents THEN
+        IF auth.uid() IS NOT NULL AND NOT COALESCE((SELECT is_admin FROM public.users WHERE id = auth.uid()), false) THEN
+          RAISE EXCEPTION 'total_earnings_cents can only be changed by an admin'
+            USING ERRCODE = 'insufficient_privilege';
+        END IF;
+      END IF;
+      IF NEW.total_participants_served IS DISTINCT FROM OLD.total_participants_served THEN
+        IF auth.uid() IS NOT NULL AND NOT COALESCE((SELECT is_admin FROM public.users WHERE id = auth.uid()), false) THEN
+          RAISE EXCEPTION 'total_participants_served can only be changed by an admin'
+            USING ERRCODE = 'insufficient_privilege';
+        END IF;
+      END IF;
+      RETURN NEW;
+    END; $fn$;
+
     a_ok := true; a_error := '(none)';
-    RAISE EXCEPTION 'REH_UNWIND_A';
   EXCEPTION WHEN OTHERS THEN
-    IF SQLERRM <> 'REH_UNWIND_A' THEN a_ok := false; a_error := SQLSTATE || ' ' || SQLERRM; END IF;
+    a_ok := false; a_error := SQLSTATE || ' ' || SQLERRM;
   END;
 
   INSERT INTO reh_probe VALUES
-    (1, 'A1 176 is applied and the RPC exists', coalesce(a_error,'(null)'), coalesce(a_ok,false));
+    (1, 'A1 176 body applies clean inside the transaction', coalesce(a_error,'(null)'), coalesce(a_ok,false));
 
   -- ── Part B1: total_earnings_cents under the PRE-176 function ────────────
   -- The discriminating half. Reinstalls the captured silent body, writes as a
