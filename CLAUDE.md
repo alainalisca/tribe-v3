@@ -580,6 +580,24 @@ So, on a table with multiple permissive policies for the same command:
 
 The general form: **when several rules combine with OR, no single one of them is load-bearing for denial, and editing any single one is theatre.** The same reasoning applies to a chain of `.or()` filters in a DAL query, to overlapping CORS allowlists, and to any "is this allowed" check assembled from independently-authored pieces.
 
+**A POINTER TO SOMETHING YOU CANNOT FIND IS A FINDING ABOUT THE THING POINTING, NOT A GAP IN WHAT YOU WERE GIVEN.**
+
+`protect_verified_instructor()` carries two comments reading _"UNCHANGED, deliberately. See the second box above before touching this."_ Handed the full 33-line body, I read those as referring to context I had not been shown, and filed a ticket saying the reason had to be found before the branches could be changed.
+
+There is no box above. **Line 008 is the first line after `BEGIN`.** Nothing precedes it inside the function, so the boxes lived in whatever source file this was authored in — and that file is not in the repository, which is the same gap the capture existed to close, showing up from the inside.
+
+The reference was not a hint that something was withheld. It was **evidence that the function had been separated from its source**, and therefore evidence about how it came to be undocumented. Read correctly it answers a different and more useful question: not "what was the reason" but "the reason is unrecoverable, so decide on the merits."
+
+This is the same move as reading _"corner-anchored"_ and _"centred"_ as separation: taking words at face value instead of checking them against the structure. Both times the check was cheap — count the lines above, intersect the intervals — and both times not doing it produced a confident conclusion that stopped work.
+
+**When a comment, a ticket, a test name or an error message refers to something you cannot locate, resolve the reference before acting on it.** Three outcomes, and they are not close to each other:
+
+- **It exists and you missed it.** Go read it.
+- **It cannot exist** — as here, where the position rules it out. That is a fact about the artefact's history and usually the more useful finding.
+- **It existed and is gone.** Then whatever it explained is now undocumented, and anyone who defers to it is deferring to nothing.
+
+The failure mode is treating all three as the first one, because that is the polite reading and the only one that requires no work. It is also the one that blocks: "find the reason first" is unsatisfiable when the reason is unrecoverable, and an unsatisfiable precondition stops a decision indefinitely while looking like diligence.
+
 ### Database Schema
 
 Core tables in `supabase/schema.sql`:

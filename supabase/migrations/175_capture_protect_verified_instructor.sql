@@ -109,6 +109,46 @@
 -- declares 4 policies on users where production has at least 6),
 -- T-SEC-EMAIL (9 policies keying access off a literal address).
 
+-- ── PRE-FLIGHT: refuse to run if 176 has already superseded this ────────────
+-- THIS BLOCK RUNS BEFORE ANYTHING IS WRITTEN, and that ordering is the point.
+--
+-- This migration is NOT atomic: it replaces the function, then checks. The
+-- Supabase SQL editor autocommits statement by statement, so without this
+-- block a re-run AFTER 176 would commit the two SILENT REVERTS back over
+-- 176's RAISE branches, and only then abort in the guard below. The operator
+-- would see an error and assume nothing happened, while the security fix had
+-- just been quietly undone. That is the failure this whole session has been
+-- about, so it does not get to live in the migration that documents it.
+--
+-- Checking first costs one query. Checking after costs the fix.
+DO $preflight$
+DECLARE
+  v_body   text;
+  v_raises integer;
+BEGIN
+  SELECT pg_get_functiondef(p.oid) INTO v_body
+    FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+   WHERE n.nspname = 'public' AND p.proname = 'protect_verified_instructor';
+
+  -- Absent is fine: that is a fresh rebuild, which is what this capture is for.
+  IF v_body IS NULL THEN
+    RAISE NOTICE '175 pre-flight: function absent (fresh rebuild). Proceeding.';
+    RETURN;
+  END IF;
+
+  v_raises := (length(v_body) - length(replace(v_body, 'RAISE EXCEPTION', '')))
+              / length('RAISE EXCEPTION');
+
+  IF v_raises > 1 THEN
+    RAISE EXCEPTION
+      '175 REFUSED: the live protect_verified_instructor() has % RAISE branches, not 1. '
+      'Migration 176 has already converted the silent reverts. Running 175 now would '
+      'overwrite that fix with the captured pre-176 body. 175 is a CAPTURE of the state '
+      'before 176 and must not be re-applied after it. If you need to re-record the '
+      'function, re-read it from the live catalog into a NEW capture migration.', v_raises;
+  END IF;
+END $preflight$;
+
 -- ── The function, VERBATIM from pg_get_functiondef ──────────────────────────
 -- Do not reformat, do not "tidy", do not convert the two assignments to RAISE.
 --
