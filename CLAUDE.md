@@ -566,6 +566,20 @@ Three of five writes the catalog said were permitted were refused, by three diff
 
 And the reverse of the same coin, found in the same pass: `public.users` has at least six policies in production and two in the repo, three of the four permissive UPDATE policies appearing nowhere here. **Where a table's protection is concerned, absence of evidence in the repo is not evidence of absence in the database — in either direction.**
 
+**PERMISSIVE POLICIES OR TOGETHER, SO THE EFFECTIVE RULE IS THE LOOSEST ONE PRESENT. TIGHTENING ONE CONSTRAINS NOTHING AND LOOKS LIKE A FIX.**
+
+`public.users` carries four permissive UPDATE policies. Postgres grants the write if **any** of them admits it, so adding a `WITH CHECK` to one, or narrowing its `USING`, changes the answer for exactly zero rows while reading in review as a security fix. The only way a policy edit restricts anything is if it is the last permissive policy for that command, or if the others are edited in the same change.
+
+**This codebase already hit that wall and solved it without naming it.** `Users can view all profiles` is still `FOR SELECT USING (true)` — wide open. Every restriction on reading `users` comes from **column grants** (066, 067, 113), not from RLS, and 113's header explains the instrument choice without explaining the constraint that forced it. With a `USING (true)` policy present, no added SELECT policy could ever have restricted a column. The grant was the only tool that could work.
+
+So, on a table with multiple permissive policies for the same command:
+
+- **A column-level restriction must come from a trigger or a grant.** Policies gate rows, and only the loosest one matters. This is why the three guards that actually protect `users` are `BEFORE UPDATE` triggers and a column-grant regime, not policy predicates.
+- **Count the policies for that command before editing any of them.** `select policyname, cmd, permissive, qual, with_check from pg_policies where tablename = '...'`. Editing one of four is a no-op; the count is the first thing to know and it is one query.
+- **`RESTRICTIVE` is the exception and it is rare.** A restrictive policy ANDs instead, so it _can_ tighten a permissive set. Nothing in this repo uses one. If you reach for that, say so explicitly, because every other policy here reads as permissive by default and a reviewer will assume the same of yours.
+
+The general form: **when several rules combine with OR, no single one of them is load-bearing for denial, and editing any single one is theatre.** The same reasoning applies to a chain of `.or()` filters in a DAL query, to overlapping CORS allowlists, and to any "is this allowed" check assembled from independently-authored pieces.
+
 ### Database Schema
 
 Core tables in `supabase/schema.sql`:
