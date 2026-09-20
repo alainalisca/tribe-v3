@@ -124,6 +124,21 @@ The rewrites that worked, in the same order: look for _any_ element that interce
 
 Same family as the privilege rule below: `has_table_privilege` answers "can this role do it", `information_schema.table_privileges` answers "is there a row that says so". Prefer the capability question every time.
 
+**AND THE CAPABILITY FUNCTION HAS ITS OWN NARROWER SCOPE, WHICH IS NOT VISIBLE IN ITS NAME.** `has_table_privilege(role, table, 'UPDATE')` answers "is UPDATE held **at table level**", not "may this role update anything in this table". For a column-level grant it returns a confident `false` while the role genuinely holds the privilege. Measured on production 2026-09-20, after `GRANT UPDATE (contacted_at) ON public.pass_leads TO authenticated`:
+
+| call                                                                     | answer  |
+| ------------------------------------------------------------------------ | ------- |
+| `has_table_privilege('authenticated','public.pass_leads','UPDATE')`      | `false` |
+| `has_any_column_privilege('authenticated','public.pass_leads','UPDATE')` | `true`  |
+| `has_column_privilege(...,'contacted_at','UPDATE')`                      | `true`  |
+| `has_column_privilege(...,'email','UPDATE')`                             | `false` |
+
+So: **when the question is "does this role hold X on this table AT ALL", use `has_any_column_privilege`** — it is true for a table-level grant _or_ a grant on any single column, and strictly subsumes the table-level form. `has_table_privilege` is correct only when the question is specifically about a table-level grant, which is rarely what a guard means.
+
+This is the rule above read the wrong way round. Both halves of it stay true; what does not follow is that `has_table_privilege` is _the_ capability question for every subject. `public.users` in this codebase is under column-level grants throughout, so the wrong form here is silently wrong on the table most worth guarding.
+
+Found by migration 175's rehearsal, arm D7. The guard asserting that no client role holds UPDATE on `pass_leads` — the guarantee the whole `set_pass_lead_contacted` design rests on — stayed green while `authenticated` held UPDATE on a column. A later migration granting `UPDATE (email)` would have passed it, and a partner could then rewrite a lead's phone number and address, which is exactly what migration 173 refused to allow through an UPDATE policy. The guard was green on every ordinary run and simply wrong; only deliberately reintroducing the mistake exposed it.
+
 **A SECOND WAY THE SAME PASS GOES WRONG: the check asked the right question, but the scenario was never reproduced.**
 
 A check can pass because the situation it guards against never occurred, not because the detector was mis-aimed. The question was fine; the setup did not put the system into the state being tested.
