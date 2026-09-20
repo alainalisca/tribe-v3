@@ -535,6 +535,37 @@ In one pass over the T-AUD list, reviewed against current `main` rather than aga
 
 The list was built on 2026-09-03 against a bundle that no longer exists. **Every entry in it deserves arithmetic or a measurement rather than a reading**, and a status inherited from a stale audit is a hypothesis, not a finding. The error rate on second look was 3 in 24 — high enough that the prior for any unverified entry should be "unknown", not "as recorded".
 
+**A PERMISSION QUESTION NEEDS A BEHAVIOURAL PROBE, NOT A CATALOG READ. GRANTS, RLS AND TRIGGERS EACH DENY INDEPENDENTLY, AND A CATALOG SHOWS YOU ONE OF THE THREE.**
+
+`information_schema.column_privileges` reported UPDATE on `public.users` granted to `authenticated` at table level **and** on all 97 columns individually. From that I reported that any signed-in user could write their own `is_admin` — "one PATCH grants admin". It was wrong.
+
+The probe, run as a real authenticated non-admin:
+
+```
+is_admin                 BLOCKED   users_is_admin_guard (migration 043)
+banned                   BLOCKED   users_banned_guard   (migration 098)
+is_verified_instructor   BLOCKED   protect_verified_instructor_trigger -- IN NO FILE IN THIS REPO
+lead_credits_remaining   SUCCEEDED
+deleted_at               SUCCEEDED
+```
+
+Three of five writes the catalog said were permitted were refused, by three different objects, two of which I had already read and one of which does not exist in the repository at all.
+
+**The grant is necessary, not sufficient.** A write has to clear the grant, then the RLS policy, then every `BEFORE UPDATE` trigger. Reading one of those three and reporting a conclusion about the other two is the same shape as reading `revalidate = 60` and concluding the route was static: a real measurement of the wrong layer.
+
+**Run the write. As the role that would run it.** Four outcomes distinguish four causes, and they are worth knowing apart:
+
+| What you see                                 | What denied it                        |
+| -------------------------------------------- | ------------------------------------- |
+| `42501 permission denied for column`         | the grant                             |
+| `new row violates row-level security policy` | a `WITH CHECK`                        |
+| `UPDATE 0` with no error at all              | a `USING` clause filtered the row out |
+| a `RAISE` message naming something           | a trigger, and the message names it   |
+
+**The corollary is the one that generalises furthest: a probe finds controls that exist only in production.** A catalog read of the _repo_ can only show what the repo knows about. `protect_verified_instructor` is live, `SECURITY DEFINER`, and appears in no migration — so `supabase db reset` produces a database where a signed-in user can verify themselves as an instructor, and `is_verified_instructor` is the only gate on the lead reach-out path. That is DB-02's category, but worse than its usual form: not a missing table, a **missing security control**, invisible to any audit performed against this repository.
+
+And the reverse of the same coin, found in the same pass: `public.users` has at least six policies in production and two in the repo, three of the four permissive UPDATE policies appearing nowhere here. **Where a table's protection is concerned, absence of evidence in the repo is not evidence of absence in the database — in either direction.**
+
 ### Database Schema
 
 Core tables in `supabase/schema.sql`:
