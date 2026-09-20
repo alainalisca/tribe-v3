@@ -126,6 +126,69 @@ FROM (
 
   UNION ALL
 
+  -- ── policy: DOES THAT ADDRESS ACTUALLY MAP TO AN ADMIN ROW? ─────────────
+  -- THE FACT THAT DECIDES WHETHER THOSE POLICIES ARE REDUNDANT OR LOAD-BEARING,
+  -- and it has to come back in this run rather than as a follow-up, because the
+  -- two answers point opposite ways:
+  --
+  --   is_admin = true   -> `is_app_admin()` already grants everything the email
+  --                        policy grants. It is redundant, and pure liability:
+  --                        it breaks the day the address changes and no audit
+  --                        would catch it, because it looks deliberate.
+  --   is_admin = false  -> that address has admin write access WITHOUT is_admin.
+  --                        The policy is load-bearing, dropping it REVOKES
+  --                        access someone is using, and the fix is to set
+  --                        is_admin on that row FIRST.
+  --   no row at all     -> the policy grants nothing to anyone and has not for
+  --                        however long the address has been wrong.
+  --
+  -- The address is READ OUT OF THE POLICY, not hardcoded here. A literal in
+  -- this file would answer only for the address I happened to type, which is
+  -- the same mistake the policies themselves make -- and it would miss a second
+  -- address if one exists. Scanning every public policy, not just users', so
+  -- one run answers it for all four known instances and any unfound fifth.
+  SELECT 'policy', 650 + row_number() OVER (ORDER BY e.addr, u.id),
+         ('EMAIL POLICY SUBJECT :: ' || e.addr)::text,
+         (CASE
+            WHEN u.id IS NULL
+              THEN 'NO users ROW MATCHES THIS ADDRESS -- the policy grants nothing to anyone'
+            ELSE 'users row EXISTS'
+                 || '   is_admin = ' || coalesce(u.is_admin::text, 'NULL')
+                 || '   -> ' || CASE WHEN coalesce(u.is_admin, false)
+                                     THEN 'REDUNDANT with is_app_admin(), safe to drop'
+                                     ELSE 'LOAD-BEARING: grants admin WITHOUT is_admin. '
+                                          || 'Set is_admin on this row BEFORE dropping the policy.' END
+                 || '   banned = ' || coalesce(u.banned::text, 'NULL')
+                 || '   deleted_at = ' || coalesce(u.deleted_at::text, 'NULL')
+                 || '   id = ' || u.id::text
+          END)::text
+  FROM (
+    SELECT DISTINCT lower(m.parts[1]) AS addr
+    FROM pg_policies pol
+    CROSS JOIN LATERAL regexp_matches(
+      coalesce(pol.qual, '') || ' ' || coalesce(pol.with_check, ''),
+      '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}', 'g'
+    ) AS m(parts)
+    WHERE pol.schemaname NOT IN ('pg_catalog', 'information_schema')
+  ) e
+  LEFT JOIN public.users u ON lower(u.email) = e.addr
+
+  UNION ALL
+
+  -- ── policy: the same sweep, across EVERY table, not just users ──────────
+  -- Four instances are the ones found, not the ones that exist. Two of the
+  -- four surfaced by accident while looking at something else.
+  SELECT 'policy', 680 + row_number() OVER (ORDER BY pol.schemaname, pol.tablename, pol.policyname),
+         ('EMAIL POLICY ELSEWHERE :: ' || pol.schemaname || '.' || pol.tablename
+          || ' :: ' || pol.cmd || ' :: ' || pol.policyname)::text,
+         (coalesce(pol.qual, '') || ' | ' || coalesce(pol.with_check, ''))::text
+  FROM pg_policies pol
+  WHERE pol.schemaname NOT IN ('pg_catalog', 'information_schema')
+    AND pol.tablename <> 'users'
+    AND (coalesce(pol.qual, '') ILIKE '%@%' OR coalesce(pol.with_check, '') ILIKE '%@%')
+
+  UNION ALL
+
   -- ── grant: is UPDATE table-level, column-level, or both ─────────────────
   -- Measurement C said BOTH, which is why a targeted column REVOKE would have
   -- been inert. Recorded here so the capture migration states it rather than
