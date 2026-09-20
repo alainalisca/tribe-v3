@@ -393,6 +393,8 @@
   },
   "adminLeads": {
     "title": "Leads",
+    "partnerSectionTitle": "Leads",
+    "partnerSectionHelp": "Personas que dejaron sus datos para reclamar una clase gratis en {gym}. Escríbeles por WhatsApp y marca el lead cuando ya lo hayas contactado.",
     "tileLast7": "Leads últimos 7 días",
     "tileUncontacted": "Leads sin contactar",
     "tileTotal": "Leads totales",

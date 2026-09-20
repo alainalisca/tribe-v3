@@ -11,6 +11,9 @@ import PartnerDashboardStats from '@/components/partner/PartnerDashboardStats';
 import { ArrowLeft, Loader } from 'lucide-react';
 import VenueRequestsSection from '@/components/partner/VenueRequestsSection';
 import { useVenueRequests } from '@/hooks/useVenueRequests';
+import PartnerLeadsSection from '@/components/partner/PartnerLeadsSection';
+import { usePartnerLeads } from '@/hooks/usePartnerLeads';
+import { useTranslations } from '@/lib/i18n/useTranslations';
 
 export default function PartnerDashboardPage() {
   const router = useRouter();
@@ -26,6 +29,20 @@ export default function PartnerDashboardPage() {
     gymName: partner?.business_name ?? '',
     gymUserId: partner?.user_id ?? '',
     initialAutoApprove: partner?.auto_approve_roster ?? true,
+  });
+  // T-LEAD2 part D. Same shape as the venue queue above: the hook mounts before
+  // `partner` resolves and fetchPartnerLeads short-circuits on an empty id, so
+  // the first render costs no query rather than one for nobody.
+  const tLeads = useTranslations('adminLeads');
+  const leads = usePartnerLeads({
+    supabase,
+    partnerId: partner?.id ?? '',
+    messages: {
+      loadError: tLeads('loadError'),
+      toggleError: tLeads('toggleError'),
+      markedContacted: tLeads('markedContacted'),
+      markedPending: tLeads('markedPending'),
+    },
   });
   const [stats, setStats] = useState<PartnerStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -105,6 +122,24 @@ export default function PartnerDashboardPage() {
           autoApprove={venue.autoApprove}
           onDecide={(request, decision) => void venue.decide(request, decision)}
           onToggleAutoApprove={(next) => void venue.toggleAutoApprove(next)}
+        />
+
+        {/* Leads sit with the venue queue, above the metrics, for the same
+            reason the queue does: both are a person waiting on this gym to do
+            something. A lead who left a phone number an hour ago outranks last
+            week's impressions. */}
+        <PartnerLeadsSection
+          gymName={partner.business_name}
+          page={leads.page}
+          loading={leads.loading}
+          togglingId={leads.togglingId}
+          onToggleContacted={(id, contacted) => void leads.toggleContacted(id, contacted)}
+          from={leads.from}
+          to={leads.to}
+          hasPrev={leads.hasPrev}
+          hasNext={leads.hasNext}
+          onPrev={leads.goPrev}
+          onNext={leads.goNext}
         />
 
         {/* Stats grid */}

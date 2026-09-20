@@ -393,6 +393,8 @@
   },
   "adminLeads": {
     "title": "Leads",
+    "partnerSectionTitle": "Leads",
+    "partnerSectionHelp": "People who left their details to claim a free class at {gym}. Message them on WhatsApp and mark a lead once you have contacted it.",
     "tileLast7": "Leads last 7 days",
     "tileUncontacted": "Uncontacted leads",
     "tileTotal": "Total leads",
