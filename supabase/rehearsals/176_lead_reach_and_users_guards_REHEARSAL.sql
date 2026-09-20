@@ -22,7 +22,7 @@
 -- Part D  lead_* denied to a caller, still permitted to service-role
 -- Part E  deleted_at denied to a caller, still permitted to service-role
 -- Part F  lead_reaches: INSERT permitted, DELETE denied
--- Part G  nothing escaped
+-- Part G  176's END STATE inside the transaction (see the note at Part G)
 --
 -- WHY THE BEFORE-ARMS EXIST. Asserting that the new function raises proves
 -- only that it raises. It does not prove the old one was broken, and a
@@ -555,7 +555,17 @@ BEGIN
 
 END $outer$;
 
--- ── Part G: nothing escaped its subtransaction ────────────────────────────
+-- ── Part G: 176's END STATE, inside the transaction ───────────────────────
+-- NOT "nothing escaped", which is what this section means in 174's rehearsal.
+-- There, Part A unwound and Part H proved production was untouched. HERE 176's
+-- DDL is applied deliberately and left in place for the arms above, so the
+-- only thing protecting production is the ROLLBACK at the bottom. Mislabelling
+-- this as an escape check would claim a guarantee the file does not provide.
+--
+-- What it does check: that after every arm has run and unwound, the objects
+-- 176 installs are still in the state 176 intends -- so no arm quietly left
+-- the silent body, a FOR ALL policy, or a missing trigger behind.
+--
 -- Driven off a VALUES list so a missing row FAILS rather than dropping its
 -- check from the output.
 INSERT INTO reh_probe
