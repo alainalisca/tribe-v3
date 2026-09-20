@@ -1373,4 +1373,32 @@ select 'GUARD_174_reviews_truncate_revoked',
             then 'MISSING -- authenticated holds TRUNCATE on public.reviews'
             else 'applied' end
 
+union all
+select '175_t_lead2_lead_contact_toggle',
+       case when to_regprocedure('public.set_pass_lead_contacted(uuid,boolean)') is not null
+             and exists (select 1 from pg_indexes
+                          where schemaname = 'public' and tablename = 'pass_leads'
+                            and indexname = 'idx_pass_leads_created')
+       then 'applied' else 'MISSING' end
+
+union all
+-- The function is the ONLY write path into pass_leads, and that is true only
+-- while the table itself grants no client role UPDATE. Both halves, because
+-- either alone is a different broken state: no function means the Contactado
+-- toggle is dead for admins and partners, and a client UPDATE grant means the
+-- one-column write surface is gone and a partner could rewrite a lead's phone
+-- number.
+select 'GUARD_175_contacted_is_the_only_writable_column',
+       case when to_regprocedure('public.set_pass_lead_contacted(uuid,boolean)') is null
+            then 'MISSING -- set_pass_lead_contacted() absent'
+            when not coalesce((select prosecdef from pg_proc
+                                where oid = 'public.set_pass_lead_contacted(uuid,boolean)'::regprocedure), false)
+            then 'MISSING -- set_pass_lead_contacted() is not SECURITY DEFINER'
+            when has_function_privilege('anon', 'public.set_pass_lead_contacted(uuid,boolean)', 'EXECUTE')
+            then 'MISSING -- anon can EXECUTE set_pass_lead_contacted()'
+            when has_table_privilege('authenticated', 'public.pass_leads', 'UPDATE')
+              or has_table_privilege('anon', 'public.pass_leads', 'UPDATE')
+            then 'MISSING -- a client role holds UPDATE on pass_leads'
+            else 'applied' end
+
 order by migration;
