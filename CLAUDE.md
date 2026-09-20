@@ -598,6 +598,33 @@ This is the same move as reading _"corner-anchored"_ and _"centred"_ as separati
 
 The failure mode is treating all three as the first one, because that is the polite reading and the only one that requires no work. It is also the one that blocks: "find the reason first" is unsatisfiable when the reason is unrecoverable, and an unsatisfiable precondition stops a decision indefinitely while looking like diligence.
 
+**A GUARD AFTER THE WRITE IS A REPORT, NOT A GATE. A HAND-RUN MIGRATION THAT REPLACES AN OBJECT MUST CHECK FOR A LATER MIGRATION BEFORE WRITING.**
+
+Migration 175 captures `protect_verified_instructor()` as it existed before 176 converted two of its branches. As first written it did this:
+
+```
+line 120   CREATE OR REPLACE FUNCTION ...   -- the pre-176 body, silent reverts and all
+line 169   DO $$ ... assert 1 RAISE and 2 silent reverts ... $$
+```
+
+The assertion was right, the body was right, and the ordering made it a weapon. **The Supabase SQL editor autocommits statement by statement**, so there is no transaction wrapping those two. Re-run 175 after 176 and line 120 commits the silent reverts back over the fix; line 169 then aborts. The operator sees one red error and reads it as _"the migration failed, so nothing happened"_ — while the security fix has just been silently reverted.
+
+**The guard could not prevent anything. It could only describe the damage, after the damage.**
+
+Two things make this worse than a one-off:
+
+**Re-running is the normal case, not the exotic one.** These migrations are hand-applied by a person reading a file. Files get re-run to confirm they applied, after a connection drop, when someone is unsure whether the first attempt took, or when a rebuild replays the directory in order. Every migration in this repo is written to be idempotent precisely because re-running is expected — and idempotence is exactly what makes a stale capture dangerous rather than noisy, because it applies cleanly.
+
+**The shape is not specific to migrations.** Any script that writes and then validates has it: a seed that inserts then counts, a backfill that updates then checks drift, a config deploy that pushes then verifies. If the write can be wrong and the validation is what would tell you, the validation belongs **first**, phrased as a precondition on the state you are about to overwrite.
+
+So:
+
+- **A capture migration must refuse to run if the thing it captures has since been changed.** Read the live object, compare it to what you are about to write, and abort _before_ writing if a later migration has superseded it. 175 now opens with a pre-flight block that does this and names 176 in the error.
+- **Absence is fine and must be distinguished from mismatch.** The same pre-flight lets a missing object through, because that is a fresh rebuild, which is what a capture is for.
+- **Where the tool gives you a transaction, use it.** A single `DO` block is one statement and therefore atomic; 174 is built that way on purpose. 175 could not be, because `CREATE OR REPLACE FUNCTION` cannot live inside a `DO` without `EXECUTE` and a quoting layer that would have obscured the verbatim body — so the pre-flight is the substitute, and the file says so.
+
+**When a check exists only to produce a message, ask what it would have prevented had it run earlier. If the answer is "the thing it is reporting", move it.**
+
 ### Database Schema
 
 Core tables in `supabase/schema.sql`:
