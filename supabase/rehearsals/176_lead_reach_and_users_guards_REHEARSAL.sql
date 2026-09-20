@@ -264,7 +264,12 @@ BEGIN
       -- layer with "permission denied for table users" and never reached the
       -- trigger at all. A write that does not read needs only UPDATE, which is
       -- still granted, and that is the path an attacker would use.
-      UPDATE public.users SET total_earnings_cents = 999999 WHERE id = k_actor;
+      -- b1_before was read ABOVE, as postgres, before the role switch. Using it
+      -- as a bound parameter keeps the UPDATE blind -- the caller never reads
+      -- the column -- while guaranteeing the value differs, so IS DISTINCT FROM
+      -- fires. A bare literal could coincide with the stored value and pass
+      -- vacuously.
+      UPDATE public.users SET total_earnings_cents = b1_before + 999999 WHERE id = k_actor;
       b1_state := 'UPDATE SUCCEEDED and raised nothing -- which is the defect';
     EXCEPTION WHEN OTHERS THEN
       b1_state := 'RAISED ' || SQLSTATE || ' ' || SQLERRM;
@@ -293,7 +298,7 @@ BEGIN
       json_build_object('sub', k_actor::text, 'role','authenticated')::text, true);
     SET LOCAL ROLE authenticated;
     BEGIN
-      UPDATE public.users SET total_earnings_cents = 999999 WHERE id = k_actor;
+      UPDATE public.users SET total_earnings_cents = b1_before + 999999 WHERE id = k_actor;
       b2_state := 'UPDATE SUCCEEDED -- 176 did not convert this branch';
       b2_raised := false;
     EXCEPTION WHEN OTHERS THEN
