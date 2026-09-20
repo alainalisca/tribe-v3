@@ -187,32 +187,52 @@ export default function StorefrontEditor({
 
   return (
     <div className="space-y-6">
-      {/* Banner Preview — neutral placeholder when empty, image fill when set. */}
-      <div className="relative h-40 rounded-xl overflow-hidden bg-stone-100 dark:bg-tribe-surface border border-dashed border-stone-300 dark:border-tribe-mid">
-        {bannerUrl ? (
-          <Image src={bannerUrl} alt="Storefront banner" fill className="object-cover" unoptimized />
-        ) : (
-          <>
-            {/* Subtle radial accent so the empty state doesn't read as broken. */}
-            <div
-              className="absolute inset-0 pointer-events-none"
-              style={{
-                background: 'radial-gradient(circle at 50% 50%, rgba(132,204,22,0.08) 0%, transparent 60%)',
-              }}
-            />
-            <div className="relative z-0 h-full flex flex-col items-center justify-center text-center px-6 gap-1">
-              <div className="w-10 h-10 rounded-full bg-tribe-green/15 border border-tribe-green/30 flex items-center justify-center mb-1">
-                <Camera className="w-5 h-5 text-tribe-green" />
+      {/* Preview and its control are ONE child of the space-y-6 stack, so the
+          gap between them is the label's own mt-3 rather than the stack's
+          24px. As two siblings they would both take space-y-6's margin-top and
+          the control would drift away from the thing it acts on. */}
+      <div>
+        {/* T-AUD14: THE UPLOAD CONTROL SITS BELOW THE PREVIEW, NOT INSIDE IT.
+          It used to be `absolute bottom-3 right-3` within this box, over a
+          vertically centred text column. The two overlapped by 12 of the hint's
+          16 pixels AT EVERY VIEWPORT WIDTH, because neither position depends on
+          width: the column's 88px of content centres in the 160px box at y
+          36-124, and the button's 36px height at bottom-3 puts its top edge at
+          y 112. Horizontally they met on anything narrower than roughly 620px,
+          so every phone. The instructor never saw "1200x400 recommended".
+
+          The fix is not padding the column to clear the button. Padding would
+          keep a control inside a centred text block and rely on arithmetic to
+          keep them apart -- and the arithmetic was never done, which is the
+          only reason this shipped. Moving the control out removes the class of
+          bug rather than this instance of it. */}
+        <div className="relative h-40 rounded-xl overflow-hidden bg-stone-100 dark:bg-tribe-surface border border-dashed border-stone-300 dark:border-tribe-mid">
+          {bannerUrl ? (
+            <Image src={bannerUrl} alt="Storefront banner" fill className="object-cover" unoptimized />
+          ) : (
+            <>
+              {/* Subtle radial accent so the empty state doesn't read as broken. */}
+              <div
+                className="absolute inset-0 pointer-events-none"
+                style={{
+                  background: 'radial-gradient(circle at 50% 50%, rgba(132,204,22,0.08) 0%, transparent 60%)',
+                }}
+              />
+              <div className="relative z-0 h-full flex flex-col items-center justify-center text-center px-6 gap-1">
+                <div className="w-10 h-10 rounded-full bg-tribe-green/15 border border-tribe-green/30 flex items-center justify-center mb-1">
+                  <Camera className="w-5 h-5 text-tribe-green" />
+                </div>
+                <p className="text-sm font-semibold text-theme-primary">{txt.uploadBanner}</p>
+                <p className="text-xs text-theme-secondary">{txt.bannerHint}</p>
               </div>
-              <p className="text-sm font-semibold text-theme-primary">{txt.uploadBanner}</p>
-              <p className="text-xs text-theme-secondary">{txt.bannerHint}</p>
-            </div>
-          </>
-        )}
+            </>
+          )}
+        </div>
+
         <label
-          className={`absolute bottom-3 right-3 flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition text-sm font-semibold ${
+          className={`mt-3 flex items-center justify-center gap-2 w-full px-3 py-3 rounded-xl cursor-pointer transition text-sm font-semibold ${
             bannerUrl
-              ? 'bg-black/60 text-white hover:bg-black/80'
+              ? 'bg-theme-card border border-theme text-theme-primary hover:bg-theme-page'
               : 'bg-tribe-green text-tribe-dark hover:bg-tribe-green-hover'
           }`}
         >

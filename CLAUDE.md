@@ -506,6 +506,35 @@ That is not luck, it is the point. **The migration was mechanical and the guard 
 
 Written afterwards, the guard would have been built to pass against the migrated tree, and `pb-12` would have looked like a screen the guard simply did not cover. **A guard written after a migration tends to encode the migration's blind spots as its scope.**
 
+**A SPATIAL CLAIM NEEDS NUMBERS. A DESCRIPTION THAT SOUNDS LIKE SEPARATION IS NOT A MEASUREMENT OF SEPARATION.**
+
+T-AUD14 was reported as _"does not reproduce as described: the button is `absolute bottom-3 right-3` and the hint is centred in a `relative z-0` flex column, so corner-anchored rather than overlapping."_ Every word of that is true, and the two elements overlap by 12 of the hint's 16 pixels at every viewport width.
+
+**"Corner-anchored" and "centred" are both true of two elements that overlap.** The description was a restatement of the class names, and it reads as an argument because the words sound like opposite ends of the box. Nothing in it is a distance.
+
+The arithmetic is four lines and closes it either way:
+
+```
+box height (h-40)                              160px
+centred content  40+4+4+20+4+16              =  88px
+free space at each end  (160-88)/2           =  36px
+control needs  bottom-3 + own height (12+36) =  48px  ->  12px overlap
+```
+
+**Before claiming two elements do or do not touch, compute the interval each occupies and intersect them.** If the numbers are not in the report, the claim has not been made. This is the human-side twin of the guard entries above: there an instrument reported the shape it was built to see; here a description was mistaken for a measurement, and the conclusion was drawn from the vocabulary rather than the geometry.
+
+The cost was not the bug. It was that the ticket **was not queued**, because "does not reproduce" is a verdict that stops work. A wrong measurement gets re-measured; a wrong verdict gets filed.
+
+**AND THE LIST ITSELF: THREE OF TWENTY-FOUR TICKETS CHANGED STATUS ON A SECOND LOOK.**
+
+In one pass over the T-AUD list, reviewed against current `main` rather than against the ticket text:
+
+- **T-AUD11** was recorded as fixed; it was not reproducing, which is a different claim with a different follow-up.
+- **T-AUD24** was a different ticket than the status list said — the status-bar item is T-AUD6, and T-AUD24 is iOS Geolocation and Haptics, still reproducing.
+- **T-AUD14** was recorded as not reproducing while reproducing on every phone.
+
+The list was built on 2026-09-03 against a bundle that no longer exists. **Every entry in it deserves arithmetic or a measurement rather than a reading**, and a status inherited from a stale audit is a hypothesis, not a finding. The error rate on second look was 3 in 24 — high enough that the prior for any unverified entry should be "unknown", not "as recorded".
+
 ### Database Schema
 
 Core tables in `supabase/schema.sql`:
