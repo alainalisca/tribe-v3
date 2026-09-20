@@ -90,10 +90,45 @@ BEGIN
     RAISE EXCEPTION 'REHEARSAL ABORTED: need two non-admin users and did not find them.';
   END IF;
 
+  -- ── Part 0: STATE THE ROLES BEFORE ANYTHING DEPENDS ON THEM ─────────────
+  -- The previous version of 176 keyed a security control on
+  -- `current_user IS DISTINCT FROM session_user`. SET ROLE changes
+  -- current_user and leaves session_user alone, and session_user is a property
+  -- of the CONNECTION: `postgres` in this editor, `authenticator` under
+  -- PostgREST. So that control fired differently per environment and would
+  -- have gone green in production while doing nothing.
+  --
+  -- Any arm below that behaves differently because of who is connected is now
+  -- readable rather than mysterious, because this row says who that is.
+  INSERT INTO reh_probe VALUES
+    (0, 'ENV session_user and current_user, stated before any arm relies on them',
+     'session_user=' || session_user || '  current_user=' || current_user
+     || '   (production differs: PostgREST connects as authenticator)', true);
+
   -- ── Part A: APPLY 176's BODY, here, inside the transaction ──────────────
   -- Not in a subtransaction: these objects must survive for every arm below.
   -- The outer ROLLBACK is what removes them.
   BEGIN
+    -- B of 176: the counter moves off users. No write grant is the mechanism.
+    CREATE TABLE IF NOT EXISTS public.lead_credits (
+      user_id   uuid PRIMARY KEY REFERENCES public.users(id) ON DELETE CASCADE,
+      remaining integer NOT NULL DEFAULT 3,
+      reset_at  timestamptz,
+      tier      text NOT NULL DEFAULT 'free' CHECK (tier IN ('free','growth','unlimited'))
+    );
+    INSERT INTO public.lead_credits (user_id, remaining, reset_at, tier)
+    SELECT u.id, coalesce(u.lead_credits_remaining, 3), u.lead_credits_reset_at,
+           coalesce(u.lead_tier, 'free')
+      FROM public.users u
+     WHERE u.lead_credits_remaining IS NOT NULL OR u.lead_tier IS NOT NULL
+    ON CONFLICT (user_id) DO NOTHING;
+    ALTER TABLE public.lead_credits ENABLE ROW LEVEL SECURITY;
+    DROP POLICY IF EXISTS lead_credits_select_own ON public.lead_credits;
+    CREATE POLICY lead_credits_select_own ON public.lead_credits
+      FOR SELECT TO authenticated USING (auth.uid() = user_id);
+    REVOKE ALL ON public.lead_credits FROM PUBLIC, anon, authenticated;
+    GRANT SELECT ON public.lead_credits TO authenticated;
+
     -- A1 of 176
     CREATE OR REPLACE FUNCTION public.reach_out_to_athlete(p_athlete_id uuid)
      RETURNS TABLE (credits_remaining integer)
@@ -106,9 +141,12 @@ BEGIN
       IF v_instructor IS NULL THEN
         RAISE EXCEPTION 'Not signed in' USING ERRCODE = 'insufficient_privilege';
       END IF;
-      SELECT u.is_verified_instructor, u.lead_tier, coalesce(u.lead_credits_remaining, 0)
-        INTO v_verified, v_tier, v_remaining
+      SELECT u.is_verified_instructor INTO v_verified
         FROM public.users u WHERE u.id = v_instructor;
+      INSERT INTO public.lead_credits (user_id) VALUES (v_instructor)
+      ON CONFLICT (user_id) DO NOTHING;
+      SELECT c.tier, c.remaining INTO v_tier, v_remaining
+        FROM public.lead_credits c WHERE c.user_id = v_instructor;
       IF NOT coalesce(v_verified, false) THEN
         RAISE EXCEPTION 'Only verified instructors can reach out' USING ERRCODE = 'insufficient_privilege';
       END IF;
@@ -121,40 +159,12 @@ BEGIN
         RAISE EXCEPTION 'You already reached this athlete' USING ERRCODE = 'unique_violation';
       END;
       IF v_tier = 'unlimited' THEN RETURN QUERY SELECT 9999; RETURN; END IF;
-      UPDATE public.users SET lead_credits_remaining = greatest(0, v_remaining - 1)
-       WHERE id = v_instructor;
+      UPDATE public.lead_credits SET remaining = greatest(0, v_remaining - 1)
+       WHERE user_id = v_instructor;
       RETURN QUERY SELECT greatest(0, v_remaining - 1);
     END; $fn$;
     REVOKE ALL ON FUNCTION public.reach_out_to_athlete(uuid) FROM PUBLIC, anon;
     GRANT EXECUTE ON FUNCTION public.reach_out_to_athlete(uuid) TO authenticated;
-
-    -- B of 176. NOT SECURITY DEFINER, deliberately: it must observe
-    -- current_user as the surrounding context sees it.
-    CREATE OR REPLACE FUNCTION public.prevent_lead_fields_self_update()
-     RETURNS trigger LANGUAGE plpgsql SET search_path TO 'public'
-    AS $fn$
-    BEGIN
-      IF auth.uid() IS NULL OR current_user IS DISTINCT FROM session_user THEN
-        RETURN NEW;
-      END IF;
-      IF is_app_admin_uid(auth.uid()) THEN RETURN NEW; END IF;
-      IF NEW.lead_credits_remaining IS DISTINCT FROM OLD.lead_credits_remaining THEN
-        RAISE EXCEPTION 'lead_credits_remaining can only be changed by reach_out_to_athlete(), the monthly reset, or an admin'
-          USING ERRCODE = 'insufficient_privilege';
-      END IF;
-      IF NEW.lead_credits_reset_at IS DISTINCT FROM OLD.lead_credits_reset_at THEN
-        RAISE EXCEPTION 'lead_credits_reset_at can only be changed by the monthly reset or an admin'
-          USING ERRCODE = 'insufficient_privilege';
-      END IF;
-      IF NEW.lead_tier IS DISTINCT FROM OLD.lead_tier THEN
-        RAISE EXCEPTION 'lead_tier can only be changed by an admin'
-          USING ERRCODE = 'insufficient_privilege';
-      END IF;
-      RETURN NEW;
-    END; $fn$;
-    DROP TRIGGER IF EXISTS users_lead_fields_guard ON public.users;
-    CREATE TRIGGER users_lead_fields_guard BEFORE UPDATE ON public.users
-      FOR EACH ROW EXECUTE FUNCTION public.prevent_lead_fields_self_update();
 
     -- C of 176
     DROP POLICY IF EXISTS "instructors_own_reaches" ON public.lead_reaches;
@@ -248,8 +258,13 @@ BEGIN
       json_build_object('sub', k_actor::text, 'role','authenticated')::text, true);
     SET LOCAL ROLE authenticated;
     BEGIN
-      UPDATE public.users SET total_earnings_cents = coalesce(total_earnings_cents,0) + 999999
-       WHERE id = k_actor;
+      -- BLIND LITERAL, not `coalesce(col,0) + n`. The first version read the
+      -- column inside the expression, and migration 113 revoked SELECT on
+      -- total_earnings_cents from authenticated -- so it died at the grant
+      -- layer with "permission denied for table users" and never reached the
+      -- trigger at all. A write that does not read needs only UPDATE, which is
+      -- still granted, and that is the path an attacker would use.
+      UPDATE public.users SET total_earnings_cents = 999999 WHERE id = k_actor;
       b1_state := 'UPDATE SUCCEEDED and raised nothing -- which is the defect';
     EXCEPTION WHEN OTHERS THEN
       b1_state := 'RAISED ' || SQLSTATE || ' ' || SQLERRM;
@@ -278,8 +293,7 @@ BEGIN
       json_build_object('sub', k_actor::text, 'role','authenticated')::text, true);
     SET LOCAL ROLE authenticated;
     BEGIN
-      UPDATE public.users SET total_earnings_cents = coalesce(total_earnings_cents,0) + 999999
-       WHERE id = k_actor;
+      UPDATE public.users SET total_earnings_cents = 999999 WHERE id = k_actor;
       b2_state := 'UPDATE SUCCEEDED -- 176 did not convert this branch';
       b2_raised := false;
     EXCEPTION WHEN OTHERS THEN
@@ -377,10 +391,10 @@ BEGIN
   -- would have failed exactly here.
   BEGIN
     DELETE FROM public.lead_reaches WHERE instructor_id = k_actor AND athlete_id = k_victim;
-    UPDATE public.users
-       SET is_verified_instructor = true, lead_tier = 'free', lead_credits_remaining = 3
-     WHERE id = k_actor;
-    SELECT coalesce(lead_credits_remaining,0) INTO c_credits_before FROM public.users WHERE id = k_actor;
+    UPDATE public.users SET is_verified_instructor = true WHERE id = k_actor;
+    INSERT INTO public.lead_credits (user_id, remaining, tier) VALUES (k_actor, 3, 'free')
+    ON CONFLICT (user_id) DO UPDATE SET remaining = 3, tier = 'free';
+    SELECT remaining INTO c_credits_before FROM public.lead_credits WHERE user_id = k_actor;
 
     PERFORM set_config('request.jwt.claims',
       json_build_object('sub', k_actor::text, 'role','authenticated')::text, true);
@@ -394,7 +408,7 @@ BEGIN
     RESET ROLE;
     PERFORM set_config('request.jwt.claims', NULL, true);
 
-    SELECT coalesce(lead_credits_remaining,0) INTO c_credits_after FROM public.users WHERE id = k_actor;
+    SELECT remaining INTO c_credits_after FROM public.lead_credits WHERE user_id = k_actor;
     SELECT count(*) INTO c_rows FROM public.lead_reaches
      WHERE instructor_id = k_actor AND athlete_id = k_victim;
     c_ok := (c_state = 'RPC succeeded')
@@ -419,7 +433,10 @@ BEGIN
       json_build_object('sub', k_actor::text, 'role','authenticated')::text, true);
     SET LOCAL ROLE authenticated;
     BEGIN
-      UPDATE public.users SET lead_credits_remaining = 9999 WHERE id = k_actor;
+      -- No UPDATE grant at all, so this is a grant denial (42501), not a
+      -- trigger raise and not an RLS row filter. Nothing to exempt, nothing
+      -- that depends on who is connected.
+      UPDATE public.lead_credits SET remaining = 9999 WHERE user_id = k_actor;
       d1_state := 'UPDATE SUCCEEDED -- the counter is still self-editable';
       d1_denied := false;
     EXCEPTION WHEN OTHERS THEN
@@ -437,7 +454,7 @@ BEGIN
   END;
 
   INSERT INTO reh_probe VALUES
-    (7, 'D1 a caller CANNOT self-set lead_credits_remaining',
+    (7, 'D1 a caller CANNOT write lead_credits (no grant, so nothing to exempt)',
         coalesce(d1_state,'(probe row missing)'), coalesce(d1_denied,false));
 
   -- Service-role: no jwt claims at all, which is what the reset cron looks
@@ -445,8 +462,8 @@ BEGIN
   BEGIN
     PERFORM set_config('request.jwt.claims', NULL, true);
     BEGIN
-      UPDATE public.users SET lead_credits_remaining = 3, lead_credits_reset_at = now()
-       WHERE id = k_actor;
+      UPDATE public.lead_credits SET remaining = 3, reset_at = now()
+       WHERE user_id = k_actor;
       d2_state := 'permitted'; d2_allowed := true;
     EXCEPTION WHEN OTHERS THEN
       d2_state := SQLSTATE || ' ' || SQLERRM; d2_allowed := false;
@@ -459,7 +476,7 @@ BEGIN
   END;
 
   INSERT INTO reh_probe VALUES
-    (8, 'D2 SERVICE-ROLE still writes lead_credits_* (the monthly reset cron)',
+    (8, 'D2 SERVICE-ROLE still writes lead_credits (the monthly reset cron)',
         coalesce(d2_state,'(probe row missing)'), coalesce(d2_allowed,false));
 
   -- ── Part E: deleted_at denied to a caller, permitted to service-role ────
@@ -586,11 +603,15 @@ FROM (VALUES
          WHERE schemaname='public' AND tablename='lead_reaches'),
        (SELECT count(*) = 0 FROM pg_policies WHERE schemaname='public'
           AND tablename='lead_reaches' AND cmd IN ('ALL','UPDATE','DELETE'))),
-  (15, 'G3 both new users guards are attached',
+  (15, 'G3 the deleted_at guard is attached, and lead_credits has no write grant',
        (SELECT coalesce(string_agg(tgname, ', ' ORDER BY tgname), '(none)') FROM pg_trigger
-         WHERE tgrelid='public.users'::regclass AND NOT tgisinternal),
-       (SELECT count(*) = 2 FROM pg_trigger WHERE tgrelid='public.users'::regclass
-          AND tgname IN ('users_lead_fields_guard','users_deleted_at_guard'))),
+         WHERE tgrelid='public.users'::regclass AND NOT tgisinternal)
+       || '   lead_credits: select=' || has_table_privilege('authenticated','public.lead_credits','SELECT')::text
+       || ' update=' || has_table_privilege('authenticated','public.lead_credits','UPDATE')::text,
+       (SELECT count(*) = 1 FROM pg_trigger WHERE tgrelid='public.users'::regclass
+          AND tgname = 'users_deleted_at_guard')
+       AND has_table_privilege('authenticated','public.lead_credits','SELECT')
+       AND NOT has_table_privilege('authenticated','public.lead_credits','UPDATE')),
   (16, 'G4 lead_reaches row count is back to its baseline, so no arm leaked a row',
        (SELECT 'now=' || (SELECT count(*) FROM public.lead_reaches)
                || '  baseline=' || (SELECT lead_reaches_rows FROM reh_baseline)),
@@ -598,7 +619,7 @@ FROM (VALUES
              = (SELECT lead_reaches_rows FROM reh_baseline)))
 ) AS t(seq, check_name, detail, passed);
 
--- The one result set. Every row must read PASS. 16 of 16.
+-- The one result set. Every row must read PASS. 17 of 17 (seq 0 to 16).
 SELECT seq, CASE WHEN passed THEN 'PASS' ELSE 'FAIL' END AS result, check_name, detail
 FROM reh_probe ORDER BY seq;
 

@@ -625,6 +625,36 @@ So:
 
 **When a check exists only to produce a message, ask what it would have prevented had it run earlier. If the answer is "the thing it is reporting", move it.**
 
+**A SECURITY CONTROL MUST NOT DEPEND ON ROLE IDENTITY THAT DIFFERS BETWEEN THE TEST HARNESS AND THE RUNTIME.**
+
+A `BEFORE UPDATE` guard on `public.users` exempted writes made inside the `SECURITY DEFINER` RPC by testing `current_user IS DISTINCT FROM session_user`. `SET ROLE` changes `current_user` and leaves `session_user` alone, so that looked like a clean way to ask "was I reached through a definer function".
+
+**It is not, because `session_user` is a property of how the connection was made.**
+
+|                | `session_user`  | direct write as `authenticated`                | inside the definer RPC         |
+| -------------- | --------------- | ---------------------------------------------- | ------------------------------ |
+| **SQL editor** | `postgres`      | DISTINCT → exemption fires → **guard skipped** | not distinct → **RPC blocked** |
+| **PostgREST**  | `authenticator` | DISTINCT → exemption fires → **guard skipped** | DISTINCT → RPC works           |
+
+The rehearsal failed in the harness with the RPC blocked. **In production it would have gone green while the guard did nothing at all** — the exemption fires for every caller, because `authenticated` is never equal to `authenticator`. One line, two environments, wrong in both, and only one of them visibly.
+
+**A trigger cannot distinguish "`current_user` was changed by SECURITY DEFINER" from "changed by `SET ROLE`"** without knowing the expected baseline, and the baseline is environment-dependent. There is no fix by choosing a better predicate. `set_config('app.x', …, true)` does not help either: `GRANT SET ON PARAMETER` covers superuser-restricted GUCs, not `app.*` placeholders, so a flag the trigger trusts is a flag the caller sets.
+
+**Remove the need for the signal instead of finding a better signal.** The counter lived on a row the user owns, which is what created the question. Moved to its own table with no write grant to `authenticated`, there is nothing to exempt: the definer RPC writes it, service-role writes it, the caller cannot, and no code asks who it is.
+
+**And if a test asserts on `current_user` or `session_user`, it must first assert what they are.** Otherwise the assertion is silently about the harness. A rehearsal arm that prints both before anything else costs one row and makes every role-dependent result readable.
+
+**WRITE THE ARM FOR THE PART YOU CANNOT VERIFY, NOT THE PART YOU CAN.**
+
+Of six arms in that rehearsal, one was written specifically because I said I was uncertain about the mechanism — _"arm C1 exists to catch this if the reasoning here is wrong too"_, in the migration's own comment. **C1 is the arm that caught it.** The arms covering the parts I was confident about all passed and told me nothing I did not already believe.
+
+This inverts the usual instinct, which is to test what you understand well enough to predict the outcome of. Those tests are the cheapest to write, the easiest to make pass, and the least informative — a test whose result you can predict has already been run, in your head, and running it again confirms your model rather than the code.
+
+**The uncertainty is the signal for where the test belongs.** When you catch yourself writing "this should work because…", that sentence is the specification for an arm. When you find yourself unable to finish the sentence, that is the arm that will earn its place. Two practical forms:
+
+- Say in the comment _why_ the arm exists and what it would catch. If you cannot name a specific wrong belief it would falsify, it is probably testing something you already know.
+- If a change rests on reasoning you could not confirm from source, the arm testing that reasoning is not optional and should not be the last one written.
+
 ### Database Schema
 
 Core tables in `supabase/schema.sql`:
