@@ -389,11 +389,19 @@ BEGIN
         coalesce(b4_state,'(probe row missing)'), coalesce(b4_raised,false));
 
   -- ── Part C: the RPC works end to end as a real non-admin ────────────────
-  -- THE ARM THAT CHECKS MY OWN REASONING. Part B's trigger exempts the RPC by
-  -- testing `current_user IS DISTINCT FROM session_user`. If that is wrong,
-  -- the guard blocks the RPC it exists to serve and this arm fails -- which is
-  -- the whole reason it is here. The first draft used pg_trigger_depth() and
-  -- would have failed exactly here.
+  -- THE NEGATIVE CONTROL, and the arm with the most history. Two earlier
+  -- versions of Part B guarded users.lead_* with a trigger and tried to exempt
+  -- the RPC -- first with pg_trigger_depth() > 1, which is 1 inside a trigger
+  -- fired by an ordinary UPDATE and so blocked the RPC; then with
+  -- `current_user IS DISTINCT FROM session_user`, which fired backwards in this
+  -- editor and would have fired for EVERY caller under PostgREST, leaving the
+  -- guard doing nothing. This arm caught both.
+  --
+  -- Part B no longer has a trigger or an exemption: the counter lives in
+  -- lead_credits with no write grant to `authenticated`, so the RPC writes it
+  -- under definer rights and a caller simply cannot. There is nothing left for
+  -- this arm to catch in that mechanism -- it now guards the plainer risk that
+  -- moving the counter broke the feature it belongs to.
   BEGIN
     DELETE FROM public.lead_reaches WHERE instructor_id = k_actor AND athlete_id = k_victim;
     UPDATE public.users SET is_verified_instructor = true WHERE id = k_actor;
