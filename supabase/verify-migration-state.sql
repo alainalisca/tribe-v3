@@ -1396,8 +1396,12 @@ select 'GUARD_175_contacted_is_the_only_writable_column',
             then 'MISSING -- set_pass_lead_contacted() is not SECURITY DEFINER'
             when has_function_privilege('anon', 'public.set_pass_lead_contacted(uuid,boolean)', 'EXECUTE')
             then 'MISSING -- anon can EXECUTE set_pass_lead_contacted()'
-            when has_table_privilege('authenticated', 'public.pass_leads', 'UPDATE')
-              or has_table_privilege('anon', 'public.pass_leads', 'UPDATE')
+            -- has_ANY_column_privilege: has_table_privilege cannot see a
+            -- column-level grant, so UPDATE (email) on pass_leads to
+            -- authenticated would read as "applied" here. Found by 175's
+            -- rehearsal, D7. Same correction in the migration's own guard.
+            when has_any_column_privilege('authenticated', 'public.pass_leads', 'UPDATE')
+              or has_any_column_privilege('anon', 'public.pass_leads', 'UPDATE')
             then 'MISSING -- a client role holds UPDATE on pass_leads'
             else 'applied' end
 

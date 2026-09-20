@@ -195,8 +195,19 @@ BEGIN
   -- THE POINT OF THE WHOLE DESIGN: the function is the doorway BECAUSE the
   -- table has no other one. If a later migration grants UPDATE to a client
   -- role, the single-column guarantee is gone and nothing else would say so.
-  IF has_table_privilege('authenticated', 'public.pass_leads', 'UPDATE')
-     OR has_table_privilege('anon', 'public.pass_leads', 'UPDATE') THEN
+  -- has_ANY_column_privilege, NOT has_table_privilege, and the rehearsal is
+  -- what found it. D7 granted UPDATE (contacted_at) to authenticated and the
+  -- guard STAYED QUIET: has_table_privilege answers only "is the privilege held
+  -- at table level", so a column-level grant is invisible to it. That is the
+  -- exact hole this guard exists to close -- a later migration granting
+  -- UPDATE (email) on pass_leads would have sailed past it, and a partner could
+  -- then rewrite a lead's address.
+  --
+  -- has_any_column_privilege is true for a table-level grant OR a grant on any
+  -- single column, so it strictly subsumes the question that was being asked.
+  -- Both arms are proved in the rehearsal: a column grant and a table grant.
+  IF has_any_column_privilege('authenticated', 'public.pass_leads', 'UPDATE')
+     OR has_any_column_privilege('anon', 'public.pass_leads', 'UPDATE') THEN
     RAISE EXCEPTION '175 guard: a client role holds UPDATE on pass_leads -- the '
                     'single-column write surface is no longer guaranteed';
   END IF;
