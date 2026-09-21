@@ -225,16 +225,32 @@ BEGIN
     FROM pg_proc p WHERE p.oid = 'public.find_training_partners(text, integer)'::regprocedure;
 
   -- ── Choose a viewer, and become them ─────────────────────────────────────
+  -- ANY live non-instructor athlete. The first version of this arm also
+  -- required coordinates AND sports, and found nobody -- which was not a bug in
+  -- 181 but a fact about the data: the only eligible user with both is an
+  -- INSTRUCTOR, so adding the instructor filter to the viewer query emptied it.
+  -- 180's rehearsal used that same selection and succeeded, which means the
+  -- viewer it ran as was an instructor.
+  --
+  -- The property under test does not depend on the viewer's position at all.
+  -- Instructors are excluded from the CANDIDATE set regardless of who is
+  -- looking, so requiring a located viewer constrained the rehearsal for no
+  -- reason and turned a data fact into a red run.
+  --
+  -- Coordinates and sports are now PREFERENCES, not requirements: the ORDER BY
+  -- takes the richest available viewer so C4 and C5 still exercise the
+  -- interesting paths, while any athlete at all will do.
   SELECT u.id INTO v_viewer FROM public.users u
    WHERE u.deleted_at IS NULL AND u.banned IS NOT TRUE AND u.is_test_account IS NOT TRUE
      AND u.is_instructor IS NOT TRUE
-     AND u.location_lat IS NOT NULL AND u.location_lng IS NOT NULL
-     AND cardinality(coalesce(u.sports,'{}')) > 0
-   ORDER BY u.id LIMIT 1;
+   ORDER BY (u.location_lat IS NOT NULL AND u.location_lng IS NOT NULL) DESC,
+            cardinality(coalesce(u.sports,'{}')) DESC,
+            u.id
+   LIMIT 1;
 
   IF v_viewer IS NULL THEN
     INSERT INTO reh_probe VALUES (98, 'NO SUITABLE VIEWER',
-      'no eligible non-instructor has coordinates and sports', false);
+      'no live non-instructor athlete exists at all', false);
     RETURN;
   END IF;
   PERFORM set_config('request.jwt.claims', json_build_object('sub', v_viewer)::text, true);
@@ -262,7 +278,12 @@ BEGIN
   -- ── C1 (PRESENCE): the function still returns people ─────────────────────
   INSERT INTO reh_probe VALUES
     (4, 'C1 PRESENCE: the result is non-empty (kills "passes because it returns nothing")',
-     'returned=' || v_rows, v_rows > 0);
+     'returned=' || v_rows
+       || '   viewer located=' || (SELECT (u.location_lat IS NOT NULL)::text
+              FROM public.users u WHERE u.id = v_viewer)
+       || '   viewer sports=' || (SELECT cardinality(coalesce(u.sports,'{}'))::text
+              FROM public.users u WHERE u.id = v_viewer),
+     v_rows > 0);
 
   -- ── C2 (PRESENCE): there WERE instructors to exclude ─────────────────────
   SELECT count(*) INTO v_eligible_instructors FROM reh_old WHERE is_instructor;
