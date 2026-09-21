@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { ArrowLeft, Search, X } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useLanguage } from '@/lib/LanguageContext';
-import { fetchNearbyAthletes } from '@/lib/dal/connections';
+import { fetchTrainingPartners } from '@/lib/dal/connections';
 import TrainingPartnerCard from '@/components/TrainingPartnerCard';
 import InviteToSessionSheet from '@/components/InviteToSessionSheet';
 import { sportTranslations } from '@/lib/translations';
@@ -41,7 +41,6 @@ export default function TrainingPartnersPage() {
   const [loading, setLoading] = useState(true);
   const [selectedSport, setSelectedSport] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [inviteTarget, setInviteTarget] = useState<TrainingPartner | null>(null);
 
@@ -53,32 +52,20 @@ export default function TrainingPartnersPage() {
       if (user) setUserId(user.id);
     };
     getUser();
-
-    // Silent location helper — falls back to Medellín when permission
-    // isn't already granted instead of prompting on page mount. If
-    // we add a "near me" button later we can wire it to
-    // requestUserLocation for explicit prompting.
-    (async () => {
-      const { getUserLocation } = await import('@/lib/location');
-      const loc = await getUserLocation();
-      setUserLocation(loc ? { lat: loc.latitude, lng: loc.longitude } : { lat: 6.2442, lng: -75.5812 });
-    })();
+    // No browser location is read here any more. find_training_partners ranks
+    // against the viewer's own stored coordinates server-side, and the Medellin
+    // centroid fallback is gone with it -- substituting the city centre
+    // answered "who is near downtown" while presenting it as "who is near me".
   }, [supabase]);
 
   useEffect(() => {
     const load = async () => {
-      if (!userId || !userLocation) return;
+      if (!userId) return;
       setLoading(true);
 
-      const result = await fetchNearbyAthletes(
-        supabase,
-        userId,
-        userLocation.lat,
-        userLocation.lng,
-        selectedSport || undefined,
-        30,
-        100
-      );
+      // 100 was passed as `limit` alongside a radius of 30 that the old DAL
+      // never read. The RPC has no radius; 100 is simply the page size.
+      const result = await fetchTrainingPartners(supabase, selectedSport || undefined, 100);
 
       if (result.success && result.data) {
         setPartners(result.data);
@@ -86,7 +73,7 @@ export default function TrainingPartnersPage() {
       setLoading(false);
     };
     load();
-  }, [supabase, userId, userLocation, selectedSport]);
+  }, [supabase, userId, selectedSport]);
 
   const filtered = searchQuery
     ? partners.filter((p) => p.name.toLowerCase().includes(searchQuery.toLowerCase()))

@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
-import { fetchNearbyAthletes } from '@/lib/dal/connections';
+import { fetchTrainingPartners } from '@/lib/dal/connections';
 import TrainingPartnerCard from './TrainingPartnerCard';
 import InviteToSessionSheet from './InviteToSessionSheet';
 import { sportTranslations } from '@/lib/translations';
@@ -31,13 +31,14 @@ export default function FindTrainingPartners({ language }: FindTrainingPartnersP
   const [loading, setLoading] = useState(true);
   const [selectedSport, setSelectedSport] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [inviteTarget, setInviteTarget] = useState<TrainingPartner | null>(null);
 
   const isEs = language === 'es';
 
-  // Get current user and location
+  // Get the current user. NO LOCATION IS READ HERE any more: find_training_partners
+  // ranks against the viewer's own stored coordinates server-side, so the
+  // browser never needs a position and never receives one.
   useEffect(() => {
     const getUser = async () => {
       const {
@@ -50,33 +51,23 @@ export default function FindTrainingPartners({ language }: FindTrainingPartnersP
     };
 
     getUser();
-
-    // Get user's location — fallback to Medellin. Silent helper so
-    // we never auto-prompt on mount; if permission isn't already
-    // granted the page falls back to the city center and the user
-    // can opt in via an explicit "near me" affordance if/when added.
-    (async () => {
-      const { getUserLocation } = await import('@/lib/location');
-      const loc = await getUserLocation();
-      setUserLocation(loc ? { lat: loc.latitude, lng: loc.longitude } : { lat: 6.2442, lng: -75.5812 });
-    })();
+    // The Medellin centroid fallback is gone with it. Substituting the city
+    // centre for a viewer with no location silently answered a different
+    // question -- "who is near downtown" -- and presented it as an answer to
+    // "who is near me". The RPC ranks such a viewer by shared sports instead.
   }, [supabase]);
 
-  // Fetch nearby athletes
+  // Fetch ranked partners. userId gates readiness only: the RPC identifies the
+  // caller itself via auth.uid() and raises 42501 if the session has not
+  // attached yet.
   useEffect(() => {
     const load = async () => {
-      if (!userId || !userLocation) return;
+      if (!userId) return;
 
       setLoading(true);
       setError(null);
 
-      const result = await fetchNearbyAthletes(
-        supabase,
-        userId,
-        userLocation.lat,
-        userLocation.lng,
-        selectedSport || undefined
-      );
+      const result = await fetchTrainingPartners(supabase, selectedSport || undefined);
 
       if (result.success && result.data) {
         setPartners(result.data);
@@ -88,7 +79,7 @@ export default function FindTrainingPartners({ language }: FindTrainingPartnersP
     };
 
     load();
-  }, [supabase, userId, userLocation, selectedSport]);
+  }, [supabase, userId, selectedSport]);
 
   const t = (key: string): string => {
     const translations: Record<string, Record<string, string>> = {

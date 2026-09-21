@@ -583,8 +583,6 @@ export default function ProfilePageClient({ userId, initialProfile, statsSlot }:
             id: userId,
             name: profile.name ?? '',
             avatar_url: profile.avatar_url ?? null,
-            primary_sport: sports[0] ?? '',
-            distance_km: 0,
             shared_sport_count: 0,
             sports: sports,
           }}
