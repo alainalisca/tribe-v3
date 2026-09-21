@@ -227,7 +227,7 @@ export default function InstructorOnboardingPage() {
     years_experience: '' as string,
     website_url: '',
     storefront_tagline: '',
-    storefront_banner_url: '',
+    cover_image_url: '',
     earnings_currency: 'COP',
     photos: [] as string[],
   });
@@ -272,7 +272,7 @@ export default function InstructorOnboardingPage() {
           years_experience: p.years_experience?.toString() || '',
           website_url: p.website_url || '',
           storefront_tagline: p.storefront_tagline || '',
-          storefront_banner_url: p.storefront_banner_url || '',
+          cover_image_url: p.cover_image_url || '',
           earnings_currency: p.earnings_currency || 'COP',
           photos: p.photos || [],
         });
@@ -340,7 +340,7 @@ export default function InstructorOnboardingPage() {
         data: { publicUrl },
       } = supabase.storage.from('profile-images').getPublicUrl(path);
 
-      setForm((prev) => ({ ...prev, storefront_banner_url: publicUrl }));
+      setForm((prev) => ({ ...prev, cover_image_url: publicUrl }));
     } catch (err) {
       logError(err, { action: 'instructorOnboarding.bannerUpload' });
       showError(getErrorMessage(err, 'upload_photo', language));
@@ -426,11 +426,12 @@ export default function InstructorOnboardingPage() {
         years_experience: yearsExperience,
         website_url: form.website_url || null,
         storefront_tagline: form.storefront_tagline || null,
-        storefront_banner_url: form.storefront_banner_url || null,
-        // BUG-007: dual-write the banner to both columns so the /profile
-        // page (which reads banner_url) and the storefront page (which
-        // reads storefront_banner_url) both display the uploaded image.
-        banner_url: form.storefront_banner_url || null,
+        // Migration 179 collapsed the two banner columns into one, which
+        // retires the BUG-007 dual-write that used to live here. That
+        // dual-write was the ONLY writer keeping the pair in step, and every
+        // other writer touched just one of them -- which is why 13
+        // instructors' storefronts had been blank since they uploaded.
+        cover_image_url: form.cover_image_url || null,
         // PAY-01: COP only. The column must keep a value because /earnings
         // and the paid session price display read it; the prefill keeps an
         // existing value, the fallback covers a blank one.
@@ -775,10 +776,10 @@ export default function InstructorOnboardingPage() {
                 className="hidden"
               />
 
-              {form.storefront_banner_url && !bannerUseUrl ? (
+              {form.cover_image_url && !bannerUseUrl ? (
                 <div className="relative rounded-lg overflow-hidden border border-stone-200 dark:border-gray-600">
                   <Image
-                    src={form.storefront_banner_url}
+                    src={form.cover_image_url}
                     alt="Storefront banner preview"
                     width={600}
                     height={112}
@@ -796,7 +797,7 @@ export default function InstructorOnboardingPage() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => setForm({ ...form, storefront_banner_url: '' })}
+                      onClick={() => setForm({ ...form, cover_image_url: '' })}
                       className="px-2 py-1 bg-red-500/90 text-xs font-medium rounded-md text-white hover:bg-red-600"
                     >
                       <X className="w-3 h-3" />
@@ -829,8 +830,8 @@ export default function InstructorOnboardingPage() {
                 <div className="space-y-2">
                   <Input
                     type="url"
-                    value={form.storefront_banner_url}
-                    onChange={(e) => setForm({ ...form, storefront_banner_url: e.target.value })}
+                    value={form.cover_image_url}
+                    onChange={(e) => setForm({ ...form, cover_image_url: e.target.value })}
                     placeholder="https://..."
                     className="bg-white dark:bg-tribe-mid border-stone-300 dark:border-gray-600"
                   />
@@ -863,9 +864,9 @@ export default function InstructorOnboardingPage() {
                 <div
                   className="h-28 bg-gradient-to-br from-tribe-green/30 to-tribe-green/10 relative"
                   style={
-                    form.storefront_banner_url
+                    form.cover_image_url
                       ? {
-                          backgroundImage: `url(${form.storefront_banner_url})`,
+                          backgroundImage: `url(${form.cover_image_url})`,
                           backgroundSize: 'cover',
                           backgroundPosition: 'center',
                         }

@@ -79,7 +79,7 @@ export interface EditProfileFormData {
   website_url: string;
   // Storefront fields (wizard step 2)
   storefront_tagline: string;
-  storefront_banner_url: string;
+  cover_image_url: string;
   // Payments fields (wizard step 3). COP only; the column must keep a value.
   earnings_currency: string;
 }
@@ -120,7 +120,7 @@ export function useEditProfile(language: 'en' | 'es') {
     years_experience: null,
     website_url: '',
     storefront_tagline: '',
-    storefront_banner_url: '',
+    cover_image_url: '',
     earnings_currency: 'COP',
   });
 
@@ -180,7 +180,7 @@ export function useEditProfile(language: 'en' | 'es') {
           years_experience: profileData.years_experience ?? null,
           website_url: profileData.website_url || '',
           storefront_tagline: profileData.storefront_tagline || '',
-          storefront_banner_url: profileData.storefront_banner_url || '',
+          cover_image_url: profileData.cover_image_url || '',
           earnings_currency: profileData.earnings_currency || 'COP',
         });
       }
@@ -317,7 +317,7 @@ export function useEditProfile(language: 'en' | 'es') {
         data: { publicUrl },
       } = supabase.storage.from('profile-images').getPublicUrl(path);
 
-      setFormData({ ...formData, storefront_banner_url: publicUrl });
+      setFormData({ ...formData, cover_image_url: publicUrl });
       handleBannerCropCancel();
     } catch (error) {
       logError(error, { action: 'handleBannerCropConfirm' });
@@ -372,7 +372,7 @@ export function useEditProfile(language: 'en' | 'es') {
         years_experience: formData.years_experience,
         website_url: formData.website_url || null,
         storefront_tagline: formData.storefront_tagline || null,
-        storefront_banner_url: formData.storefront_banner_url || null,
+        cover_image_url: formData.cover_image_url || null,
         earnings_currency: formData.earnings_currency || 'COP',
         // Self-heal: an authenticated owner editing their own profile is
         // by definition an active account. Clears the zombie state the

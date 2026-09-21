@@ -145,7 +145,7 @@ export default function StorefrontEditor({
       // Cache-bust: the object now lives at a fixed URL, so without a changing
       // query string the browser and CDN would keep serving the previous banner
       // after an overwrite. ?v=<timestamp> forces a fresh fetch, and storing it
-      // means every surface reading storefront_banner_url gets the current image.
+      // means every surface reading cover_image_url gets the current image.
       setBannerUrl(`${urlData.publicUrl}?v=${Date.now()}`);
     } catch (err) {
       const message = err instanceof Error ? err.message : txt.uploadError;
@@ -174,7 +174,7 @@ export default function StorefrontEditor({
       storefront_tagline: tagline,
       sports,
       specialties: specialtiesArr,
-      storefront_banner_url: bannerUrl || null,
+      cover_image_url: bannerUrl || null,
     });
 
     if (result.success) {

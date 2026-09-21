@@ -330,12 +330,50 @@ export default function ProfilePageClient({ userId, initialProfile, statsSlot }:
             />
           </div>
 
+          {/* Storefront CTA — instructors only. Promoted out of the Reviews
+              card header, where it was a text link most visitors never saw.
+              The storefront is where an instructor sells, so the profile
+              should point at it plainly rather than in passing.
+
+              Green is the BACKGROUND here, not the text. text-tribe-green on
+              white measures 1.65:1, which fails AA for body copy; the palette
+              has no green that passes on a light surface, so the fix is to
+              invert rather than to reach for a darker token. tribe-dark on
+              tribe-green is 12.6:1. See CLAUDE.md. The old link inside the
+              Reviews header is corrected to text-theme-primary below for the
+              same reason.
+
+              ES copy is provisional and goes to Ana before launch. */}
+          {profile?.is_instructor && (
+            <a
+              href={`/storefront/${userId}`}
+              className="mt-6 flex items-center justify-between gap-3 rounded-2xl bg-tribe-green px-5 py-4 transition-opacity hover:opacity-90"
+            >
+              <span className="min-w-0">
+                <span className="block text-sm font-bold text-tribe-dark">
+                  {language === 'es' ? 'Ver la tienda' : 'Visit the storefront'}
+                </span>
+                <span className="mt-0.5 block text-xs text-tribe-dark/80">
+                  {language === 'es'
+                    ? 'Sesiones, paquetes y reseñas en un solo lugar.'
+                    : 'Sessions, packages and reviews in one place.'}
+                </span>
+              </span>
+              <span aria-hidden className="shrink-0 text-lg text-tribe-dark">
+                →
+              </span>
+            </a>
+          )}
+
           {/* Reviews preview — instructors only */}
           {profile?.is_instructor && (
             <div className="mt-6 bg-white dark:bg-tribe-surface rounded-2xl p-5 border border-stone-200 dark:border-tribe-mid">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-sm font-bold text-theme-primary">{language === 'es' ? 'Reseñas' : 'Reviews'}</h3>
-                <a href={`/storefront/${userId}`} className="text-xs font-medium text-tribe-green hover:underline">
+                <a
+                  href={`/storefront/${userId}`}
+                  className="text-xs font-medium text-theme-primary underline hover:no-underline"
+                >
                   {language === 'es' ? 'Ver en la tienda →' : 'See all on storefront →'}
                 </a>
               </div>

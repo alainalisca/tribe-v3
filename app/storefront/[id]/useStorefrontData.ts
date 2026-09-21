@@ -28,9 +28,10 @@ export interface Instructor {
   location: string;
   specialties: string[];
   verified: boolean;
-  storefront_banner_url: string;
-  /** The account cover image. Distinct from storefront_banner_url and often the only one set. */
-  banner_url: string | null;
+  /** The one cover image. Migration 179 collapsed the two columns that used
+   *  to disagree here; the "often the only one set" note this replaces was
+   *  describing the defect, not a quirk of the data. */
+  cover_image_url: string | null;
   bio: string;
   instructor_bio?: string | null;
   average_rating?: number | null;
@@ -174,7 +175,7 @@ export function useStorefrontData(instructorId: string) {
           supabase
             .from('users')
             .select(
-              'id, name, avatar_url, storefront_tagline, location, specialties, is_verified_instructor, storefront_banner_url, bio, instructor_bio, average_rating, total_reviews, storefront_video_url, certifications, years_experience, total_participants_served, total_sessions_hosted, photos, banner_url'
+              'id, name, avatar_url, storefront_tagline, location, specialties, is_verified_instructor, cover_image_url, bio, instructor_bio, average_rating, total_reviews, storefront_video_url, certifications, years_experience, total_participants_served, total_sessions_hosted, photos'
             )
             .eq('id', instructorId)
             // A soft-deleted account's storefront should not load — maybeSingle

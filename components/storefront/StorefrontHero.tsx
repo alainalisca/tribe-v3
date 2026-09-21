@@ -44,14 +44,14 @@ export default function StorefrontHero({ instructor, language }: StorefrontHeroP
     <div className="relative">
       {/* Banner — kept short so it doesn't dominate on wide screens */}
       <div className="relative h-32 sm:h-40 md:h-44 overflow-hidden bg-tribe-dark rounded-b-2xl">
-        {instructor.storefront_banner_url ? (
+        {instructor.cover_image_url ? (
           <button
             type="button"
             onClick={() => setCoverOpen(true)}
             aria-label={language === 'es' ? 'Ver foto de portada' : 'View cover photo'}
             className="relative block h-full w-full"
           >
-            <Image src={instructor.storefront_banner_url} alt="" fill className="object-cover" unoptimized priority />
+            <Image src={instructor.cover_image_url} alt="" fill className="object-cover" unoptimized priority />
           </button>
         ) : (
           <>
@@ -122,7 +122,7 @@ export default function StorefrontHero({ instructor, language }: StorefrontHeroP
         </div>
       </div>
 
-      {coverOpen && instructor.storefront_banner_url && (
+      {coverOpen && instructor.cover_image_url && (
         <div
           className="fixed inset-0 z-[60] flex items-center justify-center bg-black p-4"
           onClick={() => setCoverOpen(false)}
@@ -138,7 +138,7 @@ export default function StorefrontHero({ instructor, language }: StorefrontHeroP
             <X className="h-6 w-6 text-white" />
           </button>
           <Image
-            src={instructor.storefront_banner_url}
+            src={instructor.cover_image_url}
             alt=""
             width={1200}
             height={400}

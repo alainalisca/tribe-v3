@@ -549,13 +549,9 @@ export default function EditProfilePage() {
                       className="hidden"
                     />
 
-                    {formData.storefront_banner_url && !bannerUseUrl ? (
+                    {formData.cover_image_url && !bannerUseUrl ? (
                       <div className="relative rounded-lg overflow-hidden border border-stone-200 dark:border-gray-600">
-                        <img
-                          src={formData.storefront_banner_url}
-                          alt="Banner preview"
-                          className="w-full h-24 object-cover"
-                        />
+                        <img src={formData.cover_image_url} alt="Banner preview" className="w-full h-24 object-cover" />
                         <div className="absolute bottom-2 right-2 flex gap-1">
                           <button
                             type="button"
@@ -567,7 +563,7 @@ export default function EditProfilePage() {
                           </button>
                           <button
                             type="button"
-                            onClick={() => setFormData({ ...formData, storefront_banner_url: '' })}
+                            onClick={() => setFormData({ ...formData, cover_image_url: '' })}
                             className="px-2 py-1 bg-red-500/90 text-xs font-medium rounded-md text-white hover:bg-red-600"
                           >
                             <X className="w-3 h-3" />
@@ -602,8 +598,8 @@ export default function EditProfilePage() {
                       <div className="space-y-2">
                         <Input
                           type="url"
-                          value={formData.storefront_banner_url}
-                          onChange={(e) => setFormData({ ...formData, storefront_banner_url: e.target.value })}
+                          value={formData.cover_image_url}
+                          onChange={(e) => setFormData({ ...formData, cover_image_url: e.target.value })}
                           placeholder="https://example.com/banner.jpg"
                           className="h-auto py-2 dark:bg-tribe-mid dark:border-gray-600 dark:text-white placeholder-gray-500 focus-visible:ring-tribe-green"
                         />

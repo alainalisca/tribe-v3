@@ -14,7 +14,7 @@ export interface SpotlightWithInstructor {
     id: string;
     name: string;
     avatar_url: string | null;
-    storefront_banner_url: string | null;
+    cover_image_url: string | null;
     storefront_tagline: string | null;
     specialties: string[];
     average_rating: number | null;
@@ -25,7 +25,7 @@ export interface SpotlightWithInstructor {
 }
 
 const INSTRUCTOR_FIELDS =
-  'id, name, avatar_url, storefront_banner_url, storefront_tagline, specialties, average_rating, total_reviews, total_sessions_hosted, is_verified_instructor';
+  'id, name, avatar_url, cover_image_url, storefront_tagline, specialties, average_rating, total_reviews, total_sessions_hosted, is_verified_instructor';
 
 /** The currently-active spotlight (today between start and end, and is_active). */
 export async function getCurrentSpotlight(
@@ -67,7 +67,7 @@ export async function getCurrentSpotlight(
               id: instRel.id as string,
               name: instRel.name as string,
               avatar_url: (instRel.avatar_url as string | null) ?? null,
-              storefront_banner_url: (instRel.storefront_banner_url as string | null) ?? null,
+              cover_image_url: (instRel.cover_image_url as string | null) ?? null,
               storefront_tagline: (instRel.storefront_tagline as string | null) ?? null,
               specialties: (instRel.specialties as string[] | null) || [],
               average_rating: (instRel.average_rating as number | null) ?? null,
@@ -117,7 +117,7 @@ export async function getSpotlightHistory(
               id: instRel.id as string,
               name: instRel.name as string,
               avatar_url: (instRel.avatar_url as string | null) ?? null,
-              storefront_banner_url: (instRel.storefront_banner_url as string | null) ?? null,
+              cover_image_url: (instRel.cover_image_url as string | null) ?? null,
               storefront_tagline: (instRel.storefront_tagline as string | null) ?? null,
               specialties: (instRel.specialties as string[] | null) || [],
               average_rating: (instRel.average_rating as number | null) ?? null,

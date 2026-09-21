@@ -83,7 +83,7 @@ export default function StorefrontProfileColumn(props: StorefrontProfileColumnPr
       {!isOrganization && (
         <VideoIntro
           videoUrl={instructor.storefront_video_url}
-          posterUrl={instructor.storefront_banner_url}
+          posterUrl={instructor.cover_image_url}
           isOwnStorefront={isOwn}
           language={lang}
         />
