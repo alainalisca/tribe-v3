@@ -1577,4 +1577,32 @@ select 'GUARD_181_instructor_filter_spelling',
          else 'applied'
        end
 
+union all
+
+select '182_notifications_action_url',
+       case when exists (select 1 from information_schema.columns
+                          where table_schema='public' and table_name='notifications'
+                            and column_name='action_url')
+       then 'applied' else 'MISSING' end
+
+union all
+
+-- The column EXISTING is not the property. It carries /invite/<token>, and a
+-- token is 32 hex characters -- if it were created as uuid (the confusion that
+-- made migration 133 necessary) every invite insert would fail.
+select 'GUARD_182_action_url_is_text',
+       case
+         when not exists (select 1 from information_schema.columns
+                           where table_schema='public' and table_name='notifications'
+                             and column_name='action_url')
+           then 'MISSING -- column absent'
+         when (select data_type from information_schema.columns
+                where table_schema='public' and table_name='notifications'
+                  and column_name='action_url') <> 'text'
+           then 'MISSING -- action_url is not text; a token is not a uuid'
+         when not has_column_privilege('authenticated','public.notifications','action_url','SELECT')
+           then 'MISSING -- authenticated cannot read it, so the link never reaches the client'
+         else 'applied'
+       end
+
 order by migration;

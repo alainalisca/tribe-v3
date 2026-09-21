@@ -32,6 +32,7 @@ export async function createNotification(
     entity_type,
     entity_id,
     message,
+    action_url,
   }: {
     recipient_id: string;
     actor_id?: string | null;
@@ -39,6 +40,9 @@ export async function createNotification(
     entity_type?: string | null;
     entity_id?: string | null;
     message: string;
+    /** Optional in-app destination, e.g. /invite/<token>. entity_id is uuid and
+     *  cannot carry a token, which is why migration 182 added this. */
+    action_url?: string | null;
   }
 ): Promise<DalResult<null>> {
   try {
@@ -54,6 +58,7 @@ export async function createNotification(
       entity_type: entity_type || null,
       entity_id: entity_id || null,
       message,
+      action_url: action_url || null,
     };
 
     // No .select()/.single() — see the note above.

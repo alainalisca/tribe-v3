@@ -1168,7 +1168,16 @@ The app is deployed to Vercel with the Node.js runtime (NOT static export). All 
 
 - All pages use `'use client'` (no Server Components)
 - API routes work in both development and production on Vercel
-- Images are unoptimized (`images: { unoptimized: true }`)
+- **Images ARE optimized.** `next.config` sets `images: { unoptimized: false }`.
+  This line said the opposite until 2026-09-21, and the cost of that is worth
+  recording: investigating avatar quality, it nearly led to the conclusion that
+  `next/image` and a raw `<img>` render identically here, which would have made
+  the two avatar render paths look interchangeable when they are not. A doc
+  asserting the opposite of the config is worse than no doc, because it is
+  checked less often than the config is.
+  Consequence worth knowing: the native app loads the LIVE Vercel build
+  (`capacitor.config.ts` sets `server.url`, overriding `webDir: 'out'`), so
+  `/_next/image` optimization is available inside the app too.
 - For Capacitor mobile builds, the static HTML pages are bundled into the native app
 
 ## Product context and decision filter

@@ -8,7 +8,7 @@ import { fetchSession } from '@/lib/dal/sessions';
 import { insertInviteToken } from '@/lib/dal/invites';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { getServiceRoleClient } from '@/lib/supabase/admin';
-import { logError } from '@/lib/logger';
+import { log, logError } from '@/lib/logger';
 import { notificationCopy, toLang } from '@/lib/notification-i18n';
 
 const inviteSchema = z.object({
@@ -77,13 +77,27 @@ export async function POST(request: Request) {
       }
     }
 
-    // Check recipient is not already in session
-    const { data: existingParticipant } = await supabase
+    // Check recipient is not already in session.
+    //
+    // THE ERROR IS CHECKED, not discarded. Destructuring only `data` meant a
+    // FAILED query produced undefined, which read as "not already in the
+    // session" and let the invite proceed -- so a transient database error
+    // silently became a duplicate invite to someone already attending.
+    const { data: existingParticipant, error: participantError } = await supabase
       .from('session_participants')
       .select('id')
       .eq('session_id', session_id)
       .eq('user_id', recipient_user_id)
       .maybeSingle();
+
+    if (participantError) {
+      logError(participantError, {
+        route: '/api/invites/session',
+        action: 'check_existing_participant',
+        session_id,
+      });
+      return NextResponse.json({ error: 'Could not verify the invite. Please try again.' }, { status: 503 });
+    }
 
     if (existingParticipant) {
       return NextResponse.json({ error: 'This athlete is already in the session' }, { status: 409 });
@@ -121,11 +135,19 @@ export async function POST(request: Request) {
       .select('preferred_language')
       .eq('id', recipient_user_id)
       .maybeSingle();
-    const { body: message } = notificationCopy('session_invite', toLang(recipientProfile?.preferred_language), {
+    const { title, body: message } = notificationCopy('session_invite', toLang(recipientProfile?.preferred_language), {
       name: senderName,
       sport: session.sport,
       date: session.date,
     });
+
+    // action_url CARRIES THE TOKEN (migration 182). Until this existed the
+    // token was minted, stored, and never delivered: entity_id is uuid and
+    // cannot hold 32 hex characters, and nothing else on a notification could
+    // carry it. The recipient got a message pointing at the SESSION, and an
+    // invite_only session refuses a tokenless join -- the exact dead end the
+    // mint was supposed to prevent.
+    const inviteUrl = `/invite/${token}/`;
 
     const notifResult = await createNotification(serviceSupabase, {
       recipient_id: recipient_user_id,
@@ -134,10 +156,55 @@ export async function POST(request: Request) {
       entity_type: 'session',
       entity_id: session_id,
       message,
+      action_url: inviteUrl,
     });
 
     if (!notifResult.success) {
       return NextResponse.json({ error: notifResult.error || 'Failed to send invite' }, { status: 500 });
+    }
+
+    // PUSH. Without this the recipient only discovers the invite by opening the
+    // app and looking at the bell -- which is indistinguishable from never
+    // being invited, and is what "the invite did not reach the intended
+    // person" actually was.
+    //
+    // `type` is supplied so /api/notifications/send gates the send on the
+    // recipient's push preference for that category; it answers
+    // { suppressed: true, reason: 'preference' } rather than sending when the
+    // recipient has that category off. Title and body are already in the
+    // RECIPIENT's language, and the url is the invite, not the session.
+    //
+    // Best-effort: a push failure must not fail the invite, because the in-app
+    // notification above is already written and IS the invite.
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+    const cronSecret = process.env.CRON_SECRET;
+    if (siteUrl && cronSecret) {
+      fetch(`${siteUrl}/api/notifications/send/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${cronSecret}` },
+        body: JSON.stringify({
+          userId: recipient_user_id,
+          title,
+          body: message,
+          url: inviteUrl,
+          type: 'session_invite',
+          data: { sessionId: session_id, type: 'session_invite' },
+        }),
+      }).catch((err) =>
+        logError(err, {
+          route: '/api/invites/session',
+          action: 'push_invite',
+          session_id,
+          recipient: recipient_user_id,
+        })
+      );
+    } else {
+      // Silence here would be indistinguishable from a delivered push.
+      log('warn', 'invite push skipped: NEXT_PUBLIC_SITE_URL or CRON_SECRET missing', {
+        route: '/api/invites/session',
+        action: 'push_skipped',
+        session_id,
+      });
     }
 
     return NextResponse.json({ success: true });
