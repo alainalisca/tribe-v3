@@ -427,6 +427,23 @@ Rehearsal and capture filenames carry the number too, so they collide silently a
 
 The number moves, not the record: rename, then state in the header what it was applied as and why it changed. An applied migration renumbered in silence is worse than the collision.
 
+**A COVERAGE CHECK PROVES EVERY FILE HAS A PROBE. IT DOES NOT PROVE EVERY FILE IS DISTINCT.**
+
+`verify-migration-state.test.ts` walks `supabase/migrations/` and fails when a migration has no matching probe. It has earned its place repeatedly. It also ran over **two duplicate migration numbers for five months without a word**: `013_fix_social_rls_policies` and `013_product_storefront`, `014_referrals` and `014_session_comments`, all from the 2026-04-19 bulk import.
+
+It was not broken. **Both files answered its question the same way** — each had a probe, so each passed — and "is this number used twice" was never a question it asked.
+
+Writing the duplicate-number test found all of them in the first run, including the 175 collision it was written for. **So the cost of not having that check was not five months of risk. It was five months of not knowing**, and the difference matters: the risk was real the whole time, but the fix was always one test away and nobody had reason to look.
+
+**A check that maps A to B proves the mapping is total. It says nothing about A being distinct, ordered, well-formed, or reachable.** Those are separate properties and each needs its own assertion. When a guard walks a collection, write down what it is actually asserting about that collection, then ask which of the other obvious properties nobody is checking:
+
+- every file has a probe — **but are the filenames unique?**
+- every consumer imports the constant — **but do two constants exist?**
+- every policy has a reason — **but do two policies overlap?**
+- every test file ran — **but did two of them test the same thing?**
+
+The pattern across this repo is consistent: the second question is never asked because the first one passing _feels_ like coverage. A green guard is evidence about one property, and the number of properties it is silent about is unbounded.
+
 **"NO CODE CHANGED" IS NOT THE SAME CLAIM AS "NO TEST READS THIS".**
 
 Migration 174 was merged and pushed without running the suite, on the reasoning that the merge brought in only SQL and therefore could not affect tests. `main` was red for the rest of the session. `supabase/verify-migration-state.test.ts` **enumerates `supabase/migrations/`** and fails when a migration has no branch in `verify-migration-state.sql`, so a file containing nothing executable broke a test by existing.
