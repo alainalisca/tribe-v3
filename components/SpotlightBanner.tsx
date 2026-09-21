@@ -55,9 +55,9 @@ export default function SpotlightBanner({ language }: SpotlightBannerProps) {
     <section className="relative rounded-2xl overflow-hidden bg-theme-card border border-[#84cc16]/30">
       {/* Banner background */}
       <div className="relative h-40 w-full bg-gradient-to-br from-[#3D4349] to-[#272D34]">
-        {instructor.storefront_banner_url ? (
+        {instructor.cover_image_url ? (
           <Image
-            src={instructor.storefront_banner_url}
+            src={instructor.cover_image_url}
             alt=""
             aria-hidden="true"
             fill

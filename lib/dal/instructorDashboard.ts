@@ -221,7 +221,7 @@ export interface StorefrontProfileUpdate {
   sports?: string[] | null;
   /** Free text. Shown and searched, never filtered on. */
   specialties?: string[] | null;
-  storefront_banner_url?: string | null;
+  cover_image_url?: string | null;
   storefront_video_url?: string | null;
 }
 

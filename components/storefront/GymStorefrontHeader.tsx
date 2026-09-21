@@ -32,7 +32,7 @@ interface Props {
    * business_type gym/studio, so an independent trainer's face is never
    * promoted to a logo.
    */
-  account: { avatar_url?: string | null; storefront_banner_url?: string | null; banner_url?: string | null };
+  account: { avatar_url?: string | null; cover_image_url?: string | null };
   coachCount: number;
   sessionsPerWeek: number;
   /** True when the signed-in viewer owns this storefront. Gates the copy-link. */
@@ -49,7 +49,10 @@ export default function GymStorefrontHeader({ partner, account, coachCount, sess
   const specialties = (partner.specialties ?? []).slice(0, 2);
 
   const logo = partner.logo_url || account.avatar_url || null;
-  const banner = partner.banner_url || account.storefront_banner_url || account.banner_url || null;
+  // The partner column below belongs to featured_partners -- a DIFFERENT
+  // table, untouched by 179. Only the two ACCOUNT columns collapsed, which
+  // is why a three-way fallback becomes two.
+  const banner = partner.banner_url || account.cover_image_url || null;
 
   // A single tile reads as orphaned -- the same visual problem as a lone chip
   // in a grid. One stat becomes a line of text; the row returns at two or more.

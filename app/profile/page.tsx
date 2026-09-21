@@ -43,7 +43,7 @@ export default function ProfilePage() {
     router,
   } = useProfile(language);
 
-  const cover = profile?.banner_url || profile?.storefront_banner_url || null;
+  const cover = profile?.cover_image_url || null;
 
   if (loading) {
     return (
@@ -104,8 +104,8 @@ export default function ProfilePage() {
       </div>
 
       <div className="pt-header max-w-2xl md:max-w-4xl mx-auto">
-        {/* Banner. Onboarding writes to storefront_banner_url, the profile
-            page historically read banner_url — falling back so the
+        {/* Banner. One column since migration 179. The two-way fallback
+            this replaces existed only because different screens wrote
             uploaded banner shows up regardless of which column wrote it
             (BUG-007). */}
         <div className="relative h-48 overflow-hidden">

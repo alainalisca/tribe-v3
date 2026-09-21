@@ -187,7 +187,7 @@ export function useProfile(language: 'en' | 'es') {
         data: { publicUrl },
       } = supabase.storage.from('profile-images').getPublicUrl(filePath);
 
-      const updateResult = await updateUser(supabase, user.id, { banner_url: publicUrl });
+      const updateResult = await updateUser(supabase, user.id, { cover_image_url: publicUrl });
       if (!updateResult.success) throw new Error(updateResult.error);
 
       handleBannerCropCancel();

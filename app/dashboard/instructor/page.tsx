@@ -275,7 +275,7 @@ export default function InstructorDashboardPage() {
                 initialTagline={profile.storefront_tagline || ''}
                 initialSports={(profile.sports as string[]) || []}
                 initialSpecialties={(profile.specialties as string[]) || []}
-                initialBannerUrl={profile.storefront_banner_url || ''}
+                initialBannerUrl={profile.cover_image_url || ''}
                 initialVideoUrl={profile.storefront_video_url ?? null}
               />
             </>

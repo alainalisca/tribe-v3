@@ -49,7 +49,7 @@ export interface SessionWithRelations extends Session {
      * Instructor's profile banner, the card hero's last fallback before the
      * sport photo. Only fetched by the feed query.
      */
-    banner_url?: string | null;
+    cover_image_url?: string | null;
   } | null;
 }
 
@@ -403,7 +403,7 @@ export async function fetchUpcomingSessions(supabase: SupabaseClient): Promise<D
       .select(
         `
         *,
-        creator:users!sessions_creator_id_fkey(id, name, avatar_url, average_rating, total_reviews, total_sessions_hosted, banner_url)
+        creator:users!sessions_creator_id_fkey(id, name, avatar_url, average_rating, total_reviews, total_sessions_hosted, cover_image_url)
       `
       )
       .eq('status', 'active')

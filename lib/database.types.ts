@@ -1442,6 +1442,7 @@ export type Database = {
           average_rating: number | null
           banned: boolean | null
           banner_url: string | null
+          cover_image_url: string | null
           bio: string | null
           certifications: string[] | null
           created_at: string | null
@@ -1511,6 +1512,7 @@ export type Database = {
           is_active?: boolean | null
           banned?: boolean | null
           banner_url?: string | null
+          cover_image_url?: string | null
           bio?: string | null
           certifications?: string[] | null
           created_at?: string | null
@@ -1580,6 +1582,7 @@ export type Database = {
           is_active?: boolean | null
           banned?: boolean | null
           banner_url?: string | null
+          cover_image_url?: string | null
           bio?: string | null
           certifications?: string[] | null
           created_at?: string | null

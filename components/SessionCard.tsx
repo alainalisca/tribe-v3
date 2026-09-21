@@ -97,7 +97,7 @@ export default function SessionCard({
   const isFree = !session.price_cents;
   const fillingFast = athleteCount >= session.max_participants * 0.7 && !isPast && !isFull;
 
-  const heroImage = getSessionHeroImage(session.sport, session.photos, session.creator?.banner_url);
+  const heroImage = getSessionHeroImage(session.sport, session.photos, session.creator?.cover_image_url);
 
   const instructorName = session.creator?.name ?? '';
   // One derivation, shared with /g/[slug] and /i/[id] -- both of which rendered
@@ -135,7 +135,7 @@ export default function SessionCard({
     sessionId: session.id,
     sessionPhotos: session.photos,
     recapPhotos,
-    bannerUrl: session.creator?.banner_url ?? null,
+    bannerUrl: session.creator?.cover_image_url ?? null,
     fallbackSrc: heroImage,
   });
   const canExpand = heroImage.startsWith('/images/') || heroImage.startsWith('http');
