@@ -1736,4 +1736,35 @@ select 'GUARD_184_mirror_matches_applied_table',
          else 'applied'
        end
 
+union all
+
+select '186_sport_demand_counts',
+       case when exists (select 1 from pg_proc p
+                          where p.oid = 'public.sport_demand_counts()'::regprocedure)
+       then 'applied' else 'MISSING' end
+
+union all
+
+-- The function EXISTING is not the property. Its whole purpose is that a small
+-- group is never reported: a cell of 1 names a person. Both the floor and the
+-- athletes-only predicate are asserted, and anon must hold no EXECUTE.
+select 'GUARD_186_small_groups_are_suppressed',
+       case
+         when not exists (select 1 from pg_proc p
+                           where p.oid = 'public.sport_demand_counts()'::regprocedure)
+           then 'MISSING -- function absent'
+         when (select length(pg_get_functiondef(p.oid)) from pg_proc p
+                where p.oid = 'public.sport_demand_counts()'::regprocedure) < 500
+           then 'MISSING -- definition unreadable, so this check cannot mean anything'
+         when not (select pg_get_functiondef(p.oid) ~ 'p\.n >= 5' from pg_proc p
+                    where p.oid = 'public.sport_demand_counts()'::regprocedure)
+           then 'MISSING -- the minimum-group-size floor is gone; a cell of 1 names a person'
+         when not (select pg_get_functiondef(p.oid) ~ 'is_instructor IS NOT TRUE' from pg_proc p
+                    where p.oid = 'public.sport_demand_counts()'::regprocedure)
+           then 'MISSING -- the count includes instructors; demand means athletes'
+         when has_function_privilege('anon','public.sport_demand_counts()','EXECUTE')
+           then 'MISSING -- anon can read demand counts'
+         else 'applied'
+       end
+
 order by migration;
