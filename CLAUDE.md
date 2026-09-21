@@ -694,6 +694,119 @@ The rehearsal failed in the harness with the RPC blocked. **In production it wou
 
 **And if a test asserts on `current_user` or `session_user`, it must first assert what they are.** Otherwise the assertion is silently about the harness. A rehearsal arm that prints both before anything else costs one row and makes every role-dependent result readable.
 
+**A MUTATION DRIVER MUST ASSERT THAT EACH MUTATION ACTUALLY CHANGED THE FILE. A MUTATION PROOF THAT SILENTLY DOES NOT MUTATE REPORTS SUCCESS.**
+
+This is the worst shape an instrument failure can take, and it is worth putting
+above the others in this file: every other bad instrument gives a wrong answer,
+while this one gives **the right answer to a question it never asked**, and the
+answer is "your guard works."
+
+Proving the `cover_image_url` guard, the driver was a shell loop:
+
+```bash
+FILES=$(git diff --name-only | grep -E '\.tsx?$')
+for f in $FILES; do cp "$f" /tmp/_orig.bak; ... done
+```
+
+**zsh does not word-split unquoted parameters.** In bash `$FILES` expands to 17
+words; in zsh it expands to one string containing 17 newline-separated paths. So
+the loop ran once, with a "filename" that was the entire list. Had `cp` and
+Python been quieter about it, the run would have printed seventeen lines of
+`caught` -- because the guard would have been run seventeen times against an
+**unmodified tree**, where it passes, and a passing guard under a mutation is
+reported as the mutation being caught... or, depending which way the driver
+reads it, as every mutation being missed. Either reading is fiction.
+
+**It was caught by accident.** `cp` said `No such file or directory` and Python
+raised `SyntaxError: unterminated string literal`, both because the one giant
+"path" was malformed. Nothing in the driver's own logic would have noticed; the
+loop had no check that the file it was about to test had actually changed. A
+tidier mutation -- one that happened to be a legal no-op rather than a syntax
+error -- would have sailed through silently.
+
+**So the driver asserts the mutation landed before it interprets the guard's
+response**, and asserts the restore landed afterwards:
+
+```python
+orig = p.read_text()
+assert 'cover_image_url' in orig          # there is something to revert
+p.write_text(orig.replace('cover_image_url', 'storefront_banner_url', 1))
+assert p.read_text() != orig              # THE MUTATION ACTUALLY HAPPENED
+r = run_guard()
+p.write_text(orig)                        # restore, pass or fail
+assert p.read_text() == orig              # THE RESTORE ACTUALLY HAPPENED
+```
+
+Three assertions, and the middle one is the load-bearing one. Without it the
+proof's conclusion does not depend on the proof having been performed.
+
+**Generalise past shells.** Any harness that perturbs something and reads a
+response has this hole: a chaos test that fails to kill the pod, a fixture that
+does not get written, a feature flag that does not flip, an env var set in a
+subshell that exits. **The perturbation needs its own assertion, separate from
+the observation.** If the only evidence that a mutation occurred is that a test
+went red, then a test that stays green is indistinguishable from a mutation that
+never happened -- and that is precisely the case you are trying to detect.
+
+And the shell lesson on its own: **write loops in a language whose splitting
+rules you are certain of, or quote and set `IFS` explicitly.** This session's
+`.zshrc`-driven default cost a silently-vacuous proof of a 17-file guard.
+
+**FOR A SCHEMA CHANGE, THE TYPECHECK IS THE TEST AND THE SUITE IS NOT.**
+
+Renaming `users.banner_url` / `users.storefront_banner_url` to
+`cover_image_url` across 17 files, the state at one point was:
+
+```
+Suite complete: 226 of 226 test files ran, 2077 tests, 0 failures.
+tsc --noEmit:   6 errors
+```
+
+**A fully green suite, and the code did not compile.** Not a flake, not a gap in
+coverage that more tests would close -- a structural blindness. The tests mock
+the DAL, so a column name never reaches a real query or a real row in any of
+them. `.select('...cover_image_url')` against a mock returns the mock's fixed
+object whatever you ask for, and a payload key that does not exist in the
+database is just a key. **There is no assertion a unit test could make that
+would notice.**
+
+`tsc` noticed immediately, because `lib/database.types.ts` is generated from the
+live schema and the Supabase client is generic over it. That file is the only
+place in this repo where the database's shape is a compile-time fact.
+
+So, for any change that renames, adds or removes a column:
+
+- **`npx tsc --noEmit` is the verification step, and it is not optional.** Run
+  it before the suite, because it is the one that can fail.
+- **A green suite is not evidence about the change.** It is evidence the mocks
+  still satisfy the code, which they will whatever you call the columns.
+- **Regenerate or hand-patch the types FIRST.** Editing 17 files and then
+  discovering the types are stale means 17 files of errors that all have one
+  cause, which reads like a broken refactor rather than a missing prerequisite.
+- The mirror of [["NO CODE CHANGED" IS NOT THE SAME CLAIM AS "NO TEST READS THIS"]]:
+  there, SQL-only changes broke tests; here, a change touching only TypeScript
+  broke nothing in the suite and everything in the compiler. **Neither instrument
+  covers the other, and which one bites is not predictable from the diff's file
+  extensions.**
+
+**BEFORE VERIFYING A SURFACE, CHECK THAT IT RENDERS. A REQUEST TO VERIFY SOMETHING IS NOT EVIDENCE IT EXISTS.**
+
+Asked to check the spotlight carousel after the `cover_image_url` deploy,
+`components/SpotlightBanner.tsx` turned out to be **imported by nothing**. It is
+a complete component, it has a DAL behind it, and `/api/cron/spotlight-rotation`
+rotates its data on a schedule. It renders on no screen.
+
+The easy failure here is not getting it wrong, it is **reporting it fine**. A
+surface that does not render produces no visual regression, so "I checked and it
+looks unchanged" is a true sentence and a useless one, and nothing downstream
+would ever contradict it. The same applies to checking a feature flag that is
+off, a route nobody links to, or an empty state that the data can never reach.
+
+**So the first step of verifying a surface is locating where it mounts.** If you
+cannot find the mount, that is the finding, and it outranks whatever you were
+sent to look at. Here it also told us something about the rest of the app:
+[[the nine dark features from 2026-08-23]] are the same shape, and this makes ten.
+
 **WHEN A MEASURED NUMBER AND A GUARD DISAGREE, THE QUERY THAT PRODUCED THE NUMBER IS ALSO AN INSTRUMENT. CHECK IT, NOT ONLY THE GUARD AND ITS REHEARSAL.**
 
 179's header recorded `only_legacy = 13`. Its guard, and the rehearsal, both
