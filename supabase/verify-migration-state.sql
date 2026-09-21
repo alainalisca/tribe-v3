@@ -1546,4 +1546,35 @@ select 'GUARD_180_rpc_returns_no_position',
          else 'applied'
        end
 
+union all
+
+select '181_find_training_partners_exclude_instructors',
+       case when exists (select 1 from pg_proc p
+                          where p.oid = 'public.find_training_partners(text, integer)'::regprocedure
+                            and pg_get_functiondef(p.oid) ~ 'is_instructor IS NOT TRUE')
+       then 'applied' else 'MISSING' end
+
+union all
+
+-- The filter EXISTING is not the property. Spelled `= false` it is NULL for
+-- every athlete who never touched the toggle, so it would exclude nearly the
+-- whole card while looking like a tighter filter. Both halves are asserted,
+-- and the read is asserted to have succeeded first.
+select 'GUARD_181_instructor_filter_spelling',
+       case
+         when not exists (select 1 from pg_proc p
+                           where p.oid = 'public.find_training_partners(text, integer)'::regprocedure)
+           then 'MISSING -- function absent'
+         when (select length(pg_get_functiondef(p.oid)) from pg_proc p
+                where p.oid = 'public.find_training_partners(text, integer)'::regprocedure) < 500
+           then 'MISSING -- definition unreadable, so this check cannot mean anything'
+         when not (select pg_get_functiondef(p.oid) ~ 'is_instructor IS NOT TRUE' from pg_proc p
+                    where p.oid = 'public.find_training_partners(text, integer)'::regprocedure)
+           then 'MISSING -- instructors are not excluded'
+         when (select pg_get_functiondef(p.oid) ~ 'is_instructor\s*=\s*false' from pg_proc p
+                where p.oid = 'public.find_training_partners(text, integer)'::regprocedure)
+           then 'MISSING -- spelled = false, which drops every athlete with a NULL toggle'
+         else 'applied'
+       end
+
 order by migration;
