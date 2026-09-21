@@ -10,6 +10,7 @@ import LoadingSpinner from '@/components/LoadingSpinner';
 import BottomNav from '@/components/BottomNav';
 import StorefrontEditor from '@/components/dashboard/StorefrontEditor';
 import SessionManager from '@/components/dashboard/SessionManager';
+import SportDemandSummary from '@/components/instructor/SportDemandSummary';
 import TribeOSEntryCard from '@/components/tribe-os/TribeOSEntryCard';
 import InstructorProfileIncompleteBanner from '@/components/InstructorProfileIncompleteBanner';
 import InstructorAnalytics from '@/components/dashboard/InstructorAnalytics';
@@ -225,6 +226,14 @@ export default function InstructorDashboardPage() {
         {/* T-PROF1: profile-completeness nudge — shown while the instructor is
             hidden from the Train with an Instructor page. Lists what's missing. */}
         {profile && <InstructorProfileIncompleteBanner missingFields={getMissingInstructorFields(profile)} />}
+
+        {/* Demand summary (migration 186). Mounted HERE rather than shipped as
+            a component nobody renders: the instructor-facing athlete card it
+            was scoped for does not exist yet, and an unmounted component is the
+            dark-feature pattern this repo already has ten instances of. This
+            page is instructor-gated (it redirects a non-instructor above),
+            which matches the RPC's own gate. */}
+        <SportDemandSummary language={language} />
 
         {/* Tab Bar */}
         <div className="mt-4 flex gap-1 bg-white dark:bg-tribe-surface rounded-xl p-1 border border-stone-200 dark:border-tribe-mid">
