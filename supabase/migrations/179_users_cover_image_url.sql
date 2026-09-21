@@ -338,3 +338,96 @@ SELECT
   coalesce((SELECT count(*) = 2 FROM information_schema.columns
     WHERE table_schema='public' AND table_name='users'
       AND column_name IN ('banner_url','storefront_banner_url')), false)            AS old_columns_still_present_ok;
+
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- ADDENDUM 2026-09-21 -- applied 2026-09-20, corrections appended not edited
+-- ═══════════════════════════════════════════════════════════════════════════
+--
+-- APPLIED TO PRODUCTION 2026-09-20 under this number. Verification returned
+-- with_cover 31, had_a_banner 31, and all three *_ok true.
+--
+-- Everything above this line is the file as it ran. Per the working agreement,
+-- the executable SQL of an applied migration is immutable and its comments are
+-- append-only: the header records what was believed at the time, and editing
+-- it in place destroys the only account of how that belief formed.
+--
+-- ── 1. THE WRITE-SITE LIST NAMES A FILE THAT CANNOT WRITE ──────────────────
+--
+-- The header lists:
+--
+--     profile/edit/page.tsx                storefront_banner_url only
+--
+-- app/profile/edit/page.tsx does not write to the database. Its two mentions
+-- of the column were setFormData calls -- form state. It contains no
+-- updateUser, no .update() and no .upsert().
+--
+-- The writer is app/profile/edit/useEditProfile.ts:375, which the header omits.
+-- So the list names the file that cannot write and leaves out the one that
+-- does.
+--
+-- It was wrong in a second, larger way: the header implies four write sites
+-- and a handful of reads. SEVENTEEN source files touched the two columns.
+-- Missing from every scoping pass: SessionCard.tsx, SpotlightBanner.tsx,
+-- StorefrontProfileColumn.tsx, GymStorefrontHeader.tsx,
+-- dashboard/instructor/page.tsx, lib/dal/instructorDashboard.ts and
+-- lib/dal/users.ts.
+--
+-- Both errors have one cause: the list was written from memory of the sites
+-- already under discussion rather than by enumerating them. The enumeration is
+-- one command and gave a different answer each time it was actually run.
+--
+-- The authoritative list is now lib/coverImage.singleColumn.test.ts, which is
+-- executable and cannot drift silently.
+--
+-- ── 2. AND 3. ALREADY CORRECTED ABOVE, BEFORE THIS RAN ─────────────────────
+--
+-- Restated here so the addendum is a complete record, but these are NOT new:
+-- both were fixed in the header above while this migration was still
+-- unapplied, which is why that text reads correctly today.
+--
+--   * The 13 and the 14 are the same data counted two ways. The 13 came from
+--     the measuring query that chose the five, which filtered
+--     `deleted_at IS NULL`. The guard has no such filter and counts 14.
+--
+--   * The fourteenth row is the `tribe` account, soft-deleted 2026-05-21. NO
+--     BANNER WAS UPLOADED. An earlier draft of this header asserted that an
+--     instructor had uploaded one between the capture and the rehearsal; that
+--     event did not happen, and the correction is recorded above rather than
+--     removed.
+--
+-- The record of how the wrong pair got compared -- the guard against the
+-- rehearsal, rather than the guard against the measuring query -- is in the
+-- header above and in CLAUDE.md.
+--
+-- ── 4. cover_image_url WAS CHOSEN WITHOUT CHECKING THE NAME WAS FREE ───────
+--
+-- The name was endorsed on the reasoning that it is consistent -- the cover of
+-- an entity -- which it is. The COLLISION WAS NOT CHECKED, by anyone, on the
+-- exact question this migration existed to answer.
+--
+-- cover_image_url already existed on two other tables before this added a
+-- third:
+--
+--     communities.cover_image_url
+--     challenges.cover_image_url
+--     users.cover_image_url        <- new, this migration
+--
+-- Eight source files referenced the name before the code branch existed.
+--
+-- THIS IS THE SAME MISS AS banner_url, which is the defect this migration was
+-- written to end: banner_url exists on users AND on featured_partners, and
+-- that overlap is precisely why the code guard could not be keyed on a column
+-- name in either direction -- banner_url would have demanded migrating a
+-- column that does not exist on featured_partners, and cover_image_url matches
+-- eight files with nothing to do with users.
+--
+-- The name is KEPT. It is right for what it holds, the three tables are never
+-- joined on it, and renaming now would cost more than the ambiguity does. What
+-- is recorded is that the check was not performed.
+--
+-- The check is two greps and it belongs in the naming decision, not after it:
+-- does this column name already exist on another table, and will any guard,
+-- query or log line mentioning it be ambiguous as a result.
+--
+-- Fuller write-up: docs/179_cover_image_corrections.md.

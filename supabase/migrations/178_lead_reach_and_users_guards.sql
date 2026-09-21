@@ -4,13 +4,9 @@
 -- users.deleted_at, and finishes a conversion someone else started in
 -- protect_verified_instructor().
 --
--- RENUMBERED 176 -> 178 ON 2026-09-20, AFTER BEING APPLIED, together with its
--- pair. It was applied to production as 176_lead_reach_and_users_guards.sql.
--- The reason for the move is in 177's header.
---
--- RUNS AFTER 177. 177 captures protect_verified_instructor() as it exists
--- TODAY, including two branches this migration converts. Applying 178 first
--- would leave 177 recording a state that no longer exists, and 177's
+-- RUNS AFTER 177. 175 captures protect_verified_instructor() as it exists
+-- TODAY, including two branches this migration converts. Applying 176 first
+-- would leave 175 recording a state that no longer exists, and 175's
 -- pre-flight would then refuse -- correctly, but after the fact. Order: 177,
 -- then 178.
 --
@@ -475,3 +471,43 @@ SELECT
   coalesce((SELECT (length(pg_get_functiondef(p.oid)) - length(replace(pg_get_functiondef(p.oid),':= OLD.',''))) = 0
               FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
              WHERE n.nspname='public' AND p.proname='protect_verified_instructor'), false)      AS no_silent_reverts_ok;
+
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- ADDENDUM 2026-09-21 -- the header above is WRONG about two numbers
+-- ═══════════════════════════════════════════════════════════════════════════
+--
+-- Appended, not edited. Everything above this line is the file as it was when
+-- it ran on production, including its mistakes. See the working agreement:
+-- executable SQL of an applied migration is immutable and its comments are
+-- append-only, because the header records what was BELIEVED when it ran, and
+-- silently rewriting that destroys the only account of how the belief formed.
+--
+-- APPLIED TO PRODUCTION AS 176_lead_reach_and_users_guards.sql, on
+-- 2026-09-20. It was renumbered 176 -> 178 that same day, after it had been
+-- applied, together with its pair. 177's header carries the full reason for
+-- the move and is cited here rather than repeated. Without this line the file
+-- says "APPLIED 2026-09-20" under a number that did not exist on the day it
+-- was applied, which is exactly the silent renumber the convention exists to
+-- prevent.
+--
+-- THE 175 AND 176 IN THE ORDERING PARAGRAPH ABOVE SHOULD READ 177 AND 178.
+-- The renumber updated the sentence that mattered -- "RUNS AFTER 177" -- and
+-- left the explanation beneath it pointing at the old numbers. 175 is now
+-- T-LEAD2's lead-contact toggle: it captures nothing, has no pre-flight for
+-- this, and has no ordering relationship with this file at all.
+--
+-- A header confidently describing the wrong migration is worse than no header,
+-- because the renumber convention exists so a later reader can reconstruct
+-- what happened, and this one sends them to a file with no bearing on it.
+--
+-- The correct ordering claim: 177 captures protect_verified_instructor() as it
+-- existed before this migration converted two of its branches. Applying 178
+-- before 177 would leave 177 recording a state that no longer exists, and
+-- 177's pre-flight would refuse -- correctly, but after the fact.
+-- Order: 177, then 178.
+--
+-- This correction was first made on 2026-09-21 by editing the header text in
+-- place (commit 267a49e). That edit was reverted and reissued in this form
+-- once the append-only rule was written down. Nothing executable changed in
+-- either version.

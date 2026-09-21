@@ -47,6 +47,61 @@ Practically: paste the file **after** `git push`, and say in the same message wh
 
 Generalise it: **a check that runs on an event cannot detect the absence of that event.** CI that runs on push cannot see work never pushed; a test that runs on merge cannot see a merge never made; a lint on commit cannot see a change committed elsewhere. When the risk is that a step is skipped, the detector has to hang off something that happens **anyway** — a scheduled reconciliation, or a comparison against the system of record. For migrations that means asking production what it has and diffing it against the directory, on a timer, not on a merge.
 
+**THE EXECUTABLE SQL OF AN APPLIED MIGRATION IS IMMUTABLE. ITS COMMENTS ARE APPEND-ONLY. CORRECTIONS GO IN A DATED ADDENDUM AT THE BOTTOM, NEVER BY EDITING THE ORIGINAL TEXT.**
+
+A migration's header is not documentation of the SQL. It is the record of what
+was **believed** when it ran, and that belief is usually the interesting part,
+because a migration that was wrong about something was wrong for a reason
+somebody will hit again. Editing it in place produces a file that is correct
+about the database and silent about how it got that way, which is the one thing
+the file could tell you that nothing else can.
+
+So the shape of every correction is the same:
+
+- The text above the addendum line is the file **as it ran**, mistakes included.
+- The addendum is dated, says what is wrong above it, and says what is true.
+- If the correction was already made before the migration was applied, the
+  addendum says so, so a reader can tell a live defect from a fixed one.
+- Nothing executable changes, ever. A migration that needs different SQL needs a
+  **new migration**.
+
+Both failure modes had already happened when this was written. 178's header was
+corrected in place after it had been applied -- comments only, well-intentioned,
+and it erased the evidence that the renumber had left stale references behind.
+179 shipped with a write-site list naming a file that cannot write. Neither is
+visible from the database, and neither would ever fail a check that only asks
+production what it has.
+
+**IT IS A TEST, NOT A CONVENTION, AND THAT DISTINCTION IS THE WHOLE LESSON OF
+THE NUMBER COLLISIONS.** "Re-read `origin/main` before choosing a migration
+number" was written down, understood and agreed, and then broken three times,
+because a rule that depends on remembering fails on the day you are busy. The
+duplicate-number test found every instance in its first run. `supabase/migrationImmutability.test.ts`
+hashes each migration's executable text against `supabase/migrations_frozen.json`
+and fails on any change at or below the highest frozen number; new migrations
+above that line stay editable until they are applied and frozen with
+`scripts/freezeMigrations.ts`.
+
+**The extractor is a tokeniser, not a regex, and that was not gold-plating.**
+`line.replace(/--.*$/, '')` is wrong on this repo's own files: 179's abort
+message contains `-- do NOT widen this to a range` **inside a quoted string**. A
+regex stripper truncates there, and the resulting hash is still perfectly
+_stable_ -- which is what makes it dangerous. The guard would look like it
+worked while every character after a `--` inside any string literal became
+invisible to it, so an applied migration's `RAISE` text could be rewritten
+silently. Proven by mutation: editing that string is rejected, appending an
+addendum is allowed.
+
+Comments **inside** `$$ ... $$` count as executable and are deliberately not
+stripped. A function body is stored verbatim in `pg_proc`, so editing a comment
+in one really does change a database object -- migration 177 exists precisely
+because a live function's body could not be recovered from this repo. Addenda
+belong at the bottom of the file, outside every block.
+
+**And the obvious dishonest fix is named in the failure message**: running
+`scripts/freezeMigrations.ts` to make this test pass records the change instead
+of rejecting it. Regenerate the manifest only when adding a migration.
+
 ## Skills
 
 Project-specific skills live in `.claude/skills/`. Before writing code in a domain (API routes, components, migrations, tests, i18n, etc.), read the relevant `SKILL.md` file for enforced patterns and checklists. Run `/session-briefing` at the start of a new session to get oriented.
