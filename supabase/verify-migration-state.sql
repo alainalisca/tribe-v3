@@ -1480,4 +1480,28 @@ select 'GUARD_176_users_deleted_at_guard',
                             and tgname = 'users_deleted_at_guard' and not tgisinternal)
        then 'applied' else 'MISSING' end
 
+union all
+
+select '179_users_cover_image_url',
+       case when exists (select 1 from information_schema.columns
+                          where table_schema='public' and table_name='users'
+                            and column_name='cover_image_url')
+             and has_column_privilege('authenticated','public.users','cover_image_url','SELECT')
+       then 'applied' else 'MISSING' end
+
+union all
+
+-- The backfill is the point, not the column. A column that exists and is empty
+-- looks applied to any check that only asks whether it exists.
+select 'GUARD_179_cover_image_backfilled',
+       case when not exists (select 1 from information_schema.columns
+                              where table_schema='public' and table_name='users'
+                                and column_name='cover_image_url')
+            then 'MISSING -- column absent'
+            when exists (select 1 from public.users
+                          where (banner_url is not null or storefront_banner_url is not null)
+                            and cover_image_url is null)
+            then 'MISSING -- someone has a banner and no cover_image_url'
+            else 'applied' end
+
 order by migration;
