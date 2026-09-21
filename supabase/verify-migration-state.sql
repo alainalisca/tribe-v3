@@ -1652,4 +1652,41 @@ select 'GUARD_184_applied_record_is_populated_and_readonly',
          else 'applied'
        end
 
+union all
+
+select '185_invite_tokens_recipient',
+       case when exists (select 1 from information_schema.columns
+                          where table_schema='public' and table_name='invite_tokens'
+                            and column_name='recipient_id')
+       then 'applied' else 'MISSING' end
+
+union all
+
+-- BOTH paths, named separately. A gate on one path is not a gate: the guest
+-- route accepts an invite token too, and a guest is signed into no account, so
+-- enforcing only in join_session leaves a complete bypass. Also asserts the
+-- refusal is guarded on recipient_id being NON-NULL, since a function that
+-- refused EVERY token would satisfy a one-sided check while breaking every
+-- public share link.
+select 'GUARD_185_both_join_paths_enforce_recipient',
+       case
+         when not exists (select 1 from information_schema.columns
+                           where table_schema='public' and table_name='invite_tokens'
+                             and column_name='recipient_id')
+           then 'MISSING -- recipient_id absent'
+         when (select length(pg_get_functiondef(p.oid)) from pg_proc p
+                where p.oid = 'public.join_session(uuid, uuid, text, text)'::regprocedure) < 1000
+           then 'MISSING -- join_session unreadable, so this check cannot mean anything'
+         when not (select pg_get_functiondef(p.oid) ~ 'invite_not_for_you' from pg_proc p
+                    where p.oid = 'public.join_session(uuid, uuid, text, text)'::regprocedure)
+           then 'MISSING -- join_session does not refuse a mismatched recipient'
+         when not (select pg_get_functiondef(p.oid) ~ 'invite_not_for_you' from pg_proc p
+                    where p.oid = 'public.join_session_as_guest(uuid, text, text, text, text)'::regprocedure)
+           then 'MISSING -- the GUEST path does not refuse an addressed token (the bypass)'
+         when not (select pg_get_functiondef(p.oid) ~ 'v_token_recipient IS NOT NULL' from pg_proc p
+                    where p.oid = 'public.join_session(uuid, uuid, text, text)'::regprocedure)
+           then 'MISSING -- the refusal is not guarded on NON-NULL; bearer/share links would break'
+         else 'applied'
+       end
+
 order by migration;
