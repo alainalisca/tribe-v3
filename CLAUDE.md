@@ -124,6 +124,21 @@ The rewrites that worked, in the same order: look for _any_ element that interce
 
 Same family as the privilege rule below: `has_table_privilege` answers "can this role do it", `information_schema.table_privileges` answers "is there a row that says so". Prefer the capability question every time.
 
+**AND THE CAPABILITY FUNCTION HAS ITS OWN NARROWER SCOPE, WHICH IS NOT VISIBLE IN ITS NAME.** `has_table_privilege(role, table, 'UPDATE')` answers "is UPDATE held **at table level**", not "may this role update anything in this table". For a column-level grant it returns a confident `false` while the role genuinely holds the privilege. Measured on production 2026-09-20, after `GRANT UPDATE (contacted_at) ON public.pass_leads TO authenticated`:
+
+| call                                                                     | answer  |
+| ------------------------------------------------------------------------ | ------- |
+| `has_table_privilege('authenticated','public.pass_leads','UPDATE')`      | `false` |
+| `has_any_column_privilege('authenticated','public.pass_leads','UPDATE')` | `true`  |
+| `has_column_privilege(...,'contacted_at','UPDATE')`                      | `true`  |
+| `has_column_privilege(...,'email','UPDATE')`                             | `false` |
+
+So: **when the question is "does this role hold X on this table AT ALL", use `has_any_column_privilege`** — it is true for a table-level grant _or_ a grant on any single column, and strictly subsumes the table-level form. `has_table_privilege` is correct only when the question is specifically about a table-level grant, which is rarely what a guard means.
+
+This is the rule above read the wrong way round. Both halves of it stay true; what does not follow is that `has_table_privilege` is _the_ capability question for every subject. `public.users` in this codebase is under column-level grants throughout, so the wrong form here is silently wrong on the table most worth guarding.
+
+Found by migration 175's rehearsal, arm D7. The guard asserting that no client role holds UPDATE on `pass_leads` — the guarantee the whole `set_pass_lead_contacted` design rests on — stayed green while `authenticated` held UPDATE on a column. A later migration granting `UPDATE (email)` would have passed it, and a partner could then rewrite a lead's phone number and address, which is exactly what migration 173 refused to allow through an UPDATE policy. The guard was green on every ordinary run and simply wrong; only deliberately reintroducing the mistake exposed it.
+
 **A SECOND WAY THE SAME PASS GOES WRONG: the check asked the right question, but the scenario was never reproduced.**
 
 A check can pass because the situation it guards against never occurred, not because the detector was mis-aimed. The question was fine; the setup did not put the system into the state being tested.
@@ -534,6 +549,126 @@ In one pass over the T-AUD list, reviewed against current `main` rather than aga
 - **T-AUD14** was recorded as not reproducing while reproducing on every phone.
 
 The list was built on 2026-09-03 against a bundle that no longer exists. **Every entry in it deserves arithmetic or a measurement rather than a reading**, and a status inherited from a stale audit is a hypothesis, not a finding. The error rate on second look was 3 in 24 — high enough that the prior for any unverified entry should be "unknown", not "as recorded".
+
+**A PERMISSION QUESTION NEEDS A BEHAVIOURAL PROBE, NOT A CATALOG READ. GRANTS, RLS AND TRIGGERS EACH DENY INDEPENDENTLY, AND A CATALOG SHOWS YOU ONE OF THE THREE.**
+
+`information_schema.column_privileges` reported UPDATE on `public.users` granted to `authenticated` at table level **and** on all 97 columns individually. From that I reported that any signed-in user could write their own `is_admin` — "one PATCH grants admin". It was wrong.
+
+The probe, run as a real authenticated non-admin:
+
+```
+is_admin                 BLOCKED   users_is_admin_guard (migration 043)
+banned                   BLOCKED   users_banned_guard   (migration 098)
+is_verified_instructor   BLOCKED   protect_verified_instructor_trigger -- IN NO FILE IN THIS REPO
+lead_credits_remaining   SUCCEEDED
+deleted_at               SUCCEEDED
+```
+
+Three of five writes the catalog said were permitted were refused, by three different objects, two of which I had already read and one of which does not exist in the repository at all.
+
+**The grant is necessary, not sufficient.** A write has to clear the grant, then the RLS policy, then every `BEFORE UPDATE` trigger. Reading one of those three and reporting a conclusion about the other two is the same shape as reading `revalidate = 60` and concluding the route was static: a real measurement of the wrong layer.
+
+**Run the write. As the role that would run it.** Four outcomes distinguish four causes, and they are worth knowing apart:
+
+| What you see                                 | What denied it                        |
+| -------------------------------------------- | ------------------------------------- |
+| `42501 permission denied for column`         | the grant                             |
+| `new row violates row-level security policy` | a `WITH CHECK`                        |
+| `UPDATE 0` with no error at all              | a `USING` clause filtered the row out |
+| a `RAISE` message naming something           | a trigger, and the message names it   |
+
+**The corollary is the one that generalises furthest: a probe finds controls that exist only in production.** A catalog read of the _repo_ can only show what the repo knows about. `protect_verified_instructor` is live, `SECURITY DEFINER`, and appears in no migration — so `supabase db reset` produces a database where a signed-in user can verify themselves as an instructor, and `is_verified_instructor` is the only gate on the lead reach-out path. That is DB-02's category, but worse than its usual form: not a missing table, a **missing security control**, invisible to any audit performed against this repository.
+
+And the reverse of the same coin, found in the same pass: `public.users` has at least six policies in production and two in the repo, three of the four permissive UPDATE policies appearing nowhere here. **Where a table's protection is concerned, absence of evidence in the repo is not evidence of absence in the database — in either direction.**
+
+**PERMISSIVE POLICIES OR TOGETHER, SO THE EFFECTIVE RULE IS THE LOOSEST ONE PRESENT. TIGHTENING ONE CONSTRAINS NOTHING AND LOOKS LIKE A FIX.**
+
+`public.users` carries four permissive UPDATE policies. Postgres grants the write if **any** of them admits it, so adding a `WITH CHECK` to one, or narrowing its `USING`, changes the answer for exactly zero rows while reading in review as a security fix. The only way a policy edit restricts anything is if it is the last permissive policy for that command, or if the others are edited in the same change.
+
+**This codebase already hit that wall and solved it without naming it.** `Users can view all profiles` is still `FOR SELECT USING (true)` — wide open. Every restriction on reading `users` comes from **column grants** (066, 067, 113), not from RLS, and 113's header explains the instrument choice without explaining the constraint that forced it. With a `USING (true)` policy present, no added SELECT policy could ever have restricted a column. The grant was the only tool that could work.
+
+So, on a table with multiple permissive policies for the same command:
+
+- **A column-level restriction must come from a trigger or a grant.** Policies gate rows, and only the loosest one matters. This is why the three guards that actually protect `users` are `BEFORE UPDATE` triggers and a column-grant regime, not policy predicates.
+- **Count the policies for that command before editing any of them.** `select policyname, cmd, permissive, qual, with_check from pg_policies where tablename = '...'`. Editing one of four is a no-op; the count is the first thing to know and it is one query.
+- **`RESTRICTIVE` is the exception and it is rare.** A restrictive policy ANDs instead, so it _can_ tighten a permissive set. Nothing in this repo uses one. If you reach for that, say so explicitly, because every other policy here reads as permissive by default and a reviewer will assume the same of yours.
+
+The general form: **when several rules combine with OR, no single one of them is load-bearing for denial, and editing any single one is theatre.** The same reasoning applies to a chain of `.or()` filters in a DAL query, to overlapping CORS allowlists, and to any "is this allowed" check assembled from independently-authored pieces.
+
+**A POINTER TO SOMETHING YOU CANNOT FIND IS A FINDING ABOUT THE THING POINTING, NOT A GAP IN WHAT YOU WERE GIVEN.**
+
+`protect_verified_instructor()` carries two comments reading _"UNCHANGED, deliberately. See the second box above before touching this."_ Handed the full 33-line body, I read those as referring to context I had not been shown, and filed a ticket saying the reason had to be found before the branches could be changed.
+
+There is no box above. **Line 008 is the first line after `BEGIN`.** Nothing precedes it inside the function, so the boxes lived in whatever source file this was authored in — and that file is not in the repository, which is the same gap the capture existed to close, showing up from the inside.
+
+The reference was not a hint that something was withheld. It was **evidence that the function had been separated from its source**, and therefore evidence about how it came to be undocumented. Read correctly it answers a different and more useful question: not "what was the reason" but "the reason is unrecoverable, so decide on the merits."
+
+This is the same move as reading _"corner-anchored"_ and _"centred"_ as separation: taking words at face value instead of checking them against the structure. Both times the check was cheap — count the lines above, intersect the intervals — and both times not doing it produced a confident conclusion that stopped work.
+
+**When a comment, a ticket, a test name or an error message refers to something you cannot locate, resolve the reference before acting on it.** Three outcomes, and they are not close to each other:
+
+- **It exists and you missed it.** Go read it.
+- **It cannot exist** — as here, where the position rules it out. That is a fact about the artefact's history and usually the more useful finding.
+- **It existed and is gone.** Then whatever it explained is now undocumented, and anyone who defers to it is deferring to nothing.
+
+The failure mode is treating all three as the first one, because that is the polite reading and the only one that requires no work. It is also the one that blocks: "find the reason first" is unsatisfiable when the reason is unrecoverable, and an unsatisfiable precondition stops a decision indefinitely while looking like diligence.
+
+**A GUARD AFTER THE WRITE IS A REPORT, NOT A GATE. A HAND-RUN MIGRATION THAT REPLACES AN OBJECT MUST CHECK FOR A LATER MIGRATION BEFORE WRITING.**
+
+Migration 175 captures `protect_verified_instructor()` as it existed before 176 converted two of its branches. As first written it did this:
+
+```
+line 120   CREATE OR REPLACE FUNCTION ...   -- the pre-176 body, silent reverts and all
+line 169   DO $$ ... assert 1 RAISE and 2 silent reverts ... $$
+```
+
+The assertion was right, the body was right, and the ordering made it a weapon. **The Supabase SQL editor autocommits statement by statement**, so there is no transaction wrapping those two. Re-run 175 after 176 and line 120 commits the silent reverts back over the fix; line 169 then aborts. The operator sees one red error and reads it as _"the migration failed, so nothing happened"_ — while the security fix has just been silently reverted.
+
+**The guard could not prevent anything. It could only describe the damage, after the damage.**
+
+Two things make this worse than a one-off:
+
+**Re-running is the normal case, not the exotic one.** These migrations are hand-applied by a person reading a file. Files get re-run to confirm they applied, after a connection drop, when someone is unsure whether the first attempt took, or when a rebuild replays the directory in order. Every migration in this repo is written to be idempotent precisely because re-running is expected — and idempotence is exactly what makes a stale capture dangerous rather than noisy, because it applies cleanly.
+
+**The shape is not specific to migrations.** Any script that writes and then validates has it: a seed that inserts then counts, a backfill that updates then checks drift, a config deploy that pushes then verifies. If the write can be wrong and the validation is what would tell you, the validation belongs **first**, phrased as a precondition on the state you are about to overwrite.
+
+So:
+
+- **A capture migration must refuse to run if the thing it captures has since been changed.** Read the live object, compare it to what you are about to write, and abort _before_ writing if a later migration has superseded it. 175 now opens with a pre-flight block that does this and names 176 in the error.
+- **Absence is fine and must be distinguished from mismatch.** The same pre-flight lets a missing object through, because that is a fresh rebuild, which is what a capture is for.
+- **Where the tool gives you a transaction, use it.** A single `DO` block is one statement and therefore atomic; 174 is built that way on purpose. 175 could not be, because `CREATE OR REPLACE FUNCTION` cannot live inside a `DO` without `EXECUTE` and a quoting layer that would have obscured the verbatim body — so the pre-flight is the substitute, and the file says so.
+
+**When a check exists only to produce a message, ask what it would have prevented had it run earlier. If the answer is "the thing it is reporting", move it.**
+
+**A SECURITY CONTROL MUST NOT DEPEND ON ROLE IDENTITY THAT DIFFERS BETWEEN THE TEST HARNESS AND THE RUNTIME.**
+
+A `BEFORE UPDATE` guard on `public.users` exempted writes made inside the `SECURITY DEFINER` RPC by testing `current_user IS DISTINCT FROM session_user`. `SET ROLE` changes `current_user` and leaves `session_user` alone, so that looked like a clean way to ask "was I reached through a definer function".
+
+**It is not, because `session_user` is a property of how the connection was made.**
+
+|                | `session_user`  | direct write as `authenticated`                | inside the definer RPC         |
+| -------------- | --------------- | ---------------------------------------------- | ------------------------------ |
+| **SQL editor** | `postgres`      | DISTINCT → exemption fires → **guard skipped** | not distinct → **RPC blocked** |
+| **PostgREST**  | `authenticator` | DISTINCT → exemption fires → **guard skipped** | DISTINCT → RPC works           |
+
+The rehearsal failed in the harness with the RPC blocked. **In production it would have gone green while the guard did nothing at all** — the exemption fires for every caller, because `authenticated` is never equal to `authenticator`. One line, two environments, wrong in both, and only one of them visibly.
+
+**A trigger cannot distinguish "`current_user` was changed by SECURITY DEFINER" from "changed by `SET ROLE`"** without knowing the expected baseline, and the baseline is environment-dependent. There is no fix by choosing a better predicate. `set_config('app.x', …, true)` does not help either: `GRANT SET ON PARAMETER` covers superuser-restricted GUCs, not `app.*` placeholders, so a flag the trigger trusts is a flag the caller sets.
+
+**Remove the need for the signal instead of finding a better signal.** The counter lived on a row the user owns, which is what created the question. Moved to its own table with no write grant to `authenticated`, there is nothing to exempt: the definer RPC writes it, service-role writes it, the caller cannot, and no code asks who it is.
+
+**And if a test asserts on `current_user` or `session_user`, it must first assert what they are.** Otherwise the assertion is silently about the harness. A rehearsal arm that prints both before anything else costs one row and makes every role-dependent result readable.
+
+**WRITE THE ARM FOR THE PART YOU CANNOT VERIFY, NOT THE PART YOU CAN.**
+
+Of six arms in that rehearsal, one was written specifically because I said I was uncertain about the mechanism — _"arm C1 exists to catch this if the reasoning here is wrong too"_, in the migration's own comment. **C1 is the arm that caught it.** The arms covering the parts I was confident about all passed and told me nothing I did not already believe.
+
+This inverts the usual instinct, which is to test what you understand well enough to predict the outcome of. Those tests are the cheapest to write, the easiest to make pass, and the least informative — a test whose result you can predict has already been run, in your head, and running it again confirms your model rather than the code.
+
+**The uncertainty is the signal for where the test belongs.** When you catch yourself writing "this should work because…", that sentence is the specification for an arm. When you find yourself unable to finish the sentence, that is the arm that will earn its place. Two practical forms:
+
+- Say in the comment _why_ the arm exists and what it would catch. If you cannot name a specific wrong belief it would falsify, it is probably testing something you already know.
+- If a change rests on reasoning you could not confirm from source, the arm testing that reasoning is not optional and should not be the last one written.
 
 ### Database Schema
 
