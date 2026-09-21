@@ -1504,4 +1504,39 @@ select 'GUARD_179_cover_image_backfilled',
             then 'MISSING -- someone has a banner and no cover_image_url'
             else 'applied' end
 
+union all
+
+select '180_find_training_partners_rpc',
+       case when exists (select 1 from pg_proc p
+                          where p.oid = 'public.find_training_partners(text, integer)'::regprocedure)
+       then 'applied' else 'MISSING' end
+
+union all
+
+-- The function existing is not the property that matters. It exists to keep
+-- position off the wire, and an invoker-rights copy would silently rank
+-- everyone as location-less because 115 revoked the raw columns from
+-- authenticated. Both are asserted, plus that anon never got EXECUTE via the
+-- PUBLIC grant Supabase applies to new functions.
+select 'GUARD_180_rpc_returns_no_position',
+       case
+         when not exists (select 1 from pg_proc p
+                           where p.oid = 'public.find_training_partners(text, integer)'::regprocedure)
+           then 'MISSING -- function absent'
+         when exists (select 1 from pg_proc p
+                        join pg_type t on t.oid = p.prorettype
+                        join pg_attribute a on a.attrelid = t.typrelid
+                       where p.oid = 'public.find_training_partners(text, integer)'::regprocedure
+                         and a.attnum > 0 and not a.attisdropped
+                         and (a.attname ilike '%lat%' or a.attname ilike '%lng%'
+                           or a.attname ilike '%distance%'))
+           then 'MISSING -- a positional column reached the return type'
+         when not (select p.prosecdef from pg_proc p
+                    where p.oid = 'public.find_training_partners(text, integer)'::regprocedure)
+           then 'MISSING -- not SECURITY DEFINER'
+         when has_function_privilege('anon', 'public.find_training_partners(text, integer)', 'EXECUTE')
+           then 'MISSING -- anon holds EXECUTE'
+         else 'applied'
+       end
+
 order by migration;
