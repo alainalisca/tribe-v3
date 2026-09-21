@@ -58,14 +58,52 @@
 -- Measured on production 2026-09-20:
 --
 --   only_legacy         14   banner_url set, storefront_banner_url NULL
+--                            (13 live instructors + 1 soft-deleted account)
 --   only_new             3   storefront_banner_url set, banner_url NULL
 --   both_and_different   5   both set and not equal
 --
--- THE COUNT MOVED ONCE, AND THE GUARD IS WHY WE KNOW. The capture that chose
--- the five measured only_legacy = 13. The rehearsal, run later the same day,
--- reported 14, and the first apply attempt aborted on the guard below with
--- `found 14, 3, 5` having written nothing. An instructor uploaded a banner
--- from /profile between the capture and the rehearsal.
+-- THE 13 AND THE 14 ARE THE SAME DATA COUNTED TWO WAYS. NOTHING CHANGED.
+-- The 13 came from the measuring query that chose the five, which filtered
+-- `deleted_at IS NULL`. The guard below has no such filter and counts 14. The
+-- fourteenth row is the `tribe` account, soft-deleted 2026-05-21. No banner
+-- was uploaded, no row moved between buckets, no instructor is affected.
+--
+-- A FIRST DRAFT OF THIS HEADER SAID AN INSTRUCTOR UPLOADED A BANNER BETWEEN
+-- THE CAPTURE AND THE REHEARSAL. That event did not happen. The correction is
+-- recorded rather than quietly removed because a header asserting a false
+-- event is worse than one saying nothing: the next reader would go looking
+-- for an upload, fail to find it, and be left with a guard that fired for a
+-- reason nobody wrote down.
+--
+-- HOW IT WAS MIS-DIAGNOSED, because the same trap is one query away. When the
+-- rehearsal reported 14 against this header's 13, the two instruments compared
+-- were the migration's guard and the rehearsal's arms. Those match exactly --
+-- same relation, byte-identical predicate, no filter in either -- so the
+-- conclusion drawn was that the data must have moved. THE PAIR THAT ACTUALLY
+-- DISAGREED WAS THE GUARD AND THE MEASURING QUERY. That query was treated as
+-- ground truth because it was an input rather than an output, and it was the
+-- one instrument in the chain that nobody could read: it was typed once and
+-- never committed, while the guard, the rehearsal and the capture are all in
+-- this repository and all unfiltered.
+--
+-- DELETED ACCOUNTS ARE INCLUDED IN THE BACKFILL, DELIBERATELY. Stating it,
+-- because otherwise it is not a decision, only the residue of which query
+-- nobody filtered:
+--
+--   * Every other instrument here reads public.users unfiltered -- this
+--     guard, the backfill, the post-conditions, capture_cover_conflicts.sql,
+--     and the verifier probe GUARD_179_cover_image_backfilled. That probe
+--     fails while ANY row holds a banner and no cover, so excluding deleted
+--     rows from the backfill alone would leave it MISSING permanently.
+--   * The cost is one soft-deleted row carrying a cover_image_url that no
+--     surface renders. If that account is ever restored, it is already right.
+--   * One population, stated once, used everywhere. A filter present in one
+--     place and absent in another is precisely what produced the confusion
+--     above, and adding a filter here would reintroduce it facing the other
+--     way.
+--
+-- If a later migration needs deleted rows excluded, it excludes them in the
+-- guard, the backfill and the probe together, or not at all.
 --
 -- IT IS UPDATED TO THE MEASURED NUMBER, NOT WIDENED TO A RANGE. Accepting a
 -- band would make this guard permanently unable to notice the next one, which
@@ -78,17 +116,14 @@
 -- check below asserts that each of the five still holds BOTH values measured
 -- for it, independently of every count. Raising 13 to 14 cannot weaken it.
 --
--- The new row needs no decision. It is legacy-only, so coalesce resolves it
--- on presence, which is the whole reason the backfill rule is per-row.
---
--- THE FOURTEEN ARE A LIVE DEFECT, NOT DRIFT. Fourteen instructors uploaded a
+-- THIRTEEN LIVE INSTRUCTORS ARE A LIVE DEFECT, NOT DRIFT. Thirteen uploaded a
 -- banner from /profile, which writes banner_url, and the storefront reads
 -- storefront_banner_url -- so their storefront has shown no banner since.
 -- Nobody reported it because the person who uploaded it sees it correctly on
 -- their own profile. Only visitors see the blank one.
 --
 -- A FIXED SURVIVING COLUMN WOULD BE WRONG EITHER WAY. Taking
--- storefront_banner_url blanks those fourteen. Taking banner_url blanks the
+-- storefront_banner_url blanks those fourteen rows. Taking banner_url blanks the
 -- three. So the rule is per row: coalesce on PRESENCE, and where both are
 -- present and differ, decide by RECENCY -- which split 3 to 2 across the five,
 -- so neither column wins globally there either.

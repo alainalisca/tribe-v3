@@ -29,7 +29,7 @@
 --
 --   A1       179's body AND ITS GUARD apply clean in-transaction
 --   A2       the measured population has not moved -- the SUCCESS arm
---   B1       THE FOURTEEN -- before AND after
+--   B1       THE FOURTEEN ROWS -- before AND after (13 live + 1 deleted)
 --   C1       the three storefront-only rows keep their banner
 --   D1..D5   each of the five INDIVIDUALLY, by id, against its decided URL
 --   D6       the second UPDATE is load-bearing (coalesce would be wrong for 3)
@@ -239,7 +239,11 @@ INSERT INTO cover_decisions (user_id, who, chosen_url, expected_legacy, expected
     RETURN;
   END IF;
 
-  -- ── B: THE FOURTEEN ──────────────────────────────────────────────────────
+  -- ── B: THE FOURTEEN ROWS ─────────────────────────────────────────────────
+  -- 14 rows: 13 live instructors and the soft-deleted `tribe` account. The
+  -- count is unfiltered on purpose and matches 179's guard exactly; see the
+  -- deleted-accounts decision in the migration header.
+  --
   -- b_before counts legacy-only users, whose storefront_banner_url is NULL --
   -- and storefront_banner_url is what the storefront hero reads, so every one
   -- of them renders no banner today. b_after counts how many now carry their

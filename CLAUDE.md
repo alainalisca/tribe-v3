@@ -694,6 +694,63 @@ The rehearsal failed in the harness with the RPC blocked. **In production it wou
 
 **And if a test asserts on `current_user` or `session_user`, it must first assert what they are.** Otherwise the assertion is silently about the harness. A rehearsal arm that prints both before anything else costs one row and makes every role-dependent result readable.
 
+**WHEN A MEASURED NUMBER AND A GUARD DISAGREE, THE QUERY THAT PRODUCED THE NUMBER IS ALSO AN INSTRUMENT. CHECK IT, NOT ONLY THE GUARD AND ITS REHEARSAL.**
+
+179's header recorded `only_legacy = 13`. Its guard, and the rehearsal, both
+counted **14**. Two explanations were available: the data moved, or the two
+counts are over different populations.
+
+The populations were compared -- and the wrong pair was compared. 179's guard,
+the rehearsal's G1 arm and the rehearsal's `reh_baseline` all read
+`FROM public.users` with a byte-identical predicate and no filter. They agreed
+perfectly, which was taken as ruling the second explanation out, so the first
+was reported: _an instructor uploaded a banner between the capture and the
+rehearsal_. **That event never happened.** The 13 came from the measuring query
+that chose the five, which filtered `deleted_at IS NULL`. The fourteenth row is
+a soft-deleted account. Same data, counted two ways, nothing changed.
+
+**The measuring query was never a candidate, because it was an input.** Every
+instrument downstream of the number was audited; the thing that produced the
+number was treated as the fact those instruments were being checked against.
+And it was the one link in the chain that could not be read: the guard, the
+rehearsal and `capture_cover_conflicts.sql` are all in the repository and all
+unfiltered, while the counting query was typed once into a SQL editor and never
+committed. **The uninspectable step is the one that escapes the audit, and it
+escapes precisely because there is nothing to inspect.**
+
+This is the **tenth** instance of the instrument-reach family, and the first
+where the mis-measured instrument was the SOURCE OF THE EXPECTATION rather than
+the thing being checked against it. It is more expensive than the others for
+that reason: a wrong instrument produces a wrong reading, but a wrong baseline
+makes every correct reading look like a change in the world. The report was not
+"the count is wrong" -- it was "someone uploaded a banner", a specific claim
+about a person's actions, with no evidence and no upload.
+
+Practically:
+
+- **Two numbers disagreeing is a three-way question, not two-way.** The data
+  moved, the guard is wrong, **or the baseline is wrong.** Enumerate all three
+  before writing a sentence about any of them.
+- **Ask where the expected number came from, and whether that query still
+  exists.** If it cannot be produced and re-run, it cannot be compared, and its
+  output is a hypothesis wearing a number's clothes.
+- **Commit the measuring query.** `capture_cover_conflicts.sql` is in the repo,
+  and that is why its `5` could be confirmed against the guard's `5` in one
+  grep. A count that decides a migration's constants belongs in the same
+  directory as the migration, for the same reason the migration is there.
+- **A filter is part of a number's definition, not a detail of how it was
+  fetched.** `13 legacy-only` and `14 legacy-only` are both true and are not the
+  same statement. When recording a measurement, record the predicate with it.
+
+**AND A HEADER THAT ASSERTS AN EVENT WHICH DID NOT HAPPEN IS WORSE THAN ONE
+THAT SAYS NOTHING.** A missing explanation makes the next reader investigate. A
+false one makes them look for an upload that does not exist, fail to find it,
+and end up with a guard that fired for a reason nobody wrote down -- with the
+investigation budget already spent. **Fabricated causes are more durable than
+absent ones, because they stop the search.** The false claim is kept in 179's
+header as an explicit correction rather than quietly deleted, so the next reader
+sees that it was wrong and why.
+
 **MUTATION ARMS PROVE A GUARD _CAN_ FIRE. ONLY A SUCCESS ARM PROVES IT _WILL NOT_. A REHEARSAL WITH ONLY THE FIRST KIND CANNOT ANSWER "WILL THIS MIGRATION APPLY".**
 
 179's rehearsal had four arms for its guard -- G1..G4, each reproducing the
