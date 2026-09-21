@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
 import { getServiceRoleClient } from '@/lib/supabase/admin';
-import { fetchPassConfig, type PassConfig } from '@/lib/dal/passLeads';
+import { fetchPassConfig, isOrganizationPartner, type PassConfig } from '@/lib/dal/passLeads';
 import { consentTextFor, CONSENT_POLICY_PATH } from '@/lib/pase/consent';
 import PaseForm from './PaseForm';
 
@@ -61,15 +61,16 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
  * branding, and the page has to match what is in their hand before it asks
  * them for a phone number.
  *
- * SHAPE. T-GYM1: organizations are squares, people are circles. PassConfig
- * does not carry the field that decides it. featured_partners.business_type
- * does exist and answers the question ('gym' and 'studio' are organizations,
- * 'independent' is a person), but it is not in the select that builds
- * PassConfig, and plumbing it through belongs in lib/dal/passLeads.ts rather
- * than here. So this is a rounded square for every partner today, which is
- * right for the three live rows the pass serves and wrong the day an
- * independent instructor gets one. The one-line fix when that happens is to
- * add business_type to PASS_CONFIG_COLUMNS and branch on it here.
+ * SHAPE. T-GYM1: organizations are squares, people are circles. #169 shipped a
+ * square for every partner because business_type was not in the select that
+ * builds PassConfig; T-LEAD2 added it, so the shape is now decided by what the
+ * partner actually is, via isOrganizationPartner().
+ *
+ * NO VISIBLE CHANGE SHIPS WITH THAT FIX. BullBox is the only row with
+ * pass_active, it is a 'gym', and it keeps the square it already had. The
+ * circle first appears the day an independent instructor gets a pass, which is
+ * the case this exists for and the case that cannot be demonstrated today
+ * without inventing a partner row to demonstrate it with.
  */
 function PartnerHero({ config }: { config: PassConfig }) {
   const initials = config.partnerName
@@ -78,12 +79,18 @@ function PartnerHero({ config }: { config: PassConfig }) {
     .map((w) => w[0]?.toUpperCase() ?? '')
     .join('');
 
+  // Squares for organizations, circles for people. Read off the row, never off
+  // the slug or the name.
+  const shape = isOrganizationPartner(config) ? 'rounded-2xl' : 'rounded-full';
+
   return (
     // Stacks under 360px: the logo plus a two-word business name does not fit
     // beside itself on a 320px phone, and a wrapped name next to a 96px block
     // looks like a mistake rather than a layout.
     <div className="mb-6 flex flex-col items-start gap-4 min-[360px]:flex-row min-[360px]:items-center">
-      <div className="h-24 w-24 shrink-0 overflow-hidden rounded-2xl bg-white/10 shadow-lg shadow-black/30 ring-2 ring-tribe-green">
+      <div
+        className={`h-24 w-24 shrink-0 overflow-hidden ${shape} bg-white/10 shadow-lg shadow-black/30 ring-2 ring-tribe-green`}
+      >
         {config.logoUrl ? (
           // eslint-disable-next-line @next/next/no-img-element -- Supabase storage host; next/image would need a loader entry for a URL that varies per partner row
           <img

@@ -17,6 +17,7 @@ import {
   BugReports,
   MessageList,
   SessionManagement,
+  AdminLeadsTab,
 } from '@/components/admin';
 import { SkeletonCard } from '@/components/Skeleton';
 import { AdminRevenueTab } from '@/components/admin/AdminRevenueTab';
@@ -156,6 +157,8 @@ export default function AdminPage() {
     { id: 'messages', label: t('messages') },
     { id: 'sessions', label: t('sessionsLabel') },
     { id: 'revenue', label: language === 'es' ? 'Ingresos' : 'Revenue' },
+    // "Leads" in both languages on purpose: it is the word Leo and Al both use.
+    { id: 'leads', label: 'Leads' },
   ];
 
   return (
@@ -346,6 +349,9 @@ export default function AdminPage() {
           />
         )}
         {activeTab === 'revenue' && <AdminRevenueTab language={language} />}
+        {/* Mounted only while selected, so its four queries do not run on
+            every admin page load for a tab nobody opened. */}
+        {activeTab === 'leads' && <AdminLeadsTab supabase={supabase} />}
       </div>
 
       <ConfirmDialog

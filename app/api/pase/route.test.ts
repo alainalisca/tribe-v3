@@ -34,6 +34,7 @@ const CONFIG = {
   partnerId: '040cbc21-1b11-4ae1-aa99-9fe35a32bda0',
   slug: 'bullbox',
   partnerName: 'CrossFit BullBox',
+  businessType: 'gym',
   address: 'Cra 43G #25a-50, El Poblado, Medellín',
   logoUrl: null,
   storefrontUserId: '0df617e9-7547-4a8d-a0b1-8be4d52a673a',

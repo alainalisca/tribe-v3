@@ -13,6 +13,7 @@ import {
   type AdminUserFilter,
   type AdminUserSort,
 } from '@/lib/dal/admin';
+import { fetchAdminLeads, ADMIN_LEADS_ALL_PARTNERS, ADMIN_LEADS_PAGE_SIZE } from '@/lib/dal/adminLeads';
 
 /**
  * @description Service-role admin list data (users, reports, feedback, bugs,
@@ -22,7 +23,9 @@ import {
  * @method GET
  * @auth Admin only. requireApiAdmin() verifies is_app_admin() and fails closed
  *   (403) on missing auth / non-admin / error BEFORE any data is read.
- * @query tab - one of: stats | users | reports | feedback | bugs | messages
+ * @query tab - one of: stats | users | reports | feedback | bugs | messages | leads
+ * @query partner - leads only: a featured_partners id, or "all"
+ * @query offset - leads only: row offset, 50 per page
  */
 export async function GET(request: NextRequest) {
   // GATE FIRST — nothing is read until the caller is a confirmed admin.
@@ -70,6 +73,26 @@ export async function GET(request: NextRequest) {
       case 'messages':
         result = await fetchAdminMessages(service);
         break;
+      case 'leads': {
+        // T-LEAD2. pass_leads is readable by an admin's own browser client
+        // under migration 173's policy, but the Cuenta column matches against
+        // public.users.email, which T-SEC5 revoked from every client role. That
+        // one column is the whole reason this read is here rather than in the
+        // page, and it is why the partner dashboard does NOT come through this
+        // route -- see lib/dal/adminLeads.ts.
+        const sp = request.nextUrl.searchParams;
+        const partner = sp.get('partner');
+        // A malformed offset falls back to the first page rather than erroring:
+        // a bad querystring should not blank the admin's list, the same rule
+        // the users tab applies to its filter and sort.
+        const rawOffset = Number.parseInt(sp.get('offset') ?? '', 10);
+        const offset = Number.isFinite(rawOffset) && rawOffset > 0 ? rawOffset : 0;
+        result = await fetchAdminLeads(service, {
+          partnerId: partner && partner !== ADMIN_LEADS_ALL_PARTNERS ? partner : ADMIN_LEADS_ALL_PARTNERS,
+          offset: Math.floor(offset / ADMIN_LEADS_PAGE_SIZE) * ADMIN_LEADS_PAGE_SIZE,
+        });
+        break;
+      }
       default:
         return NextResponse.json({ error: 'unknown_tab' }, { status: 400 });
     }

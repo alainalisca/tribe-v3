@@ -52,6 +52,21 @@ export interface GymDirectoryEntry extends GymIdentity {
   accountAvatarUrl: string | null;
   /** Approved sessions at this venue in the next seven days. */
   sessionsPerWeek: number;
+  /**
+   * The two columns the "Clase gratis" pill needs (T-LEAD2).
+   *
+   * DELIBERATELY NOT ADDED TO GYM_IDENTITY_COLUMNS. That constant is shared
+   * with fetchPartnersByIds and fetchPartnersForInstructors, which render
+   * affiliation chips on session cards and instructor tiles -- neither offers a
+   * pass, so widening the shared constant would make two unrelated reads carry
+   * columns for a third's feature. The card is the only consumer, so the
+   * columns go on the card's own select.
+   *
+   * slug is NOT NULL with a trigger filling it (163), so the discriminating
+   * half of the gate is pass_active alone. See lib/pase/entryPoint.ts.
+   */
+  slug: string;
+  pass_active: boolean;
 }
 
 /** Active gyms and studios with their roster sizes, for the discover section. */
@@ -59,7 +74,7 @@ export async function fetchGymsAndStudios(supabase: SupabaseClient): Promise<Dal
   try {
     const { data, error } = await supabase
       .from('featured_partners')
-      .select(`${GYM_IDENTITY_COLUMNS}, address, specialties, display_order, user:users(avatar_url)`)
+      .select(`${GYM_IDENTITY_COLUMNS}, address, specialties, display_order, slug, pass_active, user:users(avatar_url)`)
       .eq('status', 'active')
       .in('business_type', [...ORGANIZATION_TYPES])
       // Editorial placement first (161), then alphabetical. Same precedence as
