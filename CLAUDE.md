@@ -919,6 +919,96 @@ absent ones, because they stop the search.** The false claim is kept in 179's
 header as an explicit correction rather than quietly deleted, so the next reader
 sees that it was wrong and why.
 
+**THREE INSTRUMENTS THAT SHARE AN EXTRACTION ARE ONE INSTRUMENT. A GUARD'S READING STEP MUST ASSERT IT READ SOMETHING BEFORE ASSERTING WHAT IT FOUND.**
+
+The sharpest instance in this file, and the one to read first if you only read
+one: a single guard, checked by three independent-looking instruments, vacuous
+in all three for the same reason, all three reporting green.
+
+Migration 180's whole purpose is that no coordinate or distance reaches the
+client, so its load-bearing guard asserts the function's return type contains
+no positional column. All three checks of that property did this:
+
+```sql
+JOIN pg_type t ON t.oid = p.prorettype
+JOIN pg_attribute a ON a.attrelid = t.typrelid
+```
+
+**A `RETURNS TABLE` function has `prorettype` = `record`, and `pg_type.typrelid`
+for `record` is 0.** The join matches no rows. The extraction returned NULL, and
+
+```sql
+coalesce(v_cols, '') !~* '(lat|lng|lon|distance|coord)'
+```
+
+reduces to `'' !~* '...'` — true of the empty string, true forever, true with
+`distance_km` sitting in the signature. The migration would have applied. The
+verifier would have said `applied`. The rehearsal said PASS.
+
+**They were never three checks.** The migration's guard, the verifier probe and
+the rehearsal arm were written at different times for different audiences, and
+every one of them inherited the same wrong catalog join from the one before.
+Independence of instruments is a property of their **reading step**, not of
+their file, their author or their moment. Two checks that share how they obtain
+the value share every blind spot in obtaining it, and the redundancy is
+decorative.
+
+**What caught it was that ONE of them printed what it read.** The rehearsal arm
+put the extracted column list in its detail string, and it said
+`returns: (none)` for a function that returns five columns. Al read the detail
+rather than the verdict. Nothing else in the run disagreed with anything —
+16 of 16 PASS — and no amount of re-running would ever have surfaced it.
+
+**So, two rules, and the second is the one that generalises:**
+
+- **Print what you read, not only the verdict you reached.** A check that emits
+  `PASS` is unfalsifiable from the outside. A check that emits
+  `PASS — saw: id, name, avatar_url, sports, shared_sport_count` can be checked
+  by a human in one glance, and `(none)` is visibly absurd.
+- **Assert the read SUCCEEDED before asserting what it found.** `IF v_cols IS
+NULL OR length(btrim(v_cols)) = 0 THEN RAISE` is two lines, and without them
+  every property asserted downstream is a property of the empty string. This is
+  the same shape as [[C1 guarding C5–C7]] — an arm asserting an ABSENCE passes
+  when the thing returns nothing at all, so the arm proving it returns
+  something has to run first. A5 was the one arm in that rehearsal without such
+  a guard, which is precisely where the vacuity was.
+
+**AND THE MUTATION ARM IS WHAT PROVES THE READING STEP, NOT THE RULE.** Arm A6
+now builds a throwaway `pg_temp` function that genuinely returns
+`distance_km`, runs the **same** extraction against it, and asserts it is
+flagged. Without it, A5 passing is only evidence that the detector is quiet,
+and a detector that reads nothing is quiet about everything.
+
+That arm should have existed from the first line of the guard. The general
+form: **when a check searches for a forbidden thing, feed it a known example
+of that thing and confirm it objects.** It costs one arm, it is the only
+evidence that the search works at all, and it is exactly the mutation
+discipline already recorded here, applied to the reading step rather than to
+the production code.
+
+**AND THE FOOTER SLIP, WHICH IS NOW THE SECOND IDENTICAL INSTANCE IN ONE DAY —
+SAME FILE POSITION, SAME MISSING PREFIX.**
+
+Both rehearsals' closing comments read
+`-- The one result set. Every row must read PASS. N of N.` Both times the edit
+ran `replace("-- Every row must read PASS. 16 of 16.", ...)`, and both times the
+`-- ` prefix is not adjacent to `Every`, so the pattern matched nothing and the
+replace silently did nothing. Both times the file then told the operator to
+expect fewer rows than it emits.
+
+**A rule written after the first instance did not prevent the second.** The
+first was logged the same day, in a commit that said in so many words that a
+replace matching nothing and a replace matching correctly are both silent. That
+knowledge was available, recent, and did not fire.
+
+So the fix is not another rule. The build now **parses the stated total back out
+of the finished file and compares it against the seq literals the file can
+emit**, including the ones produced by `row_number()`. The sentence cannot
+disagree with the file, whether or not anyone remembers the lesson. Same
+principle as the migration-immutability test: when a rule has already been
+broken after being written down, replace it with something that cannot be
+forgotten.
+
 **MUTATION ARMS PROVE A GUARD _CAN_ FIRE. ONLY A SUCCESS ARM PROVES IT _WILL NOT_. A REHEARSAL WITH ONLY THE FIRST KIND CANNOT ANSWER "WILL THIS MIGRATION APPLY".**
 
 179's rehearsal had four arms for its guard -- G1..G4, each reproducing the
