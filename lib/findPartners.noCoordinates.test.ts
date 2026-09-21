@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync, existsSync } from 'fs';
+import { stripJsComments } from './stripJsComments';
 
 /**
  * Migration 180 moved Find Training Partners' ranking into the database so that
@@ -16,16 +17,14 @@ import { readFileSync, existsSync } from 'fs';
  * WHY THIS IS SCOPED TO A FILE LIST rather than banning the column names
  * repo-wide: location_lat and location_lng are read legitimately elsewhere --
  * the location picker, /api/venues/nearby, the smart-match cron. A repo-wide
- * ban would demand migrating code that has every right to them -- the same
- * mistake a bare column-name ban makes whenever a second table legitimately
- * holds a column of that name, as lib/coverImage.singleColumn.test.ts records
- * for its own subject.
+ * ban would demand migrating code that has every right to them, which is the
+ * same mistake a bare banner_url ban would have made against featured_partners.
  *
- * (That sentence originally named the other column outright, and the cover-image
- * guard flagged this file for it. Its match is textual and repo-wide BY DESIGN,
- * so prose naming a retired column reads to it exactly like code reading one.
- * A deliberately over-broad guard makes every other file's documentation its
- * business; the cost is a rephrase, and it is the right trade.)
+ * (This sentence once had to be rephrased to avoid naming that column, because
+ * the cover-image guard matched it in prose. That guard now strips comments,
+ * so documentation can name a retired column without tripping it. Rephrasing
+ * the prose had been the cheap fix; teaching the guard to tell a mention from
+ * a read is the correct one.)
  *
  * COMMENTS ARE STRIPPED BEFORE SCANNING. The files below EXPLAIN what they no
  * longer do, naming the columns while doing so. A textual guard that counted
@@ -45,17 +44,10 @@ const SURFACE: Record<string, string> = {
 
 const FORBIDDEN = /(location_lat|location_lng|users_discoverable|Math\.atan2|6371)/;
 
-/** Strip // line comments and block comments, keeping string literals intact
- *  enough for this purpose. Without this the guard reads its own subjects'
- *  documentation as code. */
-function executable(src: string): string {
-  return src
-    .replace(/\/\*[\s\S]*?\*\//g, '')
-    .split('\n')
-    .filter((l) => !/^\s*(\/\/|\*)/.test(l))
-    .map((l) => l.replace(/\/\/.*$/, ''))
-    .join('\n');
-}
+/** Shared with lib/coverImage.singleColumn.test.ts. The first version here was
+ *  a line-based regex, which truncates at the `//` inside `https://` and would
+ *  have hidden any read sharing a line with a URL. */
+const executable = stripJsComments;
 
 describe('Find Training Partners never reads a coordinate client-side', () => {
   /** NON-VACUITY FIRST. Every assertion below is true of a file that does not

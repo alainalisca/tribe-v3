@@ -55,18 +55,37 @@ export default function TrainingPartnerCard({ partner, language, onInvite }: Tra
               roughly where they live, and T-ATH1 reserves that for people who
               have trained together. Ordering already carries proximity. */}
           <div className="flex flex-wrap gap-1">
-            {shown.map((sport) => (
-              <span
-                key={sport}
-                className="inline-block bg-tribe-green-light text-stone-900 text-xs font-semibold px-2 py-0.5 rounded-full"
-              >
-                {sportTranslations[sport]?.[language as 'en' | 'es'] || sport}
+            {shown.length === 0 ? (
+              /* An athlete with no sports. Common now that the card shows
+                 EVERYONE rather than only the few with coordinates: before
+                 migration 180 these people were filtered out entirely, so the
+                 empty row never appeared.
+
+                 A neutral label rather than blank space. Blank space reads as
+                 a card that failed to load, and the row is the only content
+                 between the name and the invite button. Muted and unchipped so
+                 it does not look like a sport they have.
+
+                 ES copy is provisional and goes to Ana. */
+              <span className="inline-block text-xs text-stone-500 dark:text-gray-500 px-1 py-0.5 italic">
+                {isEs ? 'Sin deporte aún' : 'No sports yet'}
               </span>
-            ))}
-            {overflow > 0 && (
-              <span className="inline-block text-xs font-medium text-stone-600 dark:text-gray-400 px-1 py-0.5">
-                +{overflow}
-              </span>
+            ) : (
+              <>
+                {shown.map((sport) => (
+                  <span
+                    key={sport}
+                    className="inline-block bg-tribe-green-light text-stone-900 text-xs font-semibold px-2 py-0.5 rounded-full"
+                  >
+                    {sportTranslations[sport]?.[language as 'en' | 'es'] || sport}
+                  </span>
+                ))}
+                {overflow > 0 && (
+                  <span className="inline-block text-xs font-medium text-stone-600 dark:text-gray-400 px-1 py-0.5">
+                    +{overflow}
+                  </span>
+                )}
+              </>
             )}
           </div>
         </div>
