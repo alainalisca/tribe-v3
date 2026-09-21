@@ -1627,4 +1627,29 @@ select '183_google_avatar_full_size',
          else 'applied'
        end
 
+union all
+
+select '184_migrations_applied',
+       case when exists (select 1 from information_schema.tables
+                          where table_schema='public' and table_name='migrations_applied')
+       then 'applied' else 'MISSING' end
+
+union all
+
+-- The table EXISTING is not the property. An empty one satisfies every
+-- "nothing bad is recorded" check while telling the drift detector that no
+-- migration has ever run, and a writable one is not a record at all.
+select 'GUARD_184_applied_record_is_populated_and_readonly',
+       case
+         when not exists (select 1 from information_schema.tables
+                           where table_schema='public' and table_name='migrations_applied')
+           then 'MISSING -- table absent'
+         when (select count(*) from public.migrations_applied) < 6
+           then 'MISSING -- fewer than the 6 backfilled rows; the record recorded nothing'
+         when has_any_column_privilege('anon','public.migrations_applied','INSERT')
+           or has_any_column_privilege('authenticated','public.migrations_applied','INSERT')
+           then 'MISSING -- a client role can write the applied record'
+         else 'applied'
+       end
+
 order by migration;
