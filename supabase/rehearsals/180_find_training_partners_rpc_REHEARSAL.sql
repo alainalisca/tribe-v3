@@ -26,8 +26,9 @@
 -- ARMS
 -- ═══════════════════════════════════════════════════════════════════════════
 --
---   A1..A5  structure: applies, SECURITY DEFINER, grants, and the RETURN TYPE
---           carries no positional column -- the property the whole change is for
+--   A1..A6  structure: applies INCLUDING 180's own guard; SECURITY DEFINER;
+--           grants; the return columns are READABLE; none is positional;
+--           and the same extraction demonstrably flags one that is
 --   B1..B3  it refuses what it must: unauthenticated, p_limit 0, p_limit 500
 --   C1..C7  behaviour as a real viewer
 --   D1      the sport filter narrows rather than empties
@@ -157,13 +158,100 @@ DECLARE
   v_rows integer; v_msg text;
   v_first_unlocated integer; v_last_located integer;
   v_blocked uuid;
+  -- hoisted from 180's guard block, which cannot nest as a DO statement
+  v_all_cols   text;
+  v_positional text;
+  v_secdef     boolean;
+  v_anon       boolean;
 BEGIN
 
   -- ── A1: the spliced body applied (it ran above; this records it) ─────────
-  a_ok := EXISTS (SELECT 1 FROM pg_proc p
-                   WHERE p.oid = 'public.find_training_partners(text, integer)'::regprocedure);
-  a_err := CASE WHEN a_ok THEN '(none)' ELSE 'function not present after apply' END;
-  INSERT INTO reh_probe VALUES (1, 'A1 180 function and grants apply clean in-transaction', a_err, a_ok);
+  -- 180's OWN GUARD, spliced verbatim (DO wrapper stripped, vars hoisted).
+  -- The first version of this rehearsal spliced only the function and the
+  -- grants and stopped there, so A1 asserted the function EXISTS -- which is
+  -- true of a function whose guard would have aborted the migration. Running
+  -- the guard here is what makes A1 mean "180 will apply".
+  BEGIN
+  -- THE LOAD-BEARING GUARD. The entire point of this function is that nothing
+  -- positional crosses the wire. Asserting it against the declared return type
+  -- means a later CREATE OR REPLACE that adds `distance_km` back "just for
+  -- sorting on the client" fails here rather than shipping.
+  -- READ THE COLUMNS FROM proargnames/proargmodes, NOT FROM pg_attribute.
+  --
+  -- A RETURNS TABLE function has prorettype = `record`, and pg_type.typrelid
+  -- for `record` is 0 -- so the obvious join
+  --     JOIN pg_type t ON t.oid = p.prorettype
+  --     JOIN pg_attribute a ON a.attrelid = t.typrelid
+  -- matches NO ROWS and yields NULL. The first version of this guard did
+  -- exactly that, so `coalesce(v_cols,'') !~* '...'` reduced to `'' !~* '...'`
+  -- and the guard passed with any column list whatsoever, including one
+  -- containing distance_km.
+  --
+  -- It was caught because the rehearsal PRINTED the extracted list and it read
+  -- "(none)" for a function that returns five columns. A guard that reports
+  -- what it saw can be checked; one that reports only a verdict cannot.
+  SELECT string_agg(a.argname, ', ' ORDER BY a.ord)
+    INTO v_all_cols
+    FROM pg_proc p,
+         unnest(p.proargnames, p.proargmodes) WITH ORDINALITY AS a(argname, argmode, ord)
+   WHERE p.oid = 'public.find_training_partners(text, integer)'::regprocedure
+     AND a.argmode = 't';
+
+  -- NON-VACUITY FIRST. If the extraction found nothing, every assertion below
+  -- is true of the empty string and says nothing about the function.
+  IF v_all_cols IS NULL OR length(btrim(v_all_cols)) = 0 THEN
+    RAISE EXCEPTION
+      '180 ABORTED: could not read the function''s return columns, so the '
+      'no-positional-column check would pass vacuously. This is the failure '
+      'mode the check exists to prevent, arriving from the other side.';
+  END IF;
+
+  SELECT string_agg(a.argname, ', ' ORDER BY a.ord)
+    INTO v_positional
+    FROM pg_proc p,
+         unnest(p.proargnames, p.proargmodes) WITH ORDINALITY AS a(argname, argmode, ord)
+   WHERE p.oid = 'public.find_training_partners(text, integer)'::regprocedure
+     AND a.argmode = 't'
+     AND a.argname ~* '(lat|lng|lon|distance|coord|location|rank_group)';
+
+  IF v_positional IS NOT NULL THEN
+    RAISE EXCEPTION
+      '180 ABORTED: find_training_partners returns positional column(s): %. '
+      'Full return list: %. Nothing positional may cross the wire -- the client '
+      'is what must not have it. Rank here and return an order.',
+      v_positional, v_all_cols;
+  END IF;
+
+  SELECT p.prosecdef INTO v_secdef
+    FROM pg_proc p
+   WHERE p.oid = 'public.find_training_partners(text, integer)'::regprocedure;
+  IF NOT v_secdef THEN
+    RAISE EXCEPTION
+      '180 ABORTED: function is not SECURITY DEFINER. Migration 115 revoked '
+      'users.location_lat/lng from authenticated, so an invoker-rights version '
+      'silently ranks everyone as though nobody has coordinates.';
+  END IF;
+
+  v_anon := has_function_privilege('anon',
+    'public.find_training_partners(text, integer)', 'EXECUTE');
+  IF v_anon THEN
+    RAISE EXCEPTION
+      '180 ABORTED: anon holds EXECUTE. Supabase grants new functions to PUBLIC, '
+      'which reaches anon directly; revoke from anon by name.';
+  END IF;
+
+  IF NOT has_function_privilege('authenticated',
+    'public.find_training_partners(text, integer)', 'EXECUTE') THEN
+    RAISE EXCEPTION '180 ABORTED: authenticated cannot execute the function.';
+  END IF;
+
+  RAISE NOTICE '180: find_training_partners created. Returns: %. No positional column.', v_all_cols;
+    a_ok := true; a_err := '(none)';
+  EXCEPTION WHEN OTHERS THEN
+    a_ok := false; a_err := SQLSTATE || ' ' || SQLERRM;
+  END;
+  INSERT INTO reh_probe VALUES
+    (1, 'A1 180 function, grants AND ITS OWN GUARD apply clean in-transaction', a_err, a_ok);
   IF NOT a_ok THEN
     INSERT INTO reh_probe VALUES (99, 'REHEARSAL STOPPED', 'A1 failed', false);
     RETURN;
@@ -190,16 +278,63 @@ BEGIN
   -- ── A5: THE LOAD-BEARING ONE ─────────────────────────────────────────────
   -- Nothing positional may reach the return type. The detail lists every
   -- column so a reader sees WHAT is returned, not just that a check passed.
-  SELECT string_agg(a.attname, ', ' ORDER BY a.attnum) INTO v_cols
-    FROM pg_proc p JOIN pg_type t ON t.oid = p.prorettype
-    JOIN pg_attribute a ON a.attrelid = t.typrelid
+  -- A RETURNS TABLE function has prorettype = `record`, whose typrelid is 0,
+  -- so joining pg_type -> pg_attribute matches NOTHING. The first version of
+  -- this arm did that, printed "returns: (none)" for a five-column function,
+  -- and PASSED -- because `coalesce(NULL,'') !~* '...'` is `'' !~* '...'`.
+  -- It is the exact shape C1 guards against for C5-C7, in the one arm that had
+  -- no such guard of its own.
+  SELECT string_agg(a.argname, ', ' ORDER BY a.ord) INTO v_cols
+    FROM pg_proc p,
+         unnest(p.proargnames, p.proargmodes) WITH ORDINALITY AS a(argname, argmode, ord)
    WHERE p.oid = 'public.find_training_partners(text, integer)'::regprocedure
-     AND a.attnum > 0 AND NOT a.attisdropped;
+     AND a.argmode = 't';
+
+  -- NON-VACUITY, ASSERTED BEFORE THE PROPERTY. An empty list satisfies
+  -- "contains nothing forbidden" and says nothing whatever about the function.
+  INSERT INTO reh_probe VALUES
+    (5, 'A5 the return columns are READABLE (an empty read makes A5b vacuous)',
+     'pg_get_function_result: ' || coalesce(
+        (SELECT pg_get_function_result(p.oid) FROM pg_proc p
+          WHERE p.oid = 'public.find_training_partners(text, integer)'::regprocedure), '(none)'),
+     v_cols IS NOT NULL AND length(btrim(v_cols)) > 0);
 
   INSERT INTO reh_probe VALUES
-    (5, 'A5 the RETURN TYPE carries no coordinate, distance, location or rank column',
-     'returns: ' || coalesce(v_cols, '(none)'),
-     coalesce(v_cols, '') !~* '(lat|lng|lon|distance|coord|location|rank_group)');
+    (17, 'A5b none of those columns is a coordinate, distance, location or rank',
+     'columns: ' || coalesce(v_cols, '(none)'),
+     v_cols IS NOT NULL AND v_cols !~* '(lat|lng|lon|distance|coord|location|rank_group)');
+
+  -- A6: THE DETECTOR CAN ACTUALLY FIRE. A5b passing proves nothing unless the
+  -- same extraction flags a function that DOES return a forbidden column. This
+  -- builds one, checks it is caught, and drops it -- inside the transaction
+  -- that rolls back regardless.
+  DECLARE v_probe_flagged boolean; v_probe_cols text;
+  BEGIN
+    EXECUTE $probe$
+      CREATE FUNCTION pg_temp.reh_positional_probe()
+      RETURNS TABLE (id uuid, distance_km double precision)
+      LANGUAGE sql STABLE AS 'SELECT NULL::uuid, NULL::double precision'
+    $probe$;
+
+    SELECT string_agg(a.argname, ', ' ORDER BY a.ord) INTO v_probe_cols
+      FROM pg_proc p,
+           unnest(p.proargnames, p.proargmodes) WITH ORDINALITY AS a(argname, argmode, ord)
+     WHERE p.oid = 'pg_temp.reh_positional_probe()'::regprocedure
+       AND a.argmode = 't';
+
+    v_probe_flagged := v_probe_cols IS NOT NULL
+                   AND v_probe_cols ~* '(lat|lng|lon|distance|coord|location|rank_group)';
+
+    INSERT INTO reh_probe VALUES
+      (18, 'A6 the same extraction DOES flag a function that returns distance_km',
+       'probe returns: ' || coalesce(v_probe_cols, '(none)') ||
+       '   flagged=' || coalesce(v_probe_flagged::text, 'null'),
+       coalesce(v_probe_flagged, false));
+  EXCEPTION WHEN OTHERS THEN
+    INSERT INTO reh_probe VALUES
+      (18, 'A6 the same extraction DOES flag a function that returns distance_km',
+       'probe could not be built: ' || SQLERRM, false);
+  END;
 
   -- ── Choose a viewer from live data ───────────────────────────────────────
   SELECT u.id, (u.location_lat IS NOT NULL AND u.location_lng IS NOT NULL),
@@ -376,7 +511,7 @@ BEGIN
 
 END $outer$;
 
--- The one result set. Every row must read PASS. 16 of 16.
+-- The one result set. Every row must read PASS. 18 of 18.
 SELECT seq, CASE WHEN passed THEN 'PASS' ELSE 'FAIL' END AS result, check_name, detail
 FROM reh_probe ORDER BY seq;
 
