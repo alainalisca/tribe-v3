@@ -101,11 +101,25 @@ export async function GET(request: Request) {
 
     const userIds = prefsRows.map((p) => p.user_id);
 
+    // SUBJECT SIDE of the pairing. A user missing from this result is skipped
+    // by the `if (!user?.location_lat...) continue` below, so filtering here is
+    // what stops an instructor RECEIVING a proposal.
+    // INSTRUCTORS ARE NEVER TRAINING PARTNERS (Al's rule, migration 181's
+    // counterpart on this surface). This cron PUSHES its result unprompted,
+    // so without the filter it tells an athlete that an instructor is their
+    // training partner -- the rule broken more directly than on the card,
+    // because nobody has to go looking for it.
+    //
+    // `not('is_instructor', 'is', true)` is IS NOT TRUE, not `= false`.
+    // is_instructor is nullable and most athletes have never touched the
+    // toggle; eq(false) is NULL for those rows and a WHERE clause drops them,
+    // which would silently empty the candidate pool while looking stricter.
     const { data: usersData, error: usersError } = await supabase
       .from('users')
       .select('id, name, location_lat, location_lng, sports, gender, preferred_language')
       .in('id', userIds)
-      .eq('banned', false);
+      .eq('banned', false)
+      .not('is_instructor', 'is', true);
 
     if (usersError) {
       logError(usersError, { route: '/api/cron/smart-match', action: 'fetch_users' });
@@ -140,11 +154,16 @@ export async function GET(request: Request) {
 
     const allCandidateIds = [...new Set((allCandidatePrefs || []).map((c) => c.user_id))];
 
+    // CANDIDATE SIDE. A user missing here is skipped by the
+    // `if (!other?.location_lat...) continue` in the scoring loop, so filtering
+    // here is what stops an instructor BEING PROPOSED. Both sides are needed:
+    // either alone leaves the rule half-enforced in one direction.
     const { data: allCandidateUsers } = await supabase
       .from('users')
       .select('id, name, location_lat, location_lng, sports, gender')
       .in('id', allCandidateIds)
-      .eq('banned', false);
+      .eq('banned', false)
+      .not('is_instructor', 'is', true);
 
     // Build lookup maps for in-memory scoring
     const allCandidatePrefsMap = new Map<
