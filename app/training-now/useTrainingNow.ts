@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import { log, logError } from '@/lib/logger';
-import { showSuccess, showError } from '@/lib/toast';
+import { showSuccess, showError, showInfo } from '@/lib/toast';
 import { getErrorMessage } from '@/lib/errorMessages';
 import { reverseGeocodeGoogle } from '@/lib/google-maps';
 import { getUserLocation } from '@/lib/location';
@@ -83,6 +83,23 @@ export function useTrainingNow(language: 'en' | 'es') {
         const name = await reverseGeocodeGoogle(latitude, longitude);
         if (name) {
           setFormData((prev) => ({ ...prev, location: name }));
+        } else {
+          // The coordinates were saved above, so only the NAME is missing --
+          // the message must not imply the position was lost, or the user
+          // re-taps a button that already worked.
+          //
+          // showInfo, not showError: nothing is broken for them and the flow
+          // continues the moment they type. The failure itself is logged by
+          // /api/geocode and reverseGeocodeGoogle, which is where a
+          // misconfiguration belongs. Before this, a failed lookup was a
+          // silent no-op and the button simply appeared dead.
+          //
+          // ES copy is provisional and goes to Ana.
+          showInfo(
+            language === 'es'
+              ? 'No pudimos obtener el nombre de este lugar. Escribe la ubicación.'
+              : 'We could not look up the name of this spot. Please type the location.'
+          );
         }
       } catch (error) {
         logError(error, { action: 'getCurrentLocation' });
