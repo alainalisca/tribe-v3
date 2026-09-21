@@ -1,3 +1,4 @@
+import { logError } from '@/lib/logger';
 let loadPromise: Promise<void> | null = null;
 
 /**
@@ -39,16 +40,26 @@ export function loadGoogleMaps(): Promise<void> {
  * reducing client-side key exposure to only what the Places Autocomplete
  * widget requires.
  */
-export async function reverseGeocodeGoogle(
-  lat: number,
-  lng: number
-): Promise<string | null> {
+export async function reverseGeocodeGoogle(lat: number, lng: number): Promise<string | null> {
   try {
     const response = await fetch(`/api/geocode?lat=${lat}&lon=${lng}`);
-    if (!response.ok) return null;
+    if (!response.ok) {
+      // The route answers 502 when Google rejects the key or we are over
+      // quota, and 200 with display_name null only when there genuinely is no
+      // address. Returning null for both is what let a key misconfiguration
+      // look like "Google has no name for this place" at every call site.
+      // Callers still get null -- the contract is unchanged -- but the reason
+      // now exists somewhere.
+      logError(new Error(`/api/geocode responded ${response.status}`), {
+        action: 'reverseGeocodeGoogle',
+        httpStatus: response.status,
+      });
+      return null;
+    }
     const data = await response.json();
     return data.display_name || null;
-  } catch {
+  } catch (error) {
+    logError(error, { action: 'reverseGeocodeGoogle' });
     return null;
   }
 }
