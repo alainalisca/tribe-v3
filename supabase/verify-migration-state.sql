@@ -1405,4 +1405,79 @@ select 'GUARD_175_contacted_is_the_only_writable_column',
             then 'MISSING -- a client role holds UPDATE on pass_leads'
             else 'applied' end
 
+union all
+
+-- 175 captures a guard that existed in production and in no file. The probe is
+-- its PRESENCE plus its shape: absent means a rebuild produced a database where
+-- a signed-in user can self-verify as an instructor, which is the only gate on
+-- the lead reach-out path.
+select '175_capture_protect_verified_instructor',
+       case when to_regprocedure('public.protect_verified_instructor()') is not null
+             and exists (select 1 from pg_trigger
+                          where tgrelid = 'public.users'::regclass
+                            and tgname = 'protect_verified_instructor_trigger'
+                            and not tgisinternal)
+       then 'applied' else 'MISSING' end
+
+union all
+
+select '176_lead_reach_and_users_guards',
+       case when to_regprocedure('public.reach_out_to_athlete(uuid)') is not null
+             and to_regclass('public.lead_credits') is not null
+       then 'applied' else 'MISSING' end
+
+union all
+
+-- The absence of a write grant IS the mechanism, and Supabase re-grants new
+-- public objects to anon and authenticated directly. This is how it would
+-- silently come back.
+select 'GUARD_176_lead_credits_has_no_write_grant',
+       case when to_regclass('public.lead_credits') is null
+            then 'MISSING -- table absent'
+            when has_table_privilege('authenticated', 'public.lead_credits', 'UPDATE')
+              or has_table_privilege('authenticated', 'public.lead_credits', 'INSERT')
+              or has_table_privilege('authenticated', 'public.lead_credits', 'DELETE')
+            then 'MISSING -- authenticated can write lead_credits'
+            when not has_table_privilege('authenticated', 'public.lead_credits', 'SELECT')
+            then 'MISSING -- authenticated cannot read its own balance'
+            else 'applied' end
+
+union all
+
+-- FOR ALL included DELETE, which made the UNIQUE (instructor_id, athlete_id)
+-- dedupe self-clearing: an instructor could delete their own row and reach the
+-- same athlete again, without limit.
+select 'GUARD_176_lead_reaches_no_delete_policy',
+       case when (select count(*) from pg_policies
+                   where schemaname = 'public' and tablename = 'lead_reaches'
+                     and cmd in ('ALL','UPDATE','DELETE')) > 0
+            then 'MISSING -- lead_reaches has an ALL/UPDATE/DELETE policy again'
+            when not exists (select 1 from pg_policies
+                              where schemaname = 'public' and tablename = 'lead_reaches'
+                                and cmd = 'INSERT')
+            then 'MISSING -- no INSERT policy, so no reach can be filed'
+            else 'applied' end
+
+union all
+
+-- Two of three branches used to deny SILENTLY (NEW := OLD, update succeeds,
+-- nothing raised). Asserted by SHAPE rather than by name: three RAISE branches
+-- and zero silent reverts.
+select 'GUARD_176_protect_verified_instructor_raises',
+       case when to_regprocedure('public.protect_verified_instructor()') is null
+            then 'MISSING -- function absent'
+            when (select (length(pg_get_functiondef(p.oid))
+                          - length(replace(pg_get_functiondef(p.oid), ':= OLD.', ''))) 
+                    from pg_proc p where p.oid = 'public.protect_verified_instructor()'::regprocedure) > 0
+            then 'MISSING -- a silent revert is back'
+            else 'applied' end
+
+union all
+
+select 'GUARD_176_users_deleted_at_guard',
+       case when exists (select 1 from pg_trigger
+                          where tgrelid = 'public.users'::regclass
+                            and tgname = 'users_deleted_at_guard' and not tgisinternal)
+       then 'applied' else 'MISSING' end
+
 order by migration;
