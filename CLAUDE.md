@@ -966,6 +966,50 @@ grep neither adds to nor subtracts from what source already proves — an
 inconclusive instrument written up as inconclusive, rather than a number
 presented because it was available.
 
+**A COLUMN NAMED FOR AN EVENT, BACKFILLED FOR EVERYONE, ANSWERS A QUESTION NOBODY ASKED — AND WILL BE READ AS ANSWERING THE ONE THEY DID.**
+
+`users.onboarding_completed_at` sounds like "this user finished onboarding". It
+is not. Its own comment says _"finished OR **DISMISSED** the first-run
+introduction"_ — a walkthrough, where closing a tooltip counts — and migration
+156 ended with:
+
+```sql
+-- One-time backfill: existing accounts are done, new ones are not.
+UPDATE public.users SET onboarding_completed_at = NOW()
+WHERE onboarding_completed_at IS NULL;
+```
+
+**Every account that existed on 2026-09-09 is marked complete**, whatever they
+did. And `completeOnboarding()` in the DAL had **zero callers**, so nothing in
+the running app ever set it — every non-NULL value is a backfill or a dismissed
+tooltip.
+
+**It misled a real decision.** A query joined it against empty profiles and
+concluded _27 athletes completed onboarding and left sports and photo blank_,
+pointing at a leaky wizard. There is no athlete wizard: the role page sends
+athletes to `/profile/edit`, where every field is optional and sports are never
+asked for. The conclusion survived — the fix was still needed — but it was
+reached through a column that could not support it, and it could as easily have
+sent the work to the wrong place.
+
+**Three properties make a column like this dangerous, and they compound:**
+
+- **A name that describes a milestone** rather than the narrow event it records.
+  "onboarding_completed" invites the reading it got.
+- **A backfill with no marker.** Nothing distinguishes a real completion from
+  `UPDATE ... SET x = NOW()`. If a backfill is unavoidable, a `note` column or a
+  distinguishable timestamp costs nothing at write time and everything later.
+- **No live writer.** Dead code around a column implies the column means what
+  the dead function says it means.
+
+**So: when adding a state column, ask what a stranger would assume from the
+name, and put the difference in the COMMENT — where a `\d+` shows it — not only
+in the migration header nobody re-reads.** And never give an existing column a
+second meaning to avoid a migration: the second meaning is invisible at the
+query that misreads it. Migration 187 took `athlete_setup_completed_at` rather
+than reusing this one, for exactly that reason, and sharpened 156's comment so
+the next reader is told before they draw a conclusion.
+
 **CODE THAT WRITES A COLUMN MUST NOT MERGE BEFORE THE MIGRATION ADDING IT HAS BEEN APPLIED — AND "ADDITIVE FIRST" DID NOT PREVENT IT, BECAUSE ONE BRANCH MADE TWO ACTS LOOK LIKE ONE.**
 
 Migration 182 (`notifications.action_url`) and the code writing that column
