@@ -187,6 +187,7 @@ GRANT EXECUTE ON FUNCTION public.find_training_partners(text, integer) TO authen
 -- ── Guards ──────────────────────────────────────────────────────────────────
 DO $$
 DECLARE
+  v_all_cols   text;
   v_positional text;
   v_secdef     boolean;
   v_anon       boolean;
@@ -195,23 +196,50 @@ BEGIN
   -- positional crosses the wire. Asserting it against the declared return type
   -- means a later CREATE OR REPLACE that adds `distance_km` back "just for
   -- sorting on the client" fails here rather than shipping.
-  SELECT string_agg(a.attname, ', ')
-    INTO v_positional
-    FROM pg_proc p
-    JOIN pg_type t ON t.oid = p.prorettype
-    JOIN pg_attribute a ON a.attrelid = t.typrelid
+  -- READ THE COLUMNS FROM proargnames/proargmodes, NOT FROM pg_attribute.
+  --
+  -- A RETURNS TABLE function has prorettype = `record`, and pg_type.typrelid
+  -- for `record` is 0 -- so the obvious join
+  --     JOIN pg_type t ON t.oid = p.prorettype
+  --     JOIN pg_attribute a ON a.attrelid = t.typrelid
+  -- matches NO ROWS and yields NULL. The first version of this guard did
+  -- exactly that, so `coalesce(v_cols,'') !~* '...'` reduced to `'' !~* '...'`
+  -- and the guard passed with any column list whatsoever, including one
+  -- containing distance_km.
+  --
+  -- It was caught because the rehearsal PRINTED the extracted list and it read
+  -- "(none)" for a function that returns five columns. A guard that reports
+  -- what it saw can be checked; one that reports only a verdict cannot.
+  SELECT string_agg(a.argname, ', ' ORDER BY a.ord)
+    INTO v_all_cols
+    FROM pg_proc p,
+         unnest(p.proargnames, p.proargmodes) WITH ORDINALITY AS a(argname, argmode, ord)
    WHERE p.oid = 'public.find_training_partners(text, integer)'::regprocedure
-     AND a.attnum > 0 AND NOT a.attisdropped
-     AND (a.attname ILIKE '%lat%' OR a.attname ILIKE '%lng%'
-       OR a.attname ILIKE '%lon%' OR a.attname ILIKE '%distance%'
-       OR a.attname ILIKE '%coord%' OR a.attname ILIKE '%location%'
-       OR a.attname = 'rank_group');
+     AND a.argmode = 't';
+
+  -- NON-VACUITY FIRST. If the extraction found nothing, every assertion below
+  -- is true of the empty string and says nothing about the function.
+  IF v_all_cols IS NULL OR length(btrim(v_all_cols)) = 0 THEN
+    RAISE EXCEPTION
+      '180 ABORTED: could not read the function''s return columns, so the '
+      'no-positional-column check would pass vacuously. This is the failure '
+      'mode the check exists to prevent, arriving from the other side.';
+  END IF;
+
+  SELECT string_agg(a.argname, ', ' ORDER BY a.ord)
+    INTO v_positional
+    FROM pg_proc p,
+         unnest(p.proargnames, p.proargmodes) WITH ORDINALITY AS a(argname, argmode, ord)
+   WHERE p.oid = 'public.find_training_partners(text, integer)'::regprocedure
+     AND a.argmode = 't'
+     AND a.argname ~* '(lat|lng|lon|distance|coord|location|rank_group)';
 
   IF v_positional IS NOT NULL THEN
     RAISE EXCEPTION
       '180 ABORTED: find_training_partners returns positional column(s): %. '
-      'Nothing positional may cross the wire -- the client is what must not '
-      'have it. Rank here and return an order.', v_positional;
+      'Full return list: %. Nothing positional may cross the wire -- the client '
+      'is what must not have it. Rank here and return an order.',
+      v_positional, v_all_cols;
   END IF;
 
   SELECT p.prosecdef INTO v_secdef
@@ -237,7 +265,7 @@ BEGIN
     RAISE EXCEPTION '180 ABORTED: authenticated cannot execute the function.';
   END IF;
 
-  RAISE NOTICE '180: find_training_partners created. No positional column is returned.';
+  RAISE NOTICE '180: find_training_partners created. Returns: %. No positional column.', v_all_cols;
 END $$;
 
 -- ── Verification. Every *_ok must read true. ────────────────────────────────
@@ -249,10 +277,17 @@ SELECT
      'public.find_training_partners(text, integer)', 'EXECUTE'))          AS anon_cannot_execute_ok,
   has_function_privilege('authenticated',
      'public.find_training_partners(text, integer)', 'EXECUTE')           AS authenticated_can_execute_ok,
-  (SELECT count(*) FROM pg_proc p
-     JOIN pg_type t ON t.oid = p.prorettype
-     JOIN pg_attribute a ON a.attrelid = t.typrelid
+  -- Printed, not just asserted: a verdict with no evidence is what let the
+  -- first version of this check pass over a return type it never read.
+  (SELECT pg_get_function_result(p.oid) FROM pg_proc p
+    WHERE p.oid = 'public.find_training_partners(text, integer)'::regprocedure)
+                                                                          AS returns,
+  (SELECT count(*) = 0 FROM pg_proc p,
+          unnest(p.proargnames, p.proargmodes) WITH ORDINALITY AS a(argname, argmode, ord)
     WHERE p.oid = 'public.find_training_partners(text, integer)'::regprocedure
-      AND a.attnum > 0 AND NOT a.attisdropped
-      AND (a.attname ILIKE '%lat%' OR a.attname ILIKE '%lng%'
-        OR a.attname ILIKE '%distance%')) = 0                             AS no_positional_column_ok;
+      AND a.argmode = 't'
+      AND a.argname ~* '(lat|lng|lon|distance|coord|location|rank_group)')  AS no_positional_column_ok,
+  (SELECT count(*) > 0 FROM pg_proc p,
+          unnest(p.proargnames, p.proargmodes) WITH ORDINALITY AS a(argname, argmode, ord)
+    WHERE p.oid = 'public.find_training_partners(text, integer)'::regprocedure
+      AND a.argmode = 't')                                                AS return_columns_readable_ok;

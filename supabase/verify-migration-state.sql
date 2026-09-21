@@ -1523,13 +1523,20 @@ select 'GUARD_180_rpc_returns_no_position',
          when not exists (select 1 from pg_proc p
                            where p.oid = 'public.find_training_partners(text, integer)'::regprocedure)
            then 'MISSING -- function absent'
-         when exists (select 1 from pg_proc p
-                        join pg_type t on t.oid = p.prorettype
-                        join pg_attribute a on a.attrelid = t.typrelid
+         -- RETURNS TABLE means prorettype = record, whose typrelid is 0, so a
+         -- pg_attribute join reads nothing and any check built on it passes
+         -- vacuously. Read proargnames/proargmodes instead, and assert the
+         -- read SUCCEEDED before asserting what it found.
+         when not exists (select 1 from pg_proc p,
+                            unnest(p.proargnames, p.proargmodes) with ordinality as a(argname, argmode, ord)
+                           where p.oid = 'public.find_training_partners(text, integer)'::regprocedure
+                             and a.argmode = 't')
+           then 'MISSING -- return columns unreadable, so this check cannot mean anything'
+         when exists (select 1 from pg_proc p,
+                        unnest(p.proargnames, p.proargmodes) with ordinality as a(argname, argmode, ord)
                        where p.oid = 'public.find_training_partners(text, integer)'::regprocedure
-                         and a.attnum > 0 and not a.attisdropped
-                         and (a.attname ilike '%lat%' or a.attname ilike '%lng%'
-                           or a.attname ilike '%distance%'))
+                         and a.argmode = 't'
+                         and a.argname ~* '(lat|lng|lon|distance|coord|location|rank_group)')
            then 'MISSING -- a positional column reached the return type'
          when not (select p.prosecdef from pg_proc p
                     where p.oid = 'public.find_training_partners(text, integer)'::regprocedure)
