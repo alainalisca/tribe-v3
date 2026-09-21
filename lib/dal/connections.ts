@@ -20,14 +20,27 @@ export interface ConnectedUser {
   sports: string[];
 }
 
+/**
+ * Exactly what find_training_partners (migration 180) returns. No coordinate,
+ * no distance, no rank: the RPC returns rows IN ORDER and the card needs only
+ * the order.
+ *
+ * `distance_km` and `primary_sport` are gone. distance_km was rendered on every
+ * card for every viewer; primary_sport was sports[0] under another name, and
+ * the card now shows the sports themselves.
+ *
+ * NOTE there is a SECOND, unrelated TrainingPartner in lib/dal/trainingPartners.ts
+ * for the Tribe.OS section. Different shape, different surface, untouched.
+ */
 export interface TrainingPartner {
   id: string;
   name: string;
   avatar_url: string | null;
-  primary_sport: string;
-  distance_km: number;
-  shared_sport_count: number;
   sports: string[];
+  /** Sports this athlete shares WITH THE VIEWER -- computed server-side against
+   *  the caller's own list. The previous field of this name held the other
+   *  athlete's total sport count, which shares nothing with anybody. */
+  shared_sport_count: number;
 }
 
 export interface PendingRequest {
@@ -347,75 +360,42 @@ export async function fetchPendingRequests(
   }
 }
 
-
 /**
- * Fetch nearby athletes from the users table (no session-gating).
- * Uses Haversine formula in JS. Filters by radius and optional sport.
+ * Ranked training partners for the signed-in viewer, from migration 180's
+ * find_training_partners RPC.
+ *
+ * THERE IS NO lat/lng PARAMETER, DELIBERATELY. The RPC reads the caller's own
+ * stored coordinates via auth.uid(). The function this replaced took an origin
+ * as an argument and never checked it belonged to the caller, so it answered
+ * "who is near this arbitrary point" -- a question the product never asks.
+ *
+ * AND NOTHING POSITIONAL COMES BACK. The old version selected location_lat and
+ * location_lng from users_discoverable and computed a Haversine distance in the
+ * browser, which meant every logged-in user's network response carried the
+ * rounded coordinates of every athlete on the card. Ranking now happens in the
+ * database and the client receives an order.
+ *
+ * There is no radius either. Ordering is total: athletes with coordinates rank
+ * by real distance, everyone else follows by shared sports. The old MAX_RADIUS
+ * of 30km excluded people for having skipped a profile field, and the radiusKm
+ * parameter beside it was never read.
  */
-export async function fetchNearbyAthletes(
+export async function fetchTrainingPartners(
   supabase: SupabaseClient,
-  userId: string,
-  lat: number,
-  lng: number,
   sport?: string,
-  radiusKm: number = 25,
   limit: number = 30
 ): Promise<DalResult<TrainingPartner[]>> {
   try {
-    // Only query users who have coordinates set. users_discoverable (migration
-    // 114) returns coords rounded to 2dp server-side and already excludes
-    // soft-deleted/banned/test accounts, so no deleted_at filter here.
-    // Distance below is therefore computed on rounded coords: accurate to
-    // ~1.1km, and two users in the same cell can read as 0.0km apart.
-    let query = supabase
-      .from('users_discoverable')
-      .select('id, name, avatar_url, sports, location_lat, location_lng')
-      .neq('id', userId)
-      .not('location_lat', 'is', null)
-      .not('location_lng', 'is', null);
+    const { data, error } = await supabase.rpc('find_training_partners', {
+      p_sport: sport ?? null,
+      p_limit: limit,
+    });
 
-    if (sport) {
-      query = query.contains('sports', [sport]);
-    }
-
-    const { data: users, error } = await query;
     if (error) return { success: false, error: error.message };
-
-    const MAX_RADIUS = 30;
-
-    const partners: TrainingPartner[] = (users || [])
-      .map((u: Record<string, unknown>) => {
-        const uLat = u.location_lat as number;
-        const uLng = u.location_lng as number;
-        const uSports = (Array.isArray(u.sports) ? u.sports : []) as string[];
-
-        const lat1 = (lat * Math.PI) / 180;
-        const lat2 = (uLat * Math.PI) / 180;
-        const dLat = ((uLat - lat) * Math.PI) / 180;
-        const dLng = ((uLng - lng) * Math.PI) / 180;
-        const a =
-          Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-          Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        const distance = Math.round(6371 * c * 10) / 10;
-
-        return {
-          id: (u.id as string) || '',
-          name: (u.name as string) || 'Unknown',
-          avatar_url: (u.avatar_url as string | null) || null,
-          primary_sport: uSports[0] || 'Running',
-          distance_km: distance,
-          shared_sport_count: uSports.length,
-          sports: uSports,
-        };
-      })
-      .filter((p) => p.distance_km <= MAX_RADIUS)
-      .sort((a, b) => a.distance_km - b.distance_km);
-
-    return { success: true, data: partners.slice(0, limit) };
+    return { success: true, data: (data ?? []) as TrainingPartner[] };
   } catch (error) {
-    logError(error, { action: 'fetchNearbyAthletes', userId, lat, lng, sport });
-    return { success: false, error: 'Failed to fetch nearby athletes' };
+    logError(error, { action: 'fetchTrainingPartners', sport });
+    return { success: false, error: 'Failed to fetch training partners' };
   }
 }
 

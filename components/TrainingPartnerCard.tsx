@@ -13,8 +13,17 @@ interface TrainingPartnerCardProps {
 }
 
 export default function TrainingPartnerCard({ partner, language, onInvite }: TrainingPartnerCardProps) {
-  const sportName = sportTranslations[partner.primary_sport]?.[language as 'en' | 'es'] || partner.primary_sport;
   const isEs = language === 'es';
+
+  // SHOW SPORTS, RANK BY LOCATION. The card used to show one sport and a
+  // distance; the distance is gone and the sports take its place.
+  //
+  // Two chips, because the card is 160px wide and a third wraps. The overflow
+  // count is not decoration: without it a five-sport athlete would look
+  // identical to a two-sport one, and sports are now the only thing
+  // distinguishing cards beyond the name.
+  const shown = partner.sports.slice(0, 2);
+  const overflow = partner.sports.length - shown.length;
 
   const initials = partner.name
     .split(' ')
@@ -42,15 +51,24 @@ export default function TrainingPartnerCard({ partner, language, onInvite }: Tra
           {/* Name */}
           <h3 className="font-semibold text-stone-900 dark:text-white line-clamp-1 text-sm">{partner.name}</h3>
 
-          {/* Sport tag */}
+          {/* Sports. NO DISTANCE: a distance on a stranger's card discloses
+              roughly where they live, and T-ATH1 reserves that for people who
+              have trained together. Ordering already carries proximity. */}
           <div className="flex flex-wrap gap-1">
-            <span className="inline-block bg-tribe-green-light text-stone-900 text-xs font-semibold px-2 py-0.5 rounded-full">
-              {sportName}
-            </span>
+            {shown.map((sport) => (
+              <span
+                key={sport}
+                className="inline-block bg-tribe-green-light text-stone-900 text-xs font-semibold px-2 py-0.5 rounded-full"
+              >
+                {sportTranslations[sport]?.[language as 'en' | 'es'] || sport}
+              </span>
+            ))}
+            {overflow > 0 && (
+              <span className="inline-block text-xs font-medium text-stone-600 dark:text-gray-400 px-1 py-0.5">
+                +{overflow}
+              </span>
+            )}
           </div>
-
-          {/* Distance */}
-          <p className="text-xs text-stone-600 dark:text-gray-400">{partner.distance_km} km</p>
         </div>
       </Link>
 

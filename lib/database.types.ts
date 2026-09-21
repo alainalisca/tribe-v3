@@ -2421,6 +2421,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      find_training_partners: {
+        Args: { p_sport?: string | null; p_limit?: number }
+        Returns: {
+          id: string
+          name: string
+          avatar_url: string | null
+          sports: string[]
+          shared_sport_count: number
+        }[]
+      }
       get_user_attendance_stats: {
         Args: { user_uuid: string }
         Returns: {
