@@ -383,7 +383,7 @@ INSERT INTO cover_decisions (user_id, who, chosen_url, expected_legacy, expected
 
 END $outer$;
 
--- The one result set. Every row must read PASS. 18 of 18.
+-- The one result set. Every row must read PASS. 19 of 19.
 SELECT seq, CASE WHEN passed THEN 'PASS' ELSE 'FAIL' END AS result, check_name, detail
 FROM reh_probe ORDER BY seq;
 
