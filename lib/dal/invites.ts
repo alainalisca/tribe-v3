@@ -14,10 +14,27 @@ import type { DalResult } from './types';
 // insertInviteToken is KEPT: the /api/invites/session route still uses it with a
 // service-role client (RLS-bypassing) to mint the in-app invite token. The
 // shareable-link path now mints server-side via the create_session_invite RPC.
-export async function insertInviteToken(
-  supabase: SupabaseClient,
-  data: Record<string, unknown>
-): Promise<DalResult<null>> {
+/**
+ * TYPED, not Record<string, unknown>.
+ *
+ * The untyped bag accepted any key, so a typo -- `recipientId` for
+ * `recipient_id`, `sessionId` for `session_id` -- would insert a row missing
+ * the field the caller believed it had set, and no check anywhere would
+ * notice. That matters more now that an invite is about to become ADDRESSED:
+ * a token whose recipient silently failed to save is a bearer token, which is
+ * exactly what the addressing is meant to end.
+ */
+export interface InviteTokenInsert {
+  session_id: string;
+  token: string;
+  created_by: string;
+  /** Reserved for the addressed-invite work. NULL keeps today's bearer
+   *  behaviour, which public share links depend on. */
+  recipient_id?: string | null;
+  expires_at?: string;
+}
+
+export async function insertInviteToken(supabase: SupabaseClient, data: InviteTokenInsert): Promise<DalResult<null>> {
   try {
     const { error } = await supabase.from('invite_tokens').insert(data);
     if (error) return { success: false, error: error.message };

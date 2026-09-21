@@ -81,6 +81,11 @@ describe('createNotification (BUG-203: in-app join notification)', () => {
         entity_type: 'session',
         entity_id: 'session-uuid',
         message: 'Ana joined your Running session',
+        // Migration 182. Present and NULL for every notification that has no
+        // explicit destination -- kept in this exact-payload assertion rather
+        // than loosened to objectContaining, because the strictness is what
+        // caught the field being added at all.
+        action_url: null,
       },
     ]);
   });

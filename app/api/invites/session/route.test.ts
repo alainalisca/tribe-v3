@@ -60,7 +60,13 @@ function createMockRequest(body: Record<string, unknown>): NextRequest {
  *      (sender participation check only if sender is NOT creator)
  *   2. 'users' - sender profile lookup (.single)
  */
-function createAuthMock(overrides: { recipientInSession?: unknown; senderProfile?: unknown }) {
+function createAuthMock(overrides: {
+  recipientInSession?: unknown;
+  senderProfile?: unknown;
+  /** Simulates the recipient already-in-session lookup FAILING. The route used
+   *  to discard this error, so a failed query read as "not in the session". */
+  recipientCheckError?: unknown;
+}) {
   // Track maybeSingle calls on session_participants to differentiate
   // sender participation check vs recipient check
   let participantMaybeSingleCount = 0;
@@ -82,8 +88,8 @@ function createAuthMock(overrides: { recipientInSession?: unknown; senderProfile
           // For simplicity in our tests the sender is always the creator,
           // so every maybeSingle call is the recipient check.
           return Promise.resolve({
-            data: overrides.recipientInSession ?? null,
-            error: null,
+            data: overrides.recipientCheckError ? null : (overrides.recipientInSession ?? null),
+            error: overrides.recipientCheckError ?? null,
           });
         };
       }
@@ -279,5 +285,93 @@ describe('POST /api/invites/session', () => {
     const res = await POST(createMockRequest({ session_id: SESSION_ID, recipient_user_id: RECIPIENT_USER_ID }));
     expect(res.status).toBe(500);
     expect(createNotification).not.toHaveBeenCalled();
+  });
+
+  // ── 6. The token must actually REACH the recipient ──────────────────
+
+  /**
+   * The token was minted, stored, and never delivered: entity_id is uuid and
+   * cannot hold 32 hex characters, so nothing on the notification could carry
+   * it. The recipient got a message pointing at the SESSION, and an
+   * invite_only session refuses a tokenless join.
+   *
+   * Migration 182 added action_url. These assertions exist because removing
+   * `action_url: inviteUrl` from the route broke NOTHING before they did.
+   */
+  it('puts the minted token on the notification as action_url', async () => {
+    const mockClient = createAuthMock({ recipientInSession: null, senderProfile: { name: 'Al' } });
+    mockClient.auth.getUser.mockResolvedValue({
+      data: { user: { id: AUTH_USER_ID, email: 't@t.com' } },
+      error: null,
+    } as never);
+    vi.mocked(createClient).mockResolvedValue(mockClient as never);
+    vi.mocked(fetchSession).mockResolvedValue({
+      success: true,
+      data: { id: SESSION_ID, creator_id: AUTH_USER_ID, sport: 'Basketball', date: '2026-04-15' },
+    } as never);
+    const serviceSupabaseMock = createServiceMock('en');
+    vi.mocked(createServiceClient).mockReturnValue(serviceSupabaseMock as never);
+    vi.mocked(insertInviteToken).mockResolvedValue({ success: true } as never);
+    vi.mocked(createNotification).mockResolvedValue({ success: true, data: null } as never);
+
+    await POST(createMockRequest({ session_id: SESSION_ID, recipient_user_id: RECIPIENT_USER_ID }));
+
+    const mintedToken = vi.mocked(insertInviteToken).mock.calls[0][1].token as string;
+    expect(createNotification).toHaveBeenCalledWith(
+      serviceSupabaseMock,
+      expect.objectContaining({ action_url: `/invite/${mintedToken}/` })
+    );
+  });
+
+  /** The SAME token, not merely some well-formed url. A route that minted one
+   *  token and linked another would pass a shape check and still be broken. */
+  it('the linked token is the one that was stored', async () => {
+    const mockClient = createAuthMock({ recipientInSession: null, senderProfile: { name: 'Al' } });
+    mockClient.auth.getUser.mockResolvedValue({
+      data: { user: { id: AUTH_USER_ID, email: 't@t.com' } },
+      error: null,
+    } as never);
+    vi.mocked(createClient).mockResolvedValue(mockClient as never);
+    vi.mocked(fetchSession).mockResolvedValue({
+      success: true,
+      data: { id: SESSION_ID, creator_id: AUTH_USER_ID, sport: 'Yoga', date: '2026-05-01' },
+    } as never);
+    vi.mocked(createServiceClient).mockReturnValue(createServiceMock('en') as never);
+    vi.mocked(insertInviteToken).mockResolvedValue({ success: true } as never);
+    vi.mocked(createNotification).mockResolvedValue({ success: true, data: null } as never);
+
+    await POST(createMockRequest({ session_id: SESSION_ID, recipient_user_id: RECIPIENT_USER_ID }));
+
+    const stored = vi.mocked(insertInviteToken).mock.calls[0][1].token as string;
+    const linked = vi.mocked(createNotification).mock.calls[0][1].action_url as string;
+    expect(linked).toContain(stored);
+  });
+
+  // ── 7. A failed recipient lookup must not read as "not in the session" ──
+
+  it('returns 503 when the already-in-session check FAILS, instead of inviting anyway', async () => {
+    const mockClient = createAuthMock({
+      recipientCheckError: { message: 'connection reset' },
+      senderProfile: { name: 'Al' },
+    });
+    mockClient.auth.getUser.mockResolvedValue({
+      data: { user: { id: AUTH_USER_ID, email: 't@t.com' } },
+      error: null,
+    } as never);
+    vi.mocked(createClient).mockResolvedValue(mockClient as never);
+    vi.mocked(fetchSession).mockResolvedValue({
+      success: true,
+      data: { id: SESSION_ID, creator_id: AUTH_USER_ID, sport: 'Yoga', date: '2026-05-01' },
+    } as never);
+    vi.mocked(createServiceClient).mockReturnValue(createServiceMock('en') as never);
+    vi.mocked(insertInviteToken).mockResolvedValue({ success: true } as never);
+    vi.mocked(createNotification).mockResolvedValue({ success: true, data: null } as never);
+
+    const res = await POST(createMockRequest({ session_id: SESSION_ID, recipient_user_id: RECIPIENT_USER_ID }));
+
+    expect(res.status).toBe(503);
+    // and it must not have gone ahead and invited
+    expect(createNotification).not.toHaveBeenCalled();
+    expect(insertInviteToken).not.toHaveBeenCalled();
   });
 });

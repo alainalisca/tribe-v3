@@ -9,6 +9,7 @@ import { createClient } from '@/lib/supabase/client';
 import { fetchUpcomingSessionsByUser } from '@/lib/dal/sessions';
 import { sportTranslations } from '@/lib/translations';
 import { showSuccess, showError } from '@/lib/toast';
+import { logError } from '@/lib/logger';
 import type { TrainingPartner } from '@/lib/dal/connections';
 
 interface InviteToSessionSheetProps {
@@ -31,6 +32,7 @@ export default function InviteToSessionSheet({ open, onClose, athlete, language 
   const [sessions, setSessions] = useState<UpcomingSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [sendingId, setSendingId] = useState<string | null>(null);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const isEs = language === 'es';
 
@@ -51,6 +53,16 @@ export default function InviteToSessionSheet({ open, onClose, athlete, language 
       const result = await fetchUpcomingSessionsByUser(supabase, user.id, 10);
       if (result.success && result.data) {
         setSessions(result.data);
+        setLoadFailed(false);
+      } else {
+        // A FAILED LOAD USED TO RENDER EXACTLY LIKE HAVING NO SESSIONS. Both
+        // left `sessions` empty, so the sheet said "No upcoming sessions" to
+        // someone who has several, and nothing was logged.
+        setLoadFailed(true);
+        logError(new Error(result.error || 'fetchUpcomingSessionsByUser failed'), {
+          action: 'InviteToSessionSheet.loadSessions',
+          userId: user.id,
+        });
       }
       setLoading(false);
     };
@@ -79,8 +91,13 @@ export default function InviteToSessionSheet({ open, onClose, athlete, language 
         showSuccess(isEs ? 'Invitacion enviada' : 'Invite sent');
         onClose();
       }
-    } catch {
-      showError(isEs ? 'Error de red' : 'Network error');
+    } catch (err) {
+      // "Network error" was shown for EVERY thrown exception and nothing was
+      // logged, so a real bug was indistinguishable from bad signal and left
+      // no trace to investigate.
+      logError(err, { action: 'InviteToSessionSheet.sendInvite', athleteId: athlete.id });
+      const reason = err instanceof Error ? err.message : String(err);
+      showError(isEs ? `No se pudo enviar la invitacion: ${reason}` : `Could not send the invite: ${reason}`);
     } finally {
       setSendingId(null);
     }
@@ -130,12 +147,37 @@ export default function InviteToSessionSheet({ open, onClose, athlete, language 
             <div className="flex justify-center py-8">
               <Loader2 className="w-6 h-6 animate-spin text-tribe-green" />
             </div>
+          ) : loadFailed ? (
+            /* Distinct from the empty state below. Telling someone they have no
+               sessions when the query simply failed sends them to create one
+               they already have. */
+            <div className="text-center py-6">
+              <p className="text-sm text-theme-tertiary mb-2">
+                {isEs ? 'No pudimos cargar tus sesiones' : 'We could not load your sessions'}
+              </p>
+              <p className="text-xs text-gray-500">{isEs ? 'Intenta de nuevo' : 'Please try again'}</p>
+            </div>
           ) : sessions.length === 0 ? (
             <div className="text-center py-6">
               <p className="text-sm text-theme-tertiary mb-2">
                 {isEs ? 'No tienes sesiones proximas' : 'No upcoming sessions'}
               </p>
-              <p className="text-xs text-gray-500">{isEs ? 'Crea una sesion primero' : 'Create a session first'}</p>
+              {/* "Create a session first" was static text. An instruction with
+                  no way to follow it reads as a dead end, which is what this
+                  sheet looked like when the invite appeared to do nothing.
+                  ES copy is provisional and goes to Ana. */}
+              <p className="text-xs text-gray-500 mb-3">
+                {isEs
+                  ? 'Solo puedes invitar a una sesion que hayas creado.'
+                  : 'You can only invite someone to a session you created.'}
+              </p>
+              <Link
+                href="/create"
+                onClick={onClose}
+                className="inline-block rounded-full bg-tribe-green px-4 py-2 text-sm font-bold text-tribe-dark hover:opacity-90"
+              >
+                {isEs ? 'Crear una sesion' : 'Create a session'}
+              </Link>
             </div>
           ) : (
             sessions.map((session) => {

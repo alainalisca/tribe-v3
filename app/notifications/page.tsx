@@ -44,7 +44,20 @@ const TYPE_ICONS: Record<string, React.ReactNode> = {
 };
 
 export function getNotificationLink(notification: NotificationWithActor): string | null {
-  const { type, entity_type, entity_id, actor_id } = notification;
+  const { type, entity_type, entity_id, actor_id, action_url } = notification;
+
+  // AN EXPLICIT DESTINATION WINS OVER EVERY INFERRED ONE.
+  //
+  // Migration 182 added notifications.action_url because entity_id is uuid and
+  // cannot carry an invite token. Without this branch the column would be
+  // written and never read -- the same shape as the bug it exists to fix,
+  // where the token was minted, stored, and never delivered.
+  //
+  // It is checked FIRST so a type-based rule can never quietly outrank the
+  // destination the sender actually chose. `session_invite` is not in the list
+  // below at all, so before this it fell through to null and the notification
+  // was not even tappable.
+  if (action_url) return action_url;
   if (type === 'follow' && actor_id) return `/profile/${actor_id}`;
   if (
     // T-NOTIF1: leave + approve/decline notifications also click through to the session.

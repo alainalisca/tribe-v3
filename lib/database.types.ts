@@ -442,6 +442,7 @@ export type Database = {
           entity_type: string | null
           entity_id: string | null
           message: string
+          action_url: string | null
           is_read: boolean
           created_at: string
         }
@@ -453,6 +454,7 @@ export type Database = {
           entity_type?: string | null
           entity_id?: string | null
           message: string
+          action_url?: string | null
           is_read?: boolean
           created_at?: string
         }
@@ -464,6 +466,7 @@ export type Database = {
           entity_type?: string | null
           entity_id?: string | null
           message?: string
+          action_url?: string | null
           is_read?: boolean
           created_at?: string
         }
