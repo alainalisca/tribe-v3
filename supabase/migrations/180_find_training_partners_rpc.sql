@@ -68,8 +68,18 @@
 -- was `uSports.length` -- the OTHER athlete's total number of sports, which
 -- shares nothing with anybody. It was misnamed and consumed by nothing.
 --
--- BLOCKS ARE HONOURED IN BOTH DIRECTIONS. The client path never checked them,
--- so a blocked user could appear in the card.
+-- NOTHING ABOUT LOCATION CROSSES THE WIRE, INCLUDING has_location AND
+-- rank_group. Both were in an earlier draft: has_location because the card
+-- could explain its ordering, rank_group because it is an integer rather than
+-- a position. Dropping one while keeping the other gains nothing -- rank_group
+-- IS has_location, re-encoded -- and neither is needed, because the RPC
+-- returns rows IN ORDER and the card needs only the order. rank_group still
+-- exists inside the query, where it drives ORDER BY and is never selected.
+--
+-- BLOCKS ARE HONOURED IN BOTH DIRECTIONS. SCOPE ADDED BEYOND THE BRIEF, named
+-- here so it is visible in review rather than discovered in the diff: the
+-- client path never checked blocked_users at all, so someone a user had
+-- blocked could appear on the card and be invited to a session.
 
 CREATE OR REPLACE FUNCTION public.find_training_partners(
   p_sport text DEFAULT NULL,
@@ -80,9 +90,7 @@ RETURNS TABLE (
   name               text,
   avatar_url         text,
   sports             text[],
-  shared_sport_count integer,
-  has_location       boolean,
-  rank_group         smallint
+  shared_sport_count integer
 )
 LANGUAGE plpgsql
 STABLE
@@ -100,8 +108,13 @@ BEGIN
       USING ERRCODE = '42501';
   END IF;
 
+  -- RAISES rather than clamping. A silently corrected argument is the same
+  -- shape as the geocode route returning display_name NULL for a rejected key:
+  -- the caller gets a plausible answer to a question it did not ask, and
+  -- nothing anywhere records that the input was wrong.
   IF p_limit IS NULL OR p_limit < 1 OR p_limit > 200 THEN
-    p_limit := 30;
+    RAISE EXCEPTION 'find_training_partners: p_limit must be between 1 and 200, got %',
+      coalesce(p_limit::text, 'NULL') USING ERRCODE = '22023';
   END IF;
 
   SELECT u.location_lat, u.location_lng, coalesce(u.sports, '{}')
@@ -153,8 +166,7 @@ BEGIN
            ELSE NULL END AS sort_distance
       FROM candidates c
   )
-  SELECT r.id, r.name, r.avatar_url, r.sports, r.shared_sport_count,
-         r.has_location, r.rank_group
+  SELECT r.id, r.name, r.avatar_url, r.sports, r.shared_sport_count
     FROM ranked r
    ORDER BY r.rank_group ASC,
             r.sort_distance ASC NULLS LAST,
@@ -192,7 +204,8 @@ BEGIN
      AND a.attnum > 0 AND NOT a.attisdropped
      AND (a.attname ILIKE '%lat%' OR a.attname ILIKE '%lng%'
        OR a.attname ILIKE '%lon%' OR a.attname ILIKE '%distance%'
-       OR a.attname ILIKE '%coord%');
+       OR a.attname ILIKE '%coord%' OR a.attname ILIKE '%location%'
+       OR a.attname = 'rank_group');
 
   IF v_positional IS NOT NULL THEN
     RAISE EXCEPTION
