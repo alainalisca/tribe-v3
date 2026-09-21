@@ -62,6 +62,20 @@
 -- exempt: the definer RPC writes it, service-role writes it, the caller
 -- cannot, and no code has to ask who it is.
 --
+-- APPLIED 2026-09-20 and verified: rpc_secdef true, users_triggers 5,
+-- lead_reaches policies INSERT,SELECT, every *_ok true, and 112 rows in
+-- lead_credits.
+--
+-- 112, NOT THE 108 PREDICTED. Measurement A on 2026-09-19 counted 108 users
+-- sitting at exactly 3 credits, and the prediction in the paste was 108. The
+-- backfill takes any user with EITHER lead_credits_remaining OR lead_tier set,
+-- so four rows came from users with a tier and no balance, or from signups in
+-- the intervening day. Recorded because the prediction was wrong, not because
+-- the difference matters: four extra rows for users who will never reach out
+-- are inert. A guard written against the remembered 108 would have aborted a
+-- correct migration, which is the reason the guard here tests `> 0` and not an
+-- exact count.
+--
 -- ADDITIVE ONLY. users.lead_credits_remaining, lead_credits_reset_at and
 -- lead_tier are backfilled into the new table and LEFT IN PLACE. They stop
 -- being read by anything after this migration, so they are inert -- but
