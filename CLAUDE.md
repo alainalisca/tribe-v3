@@ -966,6 +966,56 @@ grep neither adds to nor subtracts from what source already proves — an
 inconclusive instrument written up as inconclusive, rather than a number
 presented because it was available.
 
+**CODE THAT WRITES A COLUMN MUST NOT MERGE BEFORE THE MIGRATION ADDING IT HAS BEEN APPLIED — AND "ADDITIVE FIRST" DID NOT PREVENT IT, BECAUSE ONE BRANCH MADE TWO ACTS LOOK LIKE ONE.**
+
+Migration 182 (`notifications.action_url`) and the code writing that column
+merged in the same branch. The code deployed at **16:15 UTC**; the migration was
+applied at **~16:50**. For thirty-five minutes `createNotification` put
+`action_url` in **every** insert payload — there is no branch on notification
+type — and PostgREST rejects an insert naming a column that does not exist.
+**Every notification in the app failed, and nothing retries.** Joins, leaves,
+reminders, reviews, follows, approvals: all lost, not queued.
+
+The additive-first rule already covered this exactly. It failed anyway, and the
+mechanism is the interesting part: **"merge the branch" and "apply the
+migration" felt like one act because they lived in one branch.** The rule
+assumed a human would notice a sequencing requirement that nothing in the
+workflow made visible.
+
+**So it is a test now, for the same reason the migration-number collisions
+became one:** a rule that depends on remembering fails on the day you are busy.
+
+**THE ENFORCEMENT NEEDED TWO LAYERS, AND THE SECOND IS WHAT MAKES THE FIRST
+HONEST.** Applied-state lives in `public.migrations_applied` (migration 184).
+Vitest runs with no database, so it cannot read that table. A committed mirror
+is the only offline option — and a hand-kept applied record is precisely what
+had _just_ drifted, being wrong about migration 181 within hours of being
+written.
+
+The resolution is not to trust the mirror, it is to have the database check it:
+
+1. `migrationAppliedBeforeCode.test.ts` reads `supabase/migrations_applied.json`
+   and fails the merge if any source file references a column introduced by a
+   migration that file does not list as applied.
+2. `verify-migration-state.sql` asserts that JSON **equals the table**, in both
+   directions — a mirror claiming an unapplied migration would let bad code
+   merge; a mirror omitting an applied one would block a good merge.
+
+**A mirror that can drift undetected reproduces the failure it was built to
+prevent. One the source of truth checks does not.** When a guard must run
+somewhere that cannot see the authoritative state, do not settle for a copy —
+copy it _and_ assert the copy, from the side that knows.
+
+**And it needs a floor, or it is too loud to survive.** The record begins at
+179, where 184's backfill starts; everything below predates the record and is
+presumed applied. Without that, the guard fails on every column in the schema,
+which is the state in which a guard gets deleted rather than fixed. The floor
+is itself asserted — raising it above the lowest recorded migration would
+silently exempt everything, and that mutation is one of the five in the proof.
+
+**Proven by reproducing the outage**: mark 182 unapplied while the code still
+writes `action_url`, and the guard rejects the merge.
+
 **A DEFECT THE OWNER CANNOT SEE IS A DEFECT NOBODY REPORTS. THIRD INSTANCE.**
 
 The same photo rendered at **128px to its owner and 96px to everyone else**.

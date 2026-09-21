@@ -1,0 +1,14 @@
+{
+  "_comment": "MIRROR of public.migrations_applied. Not the source of truth -- the table is. Regenerate with scripts/syncMigrationsApplied.ts, and verify-migration-state.sql asserts this file equals the table, so drift is DETECTED rather than silent. That detection is the whole reason a mirror is acceptable at all: the last hand-kept applied-state was wrong about migration 181 within hours.",
+  "_recordStartsAt": 179,
+  "_recordStartsAtWhy": "public.migrations_applied was created by migration 184 and backfilled from 179. Anything numbered below 179 predates the record and is presumed applied -- it has been in production for months. Treating those as unapplied would fail the guard on every column in the schema.",
+  "applied": [
+    "179_users_cover_image_url",
+    "180_find_training_partners_rpc",
+    "181_find_training_partners_exclude_instructors",
+    "182_notifications_action_url",
+    "183_google_avatar_full_size",
+    "184_migrations_applied",
+    "185_invite_tokens_recipient"
+  ]
+}

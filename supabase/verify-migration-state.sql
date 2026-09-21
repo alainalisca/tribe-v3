@@ -1689,4 +1689,51 @@ select 'GUARD_185_both_join_paths_enforce_recipient',
          else 'applied'
        end
 
+union all
+
+-- LAYER 2 of the write-before-migration guard.
+--
+-- supabase/migrations_applied.json is a MIRROR of this table, read by
+-- migrationAppliedBeforeCode.test.ts, which runs with no database and so
+-- cannot read the table itself. A mirror that could drift undetected would
+-- reproduce exactly the failure the table was created to end: the last
+-- hand-kept applied-state was wrong about migration 181 within hours.
+--
+-- So the database checks the mirror. A mirror claiming a migration that has
+-- not run would let code referencing its columns merge; a mirror MISSING a
+-- migration that has run would block a legitimate merge. Both are drift and
+-- both are named.
+select 'GUARD_184_mirror_matches_applied_table',
+       case
+         when not exists (select 1 from information_schema.tables
+                           where table_schema='public' and table_name='migrations_applied')
+           then 'MISSING -- migrations_applied absent'
+         when exists (
+           select 1 from (values
+    ('179_users_cover_image_url'),
+    ('180_find_training_partners_rpc'),
+    ('181_find_training_partners_exclude_instructors'),
+    ('182_notifications_action_url'),
+    ('183_google_avatar_full_size'),
+    ('184_migrations_applied'),
+    ('185_invite_tokens_recipient')
+           ) as mirror(migration)
+           where not exists (select 1 from public.migrations_applied a
+                              where a.migration = mirror.migration))
+           then 'MISSING -- the JSON mirror claims a migration this database has not recorded'
+         when exists (
+           select 1 from public.migrations_applied a
+           where a.migration not in (
+    ('179_users_cover_image_url'),
+    ('180_find_training_partners_rpc'),
+    ('181_find_training_partners_exclude_instructors'),
+    ('182_notifications_action_url'),
+    ('183_google_avatar_full_size'),
+    ('184_migrations_applied'),
+    ('185_invite_tokens_recipient')
+           ))
+           then 'MISSING -- this database has recorded a migration the JSON mirror omits; re-sync it'
+         else 'applied'
+       end
+
 order by migration;
