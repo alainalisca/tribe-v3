@@ -694,6 +694,56 @@ The rehearsal failed in the harness with the RPC blocked. **In production it wou
 
 **And if a test asserts on `current_user` or `session_user`, it must first assert what they are.** Otherwise the assertion is silently about the harness. A rehearsal arm that prints both before anything else costs one row and makes every role-dependent result readable.
 
+**MUTATION ARMS PROVE A GUARD _CAN_ FIRE. ONLY A SUCCESS ARM PROVES IT _WILL NOT_. A REHEARSAL WITH ONLY THE FIRST KIND CANNOT ANSWER "WILL THIS MIGRATION APPLY".**
+
+179's rehearsal had four arms for its guard -- G1..G4, each reproducing the
+guard with one input deliberately wrong, each asserting the abort message
+arrives. All four passed. **They pass by construction**: an arm that feeds a
+violated precondition to a working guard can only fire. None of them ran the
+guard with TRUE inputs, and Part A spliced 179's body from the `INSERT` to the
+first `UPDATE` -- straight past the `DO` block holding the guard.
+
+So the rehearsal reported 19 arms green over a migration that **aborts on its
+first guard**. `only_legacy` had moved from 13 to 14 between the capture and the
+rehearsal, and nothing in the run said so. It surfaced because Al read a detail
+string -- `blank storefront before=14` -- against a number in the header, and
+asked why a probe and the guard it verifies disagreed about who counts.
+
+**The diagnosis offered was also wrong, and wrong in the more expensive
+direction.** The natural reading of "probe says 14, guard expects 13" is that
+the two count different populations, and the natural fix is to align the
+probe's filter. Both files read `FROM public.users` with no filter whatsoever --
+no `deleted_at`, no `banned`, no test-account exclusion. **There was no filter
+to align.** Had the probe been "fixed" to match a filter the guard does not
+have, the rehearsal would have gone green and 179 would still have aborted, and
+the next explanation would have had one more false step in it.
+
+Two rules, and the second is the general one:
+
+- **A rehearsal applies the migration's body INCLUDING its guards.** A body
+  spliced around the guard is not that migration; it is the subset of it that
+  was always going to succeed. Where the guard is a `DO` block and the rehearsal
+  is itself plpgsql, `DO` cannot nest -- strip the wrapper and hoist the
+  `DECLARE`s, keeping the predicates and `RAISE` messages verbatim.
+- **For every guard, count the arms that prove it fires and the arms that prove
+  it passes. If the second number is zero, the guard's satisfiability on the
+  live database is untested** -- which is the only thing the person about to run
+  the migration actually wants to know. The failure arms test the guard; the
+  success arm tests the world.
+
+This is the negative image of [[WRITE THE ARM FOR THE PART YOU CANNOT VERIFY]].
+That entry says the uncertain part earns an arm. This one says the part you are
+most certain of -- "of course the preconditions hold, I measured them" -- is a
+claim about a database that other people are writing to, and it decays. A
+measurement taken on Monday is a hypothesis by Friday, and the arm asserting it
+still holds costs one row.
+
+**And a number appearing in two places must be printed from one.** 179's
+expected counts live in its guard; the rehearsal's B1 printed a count it
+computed independently. They were free to disagree silently, and did. A2 now
+prints all three live counts beside all three expected ones in a single row, so
+a drift is a sentence rather than an inference across two arms.
+
 **WRITE THE ARM FOR THE PART YOU CANNOT VERIFY, NOT THE PART YOU CAN.**
 
 Of six arms in that rehearsal, one was written specifically because I said I was uncertain about the mechanism — _"arm C1 exists to catch this if the reasoning here is wrong too"_, in the migration's own comment. **C1 is the arm that caught it.** The arms covering the parts I was confident about all passed and told me nothing I did not already believe.

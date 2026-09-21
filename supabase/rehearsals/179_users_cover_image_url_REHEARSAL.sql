@@ -27,14 +27,17 @@
 -- ARMS
 -- ═══════════════════════════════════════════════════════════════════════════
 --
---   A1       179's body applies clean in-transaction
+--   A1       179's body AND ITS GUARD apply clean in-transaction
+--   A2       the measured population has not moved -- the SUCCESS arm
 --   B1       THE THIRTEEN -- before AND after
 --   C1       the three storefront-only rows keep their banner
 --   D1..D5   each of the five INDIVIDUALLY, by id, against its decided URL
 --   D6       the second UPDATE is load-bearing (coalesce would be wrong for 3)
 --   E1,E2    nobody lost a banner, nobody gained one
 --   F1,F2    authenticated granted, anon deliberately not
---   G1..G4   each guard fires when its precondition is violated
+--   G1..G4   each guard fires when its precondition is violated. These are
+--            mutation arms and they pass by construction -- A1/A2 are what
+--            prove the guard is satisfiable on the live database
 --   H1       the old columns are untouched
 --
 -- WHY D IS FIVE ASSERTIONS AND NOT A COUNT. "5 of 5 correct" passes if the
@@ -87,6 +90,12 @@ DECLARE
   g3 boolean := false; g3m text := '(none)';
   g4 boolean := false; g4m text := '(none)';
   v_n integer;
+  -- hoisted from 179's guard block, which cannot nest as a DO statement
+  v_only_legacy integer;
+  v_only_new    integer;
+  v_conflict    integer;
+  v_decisions   integer;
+  v_stale       text;
 BEGIN
 
   -- ── A: apply 179's body ───────────────────────────────────────────────────
@@ -140,6 +149,57 @@ INSERT INTO cover_decisions (user_id, who, chosen_url, expected_legacy, expected
    'https://twyplulysepbeypqralz.supabase.co/storage/v1/object/public/media/storefront-banners/32100040-3039-4f13-88ff-6d767a41422c/1781834232747.jpg');
 -- ↑↑↑ end spliced block ↑↑↑
 
+-- ↓↓↓ 179's GUARD, spliced verbatim (DO wrapper stripped, vars hoisted) ↓↓↓
+-- THIS IS THE ARM THAT WAS MISSING. G1..G4 below each mutate ONE input so the
+-- guard fires, and all four passed by construction -- none of them ran the
+-- guard with TRUE inputs. Four arms proving it fires when violated, zero
+-- proving it passes when satisfied, and the second kind is what tells you
+-- whether the migration will actually apply.
+  SELECT count(*) INTO v_decisions FROM cover_decisions;
+  IF v_decisions <> 5 THEN
+    RAISE EXCEPTION
+      '179 ABORTED: cover_decisions holds % rows, expected 5. The five conflicting '
+      'instructors must be pasted into this migration before it runs. An empty list '
+      'would silently leave every conflicting row unresolved.', v_decisions;
+  END IF;
+
+  SELECT count(*) FILTER (WHERE banner_url IS NOT NULL AND storefront_banner_url IS NULL),
+         count(*) FILTER (WHERE banner_url IS NULL AND storefront_banner_url IS NOT NULL),
+         count(*) FILTER (WHERE banner_url IS NOT NULL AND storefront_banner_url IS NOT NULL
+                            AND banner_url IS DISTINCT FROM storefront_banner_url)
+    INTO v_only_legacy, v_only_new, v_conflict
+    FROM public.users;
+
+  IF v_only_legacy <> 13 OR v_only_new <> 3 OR v_conflict <> 5 THEN
+    RAISE EXCEPTION
+      '179 ABORTED: measured 2026-09-20 as 13 legacy-only, 3 new-only, 5 conflicting; '
+      'found %, %, %. Someone uploaded a banner since. Re-measure and re-decide the '
+      'conflicts before applying -- do NOT widen the backfill to cover the difference.',
+      v_only_legacy, v_only_new, v_conflict;
+  END IF;
+
+  -- Each of the five must still hold BOTH values measured today. A re-upload
+  -- between the measurement and the apply makes that row's decision stale, and
+  -- a stale decision is how the wrong image ends up on every session card that
+  -- instructor hosts.
+  SELECT string_agg(d.who, ', ') INTO v_stale
+    FROM cover_decisions d
+    JOIN public.users u ON u.id = d.user_id
+   WHERE u.banner_url IS DISTINCT FROM d.expected_legacy
+      OR u.storefront_banner_url IS DISTINCT FROM d.expected_storefront;
+
+  IF v_stale IS NOT NULL THEN
+    RAISE EXCEPTION
+      '179 ABORTED: these instructors no longer hold the values the decision was made '
+      'against: %. Re-read their two columns and re-decide.', v_stale;
+  END IF;
+
+  IF EXISTS (SELECT 1 FROM cover_decisions d LEFT JOIN public.users u ON u.id = d.user_id
+              WHERE u.id IS NULL) THEN
+    RAISE EXCEPTION '179 ABORTED: a decision names a user id that does not exist.';
+  END IF;
+-- ↑↑↑ end guard ↑↑↑
+
     UPDATE public.users
        SET cover_image_url = coalesce(banner_url, storefront_banner_url)
      WHERE cover_image_url IS NULL
@@ -156,7 +216,19 @@ INSERT INTO cover_decisions (user_id, who, chosen_url, expected_legacy, expected
   END;
 
   INSERT INTO reh_probe VALUES
-    (1, 'A1 179 body applies clean in-transaction', coalesce(a_error,'(null)'), coalesce(a_ok,false));
+    (1, 'A1 179 body AND ITS GUARD apply clean in-transaction', coalesce(a_error,'(null)'), coalesce(a_ok,false));
+
+  -- A2 reads reh_baseline, captured before any write, so the three live
+  -- counts print even when A1 aborted and rolled its subtransaction back.
+  -- Diagnosing a guard failure should never require inferring the numbers
+  -- from a message, or from another arm that happens to print one of them.
+  SELECT only_legacy, only_new, conflicting INTO v_only_legacy, v_only_new, v_conflict
+    FROM reh_baseline;
+  INSERT INTO reh_probe VALUES
+    (2, 'A2 the measured population has not moved since 2026-09-20',
+        'live ' || v_only_legacy || '/' || v_only_new || '/' || v_conflict
+          || '   expected 13/3/5   (legacy-only / storefront-only / conflicting)',
+        v_only_legacy = 13 AND v_only_new = 3 AND v_conflict = 5);
 
   -- If A failed, cover_decisions may not exist and every arm below would raise
   -- an unhandled error, aborting the block and leaving NO result set at all --
@@ -180,7 +252,7 @@ INSERT INTO cover_decisions (user_id, who, chosen_url, expected_legacy, expected
      AND cover_image_url = banner_url;
 
   INSERT INTO reh_probe VALUES
-    (2, 'B1 the instructors whose storefront shows nothing today all get their banner',
+    (3, 'B1 the instructors whose storefront shows nothing today all get their banner',
         'blank storefront before=' || b_before || '   carrying legacy banner after=' || b_after,
         b_before > 0 AND b_after = b_before);
 
@@ -191,13 +263,13 @@ INSERT INTO cover_decisions (user_id, who, chosen_url, expected_legacy, expected
      AND cover_image_url = storefront_banner_url;
 
   INSERT INTO reh_probe VALUES
-    (3, 'C1 the storefront-only instructors keep their banner',
+    (4, 'C1 the storefront-only instructors keep their banner',
         'matched=' || c_n || '   baseline only_new=' || c_expected,
         c_expected > 0 AND c_n = c_expected);
 
   -- ── D1..D5: the five, one assertion each, keyed by id ─────────────────────
   INSERT INTO reh_probe
-  SELECT 3 + row_number() OVER (ORDER BY d.who),
+  SELECT 4 + row_number() OVER (ORDER BY d.who),
          'D' || row_number() OVER (ORDER BY d.who) || ' ' || trim(d.who)
            || ' got the DECIDED url',
          'got ' || CASE WHEN u.cover_image_url = d.expected_legacy     THEN 'legacy'
@@ -215,7 +287,7 @@ INSERT INTO cover_decisions (user_id, who, chosen_url, expected_legacy, expected
    WHERE d.chosen_url IS DISTINCT FROM w.c;
 
   INSERT INTO reh_probe VALUES
-    (9, 'D6 the second UPDATE overrode coalesce for exactly the 3 storefront-decided rows',
+    (10, 'D6 the second UPDATE overrode coalesce for exactly the 3 storefront-decided rows',
         'rows where coalesce would have been wrong=' || d6_changed || ' (expected 3)',
         d6_changed = 3);
 
@@ -228,8 +300,8 @@ INSERT INTO cover_decisions (user_id, who, chosen_url, expected_legacy, expected
      AND cover_image_url IS NOT NULL;
 
   INSERT INTO reh_probe VALUES
-    (10, 'E1 nobody who had a banner lost one',   'lost='   || e_lost,   e_lost = 0),
-    (11, 'E2 nobody without a banner gained one', 'gained=' || e_gained, e_gained = 0);
+    (11, 'E1 nobody who had a banner lost one',   'lost='   || e_lost,   e_lost = 0),
+    (12, 'E2 nobody without a banner gained one', 'gained=' || e_gained, e_gained = 0);
 
   -- ── F: the grant, both halves ─────────────────────────────────────────────
   -- has_column_privilege, not has_table_privilege: 067 put public.users under
@@ -239,9 +311,9 @@ INSERT INTO cover_decisions (user_id, who, chosen_url, expected_legacy, expected
   f_anon := has_column_privilege('anon','public.users','cover_image_url','SELECT');
 
   INSERT INTO reh_probe VALUES
-    (12, 'F1 authenticated CAN read cover_image_url (067 revoked table-level SELECT)',
+    (13, 'F1 authenticated CAN read cover_image_url (067 revoked table-level SELECT)',
          'authenticated=' || f_auth::text, coalesce(f_auth,false)),
-    (13, 'F2 anon CANNOT -- no anon surface reads a banner, and this did not widen that',
+    (14, 'F2 anon CANNOT -- no anon surface reads a banner, and this did not widen that',
          'anon=' || f_anon::text, NOT coalesce(f_anon,true));
 
   -- ── G: each guard fires when its precondition is violated ─────────────────
@@ -295,10 +367,10 @@ INSERT INTO cover_decisions (user_id, who, chosen_url, expected_legacy, expected
   END;
 
   INSERT INTO reh_probe VALUES
-    (14, 'G1 aborts when a measured count has moved', coalesce(g1m,'?'), coalesce(g1,false)),
-    (15, 'G2 aborts when one of the five no longer holds its measured values', coalesce(g2m,'?'), coalesce(g2,false)),
-    (16, 'G3 aborts when the five were never pasted in', coalesce(g3m,'?'), coalesce(g3,false)),
-    (17, 'G4 aborts when someone with a banner ends with no cover', coalesce(g4m,'?'), coalesce(g4,false));
+    (15, 'G1 aborts when a measured count has moved', coalesce(g1m,'?'), coalesce(g1,false)),
+    (16, 'G2 aborts when one of the five no longer holds its measured values', coalesce(g2m,'?'), coalesce(g2,false)),
+    (17, 'G3 aborts when the five were never pasted in', coalesce(g3m,'?'), coalesce(g3,false)),
+    (18, 'G4 aborts when someone with a banner ends with no cover', coalesce(g4m,'?'), coalesce(g4,false));
 
   -- ── H: additive only ──────────────────────────────────────────────────────
   SELECT count(*) INTO v_n FROM pg_attribute
@@ -306,7 +378,7 @@ INSERT INTO cover_decisions (user_id, who, chosen_url, expected_legacy, expected
      AND attname IN ('banner_url','storefront_banner_url');
 
   INSERT INTO reh_probe VALUES
-    (18, 'H1 banner_url and storefront_banner_url both still exist (additive only)',
+    (19, 'H1 banner_url and storefront_banner_url both still exist (additive only)',
          'old columns present=' || v_n || ' (expected 2)', v_n = 2);
 
 END $outer$;
