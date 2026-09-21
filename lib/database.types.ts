@@ -2424,6 +2424,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      sport_demand_counts: {
+        Args: Record<string, never>
+        Returns: {
+          sport: string
+          /** A BAND, never an exact count -- "30+". Text by design: see
+           *  migration 186. A numeric type would invite returning n. */
+          athletes: string
+        }[]
+      }
       find_training_partners: {
         Args: { p_sport?: string | null; p_limit?: number }
         Returns: {
