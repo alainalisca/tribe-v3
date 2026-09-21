@@ -29,7 +29,7 @@
 --
 --   A1       179's body AND ITS GUARD apply clean in-transaction
 --   A2       the measured population has not moved -- the SUCCESS arm
---   B1       THE THIRTEEN -- before AND after
+--   B1       THE FOURTEEN -- before AND after
 --   C1       the three storefront-only rows keep their banner
 --   D1..D5   each of the five INDIVIDUALLY, by id, against its decided URL
 --   D6       the second UPDATE is load-bearing (coalesce would be wrong for 3)
@@ -170,9 +170,9 @@ INSERT INTO cover_decisions (user_id, who, chosen_url, expected_legacy, expected
     INTO v_only_legacy, v_only_new, v_conflict
     FROM public.users;
 
-  IF v_only_legacy <> 13 OR v_only_new <> 3 OR v_conflict <> 5 THEN
+  IF v_only_legacy <> 14 OR v_only_new <> 3 OR v_conflict <> 5 THEN
     RAISE EXCEPTION
-      '179 ABORTED: measured 2026-09-20 as 13 legacy-only, 3 new-only, 5 conflicting; '
+      '179 ABORTED: measured 2026-09-20 as 14 legacy-only, 3 new-only, 5 conflicting; '
       'found %, %, %. Someone uploaded a banner since. Re-measure and re-decide the '
       'conflicts before applying -- do NOT widen the backfill to cover the difference.',
       v_only_legacy, v_only_new, v_conflict;
@@ -227,8 +227,8 @@ INSERT INTO cover_decisions (user_id, who, chosen_url, expected_legacy, expected
   INSERT INTO reh_probe VALUES
     (2, 'A2 the measured population has not moved since 2026-09-20',
         'live ' || v_only_legacy || '/' || v_only_new || '/' || v_conflict
-          || '   expected 13/3/5   (legacy-only / storefront-only / conflicting)',
-        v_only_legacy = 13 AND v_only_new = 3 AND v_conflict = 5);
+          || '   expected 14/3/5   (legacy-only / storefront-only / conflicting)',
+        v_only_legacy = 14 AND v_only_new = 3 AND v_conflict = 5);
 
   -- If A failed, cover_decisions may not exist and every arm below would raise
   -- an unhandled error, aborting the block and leaving NO result set at all --
@@ -239,7 +239,7 @@ INSERT INTO cover_decisions (user_id, who, chosen_url, expected_legacy, expected
     RETURN;
   END IF;
 
-  -- ── B: THE THIRTEEN ───────────────────────────────────────────────────────
+  -- ── B: THE FOURTEEN ──────────────────────────────────────────────────────
   -- b_before counts legacy-only users, whose storefront_banner_url is NULL --
   -- and storefront_banner_url is what the storefront hero reads, so every one
   -- of them renders no banner today. b_after counts how many now carry their
@@ -326,8 +326,8 @@ INSERT INTO cover_decisions (user_id, who, chosen_url, expected_legacy, expected
   BEGIN  -- G1: a measured count has moved
     SELECT count(*) INTO v_n FROM public.users
      WHERE banner_url IS NOT NULL AND storefront_banner_url IS NULL;
-    IF v_n + 1 <> 13 THEN
-      RAISE EXCEPTION '179 ABORTED: measured 2026-09-20 as 13 legacy-only, 3 new-only, 5 conflicting; found %', v_n + 1;
+    IF v_n + 1 <> 14 THEN
+      RAISE EXCEPTION '179 ABORTED: measured 2026-09-20 as 14 legacy-only, 3 new-only, 5 conflicting; found %', v_n + 1;
     END IF;
     RAISE EXCEPTION 'GUARD_DID_NOT_FIRE';
   EXCEPTION WHEN OTHERS THEN

@@ -57,18 +57,38 @@
 --
 -- Measured on production 2026-09-20:
 --
---   only_legacy         13   banner_url set, storefront_banner_url NULL
+--   only_legacy         14   banner_url set, storefront_banner_url NULL
 --   only_new             3   storefront_banner_url set, banner_url NULL
 --   both_and_different   5   both set and not equal
 --
--- THE THIRTEEN ARE A LIVE DEFECT, NOT DRIFT. Thirteen instructors uploaded a
+-- THE COUNT MOVED ONCE, AND THE GUARD IS WHY WE KNOW. The capture that chose
+-- the five measured only_legacy = 13. The rehearsal, run later the same day,
+-- reported 14, and the first apply attempt aborted on the guard below with
+-- `found 14, 3, 5` having written nothing. An instructor uploaded a banner
+-- from /profile between the capture and the rehearsal.
+--
+-- IT IS UPDATED TO THE MEASURED NUMBER, NOT WIDENED TO A RANGE. Accepting a
+-- band would make this guard permanently unable to notice the next one, which
+-- is the only thing it does. A guard that accepts a range has been switched
+-- off politely, and it still reads as a guard in review.
+--
+-- THE FIVE ARE UNAFFECTED BY THIS EDIT, which is what makes it safe to make
+-- from the counts alone. only_new and both_and_different are unchanged at 3
+-- and 5, so nobody left the conflicting bucket; and the per-row staleness
+-- check below asserts that each of the five still holds BOTH values measured
+-- for it, independently of every count. Raising 13 to 14 cannot weaken it.
+--
+-- The new row needs no decision. It is legacy-only, so coalesce resolves it
+-- on presence, which is the whole reason the backfill rule is per-row.
+--
+-- THE FOURTEEN ARE A LIVE DEFECT, NOT DRIFT. Fourteen instructors uploaded a
 -- banner from /profile, which writes banner_url, and the storefront reads
 -- storefront_banner_url -- so their storefront has shown no banner since.
 -- Nobody reported it because the person who uploaded it sees it correctly on
 -- their own profile. Only visitors see the blank one.
 --
 -- A FIXED SURVIVING COLUMN WOULD BE WRONG EITHER WAY. Taking
--- storefront_banner_url blanks those thirteen. Taking banner_url blanks the
+-- storefront_banner_url blanks those fourteen. Taking banner_url blanks the
 -- three. So the rule is per row: coalesce on PRESENCE, and where both are
 -- present and differ, decide by RECENCY -- which split 3 to 2 across the five,
 -- so neither column wins globally there either.
@@ -195,9 +215,9 @@ BEGIN
     INTO v_only_legacy, v_only_new, v_conflict
     FROM public.users;
 
-  IF v_only_legacy <> 13 OR v_only_new <> 3 OR v_conflict <> 5 THEN
+  IF v_only_legacy <> 14 OR v_only_new <> 3 OR v_conflict <> 5 THEN
     RAISE EXCEPTION
-      '179 ABORTED: measured 2026-09-20 as 13 legacy-only, 3 new-only, 5 conflicting; '
+      '179 ABORTED: measured 2026-09-20 as 14 legacy-only, 3 new-only, 5 conflicting; '
       'found %, %, %. Someone uploaded a banner since. Re-measure and re-decide the '
       'conflicts before applying -- do NOT widen the backfill to cover the difference.',
       v_only_legacy, v_only_new, v_conflict;
@@ -226,7 +246,7 @@ BEGIN
 END $$;
 
 -- ── Backfill ────────────────────────────────────────────────────────────────
--- Presence first. coalesce takes whichever is non-null, which resolves the 13
+-- Presence first. coalesce takes whichever is non-null, which resolves the 14
 -- and the 3 with no judgement required. Rows where both are NULL stay NULL.
 UPDATE public.users
    SET cover_image_url = coalesce(banner_url, storefront_banner_url)

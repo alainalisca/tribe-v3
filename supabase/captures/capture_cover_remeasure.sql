@@ -5,7 +5,7 @@
 -- Supabase editor autocommits each statement and ON COMMIT DROP would destroy
 -- it before the next statement could read it.
 --
--- WHY THIS EXISTS. 179's guard was measured on 2026-09-20 as 13 legacy-only,
+-- WHY THIS EXISTS. 179's guard was FIRST measured on 2026-09-20 as 13 legacy-only,
 -- 3 storefront-only, 5 conflicting. The rehearsal now reports legacy-only = 14,
 -- so the population moved and 179 will abort. That is the guard working. This
 -- says WHAT moved, which decides whether the fix is mechanical or not.
@@ -71,7 +71,7 @@ select 1 as ord, '' as sort2,
        || ' / ' ||
        (select count(*) from live where banner_url is not null and storefront_banner_url is not null
                                    and banner_url is distinct from storefront_banner_url)::text
-       || '        179 expects 13 / 3 / 5' as detail
+       || '        179 expects 14 / 3 / 5' as detail
 
 union all
 
