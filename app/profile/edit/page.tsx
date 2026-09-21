@@ -174,7 +174,7 @@ export default function EditProfilePage() {
         <div className="flex flex-col items-center mb-6">
           <div className="relative">
             <Avatar className="w-28 h-28 border-4 border-tribe-green/30">
-              <AvatarImage src={formData.avatar_url || undefined} className="object-cover" />
+              <AvatarImage src={formData.avatar_url || undefined} />
               <AvatarFallback className="bg-tribe-green text-slate-900 text-3xl font-bold">
                 {formData.name?.[0]?.toUpperCase() || '?'}
               </AvatarFallback>

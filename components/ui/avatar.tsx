@@ -21,7 +21,18 @@ const AvatarImage = React.forwardRef<
   React.ElementRef<typeof AvatarPrimitive.Image>,
   React.ComponentPropsWithoutRef<typeof AvatarPrimitive.Image>
 >(({ className, ...props }, ref) => (
-  <AvatarPrimitive.Image ref={ref} className={cn('aspect-square h-full w-full', className)} {...props} />
+  // `object-cover` IS LOAD-BEARING, not styling. `aspect-square h-full w-full`
+  // forces a square box, and an <img> with no object-fit defaults to `fill`,
+  // which STRETCHES the source instead of cropping it. Every non-square upload
+  // -- which is most phone photos -- rendered squashed.
+  //
+  // It lived in exactly one call site (profile/edit) and nowhere else, so the
+  // only screen that showed an avatar correctly was the one where you edit your
+  // own. The owner of every photo was the one person who could not see it was
+  // broken. It belongs here, once.
+  //
+  // components/ui/avatar.objectCover.test.ts fails if it is removed.
+  <AvatarPrimitive.Image ref={ref} className={cn('aspect-square h-full w-full object-cover', className)} {...props} />
 ));
 AvatarImage.displayName = AvatarPrimitive.Image.displayName;
 
