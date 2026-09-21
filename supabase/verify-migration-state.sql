@@ -1716,7 +1716,8 @@ select 'GUARD_184_mirror_matches_applied_table',
     ('182_notifications_action_url'),
     ('183_google_avatar_full_size'),
     ('184_migrations_applied'),
-    ('185_invite_tokens_recipient')
+    ('185_invite_tokens_recipient'),
+    ('186_sport_demand_counts')
            ) as mirror(migration)
            where not exists (select 1 from public.migrations_applied a
                               where a.migration = mirror.migration))
@@ -1730,7 +1731,8 @@ select 'GUARD_184_mirror_matches_applied_table',
     ('182_notifications_action_url'),
     ('183_google_avatar_full_size'),
     ('184_migrations_applied'),
-    ('185_invite_tokens_recipient')
+    ('185_invite_tokens_recipient'),
+    ('186_sport_demand_counts')
            ))
            then 'MISSING -- this database has recorded a migration the JSON mirror omits; re-sync it'
          else 'applied'
