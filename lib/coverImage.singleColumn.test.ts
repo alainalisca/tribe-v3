@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { readdirSync, readFileSync, statSync } from 'fs';
 import { join, relative } from 'path';
+import { stripJsComments } from './stripJsComments';
 
 /**
  * Migration 179 collapsed users.banner_url and users.storefront_banner_url
@@ -115,8 +116,22 @@ function sourceFiles(): string[] {
   return out.filter((f) => f !== SELF);
 }
 
+/**
+ * COMMENTS ARE STRIPPED BEFORE MATCHING, so this tells a MENTION from a READ.
+ *
+ * Without it, prose naming a retired column reads exactly like code reading
+ * one. That is not hypothetical: this guard failed the training-partners
+ * branch because THAT guard's header explained why a bare column-name ban is
+ * wrong, and named this column while doing so. The fix taken at the time was
+ * to rephrase the other file, which left the defect here -- the next person
+ * documenting migration 179 would have tripped it in exactly the same way.
+ *
+ * The stripper is a tokeniser rather than a regex because `line.replace(/\/\/.*$/)`
+ * truncates at the `//` inside `https://`, hiding anything later on that line.
+ * See lib/stripJsComments.ts.
+ */
 function countOf(file: string, needle: string): number {
-  return readFileSync(file, 'utf8').split(needle).length - 1;
+  return stripJsComments(readFileSync(file, 'utf8')).split(needle).length - 1;
 }
 
 /** storefront_banner_url is a substring of nothing else; banner_url is a

@@ -919,6 +919,53 @@ absent ones, because they stop the search.** The false claim is kept in 179's
 header as an explicit correction rather than quietly deleted, so the next reader
 sees that it was wrong and why.
 
+**A SUBSTRING GREP OVER MINIFIED OUTPUT PRODUCES FALSE POSITIVES AND FALSE NEGATIVES AT THE SAME TIME. SOURCE IS WHERE THE PROPERTY IS DECIDABLE.**
+
+After deploying the training-partners change, the shipped client bundle was
+grepped to confirm no coordinate reaches the browser. The result:
+
+```
+6.2442 (the Medellin centroid):  16 chunks
+location_lat:                    12 chunks
+fetchNearbyAthletes:              0 chunks
+```
+
+Read at face value that says the centroid fallback is still everywhere. It is
+not. **`6.2442` matches inside longer numerals** — the hits are
+`6.2442,-75.5` and `6.2442,lng:-` belonging to the instructors map, the
+location picker and `city-config.ts`, which legitimately centre a map on
+Medellín. A map centre is not a ranking origin.
+
+And the reassuring line is the weaker one. **`fetchNearbyAthletes: 0` proves
+nothing**, because minifiers rename identifiers; an intact function under a
+one-letter name is indistinguishable from a deleted one. So the same command
+was simultaneously over-reporting the thing that was fixed and under-reporting
+its own ability to see it.
+
+**Minified output is not a corpus you can ask textual questions of.** Numbers
+merge into other numbers, identifiers are gone, strings survive but lose the
+context that made them meaningful, and module boundaries have dissolved. A
+string literal like `users_discoverable` does survive — but it tells you _some_
+code reads that view, not _which surface_, which was the actual question.
+
+**Ask source instead, where the question is decidable**: which files reference
+the token, which table each belongs to, and what the type that crosses the
+boundary declares. That is what the guard already does, and it is mutation-
+proven, which the grep can never be.
+
+**The general rule: before quoting a count, ask what the corpus does to the
+thing you are counting.** Minification renames and merges; ASCII-folding
+strips accents ([[the Spanish dictionary]]); rounding collapses precision;
+`2>/dev/null` discards the column being read. This is the ninth instance in
+this file of a number that described the instrument rather than the thing, and
+the first where a single command was wrong in both directions at once.
+
+**And say so when the check you ran cannot answer the question.** The 16-chunk
+hit was nearly reported as a finding. The correct report is that the bundle
+grep neither adds to nor subtracts from what source already proves — an
+inconclusive instrument written up as inconclusive, rather than a number
+presented because it was available.
+
 **THREE INSTRUMENTS THAT SHARE AN EXTRACTION ARE ONE INSTRUMENT. A GUARD'S READING STEP MUST ASSERT IT READ SOMETHING BEFORE ASSERTING WHAT IT FOUND.**
 
 The sharpest instance in this file, and the one to read first if you only read
