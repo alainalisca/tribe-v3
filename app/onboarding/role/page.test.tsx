@@ -47,15 +47,15 @@ describe('OnboardingRolePage — returnTo consumption (T-C1 Gate 2)', () => {
     expect(sessionStorage.getItem(STORAGE_KEY)).toBeNull();
   });
 
-  it('athlete completion falls back to /profile/edit when nothing is parked', async () => {
+  it('athlete completion falls back to the sports step when nothing is parked', async () => {
     await chooseAthleteAndContinue();
-    expect(mockPush).toHaveBeenCalledWith('/profile/edit');
+    expect(mockPush).toHaveBeenCalledWith('/onboarding/sports');
   });
 
-  it('a tampered parked value falls back to /profile/edit and is cleared', async () => {
+  it('a tampered parked value falls back to the sports step and is cleared', async () => {
     sessionStorage.setItem(STORAGE_KEY, '//evil.com/phish');
     await chooseAthleteAndContinue();
-    expect(mockPush).toHaveBeenCalledWith('/profile/edit');
+    expect(mockPush).toHaveBeenCalledWith('/onboarding/sports');
     expect(sessionStorage.getItem(STORAGE_KEY)).toBeNull();
   });
 });

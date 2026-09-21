@@ -116,7 +116,19 @@ export default function OnboardingRolePage() {
         // Participant — onboarding ends here. A parked returnTo (T-C1 Gate 2:
         // the invite or shared link this signup started from) wins over the
         // default profile-edit landing; consuming clears it either way.
-        router.push(consumePendingReturnTo() ?? '/profile/edit');
+        // Athletes now get ONE screen before the app: choose your sports.
+        //
+        // This used to go straight to /profile/edit, a free-form form where
+        // every field is optional, so sports were never ASKED FOR. 28 of 60
+        // live athletes had neither sports nor photo, and an athlete with no
+        // sports is invisible to partner matching, to demand counts and to the
+        // smart-match cron.
+        //
+        // A pending returnTo still wins: someone who followed a session link
+        // to sign up is mid-task, and interrupting that to ask about sports
+        // loses the thing they actually came for.
+        const pending = consumePendingReturnTo();
+        router.push(pending ?? '/onboarding/sports');
       }
     } catch (err) {
       logError(err, { action: 'onboardingRoleSelection' });

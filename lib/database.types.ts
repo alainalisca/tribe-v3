@@ -1470,6 +1470,7 @@ export type Database = {
           last_weekly_recap_sent: string | null
           welcome_email_sent_at: string | null
           onboarding_completed_at: string | null
+          athlete_setup_completed_at: string | null
           dismissed_banners: string[]
           location: string | null
           location_lat: number | null
@@ -1540,6 +1541,7 @@ export type Database = {
           last_weekly_recap_sent?: string | null
           welcome_email_sent_at?: string | null
           onboarding_completed_at?: string | null
+          athlete_setup_completed_at?: string | null
           dismissed_banners?: string[]
           location?: string | null
           location_lat?: number | null
@@ -1610,6 +1612,7 @@ export type Database = {
           last_weekly_recap_sent?: string | null
           welcome_email_sent_at?: string | null
           onboarding_completed_at?: string | null
+          athlete_setup_completed_at?: string | null
           dismissed_banners?: string[]
           location?: string | null
           location_lat?: number | null
@@ -2424,6 +2427,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      complete_athlete_setup: {
+        Args: { p_sports: string[] }
+        Returns: { success: boolean; sports: string[] }
+      }
       sport_demand_counts: {
         Args: Record<string, never>
         Returns: {

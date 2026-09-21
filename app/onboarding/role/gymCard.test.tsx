@@ -85,7 +85,10 @@ describe('the gym card', () => {
 
   it('leaves the athlete branch writing nothing', async () => {
     await chooseAndContinue('I Want to Train');
-    await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/profile/edit'));
+    // The athlete default is /onboarding/sports since migration 187. This case
+    // is about the gym card not disturbing the athlete branch, so what matters
+    // is that the branch still routes and still writes nothing.
+    await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/onboarding/sports'));
     expect(enableInstructorAccount).not.toHaveBeenCalled();
   });
 });

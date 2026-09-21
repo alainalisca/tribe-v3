@@ -13,50 +13,7 @@ import { fetchMyPrivateProfile, upsertMyPrivateProfile } from '@/lib/dal/userPri
 import { compressImage } from '@/components/stories/storyUploadHelpers';
 import { trackEvent } from '@/lib/analytics';
 import type { User } from '@supabase/supabase-js';
-
-/** Compress headshot to max 600px dimension at 85% JPEG quality */
-async function compressAvatar(file: File): Promise<Blob> {
-  return new Promise((resolve) => {
-    const reader = new FileReader();
-    reader.onerror = () => resolve(file);
-    reader.onload = (e) => {
-      const img = new window.Image();
-      img.onerror = () => resolve(file);
-      img.onload = () => {
-        try {
-          const canvas = document.createElement('canvas');
-          const MAX = 600;
-          let w = img.width;
-          let h = img.height;
-          if (w > h) {
-            if (w > MAX) {
-              h *= MAX / w;
-              w = MAX;
-            }
-          } else {
-            if (h > MAX) {
-              w *= MAX / h;
-              h = MAX;
-            }
-          }
-          canvas.width = w;
-          canvas.height = h;
-          const ctx = canvas.getContext('2d');
-          if (!ctx) {
-            resolve(file);
-            return;
-          }
-          ctx.drawImage(img, 0, 0, w, h);
-          canvas.toBlob((blob) => resolve(blob || file), 'image/jpeg', 0.85);
-        } catch {
-          resolve(file);
-        }
-      };
-      img.src = e.target?.result as string;
-    };
-    reader.readAsDataURL(file);
-  });
-}
+import { uploadAvatar } from '@/lib/avatarUpload';
 
 export interface EditProfileFormData {
   name: string;
@@ -204,21 +161,11 @@ export function useEditProfile(language: 'en' | 'es') {
 
     try {
       setUploadingPhoto(true);
-      // Compress to max 600px, quality 85 for headshot (smaller than gallery photos)
-      const compressed = await compressAvatar(file);
-      const path = `avatars/${user.id}-${Date.now()}.jpg`;
-      const { error: uploadError } = await supabase.storage
-        .from('profile-images')
-        .upload(path, compressed, { contentType: 'image/jpeg', upsert: true });
-      if (uploadError) throw uploadError;
-
-      const {
-        data: { publicUrl },
-      } = supabase.storage.from('profile-images').getPublicUrl(path);
-
-      // Cache-bust the URL so the new image shows immediately
-      const bustedUrl = `${publicUrl}?t=${Date.now()}`;
-      setFormData((prev) => ({ ...prev, avatar_url: bustedUrl }));
+      // Compression, path and cache-busting all live in lib/avatarUpload.ts,
+      // shared with the athlete onboarding step so the 600px/0.85 constants
+      // exist once.
+      const { publicUrl } = await uploadAvatar(supabase, user.id, file);
+      setFormData((prev) => ({ ...prev, avatar_url: publicUrl }));
     } catch (error) {
       logError(error, { action: 'handleAvatarUpload' });
       showError(getErrorMessage(error, 'upload_photo', language));

@@ -1769,4 +1769,36 @@ select 'GUARD_186_small_groups_are_suppressed',
          else 'applied'
        end
 
+union all
+
+select '187_athlete_setup',
+       case when exists (select 1 from information_schema.columns
+                          where table_schema='public' and table_name='users'
+                            and column_name='athlete_setup_completed_at')
+       then 'applied' else 'MISSING' end
+
+union all
+
+-- The column existing is not the property. The requirement is the REFUSAL, and
+-- a readable grant -- public.users is under column-level grants, and PostgREST
+-- fails the whole request on an ungranted column (migration 157's outage).
+select 'GUARD_187_sports_required_at_the_write',
+       case
+         when not exists (select 1 from pg_proc p
+                           where p.oid = 'public.complete_athlete_setup(text[])'::regprocedure)
+           then 'MISSING -- the refusing function is absent'
+         when (select length(pg_get_functiondef(p.oid)) from pg_proc p
+                where p.oid = 'public.complete_athlete_setup(text[])'::regprocedure) < 500
+           then 'MISSING -- definition unreadable, so this check cannot mean anything'
+         when not (select pg_get_functiondef(p.oid) ~ 'at least one sport is required' from pg_proc p
+                    where p.oid = 'public.complete_athlete_setup(text[])'::regprocedure)
+           then 'MISSING -- the write accepts an empty sports list'
+         when (select pg_get_functiondef(p.oid) ~ 'onboarding_completed_at' from pg_proc p
+                where p.oid = 'public.complete_athlete_setup(text[])'::regprocedure)
+           then 'MISSING -- it writes the intro-tour column, which means something else'
+         when not has_column_privilege('authenticated','public.users','athlete_setup_completed_at','SELECT')
+           then 'MISSING -- authenticated cannot read the new column'
+         else 'applied'
+       end
+
 order by migration;
