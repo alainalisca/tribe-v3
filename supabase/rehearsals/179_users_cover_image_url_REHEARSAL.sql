@@ -173,8 +173,12 @@ INSERT INTO cover_decisions (user_id, who, chosen_url, expected_legacy, expected
   IF v_only_legacy <> 14 OR v_only_new <> 3 OR v_conflict <> 5 THEN
     RAISE EXCEPTION
       '179 ABORTED: measured 2026-09-20 as 14 legacy-only, 3 new-only, 5 conflicting; '
-      'found %, %, %. Someone uploaded a banner since. Re-measure and re-decide the '
-      'conflicts before applying -- do NOT widen the backfill to cover the difference.',
+      'found %, %, %. BEFORE CONCLUDING THE DATA MOVED, check the filters on whichever '
+      'query produced the number you are comparing against: this guard reads '
+      'public.users UNFILTERED and counts soft-deleted rows, and a measuring query '
+      'with deleted_at IS NULL has already disagreed with it once for that reason. '
+      'If the data has genuinely moved, re-measure and re-decide the conflicts -- do '
+      'NOT widen this to a range.',
       v_only_legacy, v_only_new, v_conflict;
   END IF;
 
