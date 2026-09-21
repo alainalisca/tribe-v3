@@ -51,27 +51,6 @@ export async function fetchOnboardingState(
 }
 
 /**
- * Mark the introduction finished. Dismissing counts as completing, so every
- * exit path calls this (Al, 2026-09-09).
- *
- * Idempotent: writing a later timestamp over an earlier one changes nothing
- * that is read, since callers only test for NULL.
- */
-export async function completeOnboarding(supabase: SupabaseClient, userId: string): Promise<DalResult<null>> {
-  try {
-    const { error } = await supabase
-      .from('users')
-      .update({ onboarding_completed_at: new Date().toISOString() })
-      .eq('id', userId);
-    if (error) return { success: false, error: error.message };
-    return { success: true };
-  } catch (error) {
-    logError(error, { action: 'completeOnboarding' });
-    return { success: false, error: 'Failed to save onboarding state' };
-  }
-}
-
-/**
  * Dismiss one banner, for good.
  *
  * Goes through the dismiss_banner RPC rather than writing the array from here.

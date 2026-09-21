@@ -1,6 +1,6 @@
 'use client';
 
-import { X, Camera } from 'lucide-react';
+import { X, Camera, Dumbbell } from 'lucide-react';
 import { useBannerDismissal, BANNER_IDS } from '@/hooks/useBannerDismissal';
 import Link from 'next/link';
 import { useLanguage } from '@/lib/LanguageContext';
@@ -31,10 +31,24 @@ export default function ProfileCompletionBanner({ hasPhoto, hasSports, hasName =
 
   const handleDismiss = () => dismiss();
 
-  // When the photo is missing we lead with a photo-specific ask, because a real
-  // face is what makes the app feel like real people. Name and sports stay as
-  // secondary links. When the photo already exists we fall back to the generic
-  // completion message.
+  // SPORTS LEADS, THEN PHOTO, THEN THE GENERIC ASK.
+  //
+  // Sports was previously a secondary text link behind the photo ask, and it
+  // pointed at /profile/edit -- a form of fifteen optional fields where sports
+  // is one row among many. Measured on 2026-09-21: of 60 non-test athletes, 28
+  // have neither sports nor photo and 6 have a photo but no sports. So sports
+  // is the more common gap AND the one this app cannot work without: it is
+  // what find_training_partners ranks on and what /instructors filters by. An
+  // athlete with no sports is invisible to both, whatever their photo says.
+  //
+  // The sports ask therefore leads and goes to /onboarding/sports -- the same
+  // one screen new athletes now see, where the only decision is which sports,
+  // and where the write refuses an empty list.
+  const sportsLeadMessage =
+    language === 'es'
+      ? 'Elige tus deportes para que otros atletas puedan encontrarte.'
+      : 'Choose your sports so other athletes can find you.';
+  const chooseSportsCta = language === 'es' ? 'Elegir deportes' : 'Choose sports';
   const photoLeadMessage =
     language === 'es'
       ? 'Agrega una foto de perfil para que otros atletas te reconozcan.'
@@ -47,7 +61,35 @@ export default function ProfileCompletionBanner({ hasPhoto, hasSports, hasName =
   return (
     <div className="bg-tribe-green/10 border border-tribe-green/30 rounded-lg p-4 mb-4">
       <div className="flex items-start justify-between gap-3">
-        {!hasPhoto ? (
+        {!hasSports ? (
+          <div className="flex items-center gap-3 flex-1">
+            <div className="flex-shrink-0 w-12 h-12 rounded-full bg-tribe-green/20 border border-tribe-green/40 flex items-center justify-center">
+              <Dumbbell className="w-6 h-6 text-tribe-green" aria-hidden="true" />
+            </div>
+            <div className="flex-1">
+              <p className="text-stone-900 dark:text-white font-medium">{sportsLeadMessage}</p>
+              <div className="flex flex-wrap items-center gap-3 mt-2 text-sm">
+                <Link
+                  href="/onboarding/sports"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-tribe-green text-slate-900 font-semibold hover:bg-tribe-green/90 transition"
+                >
+                  <Dumbbell className="w-4 h-4" aria-hidden="true" />
+                  {chooseSportsCta}
+                </Link>
+                {!hasName && (
+                  <Link href="/profile/edit" className="text-tribe-green hover:underline">
+                    {t('addName')}
+                  </Link>
+                )}
+                {!hasPhoto && (
+                  <Link href="/profile/edit" className="text-tribe-green hover:underline">
+                    {t('addPhoto')}
+                  </Link>
+                )}
+              </div>
+            </div>
+          </div>
+        ) : !hasPhoto ? (
           <div className="flex items-center gap-3 flex-1">
             <div className="flex-shrink-0 w-12 h-12 rounded-full bg-tribe-green/20 border border-tribe-green/40 flex items-center justify-center">
               <Camera className="w-6 h-6 text-tribe-green" aria-hidden="true" />
@@ -67,11 +109,6 @@ export default function ProfileCompletionBanner({ hasPhoto, hasSports, hasName =
                     {t('addName')}
                   </Link>
                 )}
-                {!hasSports && (
-                  <Link href="/profile/edit" className="text-tribe-green hover:underline">
-                    {t('addSports')}
-                  </Link>
-                )}
               </div>
             </div>
           </div>
@@ -82,11 +119,6 @@ export default function ProfileCompletionBanner({ hasPhoto, hasSports, hasName =
               {!hasName && (
                 <Link href="/profile/edit" className="text-tribe-green hover:underline">
                   {t('addName')}
-                </Link>
-              )}
-              {!hasSports && (
-                <Link href="/profile/edit" className="text-tribe-green hover:underline">
-                  {t('addSports')}
                 </Link>
               )}
             </div>
