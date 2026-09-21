@@ -4,9 +4,13 @@
 -- users.deleted_at, and finishes a conversion someone else started in
 -- protect_verified_instructor().
 --
--- RUNS AFTER 177. 175 captures protect_verified_instructor() as it exists
--- TODAY, including two branches this migration converts. Applying 176 first
--- would leave 175 recording a state that no longer exists, and 175's
+-- RENUMBERED 176 -> 178 ON 2026-09-20, AFTER BEING APPLIED, together with its
+-- pair. It was applied to production as 176_lead_reach_and_users_guards.sql.
+-- The reason for the move is in 177's header.
+--
+-- RUNS AFTER 177. 177 captures protect_verified_instructor() as it exists
+-- TODAY, including two branches this migration converts. Applying 178 first
+-- would leave 177 recording a state that no longer exists, and 177's
 -- pre-flight would then refuse -- correctly, but after the fact. Order: 177,
 -- then 178.
 --
