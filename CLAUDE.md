@@ -29,6 +29,24 @@ A revert test needed a clean tree, so the working tree was stashed, modified, po
 
 Any experiment that needs a clean tree needs a **commit** first, not a stash. A commit is recoverable from the reflog even after a hard reset; a popped stash that is then discarded is not recoverable by anything. This is the same reason each approved gate gets its own commit rather than accumulating in the working tree — uncommitted work has no history to fall back to, and the moment you most want to throw away local changes is the moment you are least able to tell which ones are yours.
 
+**A MIGRATION PASTED INTO CHAT IS A PATH TO PRODUCTION THAT DOES NOT TOUCH GIT. THE BRANCH MERGES BEFORE THE PASTE, NOT AFTER.**
+
+Migrations 175 and 176 were applied to production and were not on `main`. They reached the database entirely outside version control: the file was pasted into chat, run in the SQL editor, and the branch carrying it sat unmerged. The apply and the merge were **fully decoupled**, and nothing in the process would have caught it. It surfaced only because something unrelated sent me back to that file.
+
+This is the same applied-and-untracked state that merging 172 was supposed to prevent — and the rule did not hold, because the rule assumed applying a migration and merging its branch were parts of one act. Pasting breaks that: the paste is the apply, and the merge is a separate thing someone has to remember.
+
+**So the order is fixed. Merge the branch, then paste. If the branch cannot be merged — it is red, it is unreviewed, it depends on something unlanded — the paste is not sent.** A migration that is not safe to merge is not safe to run, and sending it anyway converts a blocked merge into an unrecorded production change.
+
+Practically: paste the file **after** `git push`, and say in the same message which commit on `main` the pasted text corresponds to. That gives the person running it a way to check they are running what is recorded, which is the property the whole numbered series exists to provide.
+
+**AND THE VERIFIER CANNOT CATCH THIS CLASS. IT IS A DETECTOR OF THE SYMPTOM.**
+
+`verify-migration-state.test.ts` has now earned its place twice — it caught 174 with no verifier branch, and it caught 175 and 176 the same way. Both times it turned `main` red the moment the migration files arrived.
+
+**That is exactly why it cannot prevent this.** It fires when a migration file appears in `supabase/migrations/` without a matching probe — which requires the merge to happen. The failure mode here is **the merge not happening**, and a guard whose trigger is the action that was skipped is structurally blind to its own worst case. If nobody had ever merged that branch, the verifier would have stayed green forever while two migrations ran in production unrecorded.
+
+Generalise it: **a check that runs on an event cannot detect the absence of that event.** CI that runs on push cannot see work never pushed; a test that runs on merge cannot see a merge never made; a lint on commit cannot see a change committed elsewhere. When the risk is that a step is skipped, the detector has to hang off something that happens **anyway** — a scheduled reconciliation, or a comparison against the system of record. For migrations that means asking production what it has and diffing it against the directory, on a timer, not on a merge.
+
 ## Skills
 
 Project-specific skills live in `.claude/skills/`. Before writing code in a domain (API routes, components, migrations, tests, i18n, etc.), read the relevant `SKILL.md` file for enforced patterns and checklists. Run `/session-briefing` at the start of a new session to get oriented.
