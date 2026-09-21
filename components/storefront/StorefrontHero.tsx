@@ -73,14 +73,14 @@ export default function StorefrontHero({ instructor, language }: StorefrontHeroP
               <Image
                 src={instructor.avatar_url}
                 alt={instructor.name}
-                width={88}
-                height={88}
+                width={112}
+                height={112}
                 onError={() => setImgError(true)}
-                className="w-[88px] h-[88px] rounded-2xl border-4 border-theme-page object-cover bg-theme-card"
+                className="w-[112px] h-[112px] rounded-2xl border-4 border-theme-page object-cover bg-theme-card"
                 unoptimized
               />
             ) : (
-              <div className="w-[88px] h-[88px] rounded-2xl border-4 border-theme-page bg-tribe-green/15 flex items-center justify-center">
+              <div className="w-[112px] h-[112px] rounded-2xl border-4 border-theme-page bg-tribe-green/15 flex items-center justify-center">
                 <span className="text-2xl font-extrabold text-tribe-green">{initialsOf(instructor.name)}</span>
               </div>
             )}
