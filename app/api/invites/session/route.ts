@@ -124,6 +124,16 @@ export async function POST(request: Request) {
       session_id,
       token,
       created_by: user.id,
+      // 185: ADDRESSED, not bearer. Without this the column exists, both join
+      // paths enforce it, and it never fires on a single real invite -- every
+      // card invite would stay a bearer token that anyone it was forwarded to
+      // could accept.
+      //
+      // NULL stays meaningful and is NOT set here by accident: public share
+      // links (migration 141) mint tokens with no recipient, and those keep
+      // pre-185 behaviour on both paths. This route knows exactly who it is
+      // inviting, so it says so.
+      recipient_id: recipient_user_id,
     });
     if (!tokenResult.success) {
       return NextResponse.json({ error: 'Failed to create invite' }, { status: 500 });
