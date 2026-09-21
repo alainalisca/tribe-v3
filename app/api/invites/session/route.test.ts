@@ -374,4 +374,93 @@ describe('POST /api/invites/session', () => {
     expect(createNotification).not.toHaveBeenCalled();
     expect(insertInviteToken).not.toHaveBeenCalled();
   });
+
+  // ── 8. The token must be ADDRESSED, or 185 never fires ──────────────────
+
+  /**
+   * Migration 185 added invite_tokens.recipient_id and made BOTH join paths
+   * enforce it. None of that does anything unless the mint sets it: an invite
+   * with recipient_id NULL is a bearer token, acceptable by anyone it is
+   * forwarded to, and the check never runs.
+   *
+   * The column, the two function replacements and this one line are a single
+   * change split across a migration and a route. Testing only the migration
+   * would have left the feature inert in production while every guard
+   * reported green.
+   */
+  it('addresses the minted token to the recipient', async () => {
+    const mockClient = createAuthMock({ recipientInSession: null, senderProfile: { name: 'Al' } });
+    mockClient.auth.getUser.mockResolvedValue({
+      data: { user: { id: AUTH_USER_ID, email: 't@t.com' } },
+      error: null,
+    } as never);
+    vi.mocked(createClient).mockResolvedValue(mockClient as never);
+    vi.mocked(fetchSession).mockResolvedValue({
+      success: true,
+      data: { id: SESSION_ID, creator_id: AUTH_USER_ID, sport: 'Running', date: '2026-06-01' },
+    } as never);
+    const serviceSupabaseMock = createServiceMock('en');
+    vi.mocked(createServiceClient).mockReturnValue(serviceSupabaseMock as never);
+    vi.mocked(insertInviteToken).mockResolvedValue({ success: true } as never);
+    vi.mocked(createNotification).mockResolvedValue({ success: true, data: null } as never);
+
+    await POST(createMockRequest({ session_id: SESSION_ID, recipient_user_id: RECIPIENT_USER_ID }));
+
+    expect(insertInviteToken).toHaveBeenCalledWith(
+      serviceSupabaseMock,
+      expect.objectContaining({ recipient_id: RECIPIENT_USER_ID })
+    );
+  });
+
+  /**
+   * NOT merely "some recipient". The token must name the person the invite was
+   * sent to -- addressing it to the SENDER would satisfy a presence check and
+   * produce an invite only the sender could accept.
+   */
+  it('addresses it to the RECIPIENT, not the sender', async () => {
+    const mockClient = createAuthMock({ recipientInSession: null, senderProfile: { name: 'Al' } });
+    mockClient.auth.getUser.mockResolvedValue({
+      data: { user: { id: AUTH_USER_ID, email: 't@t.com' } },
+      error: null,
+    } as never);
+    vi.mocked(createClient).mockResolvedValue(mockClient as never);
+    vi.mocked(fetchSession).mockResolvedValue({
+      success: true,
+      data: { id: SESSION_ID, creator_id: AUTH_USER_ID, sport: 'Running', date: '2026-06-01' },
+    } as never);
+    vi.mocked(createServiceClient).mockReturnValue(createServiceMock('en') as never);
+    vi.mocked(insertInviteToken).mockResolvedValue({ success: true } as never);
+    vi.mocked(createNotification).mockResolvedValue({ success: true, data: null } as never);
+
+    await POST(createMockRequest({ session_id: SESSION_ID, recipient_user_id: RECIPIENT_USER_ID }));
+
+    const minted = vi.mocked(insertInviteToken).mock.calls[0][1];
+    expect(minted.recipient_id).toBe(RECIPIENT_USER_ID);
+    expect(minted.recipient_id).not.toBe(AUTH_USER_ID);
+  });
+
+  /** The notification must still point at the SAME token that was addressed,
+   *  or the recipient is handed a link to a different invite. */
+  it('the addressed token is the one linked in the notification', async () => {
+    const mockClient = createAuthMock({ recipientInSession: null, senderProfile: { name: 'Al' } });
+    mockClient.auth.getUser.mockResolvedValue({
+      data: { user: { id: AUTH_USER_ID, email: 't@t.com' } },
+      error: null,
+    } as never);
+    vi.mocked(createClient).mockResolvedValue(mockClient as never);
+    vi.mocked(fetchSession).mockResolvedValue({
+      success: true,
+      data: { id: SESSION_ID, creator_id: AUTH_USER_ID, sport: 'Running', date: '2026-06-01' },
+    } as never);
+    vi.mocked(createServiceClient).mockReturnValue(createServiceMock('en') as never);
+    vi.mocked(insertInviteToken).mockResolvedValue({ success: true } as never);
+    vi.mocked(createNotification).mockResolvedValue({ success: true, data: null } as never);
+
+    await POST(createMockRequest({ session_id: SESSION_ID, recipient_user_id: RECIPIENT_USER_ID }));
+
+    const minted = vi.mocked(insertInviteToken).mock.calls[0][1];
+    const linked = vi.mocked(createNotification).mock.calls[0][1].action_url as string;
+    expect(minted.recipient_id).toBe(RECIPIENT_USER_ID);
+    expect(linked).toContain(minted.token as string);
+  });
 });
