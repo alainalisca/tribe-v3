@@ -133,27 +133,41 @@ CREATE TEMP TABLE cover_decisions (
   expected_storefront  text NOT NULL
 ) ON COMMIT DROP;
 
--- >>> THE FIVE ROWS GO HERE, AND THIS MIGRATION DOES NOT RUN WITHOUT THEM.
--- >>>
--- >>> Uncomment the INSERT and paste the rows produced by the generator query
--- >>> in supabase/captures/capture_cover_conflicts.sql. That query emits these
--- >>> lines verbatim, including the UUIDs and the full URLs, so nothing here is
--- >>> transcribed by hand.
--- >>>
--- >>> Left COMMENTED rather than empty on purpose: an `INSERT ... VALUES ;`
--- >>> with no rows is a syntax error, so the file would not parse and would
--- >>> never reach the guard below that explains what is missing. A migration
--- >>> that fails with "syntax error at or near" teaches nobody anything.
--- >>>
--- >>> As it stands the file parses, runs, and aborts at the guard with the
--- >>> reason. Nothing is written before that point.
---
--- INSERT INTO cover_decisions (user_id, who, chosen_url, expected_legacy, expected_storefront) VALUES
---   ('<uuid>', 'Caroline',      '<legacy url>',     '<legacy url>', '<storefront url>'),
---   ('<uuid>', 'Jonathan',      '<storefront url>', '<legacy url>', '<storefront url>'),
---   ('<uuid>', 'Juan Bernardo', '<legacy url>',     '<legacy url>', '<storefront url>'),
---   ('<uuid>', 'Alexandra',     '<storefront url>', '<legacy url>', '<storefront url>'),
---   ('<uuid>', 'Darian',        '<storefront url>', '<legacy url>', '<storefront url>');
+-- ── The five, decided by hand and pasted from capture_cover_conflicts.sql ───
+-- Column order: (user_id, who, chosen_url, expected_legacy, expected_storefront).
+-- The last two are what was MEASURED on 2026-09-20 and exist so the guard can
+-- refuse a stale decision. `who` is the stored name verbatim, trailing spaces
+-- included, because it is only ever printed in an abort message and editing it
+-- would make it disagree with the row it names.
+INSERT INTO cover_decisions (user_id, who, chosen_url, expected_legacy, expected_storefront) VALUES
+  -- storefront. 1779744732006 > 1779469382381. BOTH on the LEGACY profile-images
+  --   path, which is why a column name cannot be read as provenance.
+  ('9a16aa6b-7bb9-4701-9793-1539eca7671d', 'Alexandra Aguirre',
+   'https://twyplulysepbeypqralz.supabase.co/storage/v1/object/public/profile-images/banners/banner-9a16aa6b-7bb9-4701-9793-1539eca7671d-1779744732006.jpg',
+   'https://twyplulysepbeypqralz.supabase.co/storage/v1/object/public/profile-images/banners/banner-9a16aa6b-7bb9-4701-9793-1539eca7671d-1779469382381.jpeg',
+   'https://twyplulysepbeypqralz.supabase.co/storage/v1/object/public/profile-images/banners/banner-9a16aa6b-7bb9-4701-9793-1539eca7671d-1779744732006.jpg'),
+  -- legacy. 1782918797835 > 1782227634967.
+  ('1848555a-8405-475a-94e2-6dd4b2f6d70e', 'Caroline Vanegas ',
+   'https://twyplulysepbeypqralz.supabase.co/storage/v1/object/public/profile-images/banners/banner-1848555a-8405-475a-94e2-6dd4b2f6d70e-1782918797835.jpg',
+   'https://twyplulysepbeypqralz.supabase.co/storage/v1/object/public/profile-images/banners/banner-1848555a-8405-475a-94e2-6dd4b2f6d70e-1782918797835.jpg',
+   'https://twyplulysepbeypqralz.supabase.co/storage/v1/object/public/media/storefront-banners/1848555a-8405-475a-94e2-6dd4b2f6d70e/1782227634967.jpg'),
+  -- storefront. Stable-path form from the 2026-08-23 work; its cache-buster
+  --   1787489844555 postdates the legacy 1781962600989. The only row not
+  --   settled by comparing two upload epochs directly.
+  ('eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Darian',
+   'https://twyplulysepbeypqralz.supabase.co/storage/v1/object/public/media/storefront-banners/eaff348f-5df3-4df5-bd80-69ec233aad0e/banner?v=1787489844555',
+   'https://twyplulysepbeypqralz.supabase.co/storage/v1/object/public/profile-images/banners/banner-eaff348f-5df3-4df5-bd80-69ec233aad0e-1781962600989.png',
+   'https://twyplulysepbeypqralz.supabase.co/storage/v1/object/public/media/storefront-banners/eaff348f-5df3-4df5-bd80-69ec233aad0e/banner?v=1787489844555'),
+  -- storefront. 1782085457928 > 1782084951804, by about eight minutes.
+  ('2084307b-1bba-4343-b08d-47b80cc4535d', 'Jonathan Andres Norena Bedoya',
+   'https://twyplulysepbeypqralz.supabase.co/storage/v1/object/public/media/storefront-banners/2084307b-1bba-4343-b08d-47b80cc4535d/1782085457928.jpg',
+   'https://twyplulysepbeypqralz.supabase.co/storage/v1/object/public/profile-images/banners/banner-2084307b-1bba-4343-b08d-47b80cc4535d-1782084951804.jpg',
+   'https://twyplulysepbeypqralz.supabase.co/storage/v1/object/public/media/storefront-banners/2084307b-1bba-4343-b08d-47b80cc4535d/1782085457928.jpg'),
+  -- legacy. 1781836997393 > 1781834232747.
+  ('32100040-3039-4f13-88ff-6d767a41422c', 'Juan Bernardo ',
+   'https://twyplulysepbeypqralz.supabase.co/storage/v1/object/public/profile-images/banners/banner-32100040-3039-4f13-88ff-6d767a41422c-1781836997393.jpg',
+   'https://twyplulysepbeypqralz.supabase.co/storage/v1/object/public/profile-images/banners/banner-32100040-3039-4f13-88ff-6d767a41422c-1781836997393.jpg',
+   'https://twyplulysepbeypqralz.supabase.co/storage/v1/object/public/media/storefront-banners/32100040-3039-4f13-88ff-6d767a41422c/1781834232747.jpg');
 
 -- ── Guard: the measured state still holds ───────────────────────────────────
 -- Same shape as 169, 171 and 178. Every count is asserted before anything is
