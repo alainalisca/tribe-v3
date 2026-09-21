@@ -966,6 +966,47 @@ grep neither adds to nor subtracts from what source already proves — an
 inconclusive instrument written up as inconclusive, rather than a number
 presented because it was available.
 
+**A DEFECT THE OWNER CANNOT SEE IS A DEFECT NOBODY REPORTS. THIRD INSTANCE.**
+
+The same photo rendered at **128px to its owner and 96px to everyone else**.
+`app/profile/page.tsx` drew the avatar at `w-32`; `ProfilePageClient.tsx` —
+the OTHER-user profile — drew it at `w-24`. So every athlete's own profile
+looked correct to them, and looked worse to every person who visited it.
+
+Nobody reports that. The only person motivated to complain is the only person
+who cannot see the problem.
+
+**It is the third time this exact shape has produced a live defect here:**
+
+|                                       | the owner saw               | everyone else saw                                                        |
+| ------------------------------------- | --------------------------- | ------------------------------------------------------------------------ |
+| the avatar crop (2026-09-19)          | a correct circle            | a stretched one, because `<img>` with no `object-fit` defaults to `fill` |
+| the blank storefronts (migration 179) | their banner, on `/profile` | nothing, because the storefront read the other column                    |
+| this                                  | 128px                       | 96px                                                                     |
+
+Each shipped for months. Each was found by someone looking at the system from
+outside, not by a user report, because **the feedback channel runs through the
+person with the best view and the least reason to look.**
+
+**So when a surface renders differently for the owner and for a visitor, that
+asymmetry is itself the thing to check** — before looking for a bug in either
+rendering. Practically:
+
+- If a component has an "is this me" branch, **diff the two branches for
+  anything that is not deliberately different.** Size, crop, fallback and
+  loading behaviour are almost never meant to differ; only affordances are.
+- **Two components rendering the same entity is the smell.** `profile/page.tsx`
+  and `ProfilePageClient.tsx` both draw a user; the 32px difference was not a
+  decision anyone made, it was two files drifting.
+- **Test the visitor's view, not the owner's.** The owner's is the one that
+  gets looked at during development, which is precisely why it is the one that
+  stays correct.
+
+The general form is already in this file for [[migration 179's thirteen blank
+storefronts]]. What this instance adds is that it recurs in RENDERING, not only
+in data — and that the tell is structural and greppable: an is-self branch, or
+two components drawing the same thing.
+
 **THREE INSTRUMENTS THAT SHARE AN EXTRACTION ARE ONE INSTRUMENT. A GUARD'S READING STEP MUST ASSERT IT READ SOMETHING BEFORE ASSERTING WHAT IT FOUND.**
 
 The sharpest instance in this file, and the one to read first if you only read
