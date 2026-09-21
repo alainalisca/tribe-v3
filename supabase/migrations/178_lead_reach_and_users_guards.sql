@@ -1,14 +1,14 @@
--- 176_lead_reach_and_users_guards.sql
+-- 178_lead_reach_and_users_guards.sql
 --
 -- Closes the lead reach-out bypass, splits the lead_reaches policy, guards
 -- users.deleted_at, and finishes a conversion someone else started in
 -- protect_verified_instructor().
 --
--- RUNS AFTER 175. 175 captures protect_verified_instructor() as it exists
+-- RUNS AFTER 177. 175 captures protect_verified_instructor() as it exists
 -- TODAY, including two branches this migration converts. Applying 176 first
 -- would leave 175 recording a state that no longer exists, and 175's
--- pre-flight would then refuse -- correctly, but after the fact. Order: 175,
--- then 176.
+-- pre-flight would then refuse -- correctly, but after the fact. Order: 177,
+-- then 178.
 --
 -- ═══════════════════════════════════════════════════════════════════════════
 -- PART A: reachOutToAthlete becomes a SECURITY DEFINER RPC
@@ -312,7 +312,7 @@ CREATE TRIGGER users_deleted_at_guard
 -- ═══════════════════════════════════════════════════════════════════════════
 -- PART E
 -- ═══════════════════════════════════════════════════════════════════════════
--- Identical to the body captured in 175 except that the two `NEW := OLD`
+-- Identical to the body captured in 177 except that the two `NEW := OLD`
 -- assignments become RAISE, in the same shape as the branch above them. The
 -- "UNCHANGED, deliberately" comments are replaced with what actually happened,
 -- so the next reader is not sent looking for a box that does not exist.
@@ -333,7 +333,7 @@ BEGIN
     END IF;
   END IF;
 
-  -- CHANGED 2026-09-20 (migration 176): was `NEW := OLD`, a silent revert.
+  -- CHANGED 2026-09-20 (migration 178): was `NEW := OLD`, a silent revert.
   -- The original comment said "UNCHANGED, deliberately. See the second box
   -- above before touching this." There is no box above -- this was the first
   -- statement after BEGIN -- so that reasoning lived in a source file that is
@@ -346,7 +346,7 @@ BEGIN
     END IF;
   END IF;
 
-  -- CHANGED 2026-09-20 (migration 176): was `NEW := OLD`. Same reasoning.
+  -- CHANGED 2026-09-20 (migration 178): was `NEW := OLD`. Same reasoning.
   IF NEW.total_participants_served IS DISTINCT FROM OLD.total_participants_served THEN
     IF auth.uid() IS NOT NULL AND NOT COALESCE((SELECT is_admin FROM public.users WHERE id = auth.uid()), false) THEN
       RAISE EXCEPTION 'total_participants_served can only be changed by an admin'
@@ -370,21 +370,21 @@ DECLARE
   v_pol    integer;
 BEGIN
   IF to_regprocedure('public.reach_out_to_athlete(uuid)') IS NULL THEN
-    RAISE EXCEPTION '176 ABORTED: reach_out_to_athlete(uuid) does not exist.';
+    RAISE EXCEPTION '178 ABORTED: reach_out_to_athlete(uuid) does not exist.';
   END IF;
 
   IF NOT (SELECT prosecdef FROM pg_proc WHERE oid = 'public.reach_out_to_athlete(uuid)'::regprocedure) THEN
-    RAISE EXCEPTION '176 ABORTED: reach_out_to_athlete is not SECURITY DEFINER, so it cannot '
+    RAISE EXCEPTION '178 ABORTED: reach_out_to_athlete is not SECURITY DEFINER, so it cannot '
       'write a counter the caller may not write. That is the entire point of Part A.';
   END IF;
 
   IF NOT has_function_privilege('authenticated', 'public.reach_out_to_athlete(uuid)', 'EXECUTE') THEN
-    RAISE EXCEPTION '176 ABORTED: authenticated cannot EXECUTE reach_out_to_athlete, so the '
+    RAISE EXCEPTION '178 ABORTED: authenticated cannot EXECUTE reach_out_to_athlete, so the '
       'discover page would be dead.';
   END IF;
 
   IF has_function_privilege('anon', 'public.reach_out_to_athlete(uuid)', 'EXECUTE') THEN
-    RAISE EXCEPTION '176 ABORTED: anon can EXECUTE reach_out_to_athlete.';
+    RAISE EXCEPTION '178 ABORTED: anon can EXECUTE reach_out_to_athlete.';
   END IF;
 
   -- Part B: the ABSENCE of a write grant is the mechanism, so it is asserted
@@ -393,33 +393,33 @@ BEGIN
   IF has_table_privilege('authenticated', 'public.lead_credits', 'UPDATE')
      OR has_table_privilege('authenticated', 'public.lead_credits', 'INSERT')
      OR has_table_privilege('authenticated', 'public.lead_credits', 'DELETE') THEN
-    RAISE EXCEPTION '176 ABORTED: authenticated can write public.lead_credits. The whole '
+    RAISE EXCEPTION '178 ABORTED: authenticated can write public.lead_credits. The whole '
       'point of moving the counter off users is that there is no write grant to exempt.';
   END IF;
 
   IF NOT has_table_privilege('authenticated', 'public.lead_credits', 'SELECT') THEN
-    RAISE EXCEPTION '176 ABORTED: authenticated cannot SELECT lead_credits, so the discover '
+    RAISE EXCEPTION '178 ABORTED: authenticated cannot SELECT lead_credits, so the discover '
       'page cannot show a balance.';
   END IF;
 
   IF has_table_privilege('anon', 'public.lead_credits', 'SELECT') THEN
-    RAISE EXCEPTION '176 ABORTED: anon can read lead_credits.';
+    RAISE EXCEPTION '178 ABORTED: anon can read lead_credits.';
   END IF;
 
   IF EXISTS (SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='lead_credits'
                AND cmd IN ('ALL','INSERT','UPDATE','DELETE')) THEN
-    RAISE EXCEPTION '176 ABORTED: lead_credits has a write policy. It should have SELECT only.';
+    RAISE EXCEPTION '178 ABORTED: lead_credits has a write policy. It should have SELECT only.';
   END IF;
 
   SELECT count(*) INTO v_pol FROM public.lead_credits;
   IF v_pol = 0 THEN
-    RAISE EXCEPTION '176 ABORTED: lead_credits is empty after the backfill; expected one row '
+    RAISE EXCEPTION '178 ABORTED: lead_credits is empty after the backfill; expected one row '
       'per instructor that had lead_credits_remaining or lead_tier set.';
   END IF;
 
   IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgrelid='public.users'::regclass
                    AND tgname='users_deleted_at_guard' AND NOT tgisinternal) THEN
-    RAISE EXCEPTION '176 ABORTED: users_deleted_at_guard is not attached.';
+    RAISE EXCEPTION '178 ABORTED: users_deleted_at_guard is not attached.';
   END IF;
 
   -- Part C: the absence of UPDATE and DELETE policies IS the fix, so it is
@@ -428,13 +428,13 @@ BEGIN
   SELECT count(*) INTO v_pol FROM pg_policies
    WHERE schemaname='public' AND tablename='lead_reaches' AND cmd IN ('ALL','UPDATE','DELETE');
   IF v_pol <> 0 THEN
-    RAISE EXCEPTION '176 ABORTED: lead_reaches still has % policy(ies) granting ALL, UPDATE or '
+    RAISE EXCEPTION '178 ABORTED: lead_reaches still has % policy(ies) granting ALL, UPDATE or '
       'DELETE. FOR ALL is what made the UNIQUE dedupe self-clearing.', v_pol;
   END IF;
 
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname='public'
                    AND tablename='lead_reaches' AND cmd='INSERT') THEN
-    RAISE EXCEPTION '176 ABORTED: lead_reaches has no INSERT policy, so no reach can be filed.';
+    RAISE EXCEPTION '178 ABORTED: lead_reaches has no INSERT policy, so no reach can be filed.';
   END IF;
 
   -- Part E: assert by SHAPE. Three RAISE branches and zero silent reverts.
@@ -444,11 +444,11 @@ BEGIN
   v_raises := (length(v_body) - length(replace(v_body,'RAISE EXCEPTION',''))) / length('RAISE EXCEPTION');
   v_silent := (length(v_body) - length(replace(v_body,':= OLD.',''))) / length(':= OLD.');
   IF v_raises <> 3 OR v_silent <> 0 THEN
-    RAISE EXCEPTION '176 ABORTED: protect_verified_instructor has % RAISE branches and % silent '
+    RAISE EXCEPTION '178 ABORTED: protect_verified_instructor has % RAISE branches and % silent '
       'reverts; expected 3 and 0.', v_raises, v_silent;
   END IF;
 
-  RAISE NOTICE '176: RPC live, lead_credits moved with no write grant, deleted_at guarded, lead_reaches split, two silent reverts converted.';
+  RAISE NOTICE '178: RPC live, lead_credits moved with no write grant, deleted_at guarded, lead_reaches split, two silent reverts converted.';
 END $$;
 
 -- ── Verification. Every *_ok must read true. ────────────────────────────────

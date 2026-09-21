@@ -1,4 +1,4 @@
--- 175_capture_protect_verified_instructor.sql
+-- 177_capture_protect_verified_instructor.sql
 --
 -- Captures public.protect_verified_instructor() and its trigger, which exist in
 -- production and in NO file in this repository. Read from the live catalog via
@@ -9,6 +9,22 @@
 -- CREATE OR REPLACE over an identical definition.
 --
 -- Same intent and shape as 143-147 and 166: capture is capture.
+--
+-- RENUMBERED 175 -> 177 ON 2026-09-20, AFTER BEING APPLIED. It was applied to
+-- production as 175_capture_protect_verified_instructor.sql and verified
+-- (security_definer true, search_path=public, trigger attached). T-LEAD2 merged
+-- 175_t_lead2_lead_contact_toggle.sql to main first, so that branch owns 175.
+--
+-- THIRD TIME THIS HAS HAPPENED, and the first where both files reached main.
+-- origin/main WAS checked before this number was chosen -- the tail was 174 --
+-- and NOT re-checked at merge time, which is the half of the rule that matters:
+-- a number is claimed by whoever MERGES first, so the claim can land after you
+-- choose and before you merge.
+--
+-- supabase/verify-migration-state.test.ts now fails on any duplicate numeric
+-- prefix. Writing it immediately surfaced two more, 013 and 014, both from the
+-- 2026-04-19 bulk import and both exempted with a reason and a rot test.
+--
 --
 -- ═══════════════════════════════════════════════════════════════════════════
 -- WHY THIS IS WORSE THAN DB-02's USUAL SHAPE
@@ -115,7 +131,7 @@
 -- This migration is NOT atomic: it replaces the function, then checks. The
 -- Supabase SQL editor autocommits statement by statement, so without this
 -- block a re-run AFTER 176 would commit the two SILENT REVERTS back over
--- 176's RAISE branches, and only then abort in the guard below. The operator
+-- 178's RAISE branches, and only then abort in the guard below. The operator
 -- would see an error and assume nothing happened, while the security fix had
 -- just been quietly undone. That is the failure this whole session has been
 -- about, so it does not get to live in the migration that documents it.
@@ -132,7 +148,7 @@ BEGIN
 
   -- Absent is fine: that is a fresh rebuild, which is what this capture is for.
   IF v_body IS NULL THEN
-    RAISE NOTICE '175 pre-flight: function absent (fresh rebuild). Proceeding.';
+    RAISE NOTICE '177 pre-flight: function absent (fresh rebuild). Proceeding.';
     RETURN;
   END IF;
 
@@ -141,9 +157,9 @@ BEGIN
 
   IF v_raises > 1 THEN
     RAISE EXCEPTION
-      '175 REFUSED: the live protect_verified_instructor() has % RAISE branches, not 1. '
-      'Migration 176 has already converted the silent reverts. Running 175 now would '
-      'overwrite that fix with the captured pre-176 body. 175 is a CAPTURE of the state '
+      '177 REFUSED: the live protect_verified_instructor() has % RAISE branches, not 1. '
+      'Migration 178 has already converted the silent reverts. Running 177 now would '
+      'overwrite that fix with the captured pre-178 body. 177 is a CAPTURE of the state '
       'before 176 and must not be re-applied after it. If you need to re-record the '
       'function, re-read it from the live catalog into a NEW capture migration.', v_raises;
   END IF;
@@ -223,19 +239,19 @@ BEGIN
 
   IF v_body IS NULL THEN
     RAISE EXCEPTION
-      '175 ABORTED: protect_verified_instructor() does not exist after this migration ran.';
+      '177 ABORTED: protect_verified_instructor() does not exist after this migration ran.';
   END IF;
 
   IF NOT v_secdef THEN
     RAISE EXCEPTION
-      '175 ABORTED: protect_verified_instructor() is not SECURITY DEFINER. It reads '
+      '177 ABORTED: protect_verified_instructor() is not SECURITY DEFINER. It reads '
       'public.users to decide who is an admin; as invoker that read is subject to RLS '
       'and the guard would silently stop guarding.';
   END IF;
 
   IF v_path NOT LIKE '%search_path%' THEN
     RAISE EXCEPTION
-      '175 ABORTED: protect_verified_instructor() has no pinned search_path (%). A '
+      '177 ABORTED: protect_verified_instructor() has no pinned search_path (%). A '
       'SECURITY DEFINER function without one is a privilege escalation waiting for a '
       'schema shadow.', v_path;
   END IF;
@@ -250,7 +266,7 @@ BEGIN
 
   IF v_raises <> 1 OR v_silent <> 2 THEN
     RAISE EXCEPTION
-      '175 ABORTED: expected 1 RAISE branch and 2 silent-revert branches, found % and %. '
+      '177 ABORTED: expected 1 RAISE branch and 2 silent-revert branches, found % and %. '
       'If the silent branches were converted to RAISE (T-SEC-SILENT-REVERT), this capture '
       'is stale and must be re-read from the live catalog rather than edited.',
       v_raises, v_silent;
@@ -262,11 +278,11 @@ BEGIN
        AND tgname = 'protect_verified_instructor_trigger'
        AND NOT tgisinternal
   ) THEN
-    RAISE EXCEPTION '175 ABORTED: the trigger is not attached to public.users.';
+    RAISE EXCEPTION '177 ABORTED: the trigger is not attached to public.users.';
   END IF;
 
   RAISE NOTICE
-    '175: protect_verified_instructor captured. SECURITY DEFINER, search_path pinned, '
+    '177: protect_verified_instructor captured. SECURITY DEFINER, search_path pinned, '
     '1 RAISE branch and 2 SILENT-REVERT branches (see T-SEC-SILENT-REVERT).';
 END $$;
 

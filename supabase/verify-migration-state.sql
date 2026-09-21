@@ -1411,7 +1411,7 @@ union all
 -- its PRESENCE plus its shape: absent means a rebuild produced a database where
 -- a signed-in user can self-verify as an instructor, which is the only gate on
 -- the lead reach-out path.
-select '175_capture_protect_verified_instructor',
+select '177_capture_protect_verified_instructor',
        case when to_regprocedure('public.protect_verified_instructor()') is not null
              and exists (select 1 from pg_trigger
                           where tgrelid = 'public.users'::regclass
@@ -1421,7 +1421,7 @@ select '175_capture_protect_verified_instructor',
 
 union all
 
-select '176_lead_reach_and_users_guards',
+select '178_lead_reach_and_users_guards',
        case when to_regprocedure('public.reach_out_to_athlete(uuid)') is not null
              and to_regclass('public.lead_credits') is not null
        then 'applied' else 'MISSING' end

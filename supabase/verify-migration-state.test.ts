@@ -48,6 +48,75 @@ function readMigrationFiles(): string[] {
     .sort();
 }
 
+/**
+ * TWO MIGRATIONS CANNOT SHARE A NUMBER.
+ *
+ * This has now happened three times, always the same way: two sessions work
+ * the repo at once, both read `main` for the next free number, and the one
+ * that merges second takes a number the first already claimed. 172 collided
+ * with T-LEAD1, and 175 collided with T-LEAD2 -- and the second one got all
+ * the way onto `main` with both files present, because nothing checked.
+ *
+ * The existing coverage test asks whether every migration has a probe. It has
+ * no opinion about two files starting `175_`, so both passed it happily.
+ *
+ * A number is claimed by whoever MERGES first, not by whoever writes first,
+ * so this cannot be prevented by being careful when choosing one -- the claim
+ * can land after you have chosen and before you merge. It has to be checked at
+ * merge time, which is what this test does.
+ */
+/**
+ * Collisions that predate this guard, each with the reason it is not renumbered.
+ * Rot-tested below: an entry that stops colliding fails, so a fix deletes its
+ * line rather than leaving an exemption nobody can audit.
+ */
+const KNOWN_DUPLICATE_NUMBERS: Record<string, string> = {
+  // Both landed in the same commit (0d2b50a, 2026-04-19) in the initial bulk
+  // import, so neither "merged first" and the ownership rule does not apply.
+  // They have been applied for five months and are referenced by number in
+  // later migrations and in docs. Renumbering them now would break those
+  // references to fix a filename, which is the wrong trade for history that
+  // is not going to change again.
+  '013': '013_fix_social_rls_policies + 013_product_storefront, same commit 2026-04-19',
+  '014': '014_referrals + 014_session_comments, same commit 2026-04-19',
+};
+
+describe('migration numbers are unique', () => {
+  it('no two migrations share a numeric prefix', () => {
+    const byNumber = new Map<string, string[]>();
+    for (const f of fs.readdirSync(MIGRATIONS_DIR)) {
+      const m = /^(\d{3})_/.exec(f);
+      if (!m) continue;
+      byNumber.set(m[1], [...(byNumber.get(m[1]) ?? []), f]);
+    }
+    const dupes = [...byNumber.entries()]
+      .filter(([n, files]) => files.length > 1 && !(n in KNOWN_DUPLICATE_NUMBERS))
+      .map(([n, files]) => `${n}: ${files.join('  AND  ')}`);
+
+    expect(
+      dupes,
+      `Two migrations share a number:\n\n  ${dupes.join('\n  ')}\n\n` +
+        `A number belongs to whichever branch MERGED first. Renumber the later ` +
+        `one, update its internal references and its verifier probes, and state ` +
+        `in its header what it was applied as -- the number moves, the record ` +
+        `does not. See CLAUDE.md, "a migration number is claimed by whoever ` +
+        `merges first".\n`
+    ).toEqual([]);
+  });
+
+  it('every known-duplicate exemption still describes a real collision', () => {
+    const counts = new Map<string, number>();
+    for (const f of fs.readdirSync(MIGRATIONS_DIR)) {
+      const m = /^(\d{3})_/.exec(f);
+      if (m) counts.set(m[1], (counts.get(m[1]) ?? 0) + 1);
+    }
+    const stale = Object.entries(KNOWN_DUPLICATE_NUMBERS)
+      .filter(([n]) => (counts.get(n) ?? 0) < 2)
+      .map(([n, why]) => `${n} no longer collides (${why})`);
+    expect(stale, `Stale exemptions:\n  ${stale.join('\n  ')}\n`).toEqual([]);
+  });
+});
+
 describe('supabase/verify-migration-state.sql ↔ migrations/', () => {
   it('verifier covers every migration in the migrations/ directory (Tribe.OS era)', () => {
     const verifierIds = readVerifierMigrationIds();

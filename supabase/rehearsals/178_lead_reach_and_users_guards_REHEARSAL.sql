@@ -1,20 +1,20 @@
--- 176_lead_reach_and_users_guards_REHEARSAL.sql
+-- 178_lead_reach_and_users_guards_REHEARSAL.sql
 --
--- Rehearsal for 176. Run in the Supabase SQL editor. Everything is inside
+-- Rehearsal for 178. Run in the Supabase SQL editor. Everything is inside
 -- BEGIN ... ROLLBACK; production is not modified. ONE result set of PASS/FAIL
 -- rows, because the editor shows only the last statement's result.
 --
--- RUN AFTER 175 IS APPLIED, AND BEFORE 176. This rehearsal APPLIES 176's own
+-- RUN AFTER 177 IS APPLIED, AND BEFORE 178. This rehearsal APPLIES 178's own
 -- statements inside the transaction and rolls them back; it does not require
 -- 176 to be applied already. The first draft did require that, which made it a
 -- post-apply verification rather than a rehearsal -- it could only have told us
 -- 176 worked after we had already run it.
 --
--- WHERE THE DDL LIVES. 176's statements are applied ONCE at the top of the DO
+-- WHERE THE DDL LIVES. 178's statements are applied ONCE at the top of the DO
 -- block, OUTSIDE any subtransaction, so every arm below sees them. The outer
 -- ROLLBACK undoes all of it. Arms that need the PRE-176 behaviour (B1, B3)
 -- reinstall the old body inside their own subtransaction, which unwinds back
--- to 176's version on the sentinel raise.
+-- to 178's version on the sentinel raise.
 --
 -- Part A  the migration body applies clean
 -- Part B  THE SILENT REVERTS, before and after. B1/B2 and B3/B4 are PAIRS.
@@ -22,7 +22,7 @@
 -- Part D  lead_* denied to a caller, still permitted to service-role
 -- Part E  deleted_at denied to a caller, still permitted to service-role
 -- Part F  lead_reaches: INSERT permitted, DELETE denied
--- Part G  176's END STATE inside the transaction (see the note at Part G)
+-- Part G  178's END STATE inside the transaction (see the note at Part G)
 --
 -- WHY THE BEFORE-ARMS EXIST. Asserting that the new function raises proves
 -- only that it raises. It does not prove the old one was broken, and a
@@ -91,7 +91,7 @@ BEGIN
   END IF;
 
   -- ── Part 0: STATE THE ROLES BEFORE ANYTHING DEPENDS ON THEM ─────────────
-  -- The previous version of 176 keyed a security control on
+  -- The previous version of 178 keyed a security control on
   -- `current_user IS DISTINCT FROM session_user`. SET ROLE changes
   -- current_user and leaves session_user alone, and session_user is a property
   -- of the CONNECTION: `postgres` in this editor, `authenticator` under
@@ -105,11 +105,11 @@ BEGIN
      'session_user=' || session_user || '  current_user=' || current_user
      || '   (production differs: PostgREST connects as authenticator)', true);
 
-  -- ── Part A: APPLY 176's BODY, here, inside the transaction ──────────────
+  -- ── Part A: APPLY 178's BODY, here, inside the transaction ──────────────
   -- Not in a subtransaction: these objects must survive for every arm below.
   -- The outer ROLLBACK is what removes them.
   BEGIN
-    -- B of 176: the counter moves off users. No write grant is the mechanism.
+    -- B of 178: the counter moves off users. No write grant is the mechanism.
     CREATE TABLE IF NOT EXISTS public.lead_credits (
       user_id   uuid PRIMARY KEY REFERENCES public.users(id) ON DELETE CASCADE,
       remaining integer NOT NULL DEFAULT 3,
@@ -129,7 +129,7 @@ BEGIN
     REVOKE ALL ON public.lead_credits FROM PUBLIC, anon, authenticated;
     GRANT SELECT ON public.lead_credits TO authenticated;
 
-    -- A1 of 176
+    -- A1 of 178
     CREATE OR REPLACE FUNCTION public.reach_out_to_athlete(p_athlete_id uuid)
      RETURNS TABLE (credits_remaining integer)
      LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public'
@@ -166,14 +166,14 @@ BEGIN
     REVOKE ALL ON FUNCTION public.reach_out_to_athlete(uuid) FROM PUBLIC, anon;
     GRANT EXECUTE ON FUNCTION public.reach_out_to_athlete(uuid) TO authenticated;
 
-    -- C of 176
+    -- C of 178
     DROP POLICY IF EXISTS "instructors_own_reaches" ON public.lead_reaches;
     CREATE POLICY lead_reaches_select_own ON public.lead_reaches
       FOR SELECT TO authenticated USING (auth.uid() = instructor_id);
     CREATE POLICY lead_reaches_insert_own ON public.lead_reaches
       FOR INSERT TO authenticated WITH CHECK (auth.uid() = instructor_id);
 
-    -- D of 176
+    -- D of 178
     CREATE OR REPLACE FUNCTION public.prevent_deleted_at_self_update()
      RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public'
     AS $fn$
@@ -190,7 +190,7 @@ BEGIN
     CREATE TRIGGER users_deleted_at_guard BEFORE UPDATE ON public.users
       FOR EACH ROW EXECUTE FUNCTION public.prevent_deleted_at_self_update();
 
-    -- E of 176: the two silent reverts become RAISE
+    -- E of 178: the two silent reverts become RAISE
     CREATE OR REPLACE FUNCTION public.protect_verified_instructor()
      RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public'
     AS $fn$
@@ -222,7 +222,7 @@ BEGIN
   END;
 
   INSERT INTO reh_probe VALUES
-    (1, 'A1 176 body applies clean inside the transaction', coalesce(a_error,'(null)'), coalesce(a_ok,false));
+    (1, 'A1 178 body applies clean inside the transaction', coalesce(a_error,'(null)'), coalesce(a_ok,false));
 
   -- ── Part B1: total_earnings_cents under the PRE-176 function ────────────
   -- The discriminating half. Reinstalls the captured silent body, writes as a
@@ -292,14 +292,14 @@ BEGIN
         coalesce(b1_state,'?') || '   before=' || b1_before || '  after=' || b1_after,
         coalesce(b1_silent,false));
 
-  -- ── Part B2: the same write under 176 ───────────────────────────────────
+  -- ── Part B2: the same write under 178 ───────────────────────────────────
   BEGIN
     PERFORM set_config('request.jwt.claims',
       json_build_object('sub', k_actor::text, 'role','authenticated')::text, true);
     SET LOCAL ROLE authenticated;
     BEGIN
       UPDATE public.users SET total_earnings_cents = b1_before + 999999 WHERE id = k_actor;
-      b2_state := 'UPDATE SUCCEEDED -- 176 did not convert this branch';
+      b2_state := 'UPDATE SUCCEEDED -- 178 did not convert this branch';
       b2_raised := false;
     EXCEPTION WHEN OTHERS THEN
       b2_state := SQLSTATE || ' ' || SQLERRM;
@@ -368,7 +368,7 @@ BEGIN
     BEGIN
       UPDATE public.users SET total_participants_served = coalesce(total_participants_served,0) + 4242
        WHERE id = k_actor;
-      b4_state := 'UPDATE SUCCEEDED -- 176 did not convert this branch';
+      b4_state := 'UPDATE SUCCEEDED -- 178 did not convert this branch';
       b4_raised := false;
     EXCEPTION WHEN OTHERS THEN
       b4_state := SQLSTATE || ' ' || SQLERRM;
@@ -585,9 +585,9 @@ BEGIN
 
 END $outer$;
 
--- ── Part G: 176's END STATE, inside the transaction ───────────────────────
+-- ── Part G: 178's END STATE, inside the transaction ───────────────────────
 -- NOT "nothing escaped", which is what this section means in 174's rehearsal.
--- There, Part A unwound and Part H proved production was untouched. HERE 176's
+-- There, Part A unwound and Part H proved production was untouched. HERE 178's
 -- DDL is applied deliberately and left in place for the arms above, so the
 -- only thing protecting production is the ROLLBACK at the bottom. Mislabelling
 -- this as an escape check would claim a guarantee the file does not provide.
