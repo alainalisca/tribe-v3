@@ -234,7 +234,7 @@ export default function ProfilePageClient({ userId, initialProfile, statsSlot }:
               <div className="flex justify-center mb-4">
                 <div className="relative">
                   <Avatar
-                    className="w-24 h-24 border-4 border-tribe-green cursor-pointer hover:opacity-90 transition"
+                    className="w-32 h-32 border-4 border-tribe-green cursor-pointer hover:opacity-90 transition"
                     onClick={openLightbox}
                   >
                     <AvatarImage loading="lazy" src={currentPhoto || undefined} alt={profile.name ?? ''} />

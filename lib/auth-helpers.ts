@@ -2,6 +2,7 @@ import type { User } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/client';
 import { log, logError } from '@/lib/logger';
 import { upsertUser, fetchUserProfileMaybe } from '@/lib/dal';
+import { upgradeProviderAvatarUrl } from '@/lib/providerAvatar';
 
 interface UpsertResult {
   isNewUser: boolean;
@@ -23,7 +24,12 @@ export async function upsertUserProfile(user: User, displayName?: string): Promi
     const profileResult = await fetchUserProfileMaybe(supabase, user.id, 'id, avatar_url, created_at');
     const existingProfile = profileResult.success ? profileResult.data : null;
 
-    const providerAvatar = user.user_metadata?.avatar_url || user.user_metadata?.picture || null;
+    // Upgraded at capture, so a new Google sign-up never stores the 96px
+    // version in the first place. The migration repairs the rows written
+    // before this existed; this is what stops the problem recurring.
+    const providerAvatar = upgradeProviderAvatarUrl(
+      user.user_metadata?.avatar_url || user.user_metadata?.picture || null
+    );
     const existingAvatar = existingProfile?.avatar_url || null;
     const name =
       displayName || user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0] || 'User';

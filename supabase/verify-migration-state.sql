@@ -1605,4 +1605,26 @@ select 'GUARD_182_action_url_is_text',
          else 'applied'
        end
 
+union all
+
+-- 183 rewrites Google avatar urls from =s96-c to =s600-c. "Applied" is not
+-- "the column exists" -- it is that NO live Google avatar still carries a
+-- non-600 size suffix. A migration that matched nothing would otherwise look
+-- identical to one that worked.
+select '183_google_avatar_full_size',
+       case
+         when not exists (select 1 from public.users
+                           where avatar_url like '%googleusercontent.com%'
+                             and deleted_at is null and banned is not true
+                             and is_test_account is not true)
+           then 'applied -- no Google avatars in this database'
+         when exists (select 1 from public.users
+                       where avatar_url like '%googleusercontent.com%'
+                         and avatar_url ~ '=s\d+-c$' and avatar_url !~ '=s600-c$'
+                         and deleted_at is null and banned is not true
+                         and is_test_account is not true)
+           then 'MISSING -- a Google avatar still carries a small size suffix'
+         else 'applied'
+       end
+
 order by migration;
