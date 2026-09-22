@@ -103,6 +103,17 @@ const publicApiPaths = [
   // defaults to true there.
   '/api/one-off',
 
+  // Universal Link / App Link association files. Apple's CDN and Android's
+  // verifier fetch these with no cookies, and APPLE DOES NOT FOLLOW REDIRECTS
+  // for the AASA -- a 307 to /auth is simply a failed association, silently,
+  // with no way to tell from the app that it never worked.
+  //
+  // assetlinks.json happens to serve 200 today because it exists as a static
+  // file; a MISSING extensionless path under the same directory returns 307
+  // (measured 2026-09-22). Relying on that ordering is relying on an
+  // implementation detail of which handler wins, so the exemption is explicit.
+  '/.well-known',
+
   // Vercel Cron invocations carry an `Authorization: Bearer ${CRON_SECRET}`
   // header, NOT a session cookie. Without this exemption the cookie-based
   // session gate below redirects every cron run to /auth before it reaches
