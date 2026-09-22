@@ -1,13 +1,14 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { Suspense, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { SPORTS_LIST, getSportTranslation } from '@/lib/sports';
 import { completeAthleteSetup } from '@/lib/dal/athleteSetup';
 import { useLanguage } from '@/lib/LanguageContext';
 import { showError } from '@/lib/toast';
 import { logError } from '@/lib/logger';
+import { sanitizeReturnTo, decodeReturnToParam } from '@/lib/pendingReturnTo';
 import AvatarUploadField from '@/components/onboarding/AvatarUploadField';
 
 /**
@@ -42,8 +43,9 @@ import AvatarUploadField from '@/components/onboarding/AvatarUploadField';
  *
  * ES copy is provisional and goes to Ana.
  */
-export default function AthleteSportsStep() {
+function AthleteSportsStepInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const supabase = createClient();
   const { language } = useLanguage();
   const isEs = language === 'es';
@@ -60,11 +62,18 @@ export default function AthleteSportsStep() {
   const toggle = (sport: string) =>
     setSelected((prev) => (prev.includes(sport) ? prev.filter((s) => s !== sport) : [...prev, sport]));
 
+  // Where to go once sports are saved. The deferred ask (a share-link athlete
+  // asked right after joining) passes the session they came for, so they land
+  // back on it rather than on the feed. Validated with the SAME rule as every
+  // other returnTo in the app -- a second copy of that rule is the one that
+  // would miss "/\\evil.com".
+  const returnTo = sanitizeReturnTo(decodeReturnToParam(searchParams.get('returnTo'))) ?? '/';
+
   const onContinue = async () => {
     setSaving(true);
     const result = await completeAthleteSetup(supabase, selected);
     if (result.success) {
-      router.replace('/');
+      router.replace(returnTo);
       return;
     }
     // The real reason, not a generic one. The RPC's message names why a sport
@@ -142,5 +151,17 @@ export default function AthleteSportsStep() {
         )}
       </div>
     </div>
+  );
+}
+
+// useSearchParams needs a Suspense boundary or the route cannot prerender --
+// the same wrapper /messages uses. The fallback is a blank screen of the right
+// colour rather than a spinner: this renders for one frame on an already-
+// navigated page, and a flashing spinner reads as an error.
+export default function AthleteSportsStep() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-theme-base" />}>
+      <AthleteSportsStepInner />
+    </Suspense>
   );
 }

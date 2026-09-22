@@ -6,6 +6,7 @@ import { getErrorMessage } from '@/lib/errorMessages';
 import { celebrateJoin } from '@/lib/confetti';
 import { trackEvent } from '@/lib/analytics';
 import { joinSession } from '@/lib/sessions';
+import { needsAthleteSetup } from '@/lib/dal/athleteSetup';
 import { haptic } from '@/lib/haptics';
 import {
   cancelSession,
@@ -130,6 +131,27 @@ export function useSessionActions({
         sessionStorage.setItem('tribe_sessions_dirty', '1');
       }
       await onSessionUpdated();
+
+      // DEFER THE SPORTS STEP TO HERE, rather than skipping it.
+      //
+      // An athlete arriving through a share link has a parked returnTo, so
+      // /onboarding/role sends them to the session and never shows the sports
+      // step -- the invite wins, which is right. The cost was that the share
+      // funnel produced athletes with no sports, invisible to partner matching
+      // and to /instructors. So the ask moves to the moment after they join,
+      // and returnTo brings them straight back to the session they came for.
+      //
+      // It fires for a PENDING request too. A curated host reviews the
+      // requester's profile before deciding, so an empty one hurts most
+      // exactly there.
+      //
+      // A failed read does not interrupt the join: needsAthleteSetup reports
+      // the failure and answers false, and the home-feed banner still catches
+      // them.
+      const setupCheck = await needsAthleteSetup(supabase, user.id);
+      if (setupCheck.success && setupCheck.data) {
+        onNavigate(`/onboarding/sports?returnTo=${encodeURIComponent(`/session/${session.id}`)}`);
+      }
     } catch (error) {
       haptic('error');
       showError(getErrorMessage(error, 'join_session', language));

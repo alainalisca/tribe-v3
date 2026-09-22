@@ -47,6 +47,25 @@ describe('OnboardingRolePage — returnTo consumption (T-C1 Gate 2)', () => {
     expect(sessionStorage.getItem(STORAGE_KEY)).toBeNull();
   });
 
+  /**
+   * DEFER, NOT SKIP -- first half. A share-link athlete reaches the SESSION
+   * first; the invite wins over the sports step. The second half, being asked
+   * for sports immediately after joining it, is in
+   * hooks/useSessionActions.deferredSportsStep.test.ts.
+   *
+   * This is a distinct case from the invite one above, and deliberately so:
+   * the value that must win is now a /session path, which is the exact shape
+   * the deferred ask sends back as its returnTo. A rule that happened to
+   * special-case /invite would pass that test and fail this one.
+   */
+  it('a share-link athlete goes to the SESSION, not to the sports step', async () => {
+    sessionStorage.setItem(STORAGE_KEY, '/session/sess-1');
+    await chooseAthleteAndContinue();
+    expect(mockPush).toHaveBeenCalledWith('/session/sess-1');
+    expect(mockPush).not.toHaveBeenCalledWith('/onboarding/sports');
+    expect(sessionStorage.getItem(STORAGE_KEY)).toBeNull();
+  });
+
   it('athlete completion falls back to the sports step when nothing is parked', async () => {
     await chooseAthleteAndContinue();
     expect(mockPush).toHaveBeenCalledWith('/onboarding/sports');
