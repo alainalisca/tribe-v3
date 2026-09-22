@@ -78,6 +78,40 @@ describe('the logo survives any shape it is given', () => {
   });
 });
 
+describe('the white is deliberate, not accidental', () => {
+  it('an organization logo sits on a white card with even padding', () => {
+    // BullBox's file is an opaque JPEG with white baked in. Without a card it
+    // lands on the dark page as a stray tile ending at an edge nobody chose.
+    expect(SRC).toMatch(/bg-white shadow-lg shadow-black\/30/);
+    expect(SRC).toMatch(/padding: HERO_CARD_PAD_PX/);
+  });
+
+  it('the padding is one constant, like the size', () => {
+    expect(SRC.match(/const HERO_CARD_PAD_PX = \d+;/g)).toHaveLength(1);
+  });
+
+  it('the padding is even on all four sides', () => {
+    // A single `padding` value, not paddingTop/X/Y. A wide mark in a hugging
+    // card would otherwise show more white on two sides than the other two.
+    expect(SRC).not.toMatch(/padding(?:Top|Right|Bottom|Left|X|Y):/);
+  });
+
+  it('a PERSON keeps the headshot treatment, with no white card', () => {
+    // A headshot inset inside a padded white circle reads as a mistake. The
+    // same isOrganizationPartner call that picks square-vs-circle picks this.
+    expect(SRC).toMatch(/isOrganizationPartner\(config\)\s*\?[\s\S]{0,160}bg-white shadow/);
+    expect(SRC).toMatch(/:\s*`inline-flex[^`]*bg-white\/5`/);
+  });
+
+  it('the card still hugs the image, so the mark is not boxed', () => {
+    // If the card gained a fixed height, a wordmark would sit in letterbox
+    // bars again and the padding would stop being even.
+    const hero = SRC.slice(SRC.indexOf('function PartnerHero'), SRC.indexOf('function Wordmark'));
+    expect(hero).toContain('inline-flex');
+    expect(hero).not.toMatch(/style=\{\{ height: HERO_PX, width: HERO_PX \}\}[\s\S]{0,200}config\.logoUrl/);
+  });
+});
+
 describe('the hero size is one edit', () => {
   it('HERO_PX is declared once and is the only source of the size', () => {
     expect(SRC.match(/const HERO_PX = \d+;/g)).toHaveLength(1);
