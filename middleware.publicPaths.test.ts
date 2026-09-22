@@ -85,6 +85,16 @@ describe('existing public surfaces survive the change', () => {
     // unrelated to anything real.
   });
 
+  it('keeps the one-off outreach route reachable by its cron caller', () => {
+    // Found by the dry run, not by review: the route checks CRON_SECRET itself,
+    // but middleware's cookie gate runs first and 307s it to /auth. The
+    // campaign would have been unreachable in production while every test
+    // passed, because the tests call the handler directly and never traverse
+    // middleware.
+    expect(isPublicPath('/api/one-off/sports-nudge')).toBe(true);
+    expect(isPublicPath('/api/one-off/sports-nudge/')).toBe(true);
+  });
+
   it('still gates an authenticated route', () => {
     expect(isPublicPath('/home')).toBe(false);
     expect(isPublicPath('/storefront/040cbc21/')).toBe(false);
