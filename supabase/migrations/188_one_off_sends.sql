@@ -142,10 +142,13 @@ BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM pg_constraint
      WHERE conrelid = 'public.one_off_sends'::regclass AND contype = 'p'
-       AND (SELECT array_agg(a.attname ORDER BY a.attname)
+       -- ::text on BOTH sides. pg_attribute.attname is type `name`, so an
+       -- uncast array_agg returns name[], and `name[] = text[]` has no
+       -- operator: 42883, which aborts the whole script (see the addendum).
+       AND (SELECT array_agg(a.attname::text ORDER BY a.attname::text)
               FROM unnest(conkey) k JOIN pg_attribute a
                 ON a.attrelid = conrelid AND a.attnum = k)
-           = ARRAY['campaign','channel','user_id']
+           = ARRAY['campaign','channel','user_id']::text[]
   ) THEN
     RAISE EXCEPTION
       '188 ABORTED: one_off_sends has no (campaign, user_id, channel) primary '
@@ -203,3 +206,42 @@ SELECT
       AND u.is_instructor IS NOT TRUE
       AND coalesce(array_length(u.sports, 1), 0) = 0
       AND u.fcm_token IS NOT NULL)                                                    AS blank_athletes_with_token;
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- ADDENDUM 2026-09-22: THE FIRST ATTEMPT ABORTED, AND NOTHING LANDED
+-- ═══════════════════════════════════════════════════════════════════════════
+--
+-- Applied 2026-09-21 and it failed inside the guard above with
+--
+--     ERROR 42883: operator does not exist: name[] = text[]
+--
+-- `pg_attribute.attname` is type `name`, not `text`. `array_agg` over it
+-- returns `name[]`, and there is no `name[] = text[]` operator -- the implicit
+-- name->text cast that makes `attname = 'literal'` work does not apply through
+-- an array comparison. Fixed above with `::text` on both sides. The same
+-- mistake was copied into verify-migration-state.sql's GUARD_188 probe and is
+-- fixed there too; 189 is unaffected, because it only ever compares a scalar
+-- `attname` to a literal.
+--
+-- THE EXECUTABLE SQL ABOVE IS CORRECTED IN PLACE, NOT ADDENDUM-PATCHED,
+-- because this migration never applied: the working agreement freezes SQL that
+-- RAN, and this raised before committing anything. It is not in
+-- migrations_frozen.json either. The addendum records the attempt because the
+-- attempt is the interesting part.
+--
+-- WHAT LANDED: nothing. Verified by a read-only state query on 2026-09-22 --
+-- one_off_sends ABSENT, email_unsubscribed_at ABSENT, no migrations_applied
+-- row. That is the finding, and it contradicted what both of us expected.
+--
+-- Eight statements before the DO block had already succeeded (two ALTERs, two
+-- COMMENTs, a CREATE TABLE, three REVOKEs) and every one of them was rolled
+-- back. PostgreSQL's simple-Query protocol wraps a multi-statement message in
+-- ONE implicit transaction, and PostgreSQL DDL is transactional, so an error
+-- anywhere discards the whole script. See the CLAUDE.md entry, which said the
+-- opposite until today.
+--
+-- IT WAS APPLIED WITHOUT A REHEARSAL. Every migration this week that had one
+-- caught its problem inside a rolled-back run. This one caught it in
+-- production. A rehearsal was guaranteed to find this particular fault,
+-- because the guard is the thing that executes.
+-- See supabase/rehearse_188.sql, written before the second attempt.
