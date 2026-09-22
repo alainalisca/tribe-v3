@@ -966,6 +966,61 @@ grep neither adds to nor subtracts from what source already proves — an
 inconclusive instrument written up as inconclusive, rather than a number
 presented because it was available.
 
+**A DOCUMENTED PROCEDURE THAT NAMES A SCRIPT IS ONLY AS GOOD AS THE SCRIPT EXISTING — AND NOTHING CHECKS THAT, BECAUSE A BROKEN POINTER READS EXACTLY LIKE A WORKING ONE.**
+
+`supabase/migrations_applied.json` opened with an instruction: regenerate this
+with `scripts/syncMigrationsApplied.ts`. **That file had never been written.**
+The instruction was false for the entire life of the file, and the file was
+written specifically to make a fragile hand-kept record safe.
+
+What it actually cost: recording a migration meant editing the JSON **and** the
+same list embedded **twice** in `verify-migration-state.sql` — three
+hand-maintained copies of eight strings, with the documented way to keep them
+in sync being a command that errors. They had not drifted yet. Nothing would
+have said so when they did, and the SQL copy is the one that verifies the JSON,
+so a drift there means the database is dutifully checking a list nobody reads.
+
+**A pointer to something you cannot find is a finding about the thing
+pointing** — that entry is already in this file, about a comment referring to a
+box that could not exist. This is the same shape with a worse property: a
+missing explanation makes the next reader investigate, while a missing _script_
+makes them type a command, get "no such file", and quietly do the job by hand —
+which is the failure mode the instruction existed to prevent, reached by
+following the instruction.
+
+**So: any file that tells the next person to run something gets a test that the
+something exists.** `lib/docsReferencedScripts.test.ts` scans every tracked
+text file for `scripts/*.{ts,js,sh,sql,py}` and fails naming any that is not
+there. It is cheap, it has no allow-list on purpose — an allow-list of broken
+pointers is the defect written down — and it excludes only itself, by path,
+because its own mutation cases name scripts that deliberately do not exist.
+That exclusion is the [[guard-scans-its-own-apparatus]] trap, which this repo
+has now hit three times.
+
+**What it cannot say** is that the script still does what the prose claims;
+that needs the script's own test. It asserts the pointer resolves, which is the
+half that was wrong. The same reasoning extends past scripts — an npm script, a
+make target, a runbook URL, an env var a README says to set — and the test is
+worth writing wherever the instruction is the only thing standing between the
+next person and doing it by hand.
+
+**AND A MUTATION THAT DOES NOT LAND REPORTS THE WRONG ANSWER IN EITHER
+DIRECTION.** Proving this guard, arm P3 replaced `\bscripts/` in the source to
+kill the regex. The source reads `/\bscripts\/` — an escaped slash — so the
+replace matched nothing, the file was untouched, and the run came back green,
+which the driver reported as MISSED. Two of the three arms carried
+`assert p.read_text() != orig` and **P3 was the one that did not.** The rule is
+already in this file, written after a zsh word-splitting bug produced a
+seventeen-file proof that ran once; it was broken again three weeks later on a
+three-arm driver, by its own author, on the single arm where it was omitted.
+
+This time it cost a re-run, because a vacuous mutation on a _passing_ guard
+reads as MISSED — the alarming direction. **The direction is luck.** Had the
+arm been one where the guard fails for an unrelated reason, the same missing
+assertion would have printed CAUGHT and the proof would have been fiction.
+**The assertion is not optional on the arm you are confident about; that is the
+arm where it is omitted.**
+
 **A COLUMN NAMED FOR AN EVENT, BACKFILLED FOR EVERYONE, ANSWERS A QUESTION NOBODY ASKED — AND WILL BE READ AS ANSWERING THE ONE THEY DID.**
 
 `users.onboarding_completed_at` sounds like "this user finished onboarding". It
