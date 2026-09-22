@@ -1850,4 +1850,38 @@ select 'GUARD_188_send_once_and_opt_out',
          else 'applied'
        end
 
+union all
+
+select '189_stable_unsub_token',
+       case when exists (select 1 from information_schema.columns
+                          where table_schema='public' and table_name='notification_preferences'
+                            and column_name='unsub_token')
+       then 'applied' else 'MISSING' end
+
+union all
+
+-- The column existing is not the property. ONE TOKEN PER PERSON is: if
+-- gen_random_uuid() had been evaluated once for the whole backfill UPDATE,
+-- every row would share a token and an unsubscribe click would resolve to the
+-- wrong user. And a row with no token means an email with a dead link.
+select 'GUARD_189_one_token_per_person',
+       case
+         when not exists (select 1 from information_schema.columns
+                           where table_schema='public' and table_name='notification_preferences'
+                             and column_name='unsub_token')
+           then 'MISSING -- unsub_token absent'
+         when (select count(*) from public.notification_preferences) = 0
+           then 'MISSING -- notification_preferences is empty, so this check means nothing'
+         when (select count(*) <> count(unsub_token) from public.notification_preferences)
+           then 'MISSING -- some rows have no token, so those users get a dead unsubscribe link'
+         when (select count(*) <> count(distinct unsub_token) from public.notification_preferences)
+           then 'MISSING -- tokens are not unique; an unsubscribe click resolves to the wrong person'
+         when not exists (select 1 from pg_attrdef d join pg_attribute a
+                            on a.attrelid = d.adrelid and a.attnum = d.adnum
+                           where d.adrelid = 'public.notification_preferences'::regclass
+                             and a.attname = 'unsub_token')
+           then 'MISSING -- no DEFAULT, so rows from 150''s signup trigger get no token'
+         else 'applied'
+       end
+
 order by migration;
