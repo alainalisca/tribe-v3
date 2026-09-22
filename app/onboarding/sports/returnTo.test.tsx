@@ -15,15 +15,16 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ replace: mockReplace, push: vi.fn() }),
   useSearchParams: () => params,
 }));
-vi.mock('@/lib/supabase/client', () => ({ createClient: () => ({}) }));
+const getUser = vi.fn();
+vi.mock('@/lib/supabase/client', () => ({ createClient: () => ({ auth: { getUser } }) }));
 vi.mock('@/lib/LanguageContext', () => ({ useLanguage: () => ({ language: 'en' }) }));
 vi.mock('@/lib/toast', () => ({ showError: vi.fn() }));
 vi.mock('@/lib/logger', () => ({ logError: vi.fn() }));
 vi.mock('@/components/onboarding/AvatarUploadField', () => ({ default: () => <div /> }));
-vi.mock('@/lib/dal/athleteSetup', () => ({ completeAthleteSetup: vi.fn() }));
+vi.mock('@/lib/dal/athleteSetup', () => ({ completeAthleteSetup: vi.fn(), fetchOwnSports: vi.fn() }));
 
 import AthleteSportsStep from './page';
-import { completeAthleteSetup } from '@/lib/dal/athleteSetup';
+import { completeAthleteSetup, fetchOwnSports } from '@/lib/dal/athleteSetup';
 
 async function pickASportAndContinue() {
   render(<AthleteSportsStep />);
@@ -36,6 +37,8 @@ beforeEach(() => {
   vi.clearAllMocks();
   params = new URLSearchParams();
   vi.mocked(completeAthleteSetup).mockResolvedValue({ success: true, data: null });
+  getUser.mockResolvedValue({ data: { user: { id: 'u1' } } });
+  vi.mocked(fetchOwnSports).mockResolvedValue({ success: true, data: [] });
 });
 
 describe('the sports step honours returnTo', () => {

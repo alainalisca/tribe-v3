@@ -81,3 +81,33 @@ export async function needsAthleteSetup(supabase: SupabaseClient, userId: string
     return { success: false, error: 'Failed to read athlete setup state' };
   }
 }
+
+/**
+ * The caller's current sports, for PREFILLING the setup screen.
+ *
+ * WHY THIS EXISTS: complete_athlete_setup does `SET sports = v_clean`, an
+ * overwrite. A screen that starts empty and saves what is on it therefore
+ * REPLACES the list rather than editing it. An athlete with 23 sports who
+ * opens the screen, taps one and saves loses the other 22 -- silently, with a
+ * success toast.
+ *
+ * That is the shape CLAUDE.md already records for the storefront editor: a
+ * write whose payload is built from component state will blank whatever the
+ * state does not know about. It was written up, a guard was added for that
+ * component, and then reproduced here.
+ *
+ * Returns null when the read FAILS, which the caller must treat as "do not
+ * save" -- distinct from `[]`, which is a real answer meaning this athlete has
+ * no sports yet. Collapsing the two is how the overwrite happens.
+ */
+export async function fetchOwnSports(supabase: SupabaseClient, userId: string): Promise<DalResult<string[]>> {
+  try {
+    const { data, error } = await supabase.from('users').select('sports').eq('id', userId).maybeSingle();
+    if (error) return { success: false, error: error.message };
+    if (!data) return { success: false, error: 'no profile row for the caller' };
+    return { success: true, data: ((data as { sports: string[] | null }).sports ?? []).filter(Boolean) };
+  } catch (error) {
+    logError(error, { action: 'fetchOwnSports', userId });
+    return { success: false, error: 'Failed to read your sports' };
+  }
+}
