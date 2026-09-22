@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getServiceRoleClient } from '@/lib/supabase/admin';
-import { userForUnsubToken, setEmailUnsubscribed } from '@/lib/dal/oneOffSends';
+import { userForUnsubToken, setEmailUnsubscribed } from '@/lib/dal/emailUnsubscribe';
 import { logError } from '@/lib/logger';
 
 /**

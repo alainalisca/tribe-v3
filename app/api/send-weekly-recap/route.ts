@@ -5,6 +5,8 @@ import { logError } from '@/lib/logger';
 import { fetchParticipationsWithSession, fetchSessionsByCreator, fetchUsersForEmailJobs } from '@/lib/dal';
 import { formatSessionLocation } from '@/lib/sessionLocation';
 import { isValidCronAuth } from '@/lib/auth/cron';
+import { shouldSendNotification } from '@/lib/dal/notificationPreferences';
+import { isEmailSuppressed, unsubUrlFor, unsubHeaders } from '@/lib/dal/emailUnsubscribe';
 import { bogotaDateOffset } from '@/lib/time/bogotaDate';
 import { dateLocale } from '@/lib/dateLocale';
 
@@ -55,6 +57,7 @@ export async function POST(request: Request) {
 
     let emailsSent = 0;
     let errors = 0;
+    let suppressed = 0;
 
     for (const user of users) {
       try {
@@ -89,6 +92,49 @@ export async function POST(request: Request) {
         const totalSessions = participatedSessions.length + hostedSessions.length;
 
         if (totalSessions === 0) continue;
+
+        // THE GATE THIS ROUTE NEVER HAD.
+        //
+        // AFTER the activity check, deliberately. Placed before it, `suppressed`
+        // would count every user with a quiet week alongside every user who
+        // opted out, and a metric that conflates "nothing to say" with "asked
+        // us to stop" is the kind of number that later gets quoted as
+        // opt-out rate.
+        //
+        // TYPE_META declares weekly_recap as email:'opt_in' -- it requires
+        // affirmative consent AND the weekly_recap category. This route read
+        // no preference at all and emailed every user who had an address, so
+        // the declared policy and the code disagreed and the code won. It has
+        // never carried an unsubscribe link either.
+        //
+        // Two checks, in this order, because they answer different questions:
+        // isEmailSuppressed is "did this person tell us to stop" (hard, and
+        // outranks everything), shouldSendNotification is "does the policy for
+        // this type permit it".
+        if (await isEmailSuppressed(supabase, user.id)) {
+          suppressed++;
+          continue;
+        }
+        if (!(await shouldSendNotification(supabase, user.id, 'weekly_recap', 'email'))) {
+          suppressed++;
+          continue;
+        }
+
+        // NO LINK MEANS NO SEND. A recurring email with no way out is what
+        // this mechanism exists to end; a missing token is 189's backfill not
+        // having reached this row, which is a bug to see rather than to paper
+        // over by sending anyway.
+        const unsub = await unsubUrlFor(supabase, user.id, SITE_URL);
+        if (!unsub.success || !unsub.data) {
+          logError(new Error(unsub.error ?? 'no unsubscribe token'), {
+            route: '/api/send-weekly-recap',
+            action: 'unsubUrl',
+            userId: user.id,
+          });
+          errors++;
+          continue;
+        }
+        const unsubUrl = unsub.data;
 
         const lang = user.preferred_language || 'en';
         const isSpanish = lang === 'es';
@@ -144,6 +190,7 @@ export async function POST(request: Request) {
           from: 'Tribe <tribe@aplusfitnessllc.com>',
           to: user.email,
           subject: subject,
+          headers: unsubHeaders(unsubUrl),
           html: `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f9fafb; padding: 20px;">
               <div style="background: white; border-radius: 12px; padding: 30px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
@@ -171,6 +218,9 @@ export async function POST(request: Request) {
                   <p style="color: #9ca3af; font-size: 12px; margin: 0;">
                     ${isSpanish ? 'Recibiste este email porque eres miembro activo de Tribe.' : 'You received this email because you are an active Tribe member.'}
                   </p>
+                  <p style="color: #9ca3af; font-size: 12px; margin: 8px 0 0;">
+                    <a href="${unsubUrl}" style="color: #9ca3af;">${isSpanish ? 'Cancelar la suscripción a estos correos' : 'Unsubscribe from these emails'}</a>
+                  </p>
                 </div>
               </div>
               
@@ -192,6 +242,7 @@ export async function POST(request: Request) {
       success: true,
       emailsSent,
       errors,
+      suppressed,
       totalUsers: users.length,
     });
   } catch (error: unknown) {

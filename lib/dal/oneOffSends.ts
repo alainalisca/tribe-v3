@@ -1,6 +1,5 @@
 /** DAL: one_off_sends — send-once bookkeeping for one-off outreach. */
 import { SupabaseClient } from '@supabase/supabase-js';
-import { randomBytes } from 'crypto';
 import { logError } from '@/lib/logger';
 import type { DalResult } from './types';
 
@@ -32,9 +31,11 @@ export async function claimOneOffSend(
   channel: OneOffChannel
 ): Promise<DalResult<{ claimed: boolean; unsubToken: string | null }>> {
   try {
-    // 32 hex chars from crypto, not Math.random: this is the credential that
-    // lets an unauthenticated link turn someone's email off.
-    const unsubToken = channel === 'email' ? randomBytes(16).toString('hex') : null;
+    // No per-campaign token: migration 189 moved the unsubscribe credential to
+    // the person (notification_preferences.unsub_token), so one stable URL
+    // works for every email. Minting one here as well would be a second
+    // mechanism, and the copy that drifts is the one in somebody's inbox.
+    const unsubToken = null;
     const { data, error } = await supabase
       .from('one_off_sends')
       .insert({ campaign, user_id: userId, channel, unsub_token: unsubToken })
@@ -113,72 +114,9 @@ export async function releaseOneOffClaim(
 }
 
 /**
- * HARD EMAIL SUPPRESSION, checked before every email this campaign sends.
- *
- * email_enabled cannot answer "did this person ask us to stop": 037 defaulted
- * it false, 151 backfilled a row for every user, and
- * updateNotificationPreferences rewrites the whole defaults object on any
- * patch. Every false in it is a default. email_unsubscribed_at (migration 188)
- * is only ever written by someone clicking unsubscribe.
- *
- * A failed read suppresses. This is the one place in this codebase where fail-
- * closed is right: shouldSendNotification fails open so a database hiccup does
- * not silently drop a session reminder, but the cost of being wrong here is
- * emailing somebody who told us not to.
+ * The email opt-out helpers moved to lib/dal/emailUnsubscribe.ts in migration
+ * 189's change, because the weekly recap needs them too and a second copy is
+ * the one that goes stale. Re-exported here only so existing importers keep
+ * working; new code should import from the module that owns them.
  */
-export async function isEmailSuppressed(supabase: SupabaseClient, userId: string): Promise<boolean> {
-  try {
-    const { data, error } = await supabase
-      .from('notification_preferences')
-      .select('email_unsubscribed_at')
-      .eq('user_id', userId)
-      .maybeSingle();
-    if (error) {
-      logError(new Error(error.message), { action: 'isEmailSuppressed', userId });
-      return true;
-    }
-    // No row means no preferences were ever written, which is not an opt-out.
-    return !!data?.email_unsubscribed_at;
-  } catch (error) {
-    logError(error, { action: 'isEmailSuppressed', userId });
-    return true;
-  }
-}
-
-/** Turn a single-use unsubscribe token into the user it belongs to. */
-export async function userForUnsubToken(supabase: SupabaseClient, token: string): Promise<DalResult<string | null>> {
-  try {
-    const { data, error } = await supabase
-      .from('one_off_sends')
-      .select('user_id')
-      .eq('unsub_token', token)
-      .maybeSingle();
-    if (error) return { success: false, error: error.message };
-    return { success: true, data: (data as { user_id: string } | null)?.user_id ?? null };
-  } catch (error) {
-    logError(error, { action: 'userForUnsubToken' });
-    return { success: false, error: 'Failed to resolve token' };
-  }
-}
-
-/**
- * Record the opt-out. Upsert, because a user may have no preferences row.
- *
- * The payload is deliberately two keys. PostgREST's ON CONFLICT DO UPDATE sets
- * only the columns supplied, so an existing row keeps every other preference.
- * Passing a spread of defaults here -- the shape updateNotificationPreferences
- * uses -- would reset someone's whole settings page as a side effect of them
- * clicking unsubscribe.
- */
-export async function setEmailUnsubscribed(supabase: SupabaseClient, userId: string): Promise<DalResult<null>> {
-  try {
-    const { error } = await supabase
-      .from('notification_preferences')
-      .upsert({ user_id: userId, email_unsubscribed_at: new Date().toISOString() }, { onConflict: 'user_id' });
-    if (error) return { success: false, error: error.message };
-    return { success: true, data: null };
-  } catch (error) {
-    logError(error, { action: 'setEmailUnsubscribed', userId });
-    return { success: false, error: 'Failed to unsubscribe' };
-  }
-}
+export { isEmailSuppressed, userForUnsubToken, setEmailUnsubscribed } from './emailUnsubscribe';

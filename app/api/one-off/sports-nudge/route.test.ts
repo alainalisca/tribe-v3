@@ -18,10 +18,17 @@ vi.mock('@/lib/logger', () => ({ logError: vi.fn(), log: vi.fn() }));
 vi.mock('@/lib/auth/cron', () => ({ isValidCronAuth: vi.fn(() => true) }));
 vi.mock('@/lib/dal/notificationPreferences', () => ({ shouldSendNotification: vi.fn(async () => true) }));
 vi.mock('@/lib/dal/oneOffSends', () => ({
-  claimOneOffSend: vi.fn(async () => ({ success: true, data: { claimed: true, unsubToken: 'tok' } })),
+  claimOneOffSend: vi.fn(async () => ({ success: true, data: { claimed: true, unsubToken: null } })),
   recordOneOffOutcome: vi.fn(async () => ({ success: true, data: null })),
   releaseOneOffClaim: vi.fn(async () => ({ success: true, data: null })),
+}));
+vi.mock('@/lib/dal/emailUnsubscribe', async () => ({
   isEmailSuppressed: vi.fn(async () => false),
+  unsubUrlFor: vi.fn(async () => ({ success: true, data: 'https://x/api/unsubscribe?token=tok' })),
+  // The REAL header builder: mocking it would test the mock's idea of RFC 8058
+  // rather than the headers that actually go out.
+  unsubHeaders: (await vi.importActual<typeof import('@/lib/dal/emailUnsubscribe')>('@/lib/dal/emailUnsubscribe'))
+    .unsubHeaders,
 }));
 
 let audience: Array<Record<string, unknown>> = [];
@@ -39,7 +46,8 @@ vi.mock('@/lib/supabase/admin', () => ({
 import { POST } from './route';
 import { isValidCronAuth } from '@/lib/auth/cron';
 import { shouldSendNotification } from '@/lib/dal/notificationPreferences';
-import { claimOneOffSend, releaseOneOffClaim, isEmailSuppressed } from '@/lib/dal/oneOffSends';
+import { claimOneOffSend, releaseOneOffClaim } from '@/lib/dal/oneOffSends';
+import { isEmailSuppressed, unsubUrlFor } from '@/lib/dal/emailUnsubscribe';
 
 const ATHLETE = { id: 'u1', name: 'Ana', email: 'a@b.co', fcm_token: 'tok-1', preferred_language: 'es' };
 
@@ -59,7 +67,8 @@ beforeEach(() => {
   vi.mocked(isValidCronAuth).mockReturnValue(true);
   vi.mocked(shouldSendNotification).mockResolvedValue(true);
   vi.mocked(isEmailSuppressed).mockResolvedValue(false);
-  vi.mocked(claimOneOffSend).mockResolvedValue({ success: true, data: { claimed: true, unsubToken: 'tok' } });
+  vi.mocked(claimOneOffSend).mockResolvedValue({ success: true, data: { claimed: true, unsubToken: null } });
+  vi.mocked(unsubUrlFor).mockResolvedValue({ success: true, data: 'https://x/api/unsubscribe?token=tok' });
   global.fetch = vi.fn().mockResolvedValue({ ok: true, status: 200 }) as never;
 });
 
@@ -144,6 +153,16 @@ describe('it honours what people have said', () => {
     expect(claimOneOffSend).not.toHaveBeenCalledWith(expect.anything(), expect.anything(), 'u1', 'email');
   });
 
+  it('a person with NO unsubscribe token is not emailed at all', async () => {
+    // 189 backfilled a token for every row, so this is the broken-backfill
+    // case. Sending without a link would leave them no way out, which is the
+    // thing the opt-out exists to prevent.
+    vi.mocked(unsubUrlFor).mockResolvedValue({ success: true, data: null });
+    const body = await (await POST(req({ dryRun: false }))).json();
+    expect(body.recipients.u1.email).toBe('failed');
+    expect(send).not.toHaveBeenCalled();
+  });
+
   it('someone with training nudges off gets no push', async () => {
     vi.mocked(shouldSendNotification).mockResolvedValue(false);
     const body = await (await POST(req({ dryRun: false }))).json();
@@ -216,7 +235,8 @@ describe('what actually goes out', () => {
     expect(send.mock.calls[0][0].subject).toBe('¿Qué entrenas?');
 
     vi.clearAllMocks();
-    vi.mocked(claimOneOffSend).mockResolvedValue({ success: true, data: { claimed: true, unsubToken: 'tok' } });
+    vi.mocked(claimOneOffSend).mockResolvedValue({ success: true, data: { claimed: true, unsubToken: null } });
+    vi.mocked(unsubUrlFor).mockResolvedValue({ success: true, data: 'https://x/api/unsubscribe?token=tok' });
     vi.mocked(isEmailSuppressed).mockResolvedValue(false);
     vi.mocked(shouldSendNotification).mockResolvedValue(true);
     audience = [{ ...ATHLETE, preferred_language: 'en' }];

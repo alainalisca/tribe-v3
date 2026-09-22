@@ -7,13 +7,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('@/lib/logger', () => ({ logError: vi.fn() }));
 vi.mock('@/lib/supabase/admin', () => ({ getServiceRoleClient: () => ({}) }));
-vi.mock('@/lib/dal/oneOffSends', () => ({
+vi.mock('@/lib/dal/emailUnsubscribe', () => ({
   userForUnsubToken: vi.fn(),
   setEmailUnsubscribed: vi.fn(),
 }));
 
 import { GET, POST } from './route';
-import { userForUnsubToken, setEmailUnsubscribed } from '@/lib/dal/oneOffSends';
+import { userForUnsubToken, setEmailUnsubscribed } from '@/lib/dal/emailUnsubscribe';
 
 const call = (qs: string) => GET(new Request(`https://x/api/unsubscribe${qs}`));
 const DONE = /no recibirás más correos|not receive any more/i;

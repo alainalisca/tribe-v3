@@ -4,13 +4,8 @@ import { getServiceRoleClient } from '@/lib/supabase/admin';
 import { isValidCronAuth } from '@/lib/auth/cron';
 import { logError, log } from '@/lib/logger';
 import { shouldSendNotification } from '@/lib/dal/notificationPreferences';
-import {
-  claimOneOffSend,
-  recordOneOffOutcome,
-  releaseOneOffClaim,
-  isEmailSuppressed,
-  type OneOffChannel,
-} from '@/lib/dal/oneOffSends';
+import { claimOneOffSend, recordOneOffOutcome, releaseOneOffClaim, type OneOffChannel } from '@/lib/dal/oneOffSends';
+import { isEmailSuppressed, unsubUrlFor, unsubHeaders } from '@/lib/dal/emailUnsubscribe';
 import { copyFor } from '@/lib/oneOff/sportsNudgeCopy';
 
 /**
@@ -219,7 +214,18 @@ async function runEmail(
   }
 
   const copy = copyFor(person.preferred_language);
-  const unsubUrl = `${SITE_URL}/api/unsubscribe?token=${unsubToken}`;
+  void unsubToken; // superseded by the per-user token; see migration 189
+
+  // NO LINK MEANS NO SEND. A missing token is 189's backfill not having
+  // reached this row, and a promotional email with no way out is the thing
+  // this whole mechanism exists to end. Failing here costs one person one
+  // email; sending anyway costs them the only exit they have.
+  const unsub = await unsubUrlFor(supabase, person.id, SITE_URL);
+  if (!unsub.success || !unsub.data) {
+    await recordOneOffOutcome(supabase, CAMPAIGN, person.id, 'email', 'failed', 'no unsubscribe token');
+    return 'failed';
+  }
+  const unsubUrl = unsub.data;
   const key = process.env.RESEND_API_KEY;
   if (!key) {
     await recordOneOffOutcome(supabase, CAMPAIGN, person.id, 'email', 'failed', 'RESEND_API_KEY not configured');
@@ -232,13 +238,7 @@ async function runEmail(
       to: person.email,
       subject: copy.emailSubject,
       html: emailHtml(copy, unsubUrl),
-      headers: {
-        // RFC 8058 one-click. A visible link alone leaves the decision to
-        // whoever finds the small print; these put it in the mail client's
-        // own chrome, which is where people actually look for it.
-        'List-Unsubscribe': `<${unsubUrl}>`,
-        'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
-      },
+      headers: unsubHeaders(unsubUrl),
     });
     const ok = !error;
     await recordOneOffOutcome(supabase, CAMPAIGN, person.id, 'email', ok ? 'sent' : 'failed', error?.message);
