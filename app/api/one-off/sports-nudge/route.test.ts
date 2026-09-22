@@ -32,12 +32,20 @@ vi.mock('@/lib/dal/emailUnsubscribe', async () => ({
 }));
 
 let audience: Array<Record<string, unknown>> = [];
+let selectedIds: string[] | null = null;
 vi.mock('@/lib/supabase/admin', () => ({
   getServiceRoleClient: () => ({
     from: () => {
       const q: Record<string, unknown> = {};
       for (const m of ['select', 'is', 'not']) q[m] = () => q;
       q.or = () => Promise.resolve({ data: audience, error: null });
+      // Test mode selects by id instead of the audience predicate. The mock
+      // records what it was asked for, so a case can assert the route narrowed
+      // rather than just that it sent to one person.
+      q.in = (_col: string, ids: string[]) => {
+        selectedIds = ids;
+        return Promise.resolve({ data: audience.filter((u) => ids.includes(u.id as string)), error: null });
+      };
       return q;
     },
   }),
@@ -62,6 +70,7 @@ function req(body?: unknown) {
 beforeEach(() => {
   vi.clearAllMocks();
   audience = [ATHLETE];
+  selectedIds = null;
   process.env.RESEND_API_KEY = 'test-key';
   process.env.CRON_SECRET = 'test-secret';
   vi.mocked(isValidCronAuth).mockReturnValue(true);
@@ -251,5 +260,83 @@ describe('what actually goes out', () => {
     const html: string = send.mock.calls[0][0].html;
     expect(html).not.toMatch(/color:\s*#A8DA36/i);
     expect(html).toContain('background:#A8DA36');
+  });
+});
+
+/**
+ * TEST MODE: one real message to one known account.
+ *
+ * A real send is first seen by the people receiving it, and the dry run cannot
+ * show it -- it returns before the HTML is built and before Resend is called.
+ * So there has to be a way to send one real message to one known account.
+ *
+ * It must bypass the AUDIENCE, because the obvious test recipient is the
+ * owner's own account and that account fails the audience query on two counts:
+ * it is an instructor and it has sports. Narrowing the audience query to his
+ * id selects nobody and sends nothing, silently -- which is the failure mode
+ * this mode exists to avoid.
+ *
+ * It must NOT bypass the GATES. A test that skips suppression, preferences and
+ * the unsubscribe link exercises a path nobody will ever run.
+ */
+describe('test mode sends to named accounts without becoming a targeting tool', () => {
+  it('selects the named ids INSTEAD of the audience', async () => {
+    audience = [ATHLETE, { ...ATHLETE, id: 'u2', email: 'b@c.co' }];
+    const body = await (await POST(req({ dryRun: false, onlyUserIds: ['u2'] }))).json();
+    expect(selectedIds).toEqual(['u2']);
+    expect(body.mode).toBe('test');
+    expect(Object.keys(body.recipients)).toEqual(['u2']);
+    expect(send).toHaveBeenCalledOnce();
+    expect(send.mock.calls[0][0].to).toBe('b@c.co');
+  });
+
+  it('without onlyUserIds it is the ordinary audience run', async () => {
+    const body = await (await POST(req({ dryRun: false }))).json();
+    expect(selectedIds).toBeNull();
+    expect(body.mode).toBe('audience');
+  });
+
+  /** The gates are the point. A test recipient who unsubscribed gets nothing. */
+  it('still honours the opt-out for a test recipient', async () => {
+    vi.mocked(isEmailSuppressed).mockResolvedValue(true);
+    const body = await (await POST(req({ dryRun: false, onlyUserIds: ['u1'] }))).json();
+    expect(body.recipients.u1.email).toBe('suppressed');
+    expect(send).not.toHaveBeenCalled();
+  });
+
+  it('still honours the push preference for a test recipient', async () => {
+    vi.mocked(shouldSendNotification).mockResolvedValue(false);
+    const body = await (await POST(req({ dryRun: false, onlyUserIds: ['u1'] }))).json();
+    expect(body.recipients.u1.push).toBe('suppressed');
+  });
+
+  it('still refuses to send a test email with no unsubscribe link', async () => {
+    vi.mocked(unsubUrlFor).mockResolvedValue({ success: true, data: null });
+    const body = await (await POST(req({ dryRun: false, onlyUserIds: ['u1'] }))).json();
+    expect(body.recipients.u1.email).toBe('failed');
+    expect(send).not.toHaveBeenCalled();
+  });
+
+  it('a test still defaults to a dry run', async () => {
+    await POST(req({ onlyUserIds: ['u1'] }));
+    expect(send).not.toHaveBeenCalled();
+  });
+
+  it('the campaign override is what gets claimed, so a test cannot burn a real claim', async () => {
+    await POST(req({ dryRun: false, onlyUserIds: ['u1'], campaign: 'sports_nudge_test' }));
+    expect(claimOneOffSend).toHaveBeenCalledWith(expect.anything(), 'sports_nudge_test', 'u1', 'email');
+    expect(claimOneOffSend).not.toHaveBeenCalledWith(expect.anything(), 'sports_nudge_2026_09', 'u1', 'email');
+  });
+
+  it('rejects a campaign key that is not a plain slug', async () => {
+    const res = await POST(req({ dryRun: false, onlyUserIds: ['u1'], campaign: "x'; drop table--" }));
+    expect(res.status).toBe(400);
+    expect(send).not.toHaveBeenCalled();
+  });
+
+  it('caps the id list, so this cannot become a targeting tool', async () => {
+    const res = await POST(req({ dryRun: false, onlyUserIds: ['a', 'b', 'c', 'd', 'e', 'f'] }));
+    expect(res.status).toBe(400);
+    expect(send).not.toHaveBeenCalled();
   });
 });
