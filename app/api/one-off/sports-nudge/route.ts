@@ -89,7 +89,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  let body: { dryRun?: boolean; channels?: OneOffChannel[] } = {};
+  let body: {
+    dryRun?: boolean;
+    channels?: OneOffChannel[];
+    /** TEST MODE: send to these accounts INSTEAD of the audience. */
+    onlyUserIds?: string[];
+    /** Campaign key override, so a test does not burn a real claim. */
+    campaign?: string;
+  } = {};
   try {
     body = await request.json();
   } catch {
@@ -97,6 +104,39 @@ export async function POST(request: Request) {
   }
   const dryRun = body.dryRun !== false;
   const channels: OneOffChannel[] = body.channels?.length ? body.channels : ['push', 'email'];
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // TEST MODE. It bypasses the AUDIENCE, never the GATES.
+  // ═══════════════════════════════════════════════════════════════════════
+  //
+  // A real send is only ever seen for the first time by the people receiving
+  // it, and the dry run cannot show it: it returns before the HTML is built
+  // and before Resend is called. So there has to be a way to send one real
+  // message to one known account.
+  //
+  // It has to bypass the audience query, because the obvious candidate for a
+  // test recipient -- the owner's own account -- fails that query on two
+  // counts: it is an instructor, and it has sports. Narrowing the audience
+  // query to his id selects nobody and sends nothing, silently.
+  //
+  // What it does NOT bypass: isEmailSuppressed, shouldSendNotification, the
+  // unsubscribe-link requirement, and the send-once claim. A test that skips
+  // the gates tests a code path nobody will ever run.
+  //
+  // Capped at 5. This is a route that can mail people, reachable with the
+  // CRON_SECRET, and an unbounded id list turns it into a targeting tool.
+  const testIds = Array.isArray(body.onlyUserIds) ? body.onlyUserIds.filter((s) => typeof s === 'string') : [];
+  if (testIds.length > 5) {
+    return NextResponse.json({ error: 'onlyUserIds is capped at 5' }, { status: 400 });
+  }
+
+  // A distinct campaign key keeps a test out of the real campaign's ledger.
+  // Without it, testing against somebody who IS in the audience would claim
+  // their row and the real run would skip them as already sent.
+  const campaign = body.campaign ?? CAMPAIGN;
+  if (!/^[a-z0-9_]{3,64}$/.test(campaign)) {
+    return NextResponse.json({ error: 'campaign must match /^[a-z0-9_]{3,64}$/' }, { status: 400 });
+  }
 
   try {
     const supabase = getServiceRoleClient();
@@ -106,14 +146,15 @@ export async function POST(request: Request) {
     // sports. Replicating the gates rather than trusting a remembered number
     // is the rule this repo learned by quoting "4 of 15" for a page that shows
     // 11 rows.
-    const { data, error } = await supabase
-      .from('users')
-      .select('id, name, email, fcm_token, preferred_language')
-      .is('deleted_at', null)
-      .not('banned', 'is', true)
-      .not('is_test_account', 'is', true)
-      .not('is_instructor', 'is', true)
-      .or('sports.is.null,sports.eq.{}');
+    const base = supabase.from('users').select('id, name, email, fcm_token, preferred_language');
+    const { data, error } = testIds.length
+      ? await base.in('id', testIds)
+      : await base
+          .is('deleted_at', null)
+          .not('banned', 'is', true)
+          .not('is_test_account', 'is', true)
+          .not('is_instructor', 'is', true)
+          .or('sports.is.null,sports.eq.{}');
 
     if (error) {
       logError(new Error(error.message), { route: '/api/one-off/sports-nudge', action: 'audience' });
@@ -128,10 +169,10 @@ export async function POST(request: Request) {
 
     for (const person of recipients) {
       if (channels.includes('push')) {
-        note(person.id, 'push', await runPush(supabase, person, dryRun));
+        note(person.id, 'push', await runPush(supabase, person, dryRun, campaign));
       }
       if (channels.includes('email')) {
-        note(person.id, 'email', await runEmail(supabase, person, dryRun));
+        note(person.id, 'email', await runEmail(supabase, person, dryRun, campaign));
       }
     }
 
@@ -142,10 +183,17 @@ export async function POST(request: Request) {
         return acc;
       }, {});
 
-    log('info', 'sports nudge run', { action: 'oneOff.sportsNudge', dryRun, audience: recipients.length });
+    log('info', 'sports nudge run', {
+      action: 'oneOff.sportsNudge',
+      dryRun,
+      campaign,
+      mode: testIds.length ? 'test' : 'audience',
+      audience: recipients.length,
+    });
     return NextResponse.json({
       dryRun,
-      campaign: CAMPAIGN,
+      mode: testIds.length ? 'test' : 'audience',
+      campaign,
       audience: recipients.length,
       audienceWithToken: recipients.filter((r) => r.fcm_token).length,
       audienceWithEmail: recipients.filter((r) => r.email).length,
@@ -162,12 +210,13 @@ export async function POST(request: Request) {
 async function runPush(
   supabase: ReturnType<typeof getServiceRoleClient>,
   person: Recipient,
-  dryRun: boolean
+  dryRun: boolean,
+  campaign: string
 ): Promise<Outcome> {
   if (!person.fcm_token) return 'no_address';
   if (!(await shouldSendNotification(supabase, person.id, NOTIFICATION_TYPE, 'push'))) return 'suppressed';
 
-  const claim = await claimOneOffSend(supabase, CAMPAIGN, person.id, 'push');
+  const claim = await claimOneOffSend(supabase, campaign, person.id, 'push');
   // DalResult is not a discriminated union, so .data must be checked as well
   // as .success. Treating a successful-but-empty result as "already claimed"
   // would silently skip a person on a read that actually broke -- the
@@ -176,7 +225,7 @@ async function runPush(
   if (!claim.data.claimed) return 'skipped_already_sent';
 
   if (dryRun) {
-    await releaseOneOffClaim(supabase, CAMPAIGN, person.id, 'push');
+    await releaseOneOffClaim(supabase, campaign, person.id, 'push');
     return 'dry_run';
   }
 
@@ -201,25 +250,26 @@ async function runPush(
 
   const ok = res.ok;
   const detail = ok ? null : `status ${res.status}`;
-  await recordOneOffOutcome(supabase, CAMPAIGN, person.id, 'push', ok ? 'sent' : 'failed', detail ?? undefined);
+  await recordOneOffOutcome(supabase, campaign, person.id, 'push', ok ? 'sent' : 'failed', detail ?? undefined);
   return ok ? 'sent' : 'failed';
 }
 
 async function runEmail(
   supabase: ReturnType<typeof getServiceRoleClient>,
   person: Recipient,
-  dryRun: boolean
+  dryRun: boolean,
+  campaign: string
 ): Promise<Outcome> {
   if (!person.email) return 'no_address';
   if (await isEmailSuppressed(supabase, person.id)) return 'suppressed';
 
-  const claim = await claimOneOffSend(supabase, CAMPAIGN, person.id, 'email');
+  const claim = await claimOneOffSend(supabase, campaign, person.id, 'email');
   if (!claim.success || !claim.data) return 'failed';
   const { claimed, unsubToken } = claim.data;
   if (!claimed) return 'skipped_already_sent';
 
   if (dryRun) {
-    await releaseOneOffClaim(supabase, CAMPAIGN, person.id, 'email');
+    await releaseOneOffClaim(supabase, campaign, person.id, 'email');
     return 'dry_run';
   }
 
@@ -232,13 +282,13 @@ async function runEmail(
   // email; sending anyway costs them the only exit they have.
   const unsub = await unsubUrlFor(supabase, person.id, SITE_URL);
   if (!unsub.success || !unsub.data) {
-    await recordOneOffOutcome(supabase, CAMPAIGN, person.id, 'email', 'failed', 'no unsubscribe token');
+    await recordOneOffOutcome(supabase, campaign, person.id, 'email', 'failed', 'no unsubscribe token');
     return 'failed';
   }
   const unsubUrl = unsub.data;
   const key = process.env.RESEND_API_KEY;
   if (!key) {
-    await recordOneOffOutcome(supabase, CAMPAIGN, person.id, 'email', 'failed', 'RESEND_API_KEY not configured');
+    await recordOneOffOutcome(supabase, campaign, person.id, 'email', 'failed', 'RESEND_API_KEY not configured');
     return 'failed';
   }
 
@@ -251,7 +301,7 @@ async function runEmail(
       headers: unsubHeaders(unsubUrl),
     });
     const ok = !error;
-    await recordOneOffOutcome(supabase, CAMPAIGN, person.id, 'email', ok ? 'sent' : 'failed', error?.message);
+    await recordOneOffOutcome(supabase, campaign, person.id, 'email', ok ? 'sent' : 'failed', error?.message);
     return ok ? 'sent' : 'failed';
   } catch (err) {
     await recordOneOffOutcome(
