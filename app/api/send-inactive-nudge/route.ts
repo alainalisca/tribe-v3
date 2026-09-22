@@ -9,6 +9,7 @@ import {
   updateUser,
 } from '@/lib/dal';
 import { shouldSendNotification } from '@/lib/dal/notificationPreferences';
+import { isEmailSuppressed, unsubUrlFor, unsubHeaders } from '@/lib/dal/emailUnsubscribe';
 import { bogotaDateOffset } from '@/lib/time/bogotaDate';
 import { isValidCronAuth } from '@/lib/auth/cron';
 
@@ -105,6 +106,23 @@ export async function POST(request: Request) {
         const allowed = await shouldSendNotification(supabase, user.id, 'comeback', 'email');
         if (!allowed) continue;
 
+        // The hard opt-out (migration 188) outranks the policy above, and this
+        // route is promotional and recurring, so it needs a way out. It had
+        // the preference gate and no unsubscribe link, which are different
+        // things: a preference is a setting somebody has to know exists, a
+        // link is in the message itself. NO LINK MEANS NO SEND.
+        if (await isEmailSuppressed(supabase, user.id)) continue;
+        const unsub = await unsubUrlFor(supabase, user.id, SITE_URL);
+        if (!unsub.success || !unsub.data) {
+          logError(new Error(unsub.error ?? 'no unsubscribe token'), {
+            route: '/api/send-inactive-nudge',
+            action: 'unsubUrl',
+            userId: user.id,
+          });
+          continue;
+        }
+        const unsubUrl = unsub.data;
+
         const lang = user.preferred_language || 'en';
         const isSpanish = lang === 'es';
 
@@ -129,6 +147,7 @@ export async function POST(request: Request) {
           from: 'Tribe <tribe@aplusfitnessllc.com>',
           to: user.email,
           subject: subject,
+          headers: unsubHeaders(unsubUrl),
           html: `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f9fafb; padding: 20px;">
               <div style="background: white; border-radius: 12px; padding: 30px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
@@ -155,6 +174,9 @@ export async function POST(request: Request) {
                 <div style="border-top: 1px solid #e5e7eb; margin-top: 30px; padding-top: 20px;">
                   <p style="color: #9ca3af; font-size: 12px; margin: 0;">
                     ${isSpanish ? 'Tu comunidad de entrenamiento te extraña.' : 'Your training community misses you.'}
+                  </p>
+                  <p style="color: #9ca3af; font-size: 12px; margin: 8px 0 0;">
+                    <a href="${unsubUrl}" style="color: #9ca3af;">${isSpanish ? 'Cancelar la suscripción a estos correos' : 'Unsubscribe from these emails'}</a>
                   </p>
                 </div>
               </div>

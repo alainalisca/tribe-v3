@@ -72,6 +72,19 @@ describe('existing public surfaces survive the change', () => {
     expect(isPublicPath('/s/abc/')).toBe(true);
   });
 
+  it('keeps the unsubscribe link reachable from an inbox', () => {
+    // No session cookie exists when a link is clicked from an email client.
+    // If this gate catches /api/unsubscribe the link 302s to /auth and the
+    // only way to stop receiving mail silently stops working -- #52, where
+    // all 17 crons were redirected to /auth for months, in miniature.
+    expect(isPublicPath('/api/unsubscribe')).toBe(true);
+    expect(isPublicPath('/api/unsubscribe/')).toBe(true);
+    // No ?token= case: isPublicPath is handed nextUrl.pathname, which never
+    // carries a query. Asserting on one would be asserting on an input the
+    // function cannot receive -- a case that passes or fails for reasons
+    // unrelated to anything real.
+  });
+
   it('still gates an authenticated route', () => {
     expect(isPublicPath('/home')).toBe(false);
     expect(isPublicPath('/storefront/040cbc21/')).toBe(false);

@@ -88,6 +88,13 @@ const publicApiPaths = [
   '/api/send-attendance-notification', // cron (CRON_SECRET) or user session — both checked in the handler
   '/api/send-welcome-email', // welcome onboarding email cron (CRON_SECRET); enforced via isValidCronAuth() in the handler
 
+  // Clicked from an inbox, where there is no session cookie by definition.
+  // Without this the auth gate redirects the unsubscribe link to /auth and the
+  // only way to stop receiving email silently stops working -- the same shape
+  // as #52, where this gate redirected all 17 crons to /auth for months.
+  // Authorization is the 128-bit single-use token in the query string.
+  '/api/unsubscribe',
+
   // Vercel Cron invocations carry an `Authorization: Bearer ${CRON_SECRET}`
   // header, NOT a session cookie. Without this exemption the cookie-based
   // session gate below redirects every cron run to /auth before it reaches
