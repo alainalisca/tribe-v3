@@ -1831,10 +1831,12 @@ select 'GUARD_188_send_once_and_opt_out',
          when not exists (
            select 1 from pg_constraint
             where conrelid = 'public.one_off_sends'::regclass and contype = 'p'
-              and (select array_agg(a.attname order by a.attname)
+              -- ::text on both sides: attname is `name`, and name[] = text[]
+              -- has no operator (42883). Same fault as 188's first attempt.
+              and (select array_agg(a.attname::text order by a.attname::text)
                      from unnest(conkey) k join pg_attribute a
                        on a.attrelid = conrelid and a.attnum = k)
-                  = ARRAY['campaign','channel','user_id'])
+                  = ARRAY['campaign','channel','user_id']::text[])
            then 'MISSING -- no (campaign, user_id, channel) key; a re-run can message people twice'
          when not exists (select 1 from information_schema.columns
                            where table_schema='public' and table_name='notification_preferences'

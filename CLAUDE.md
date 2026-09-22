@@ -47,6 +47,56 @@ Practically: paste the file **after** `git push`, and say in the same message wh
 
 Generalise it: **a check that runs on an event cannot detect the absence of that event.** CI that runs on push cannot see work never pushed; a test that runs on merge cannot see a merge never made; a lint on commit cannot see a change committed elsewhere. When the risk is that a step is skipped, the detector has to hang off something that happens **anyway** — a scheduled reconciliation, or a comparison against the system of record. For migrations that means asking production what it has and diffing it against the directory, on a timer, not on a merge.
 
+**CORRECTION, 2026-09-22: A SCRIPT PASTED INTO THE SQL EDITOR IS ONE TRANSACTION. THE DANGER IS NOT PER-STATEMENT COMMIT, IT IS PER-PASTE COMMIT.**
+
+This file asserted for weeks that "the Supabase SQL editor autocommits
+statement by statement". **That was never measured. Migration 188 measured it.**
+
+188 has **eleven top-level statements** — two `ALTER TABLE`, two `COMMENT ON`,
+a `CREATE TABLE`, three `REVOKE`, a `DO` block, an `INSERT`, a `SELECT`. The
+first eight all succeeded. The ninth raised `42883`. **Nothing landed:** a
+read-only state query the next morning found `one_off_sends` absent,
+`email_unsubscribed_at` absent, and no `migrations_applied` row.
+
+The mechanism is PostgreSQL's, not Supabase's. **Several statements sent in one
+simple-Query message execute inside a single implicit transaction**, and
+**PostgreSQL DDL is transactional** — unlike MySQL or Oracle, a `CREATE TABLE`
+rolls back. So an error anywhere in a pasted script discards all of it.
+
+**What this changes, and what it does not:**
+
+- **The 175 re-run hazard as described cannot happen.** Re-running a capture
+  migration after a later one would abort at the pre-flight and roll the
+  `CREATE OR REPLACE` back with it. The pre-flight is still correct — checking
+  before a destructive write is right regardless — but it was justified by a
+  mechanism that does not exist.
+- **The paste-the-complete-file rule gets STRONGER, and for a better reason.**
+  Atomicity is per **paste**, not per statement. Two pastes are two
+  transactions with nothing joining them. That is exactly how 185 half-applied:
+  an excerpt was pasted, and the excerpt committed **completely and
+  successfully** on its own. It was never a half-committed transaction; it was
+  a complete transaction over half a file. A partial paste is the one way to
+  get a partial apply, and it is entirely under the paster's control.
+- **A multi-statement migration no longer needs `BEGIN`/`COMMIT` around it** for
+  atomicity. It already has it. Wrapping is harmless and still worth doing when
+  a script must be re-run by hand.
+- **Exceptions that break the implicit transaction, and are worth knowing before
+  relying on this:** a statement that cannot run inside a transaction block
+  (`CREATE INDEX CONCURRENTLY`, `VACUUM`, `REINDEX CONCURRENTLY`); an explicit
+  `COMMIT` in the middle of the script, which ends the implicit transaction and
+  starts a new one; and any client that splits on semicolons and sends each
+  piece separately. The first two are visible in the file. **The third is not**,
+  so treat one-paste atomicity as a property observed on this editor, re-checked
+  whenever the tool changes, rather than a guarantee.
+
+**The general lesson is the one this file keeps paying for: a claim about a
+tool's behaviour is a measurement or it is a guess, and a guess written in
+confident prose is indistinguishable from a measurement six weeks later.** This
+one sat here for weeks, was cited to justify the shape of a migration, and was
+falsified the first time a script actually failed part-way. When writing down
+how a tool behaves, say how you know — and if the answer is "it stands to
+reason", say that instead.
+
 **THE EXECUTABLE SQL OF AN APPLIED MIGRATION IS IMMUTABLE. ITS COMMENTS ARE APPEND-ONLY. CORRECTIONS GO IN A DATED ADDENDUM AT THE BOTTOM, NEVER BY EDITING THE ORIGINAL TEXT.**
 
 A migration's header is not documentation of the SQL. It is the record of what
@@ -712,7 +762,7 @@ line 120   CREATE OR REPLACE FUNCTION ...   -- the pre-176 body, silent reverts 
 line 169   DO $$ ... assert 1 RAISE and 2 silent reverts ... $$
 ```
 
-The assertion was right, the body was right, and the ordering made it a weapon. **The Supabase SQL editor autocommits statement by statement**, so there is no transaction wrapping those two. Re-run 175 after 176 and line 120 commits the silent reverts back over the fix; line 169 then aborts. The operator sees one red error and reads it as _"the migration failed, so nothing happened"_ — while the security fix has just been silently reverted.
+The assertion was right, the body was right, and the ordering made it a weapon — **on the reasoning available at the time, which was wrong.** This paragraph claimed the Supabase SQL editor autocommits statement by statement, so that nothing wrapped those two. **It does not. See the correction below, dated 2026-09-22.** The pre-flight guard is still the right construction, and the reason to run a check before a destructive write stands on its own; what does not stand is the specific mechanism described here. Re-run 175 after 176 and line 120 commits the silent reverts back over the fix; line 169 then aborts. The operator sees one red error and reads it as _"the migration failed, so nothing happened"_ — while the security fix has just been silently reverted.
 
 **The guard could not prevent anything. It could only describe the damage, after the damage.**
 
