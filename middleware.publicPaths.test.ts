@@ -95,6 +95,14 @@ describe('existing public surfaces survive the change', () => {
     expect(isPublicPath('/api/one-off/sports-nudge/')).toBe(true);
   });
 
+  it('keeps the universal-link association files reachable', () => {
+    // Apple does NOT follow redirects for the AASA: a 307 to /auth is a
+    // silently failed association, and nothing in the app reports it. Android
+    // fetches assetlinks.json the same way, without cookies.
+    expect(isPublicPath('/.well-known/apple-app-site-association')).toBe(true);
+    expect(isPublicPath('/.well-known/assetlinks.json')).toBe(true);
+  });
+
   it('still gates an authenticated route', () => {
     expect(isPublicPath('/home')).toBe(false);
     expect(isPublicPath('/storefront/040cbc21/')).toBe(false);
