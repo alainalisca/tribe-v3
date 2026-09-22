@@ -58,11 +58,34 @@ describe('viewport meta', () => {
     expect(body).toMatch(/initialScale\s*:\s*1/);
   });
 
+  /**
+   * A file that emits its own COMPLETE document is not in this rule's
+   * population, and the reason is the rule's own reasoning.
+   *
+   * The defect is that a hand-written <meta> does not REPLACE Next's default,
+   * it ADDS to it. That only happens where Next builds the document. A route
+   * handler returning `new NextResponse('<!doctype html>...')` bypasses the
+   * App Router document entirely -- app/layout.tsx never runs, no default tag
+   * is emitted, and there is nothing to duplicate. Requiring those files to
+   * omit a viewport would make them render unscaled on a phone to satisfy a
+   * rule about a tag that is not there. /api/unsubscribe is one: it is clicked
+   * from an inbox, mostly on a phone, and it is the only way anyone has to
+   * stop receiving email.
+   *
+   * Detected by the doctype rather than by a path allow-list, deliberately. A
+   * list of filenames goes stale silently and needs a rot test to stay honest;
+   * "does this file emit a whole document" is the actual distinguishing
+   * property and cannot drift out of date. No page or component contains a
+   * doctype, so nothing in the real population is exempted by it.
+   */
+  const emitsOwnDocument = (src: string) => /<!doctype html/i.test(src);
+
   it('NO file hand-writes a viewport meta, which would produce a second tag', () => {
     const offenders: string[] = [];
 
     for (const file of sourceFiles(ROOT)) {
       const src = stripComments(fs.readFileSync(file, 'utf8'));
+      if (emitsOwnDocument(src)) continue;
       // Both the JSX form and a raw string, since either reaches the document.
       for (const m of src.matchAll(/name=["']viewport["']/g)) {
         const line = src.slice(0, m.index!).split('\n').length;
@@ -78,5 +101,30 @@ describe('viewport meta', () => {
         offenders.join('\n') +
         `\n`
     ).toEqual([]);
+  });
+
+  /**
+   * ASSERT THE EXEMPTION, NOT JUST THE RULE. A narrowing that quietly matched
+   * everything would make the case above pass forever over an empty set --
+   * and it would look exactly like a clean repo.
+   */
+  it('the doctype narrowing still leaves the real population under the rule', () => {
+    const all = sourceFiles(ROOT).map((f) => stripComments(fs.readFileSync(f, 'utf8')));
+    const exempt = all.filter(emitsOwnDocument);
+    const covered = all.length - exempt.length;
+
+    // It applies to something real...
+    expect(exempt.length).toBeGreaterThan(0);
+    // ...and to almost nothing. Every page and component is still checked.
+    expect(covered).toBeGreaterThan(300);
+    expect(exempt.length).toBeLessThan(covered / 20);
+  });
+
+  it('a file with no doctype is still caught', () => {
+    // The rule itself, exercised on a synthetic offender, so "no offenders"
+    // cannot mean "the detector stopped looking".
+    const pageLike = 'export default () => <meta name="viewport" content="width=device-width" />;';
+    expect(emitsOwnDocument(pageLike)).toBe(false);
+    expect([...pageLike.matchAll(/name=["']viewport["']/g)]).toHaveLength(1);
   });
 });

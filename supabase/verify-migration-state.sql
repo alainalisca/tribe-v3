@@ -1807,4 +1807,47 @@ select 'GUARD_187_sports_required_at_the_write',
          else 'applied'
        end
 
+union all
+
+select '188_one_off_sends',
+       case when exists (select 1 from information_schema.tables
+                          where table_schema='public' and table_name='one_off_sends')
+       then 'applied' else 'MISSING' end
+
+union all
+
+-- The table existing is not the property. The send-once guarantee is the
+-- PRIMARY KEY, and the opt-out is only worth anything if no client role can
+-- read the table that holds the unsubscribe credentials.
+select 'GUARD_188_send_once_and_opt_out',
+       case
+         when not exists (select 1 from information_schema.tables
+                           where table_schema='public' and table_name='one_off_sends')
+           then 'MISSING -- one_off_sends absent'
+         when (select count(*) from pg_attribute
+                where attrelid = 'public.one_off_sends'::regclass
+                  and attnum > 0 and not attisdropped) < 6
+           then 'MISSING -- catalog read returned too few columns to judge anything'
+         when not exists (
+           select 1 from pg_constraint
+            where conrelid = 'public.one_off_sends'::regclass and contype = 'p'
+              and (select array_agg(a.attname order by a.attname)
+                     from unnest(conkey) k join pg_attribute a
+                       on a.attrelid = conrelid and a.attnum = k)
+                  = ARRAY['campaign','channel','user_id'])
+           then 'MISSING -- no (campaign, user_id, channel) key; a re-run can message people twice'
+         when not exists (select 1 from information_schema.columns
+                           where table_schema='public' and table_name='notification_preferences'
+                             and column_name='email_unsubscribed_at')
+           then 'MISSING -- no email opt-out column'
+         when has_any_column_privilege('anon','public.one_off_sends','SELECT')
+           or has_any_column_privilege('authenticated','public.one_off_sends','SELECT')
+           or has_any_column_privilege('anon','public.one_off_sends','INSERT')
+           or has_any_column_privilege('authenticated','public.one_off_sends','INSERT')
+           then 'MISSING -- a client role can reach one_off_sends and its unsubscribe tokens'
+         when not (select relrowsecurity from pg_class where oid='public.one_off_sends'::regclass)
+           then 'MISSING -- RLS is off on one_off_sends'
+         else 'applied'
+       end
+
 order by migration;
