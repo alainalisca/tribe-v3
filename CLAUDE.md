@@ -1078,6 +1078,58 @@ copy — this repo has now paid for that specific lesson in
 [[SPORTS_LIST in five modules]], [[two translation maps for the same 23 keys]],
 [[three hand-kept copies of the applied-migration list]] and here.
 
+**A DRY RUN THAT RETURNS BEFORE THE EXPENSIVE PART CANNOT TEST THE EXPENSIVE PART. THE FIRST REAL SEND FOUND TWO BUGS IN THIRTY SECONDS THAT A GREEN DRY RUN AND 30 PASSING TESTS HAD BOTH MISSED.**
+
+The one-off nudge's dry run claims each recipient, releases the claim, and
+returns `dry_run`. It is genuinely useful — it proved the audience, the gates,
+the suppression and the send-once ledger. **It returns before the HTML is
+built and before Resend is called**, so everything downstream of that line was
+unexercised by construction. Sending one real message to one known account
+found both defects immediately:
+
+**1. One person's throw aborted everyone's send.** `runPush` threw
+`fetch failed` against a dead `SITE_URL`, the exception reached the route's
+outer `catch`, and the whole request returned 500. That person's email leg
+never ran. On the 34-person send, one network blip on person 3 silently drops
+persons 4 to 34 — **and leaves their claims behind**, so the retry skips them
+as already sent. A per-recipient failure now records against that person and
+channel and the loop continues; the outer catch is for failures about the run
+as a whole.
+
+**2. Every email outcome in the test suite had been `failed`, and nobody
+noticed.** The Resend mock had no return value, so destructuring `{ error }`
+threw, `runEmail`'s own catch returned `'failed'`, and thirty tests stayed
+green. They asserted `send()` **was called** — never what it returned.
+
+**That distinction is the transferable one. Asserting the attempt is not
+asserting the result.** `expect(send).toHaveBeenCalledOnce()` is true of a send
+that was called and then failed on its own response shape. It reads like
+coverage and is evidence of an invocation.
+
+And behind it, a third thing the first two were hiding: **nothing covered
+Resend REPORTING an error.** `{ data: null, error: {...} }` is a success at the
+transport layer with a rejected message inside it, and reading that as sent
+passed every test. Found by mutation — `const ok = !error` → `const ok = true`
+survived — which is the only reason it was found at all.
+
+**So, for any path that ends in an external call:**
+
+- **Ask what the rehearsal returns before.** A dry run, a `--check` flag, a
+  preview mode: each one has a line after which nothing is exercised. Everything
+  past it needs a real invocation against a real endpoint, once, to a recipient
+  you control. One real send is worth more than any number of simulated ones,
+  and it is cheap when the blast radius is your own inbox.
+- **Assert the outcome the caller will branch on**, not that the client was
+  invoked. If the code reads `error`, a test must supply `error` set and
+  `error` unset.
+- **Give mocks the real response shape.** A mock returning `undefined` does not
+  fail loudly; it fails as whatever the destructuring does next, which here was
+  a wrong answer that looked like a handled one.
+- **A loop over people needs per-iteration containment.** Whenever one item's
+  failure can end the batch, the blast radius is everyone after them — worse
+  when the batch writes claim-before-acting state, because the survivors are
+  then indistinguishable from the already-done.
+
 **A DOCUMENTED PROCEDURE THAT NAMES A SCRIPT IS ONLY AS GOOD AS THE SCRIPT EXISTING — AND NOTHING CHECKS THAT, BECAUSE A BROKEN POINTER READS EXACTLY LIKE A WORKING ONE.**
 
 `supabase/migrations_applied.json` opened with an instruction: regenerate this
