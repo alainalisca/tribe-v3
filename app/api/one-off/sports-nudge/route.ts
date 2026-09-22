@@ -65,6 +65,27 @@ import { bilingual, type BilingualCopy } from '@/lib/oneOff/sportsNudgeCopy';
  *          carries a working unsubscribe link and the RFC 8058 headers: after
  *          this campaign, "has not opted out" becomes a statement with content.
  */
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * THE REAL SEND IS GATED ON TWO THINGS. NEITHER IS IN THIS REPO.
+ * ═══════════════════════════════════════════════════════════════════════════
+ *
+ * Recorded here because this is the file somebody opens before running the
+ * campaign, and because the tracking ticket lives in a tool this codebase
+ * cannot assert against.
+ *
+ * 1. ANA APPROVES THE SPANISH.  Tracked as T-ES-REVIEW-2 (Notion). The strings
+ *    are in lib/oneOff/sportsNudgeCopy.ts, which is the only place they live.
+ *
+ * 2. 2.6.3 IS LIVE IN BOTH STORES.  Until then the email button opens a
+ *    browser and asks an athlete who is already signed in to the app to log in
+ *    again. Measured on an iPhone from Gmail on 2026-09-22. Universal Links
+ *    and App Links are on release/2.6.3-android-icon; they are an entitlement
+ *    and a manifest change, so they ship in a BUILD and cannot be deployed.
+ *
+ * dryRun defaults to true, so nothing here fires by accident while both are
+ * outstanding. A test send to one named account is what onlyUserIds is for.
+ */
 const CAMPAIGN = 'sports_nudge_2026_09';
 const NOTIFICATION_TYPE = 'comeback'; // training_nudges category; push default_on
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://tribe-v3.vercel.app';
