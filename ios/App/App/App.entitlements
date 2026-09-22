@@ -4,5 +4,23 @@
 <dict>
 	<key>aps-environment</key>
 	<string>production</string>
+	<!--
+	  Universal Links. Without this entitlement iOS never fetches the AASA file
+	  and every tap on a tribe-v3.vercel.app link opens Safari instead of the
+	  app -- which is what happens today: the athlete is signed in to the app
+	  and lands on a browser login.
+
+	  applinks: is the Universal Links service. The AASA at
+	  https://tribe-v3.vercel.app/.well-known/apple-app-site-association names
+	  Q7B7X5522Q.prod.tribe.ios, which must match DEVELOPMENT_TEAM in
+	  project.pbxproj and the bundle id.
+
+	  This is an ENTITLEMENT, so it only takes effect in a signed build. It
+	  cannot be shipped by deploying the website.
+	-->
+	<key>com.apple.developer.associated-domains</key>
+	<array>
+		<string>applinks:tribe-v3.vercel.app</string>
+	</array>
 </dict>
 </plist>

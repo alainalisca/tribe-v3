@@ -1,0 +1,21 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["Q7B7X5522Q.prod.tribe.ios"],
+        "components": [
+          { "/": "/onboarding/*", "comment": "the sports step, which email campaigns link to" },
+          { "/": "/session/*", "comment": "a shared session -- the share funnel's destination" },
+          { "/": "/s/*", "comment": "the public share short link" },
+          { "/": "/invite/*", "comment": "an addressed invite" },
+          { "/": "/profile/*", "comment": "an athlete profile" },
+          { "/": "/i/*", "comment": "an instructor share page" },
+          { "/": "/g/*", "comment": "a gym share page" },
+          { "/": "/api/*", "exclude": true, "comment": "API routes must stay in the browser/server, never hijacked into the app" },
+          { "/": "/auth*", "exclude": true, "comment": "OAuth redirects must complete in the context that started them" },
+          { "/": "/.well-known/*", "exclude": true, "comment": "association files themselves" }
+        ]
+      }
+    ]
+  }
+}

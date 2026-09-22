@@ -1,6 +1,23 @@
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
+  /**
+   * Apple requires the AASA to be served as application/json. It has NO file
+   * extension, by Apple's own rule, so Next has nothing to infer the type
+   * from and serves it as a generic binary -- which Apple rejects, silently.
+   *
+   * It must also be served with no redirect, which is why /.well-known is
+   * exempted in middleware.ts.
+   */
+  async headers() {
+    return [
+      {
+        source: '/.well-known/apple-app-site-association',
+        headers: [{ key: 'Content-Type', value: 'application/json' }],
+      },
+    ];
+  },
+
   images: {
     unoptimized: false,
     remotePatterns: [

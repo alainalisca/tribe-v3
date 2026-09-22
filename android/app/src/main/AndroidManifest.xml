@@ -22,6 +22,26 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
+            <!--
+              App Links. assetlinks.json has been published at
+              https://tribe-v3.vercel.app/.well-known/assetlinks.json since
+              January and NOTHING CONSUMED IT: without this filter the app
+              claims no web URL, so every tap opened the browser.
+
+              android:autoVerify="true" makes Android fetch that file at
+              install time and, on a match, hand these URLs straight to the
+              app with no disambiguation dialog.
+
+              This is a MANIFEST change, so it ships in a build. Publishing the
+              website does not deliver it.
+            -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="tribe-v3.vercel.app" />
+            </intent-filter>
+
         </activity>
 
         <meta-data
