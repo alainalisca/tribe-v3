@@ -95,6 +95,14 @@ const publicApiPaths = [
   // Authorization is the 128-bit single-use token in the query string.
   '/api/unsubscribe',
 
+  // One-off outreach, triggered server-to-server with a CRON_SECRET bearer and
+  // no session cookie -- the same shape as /api/cron below. Without this the
+  // auth gate 307s it to /auth and the campaign is simply unreachable, which
+  // is #52 again: that gate silently redirected all 17 crons for months.
+  // isValidCronAuth() in the handler is the actual authorization, and dryRun
+  // defaults to true there.
+  '/api/one-off',
+
   // Vercel Cron invocations carry an `Authorization: Bearer ${CRON_SECRET}`
   // header, NOT a session cookie. Without this exemption the cookie-based
   // session gate below redirects every cron run to /auth before it reaches

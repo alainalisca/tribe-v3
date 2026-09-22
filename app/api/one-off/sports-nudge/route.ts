@@ -184,7 +184,7 @@ async function runPush(
   // Through /api/notifications/send, not a direct FCM call: that route already
   // clears an fcm_token the moment FCM reports it invalid, which is how a
   // bounce becomes a measurable fact rather than a log line.
-  const res = await fetch(`${SITE_URL}/api/notifications/send`, {
+  const res = await fetch(`${SITE_URL}/api/notifications/send/`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
