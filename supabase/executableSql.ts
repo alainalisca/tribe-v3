@@ -43,6 +43,44 @@
  * agreement puts it anyway.
  */
 export function executableSql(src: string): string {
+  return tokenise(src, { stripInsideDollarQuotes: false }).replace(/\s+/g, ' ').trim();
+}
+
+/**
+ * The same tokeniser, stripping comments EVERYWHERE -- including inside
+ * dollar-quoted blocks -- and preserving line structure.
+ *
+ * ═══════════════════════════════════════════════════════════════════════════
+ * WHY THIS EXISTS: A GUARD MATCHED ITS OWN AUTHOR'S PROSE
+ * ═══════════════════════════════════════════════════════════════════════════
+ *
+ * migrationAppliedBeforeCode.test.ts extracts column names with
+ * /ADD COLUMN\s+(?:IF NOT EXISTS\s+)?([a-z_][a-z0-9_]*)/gi over the RAW file.
+ * Migration 189 contains, in a comment:
+ *
+ *     -- Set separately from ADD COLUMN so a re-run on a table that already
+ *     -- has the column still installs the default.
+ *
+ * So the guard learned about a column named "so", decided it belonged to an
+ * unapplied migration, and flagged every source file containing the word
+ * "so" -- turning main red over a word. This is the fourth time in this repo
+ * that a check has matched prose describing the thing it checks (migration
+ * 165's counter guard, the T-AUD3 translation guard, the accent guard reading
+ * its own exemption list).
+ *
+ * Unlike executableSql, this strips comments inside $$ ... $$ too. That
+ * function must keep them because a function body is stored verbatim in
+ * pg_proc and a comment inside one is part of a database object. Here the
+ * question is "what DDL does this file perform", and prose inside a DO block
+ * is still prose.
+ *
+ * Newlines are preserved so callers can report a line number.
+ */
+export function sqlWithoutComments(src: string): string {
+  return tokenise(src, { stripInsideDollarQuotes: true });
+}
+
+function tokenise(src: string, opts: { stripInsideDollarQuotes: boolean }): string {
   let out = '';
   let i = 0;
   const n = src.length;
@@ -109,14 +147,20 @@ export function executableSql(src: string): string {
       continue;
     }
 
-    // $$ ... $$ or $tag$ ... $tag$, kept whole (see header)
+    // $$ ... $$ or $tag$ ... $tag$. Kept whole for executableSql (see header);
+    // recursed into when the caller wants comments stripped everywhere.
     if (c === '$') {
       const m = /^\$([A-Za-z_]\w*)?\$/.exec(src.slice(i));
       if (m) {
         const tag = m[0];
         const end = src.indexOf(tag, i + tag.length);
         const stop = end === -1 ? n : end + tag.length;
-        out += src.slice(i, stop);
+        if (opts.stripInsideDollarQuotes) {
+          const inner = src.slice(i + tag.length, end === -1 ? n : end);
+          out += tag + tokenise(inner, opts) + (end === -1 ? '' : tag);
+        } else {
+          out += src.slice(i, stop);
+        }
         i = stop;
         continue;
       }
@@ -126,5 +170,5 @@ export function executableSql(src: string): string {
     i++;
   }
 
-  return out.replace(/\s+/g, ' ').trim();
+  return out;
 }

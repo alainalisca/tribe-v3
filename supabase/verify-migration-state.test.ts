@@ -18,6 +18,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
+import { sqlWithoutComments } from './executableSql';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
@@ -210,14 +211,6 @@ describe('public.users columns added after 067 carry an explicit SELECT grant', 
   };
 
   /** Strip block and line comments so commented-out DDL never counts. */
-  function stripSqlComments(sql: string): string {
-    return sql
-      .replace(/\/\*[\s\S]*?\*\//g, ' ')
-      .split('\n')
-      .map((line) => line.replace(/--.*$/, ''))
-      .join('\n');
-  }
-
   it('every users column added after 067 is granted to authenticated', () => {
     const files = fs
       .readdirSync(MIGRATIONS_DIR)
@@ -228,7 +221,7 @@ describe('public.users columns added after 067 carry an explicit SELECT grant', 
     const grantedColumns = new Set<string>();
 
     for (const file of files) {
-      const sql = stripSqlComments(fs.readFileSync(path.join(MIGRATIONS_DIR, file), 'utf-8'));
+      const sql = sqlWithoutComments(fs.readFileSync(path.join(MIGRATIONS_DIR, file), 'utf-8'));
 
       // `ALTER TABLE [IF EXISTS] [ONLY] [public.]users ... ;` -- one statement
       // may add several columns, and may span many lines.
@@ -322,14 +315,6 @@ describe('public.sessions columns added after 158 carry an explicit write grant'
    */
   const VERDICT_COLUMNS = ['partner_status', 'partner_reviewed_at', 'partner_id'];
 
-  function stripSqlComments(sql: string): string {
-    return sql
-      .replace(/\/\*[\s\S]*?\*\//g, ' ')
-      .split('\n')
-      .map((line) => line.replace(/--.*$/, ''))
-      .join('\n');
-  }
-
   it('every sessions column added after 158 is granted INSERT and UPDATE', () => {
     const files = fs
       .readdirSync(MIGRATIONS_DIR)
@@ -340,7 +325,7 @@ describe('public.sessions columns added after 158 carry an explicit write grant'
     const granted = { INSERT: new Set<string>(), UPDATE: new Set<string>() };
 
     for (const file of files) {
-      const sql = stripSqlComments(fs.readFileSync(path.join(MIGRATIONS_DIR, file), 'utf-8'));
+      const sql = sqlWithoutComments(fs.readFileSync(path.join(MIGRATIONS_DIR, file), 'utf-8'));
 
       const alters = sql.matchAll(
         /ALTER\s+TABLE\s+(?:IF\s+EXISTS\s+)?(?:ONLY\s+)?(?:public\s*\.\s*)?"?sessions"?\b([\s\S]*?);/gi
@@ -424,7 +409,7 @@ describe('public.sessions columns added after 158 carry an explicit write grant'
       .filter((f) => /^\d{3}_.*\.sql$/.test(f))
       .sort()) {
       if (parseInt(file.slice(0, 3), 10) <= 162) continue;
-      const sql = stripSqlComments(fs.readFileSync(path.join(MIGRATIONS_DIR, file), 'utf-8'));
+      const sql = sqlWithoutComments(fs.readFileSync(path.join(MIGRATIONS_DIR, file), 'utf-8'));
       for (const privilege of ['INSERT', 'UPDATE'] as const) {
         const re = new RegExp(
           `GRANT[\\s\\S]{0,80}?\\b${privilege}\\s*\\(([^)]*)\\)[\\s\\S]{0,200}?ON\\s+(?:public\\s*\\.\\s*)?"?sessions"?[\\s\\S]{0,80}?authenticated`,

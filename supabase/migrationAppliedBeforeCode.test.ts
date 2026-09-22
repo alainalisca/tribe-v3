@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { readdirSync, readFileSync, statSync } from 'fs';
 import { join, relative } from 'path';
 import { stripJsComments } from '../lib/stripJsComments';
+import { sqlWithoutComments } from './executableSql';
 import mirror from './migrations_applied.json';
 
 /**
@@ -56,7 +57,16 @@ const DIR = 'supabase/migrations';
 const applied = new Set((mirror as { applied: string[] }).applied);
 const FLOOR = (mirror as { _recordStartsAt: number })._recordStartsAt;
 
-/** `ADD COLUMN [IF NOT EXISTS] <name>` -- the only shape this repo uses. */
+/**
+ * `ADD COLUMN [IF NOT EXISTS] <name>` -- the only shape this repo uses.
+ *
+ * MATCHED AGAINST sqlWithoutComments, NOT THE RAW FILE. Migration 189's header
+ * contains "Set separately from ADD COLUMN so a re-run..." in a comment, and
+ * matching the raw text taught this guard about a column named "so" -- then
+ * flagged every source file containing that word and turned main red. Fourth
+ * instance in this repo of a check matching prose that describes the thing it
+ * checks.
+ */
 const ADD_COLUMN = /ADD COLUMN\s+(?:IF NOT EXISTS\s+)?([a-z_][a-z0-9_]*)/gi;
 
 const numberOf = (f: string): number | null => {
@@ -75,7 +85,7 @@ function columnsFromUnappliedMigrations(): Array<{ column: string; migration: st
     if (n === null || n < FLOOR) continue;
     const stem = file.replace(/\.sql$/, '');
     if (applied.has(stem)) continue;
-    const sql = readFileSync(join(DIR, file), 'utf8');
+    const sql = sqlWithoutComments(readFileSync(join(DIR, file), 'utf8'));
     for (const m of sql.matchAll(ADD_COLUMN)) out.push({ column: m[1], migration: stem });
   }
   return out;
