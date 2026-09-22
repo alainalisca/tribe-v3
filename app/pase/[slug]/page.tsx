@@ -72,6 +72,28 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
  * the case this exists for and the case that cannot be demonstrated today
  * without inventing a partner row to demonstrate it with.
  */
+/**
+ * THE ONE PLACE THE PASS HERO'S SIZE IS SET.
+ *
+ * 128px is not the size this wants to be. It is the largest size BullBox's
+ * current logo survives: the file is 385x385, and a 3x phone needs 384 real
+ * pixels for a 128px box. At 160 it is soft on a 3x screen; at 200 it is soft
+ * on a 2x one.
+ *
+ * So this is pinned to the ASSET, not to the design. When a logo of 720px or
+ * more arrives, raise this number and nothing else -- the height, the wide-
+ * logo cap and the fallback tile all derive from it. That is the whole reason
+ * it is a constant instead of an h-32 somewhere in a class list.
+ */
+const HERO_PX = 128;
+
+/**
+ * How much wider than tall a logo may render before the container width takes
+ * over. A wordmark is commonly 3:1 or 4:1; 2.5 keeps a wide mark large without
+ * letting it run the full width of a 430px column and swamp the headline.
+ */
+const HERO_MAX_ASPECT = 2.5;
+
 function PartnerHero({ config }: { config: PassConfig }) {
   const initials = config.partnerName
     .split(/\s+/)
@@ -84,28 +106,41 @@ function PartnerHero({ config }: { config: PassConfig }) {
   const shape = isOrganizationPartner(config) ? 'rounded-2xl' : 'rounded-full';
 
   return (
-    // Stacks under 360px: the logo plus a two-word business name does not fit
-    // beside itself on a 320px phone, and a wrapped name next to a 96px block
-    // looks like a mistake rather than a layout.
-    <div className="mb-6 flex flex-col items-start gap-4 min-[360px]:flex-row min-[360px]:items-center">
-      <div
-        className={`h-24 w-24 shrink-0 overflow-hidden ${shape} bg-white/10 shadow-lg shadow-black/30 ring-2 ring-tribe-green`}
-      >
-        {config.logoUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element -- Supabase storage host; next/image would need a loader entry for a URL that varies per partner row
+    // CENTRED, and the first thing on the page. This is a BullBox conversion
+    // page reached from a voucher in a BullBox gym, so the visitor must see
+    // the brand they are holding before they see ours. The Tribe wordmark
+    // moved to the footer; it is the host, not the headline.
+    <div className="mb-5 flex flex-col items-center gap-4 text-center">
+      {config.logoUrl ? (
+        // The container HUGS the image rather than boxing it. A fixed square
+        // with a wide logo inside produces letterbox bars that read as part of
+        // the mark; hugging means a square logo gets a square and a wordmark
+        // gets a wordmark-shaped block.
+        <div className={`inline-flex items-center justify-center overflow-hidden ${shape} bg-white/5`}>
+          {/* eslint-disable-next-line @next/next/no-img-element -- Supabase storage host; next/image would need a loader entry for a URL that varies per partner row */}
           <img
             src={config.logoUrl}
             alt={config.partnerName}
-            className="h-full w-full object-cover"
-            width={96}
-            height={96}
+            // object-CONTAIN, never cover. Cropping a logo is worse than
+            // letterboxing it: cover on a wide mark cuts the ends off the
+            // word, which is the one part of a logo that has to survive.
+            //
+            // max-height plus w-auto means the element takes the image's own
+            // proportions, so distortion is not merely unlikely, it has no
+            // way to happen. max-w-full keeps a wide mark inside the column at
+            // 320px, where the content box is 288px.
+            className="block h-auto w-auto object-contain"
+            style={{ maxHeight: HERO_PX, maxWidth: `min(${HERO_PX * HERO_MAX_ASPECT}px, 100%)` }}
           />
-        ) : (
-          <span className="flex h-full w-full items-center justify-center text-2xl font-bold text-white">
-            {initials}
-          </span>
-        )}
-      </div>
+        </div>
+      ) : (
+        <div
+          className={`flex shrink-0 items-center justify-center overflow-hidden ${shape} bg-white/10 text-2xl font-bold text-white ring-2 ring-tribe-green`}
+          style={{ height: HERO_PX, width: HERO_PX }}
+        >
+          {initials}
+        </div>
+      )}
       {/* The name only. pass_sub already renders under the h1 below, and
           repeating it here would say the same line twice on one screen. */}
       <p className="text-xl font-bold leading-tight text-white">{config.partnerName}</p>
@@ -113,8 +148,25 @@ function PartnerHero({ config }: { config: PassConfig }) {
   );
 }
 
-function Wordmark() {
-  return <Image src="/tribe-wordmark.png" alt="Tribe" width={96} height={28} priority className="h-7 w-auto" />;
+/**
+ * `size` exists because this mark plays two roles on two pages. On the
+ * inactive pass it is the only branding on screen and stands at full size; on
+ * the active pass it is the host credit under the form, where being as loud as
+ * the partner is the exact defect being fixed. An opacity class alone would
+ * not do it: this is an <img>, so a text-white/50 parent does not dim it.
+ */
+function Wordmark({ size = 'full' }: { size?: 'full' | 'credit' }) {
+  const credit = size === 'credit';
+  return (
+    <Image
+      src="/tribe-wordmark.png"
+      alt="Tribe"
+      width={96}
+      height={28}
+      priority={!credit}
+      className={credit ? 'h-5 w-auto opacity-70' : 'h-7 w-auto'}
+    />
+  );
 }
 
 /**
@@ -154,13 +206,11 @@ export default async function PasePage({ params }: PageProps) {
   return (
     <main className="min-h-screen bg-tribe-dark px-4 py-8">
       <div className="mx-auto w-full max-w-[430px]">
-        <header className="mb-8">
-          <Wordmark />
-        </header>
-
+        {/* No header. The partner is the first thing on the page; the Tribe
+            wordmark is in the footer below, where it reads as the host. */}
         <PartnerHero config={config} />
 
-        <div className="mb-6">
+        <div className="mb-6 text-center">
           <h1 className="text-3xl font-extrabold leading-tight text-white">
             {config.headline ?? 'Tu primera clase gratis'}
           </h1>
@@ -177,6 +227,13 @@ export default async function PasePage({ params }: PageProps) {
           consentText={consentTextFor(config.partnerName)}
           consentPolicyPath={CONSENT_POLICY_PATH}
         />
+
+        {/* Tribe as the host, not the headline. Small, last, and below the
+            form so it never competes with the partner above it. */}
+        <footer className="mt-8 flex items-center justify-center gap-2 text-white/50">
+          <span className="text-sm">en</span>
+          <Wordmark size="credit" />
+        </footer>
       </div>
     </main>
   );
