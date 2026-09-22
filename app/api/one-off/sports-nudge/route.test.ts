@@ -54,7 +54,7 @@ vi.mock('@/lib/supabase/admin', () => ({
 import { POST } from './route';
 import { isValidCronAuth } from '@/lib/auth/cron';
 import { shouldSendNotification } from '@/lib/dal/notificationPreferences';
-import { claimOneOffSend, releaseOneOffClaim } from '@/lib/dal/oneOffSends';
+import { claimOneOffSend, releaseOneOffClaim, recordOneOffOutcome } from '@/lib/dal/oneOffSends';
 import { isEmailSuppressed, unsubUrlFor } from '@/lib/dal/emailUnsubscribe';
 
 const ATHLETE = { id: 'u1', name: 'Ana', email: 'a@b.co', fcm_token: 'tok-1', preferred_language: 'es' };
@@ -79,6 +79,11 @@ beforeEach(() => {
   vi.mocked(claimOneOffSend).mockResolvedValue({ success: true, data: { claimed: true, unsubToken: null } });
   vi.mocked(unsubUrlFor).mockResolvedValue({ success: true, data: 'https://x/api/unsubscribe?token=tok' });
   global.fetch = vi.fn().mockResolvedValue({ ok: true, status: 200 }) as never;
+  // Resend's real shape. Without this the mock returns undefined, destructuring
+  // `{ error }` throws, and EVERY email outcome is 'failed' -- which went
+  // unnoticed because the cases asserted send() was CALLED and never that the
+  // outcome was 'sent'. Asserting the call is asserting the attempt.
+  send.mockResolvedValue({ data: { id: 'email-1' }, error: null });
 });
 
 describe('it refuses to send unless told to', () => {
@@ -107,9 +112,12 @@ describe('it refuses to send unless told to', () => {
   });
 
   it('only an explicit dryRun:false sends', async () => {
-    await POST(req({ dryRun: false }));
+    const body = await (await POST(req({ dryRun: false }))).json();
     expect(send).toHaveBeenCalledOnce();
     expect(global.fetch).toHaveBeenCalledOnce();
+    // The OUTCOME, not just the attempt. A send that was called and then threw
+    // on its own response shape looks identical here without this line.
+    expect(body.recipients.u1).toEqual({ push: 'sent', email: 'sent' });
   });
 
   it('a dry run RELEASES its claims, so the real run is not consumed', async () => {
@@ -338,5 +346,71 @@ describe('test mode sends to named accounts without becoming a targeting tool', 
     const res = await POST(req({ dryRun: false, onlyUserIds: ['a', 'b', 'c', 'd', 'e', 'f'] }));
     expect(res.status).toBe(400);
     expect(send).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * ONE PERSON'S FAILURE MUST NOT ABORT EVERYONE ELSE'S.
+ *
+ * Found on the first real send, not in review: runPush threw `fetch failed`
+ * against a dead SITE_URL, the exception reached the outer catch, and the
+ * whole request 500'd. That person's email never ran and every recipient after
+ * them would have been skipped -- while their claims stayed behind, so the
+ * retry skips them as already sent.
+ */
+describe('a throw is contained to one person and one channel', () => {
+  it('a push that THROWS does not stop that person getting the email', async () => {
+    global.fetch = vi.fn().mockRejectedValue(new TypeError('fetch failed')) as never;
+    const body = await (await POST(req({ dryRun: false }))).json();
+    expect(body.recipients.u1.push).toBe('failed');
+    expect(body.recipients.u1.email).toBe('sent');
+    expect(send).toHaveBeenCalledOnce();
+  });
+
+  it('a push that THROWS does not stop the NEXT person', async () => {
+    audience = [ATHLETE, { ...ATHLETE, id: 'u2', email: 'b@c.co' }];
+    global.fetch = vi.fn().mockRejectedValue(new TypeError('fetch failed')) as never;
+    const body = await (await POST(req({ dryRun: false }))).json();
+    expect(Object.keys(body.recipients).sort()).toEqual(['u1', 'u2']);
+    expect(body.recipients.u2.email).toBe('sent');
+    expect(send).toHaveBeenCalledTimes(2);
+  });
+
+  it('the thrown failure is RECORDED, so no claim is left stranded as claimed', async () => {
+    global.fetch = vi.fn().mockRejectedValue(new TypeError('fetch failed')) as never;
+    await POST(req({ dryRun: false }));
+    expect(recordOneOffOutcome).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.any(String),
+      'u1',
+      'push',
+      'failed',
+      'fetch failed'
+    );
+  });
+
+  /**
+   * Resend REPORTS failure, it does not only throw it. `{ data: null, error:
+   * {...} }` is a 200 from its SDK with a rejected message inside. Nothing
+   * covered that shape, so reading the outcome as success passed every test.
+   */
+  it('a Resend error in the RESPONSE is a failed send, not a sent one', async () => {
+    send.mockResolvedValue({ data: null, error: { message: 'domain not verified' } });
+    const body = await (await POST(req({ dryRun: false }))).json();
+    expect(body.recipients.u1.email).toBe('failed');
+    expect(recordOneOffOutcome).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.any(String),
+      'u1',
+      'email',
+      'failed',
+      'domain not verified'
+    );
+  });
+
+  it('the request still returns 200 with per-person detail, not a blanket 500', async () => {
+    global.fetch = vi.fn().mockRejectedValue(new TypeError('fetch failed')) as never;
+    const res = await POST(req({ dryRun: false }));
+    expect(res.status).toBe(200);
   });
 });
