@@ -6,7 +6,7 @@ import { logError, log } from '@/lib/logger';
 import { shouldSendNotification } from '@/lib/dal/notificationPreferences';
 import { claimOneOffSend, recordOneOffOutcome, releaseOneOffClaim, type OneOffChannel } from '@/lib/dal/oneOffSends';
 import { isEmailSuppressed, unsubUrlFor, unsubHeaders } from '@/lib/dal/emailUnsubscribe';
-import { copyFor } from '@/lib/oneOff/sportsNudgeCopy';
+import { bilingual, type BilingualCopy } from '@/lib/oneOff/sportsNudgeCopy';
 
 /**
  * @description One-off nudge to athletes with no sports: push to those with a token, email to all of them.
@@ -254,7 +254,8 @@ async function runPush(
     return 'dry_run';
   }
 
-  const copy = copyFor(person.preferred_language);
+  // Bilingual regardless of preferred_language -- see lib/oneOff/sportsNudgeCopy.
+  const copy = bilingual();
   // Through /api/notifications/send, not a direct FCM call: that route already
   // clears an fcm_token the moment FCM reports it invalid, which is how a
   // bounce becomes a measurable fact rather than a log line.
@@ -298,7 +299,7 @@ async function runEmail(
     return 'dry_run';
   }
 
-  const copy = copyFor(person.preferred_language);
+  const copy = bilingual();
   void unsubToken; // superseded by the per-user token; see migration 189
 
   // NO LINK MEANS NO SEND. A missing token is 189's backfill not having
@@ -341,21 +342,34 @@ async function runEmail(
   }
 }
 
-function emailHtml(copy: ReturnType<typeof copyFor>, unsubUrl: string): string {
-  const cta = `${SITE_URL}/onboarding/sports`;
+function emailHtml(copy: BilingualCopy, unsubUrl: string): string {
+  const cta = `${SITE_URL}/onboarding/sports/`;
   // tribe-dark on white for body copy. No green text: measured 2026-09-13,
   // the best green in the palette is 3.04:1 on white and fails AA at body size.
   // Green stays a fill with dark text on it, which is 12.6:1.
-  return `<!doctype html><html><body style="margin:0;background:#F0F1F3;font-family:system-ui,-apple-system,'Segoe UI',sans-serif">
+  //
+  // Spanish above, English below, one rule between them. Not two columns: at
+  // phone width a two-column layout collapses into whichever one the client
+  // decides to stack first, and that decision is not ours to lose.
+  const block = (c: { emailHeading: string; emailBody: string; emailCta: string }, lang: string) => `
+    <div lang="${lang}">
+      <h1 style="font-size:1.4rem;margin:0 0 1rem;color:#272D34">${c.emailHeading}</h1>
+      <p style="font-size:1rem;line-height:1.6;margin:0 0 1.5rem;color:#272D34">${c.emailBody}</p>
+      <p style="margin:0 0 0.5rem">
+        <a href="${cta}" style="display:inline-block;background:#A8DA36;color:#272D34;font-weight:700;text-decoration:none;padding:0.85rem 1.5rem;border-radius:999px">${c.emailCta}</a>
+      </p>
+    </div>`;
+  return `<!doctype html><html lang="es"><body style="margin:0;background:#F0F1F3;font-family:system-ui,-apple-system,'Segoe UI',sans-serif">
   <div style="max-width:32rem;margin:0 auto;padding:2rem 1rem;color:#272D34">
-    <h1 style="font-size:1.4rem;margin:0 0 1rem">${copy.emailHeading}</h1>
-    <p style="font-size:1rem;line-height:1.6;margin:0 0 1.5rem">${copy.emailBody}</p>
-    <p style="margin:0 0 2rem">
-      <a href="${cta}" style="display:inline-block;background:#A8DA36;color:#272D34;font-weight:700;text-decoration:none;padding:0.85rem 1.5rem;border-radius:999px">${copy.emailCta}</a>
-    </p>
-    <p style="font-size:0.95rem;line-height:1.6;margin:0 0 2rem;white-space:pre-line">${copy.emailSignoff}</p>
+    ${block(copy.es, 'es')}
+    <hr style="border:0;border-top:1px solid #D7DAE0;margin:2rem 0" />
+    ${block(copy.en, 'en')}
+    <p style="font-size:0.95rem;line-height:1.6;margin:2rem 0 2rem;white-space:pre-line;color:#272D34">${copy.es.emailSignoff}</p>
     <p style="font-size:0.8rem;line-height:1.5;color:#5B6470;margin:0">
-      <a href="${unsubUrl}" style="color:#5B6470">${copy.unsubscribe}</a>
+      <a href="${unsubUrl}" style="color:#5B6470">${copy.es.unsubscribe}</a>
+    </p>
+    <p style="font-size:0.8rem;line-height:1.5;color:#5B6470;margin:0.4rem 0 0">
+      <a href="${unsubUrl}" style="color:#5B6470">${copy.en.unsubscribe}</a>
     </p>
   </div></body></html>`;
 }

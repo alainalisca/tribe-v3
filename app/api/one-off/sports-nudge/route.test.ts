@@ -247,18 +247,58 @@ describe('what actually goes out', () => {
     expect(pushBody.url).toBe('/onboarding/sports');
   });
 
-  it('Spanish is the default, English only on an explicit preference', async () => {
-    await POST(req({ dryRun: false }));
-    expect(send.mock.calls[0][0].subject).toBe('¿Qué entrenas?');
+  it('BILINGUAL regardless of preferred_language: Spanish above, English below', async () => {
+    // The column is VARCHAR(2) DEFAULT 'en' and is only written when somebody
+    // touches the toggle, so a stored 'en' cannot be told apart from never
+    // having been asked -- and the app's own no-signal fallback is Spanish.
+    // Sending both removes the guess.
+    for (const lang of ['en', 'es', null]) {
+      vi.clearAllMocks();
+      vi.mocked(claimOneOffSend).mockResolvedValue({ success: true, data: { claimed: true, unsubToken: null } });
+      vi.mocked(unsubUrlFor).mockResolvedValue({ success: true, data: 'https://x/api/unsubscribe?token=tok' });
+      vi.mocked(isEmailSuppressed).mockResolvedValue(false);
+      vi.mocked(shouldSendNotification).mockResolvedValue(true);
+      send.mockResolvedValue({ data: { id: 'e1' }, error: null });
+      global.fetch = vi.fn().mockResolvedValue({ ok: true, status: 200 }) as never;
+      audience = [{ ...ATHLETE, preferred_language: lang }];
 
-    vi.clearAllMocks();
-    vi.mocked(claimOneOffSend).mockResolvedValue({ success: true, data: { claimed: true, unsubToken: null } });
-    vi.mocked(unsubUrlFor).mockResolvedValue({ success: true, data: 'https://x/api/unsubscribe?token=tok' });
-    vi.mocked(isEmailSuppressed).mockResolvedValue(false);
-    vi.mocked(shouldSendNotification).mockResolvedValue(true);
-    audience = [{ ...ATHLETE, preferred_language: 'en' }];
+      await POST(req({ dryRun: false }));
+      const html: string = send.mock.calls[0][0].html;
+      expect(html, `preferred_language=${lang}`).toContain('Elige tus deportes');
+      expect(html, `preferred_language=${lang}`).toContain('Choose your sports');
+      // Spanish FIRST. Asserting both are present would pass with them reversed.
+      expect(html.indexOf('Elige tus deportes')).toBeLessThan(html.indexOf('Choose your sports'));
+      expect(send.mock.calls[0][0].subject).toBe('¿Qué entrenas? · What do you train?');
+    }
+  });
+
+  it('both language blocks are marked up for screen readers and clients', async () => {
     await POST(req({ dryRun: false }));
-    expect(send.mock.calls[0][0].subject).toBe('What do you train?');
+    const html: string = send.mock.calls[0][0].html;
+    expect(html).toContain('lang="es"');
+    expect(html).toContain('lang="en"');
+  });
+
+  it('the PUSH is bilingual too, Spanish first', async () => {
+    await POST(req({ dryRun: false }));
+    const body = JSON.parse((vi.mocked(global.fetch).mock.calls[0][1] as RequestInit).body as string);
+    expect(body.title).toBe('¿Qué entrenas? · What do you train?');
+    expect(body.body).toContain('Elige tus deportes');
+    expect(body.body).toContain('Choose your sports');
+    expect(body.body.indexOf('Elige')).toBeLessThan(body.body.indexOf('Choose'));
+  });
+
+  it('the unsubscribe line appears in both languages', async () => {
+    await POST(req({ dryRun: false }));
+    const html: string = send.mock.calls[0][0].html;
+    expect(html).toContain('cancela tu suscripción');
+    expect(html).toContain('unsubscribe here');
+  });
+
+  it('the CTA carries the trailing slash this app redirects to', async () => {
+    await POST(req({ dryRun: false }));
+    const html: string = send.mock.calls[0][0].html;
+    expect(html).toMatch(/href="[^"]*\/onboarding\/sports\/"/);
   });
 
   it('no green text on the light email background', async () => {

@@ -42,5 +42,30 @@ export const SPORTS_NUDGE_EN: NudgeCopy = {
   unsubscribe: 'If you would rather not hear from us, unsubscribe here.',
 };
 
-export const copyFor = (language: string | null | undefined): NudgeCopy =>
-  language === 'en' ? SPORTS_NUDGE_EN : SPORTS_NUDGE_ES;
+/**
+ * BILINGUAL, SPANISH FIRST, REGARDLESS OF preferred_language.
+ *
+ * The nudge used to pick one language from users.preferred_language. Measured
+ * 2026-09-22: all 34 recipients read 'en', and so do 94 of 99 live users --
+ * because the column is `VARCHAR(2) DEFAULT 'en'` and is only ever WRITTEN
+ * when somebody touches the language toggle. A stored 'en' is therefore
+ * indistinguishable from nobody having been asked.
+ *
+ * The app contradicts the column on exactly this point. LanguageContext's
+ * no-signal fallback is SPANISH, in its own words because "Tribe is a
+ * Medellín-first product". So a user who has never touched the toggle sees a
+ * Spanish UI and would have received an English email.
+ *
+ * Sending both removes the guess. Spanish leads because that is the app's own
+ * default for the no-signal case, which is most of this audience.
+ */
+export const bilingual = () => ({
+  /** Push titles are truncated aggressively; a middot reads as one line. */
+  pushTitle: `${SPORTS_NUDGE_ES.pushTitle} · ${SPORTS_NUDGE_EN.pushTitle}`,
+  pushBody: `${SPORTS_NUDGE_ES.pushBody}\n${SPORTS_NUDGE_EN.pushBody}`,
+  emailSubject: `${SPORTS_NUDGE_ES.emailSubject} · ${SPORTS_NUDGE_EN.emailSubject}`,
+  es: SPORTS_NUDGE_ES,
+  en: SPORTS_NUDGE_EN,
+});
+
+export type BilingualCopy = ReturnType<typeof bilingual>;
