@@ -1,10 +1,10 @@
 'use client';
 
-import { Suspense, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { SPORTS_LIST, getSportTranslation } from '@/lib/sports';
-import { completeAthleteSetup } from '@/lib/dal/athleteSetup';
+import { completeAthleteSetup, fetchOwnSports } from '@/lib/dal/athleteSetup';
 import { useLanguage } from '@/lib/LanguageContext';
 import { showError } from '@/lib/toast';
 import { logError } from '@/lib/logger';
@@ -58,6 +58,48 @@ function AthleteSportsStepInner() {
 
   const [selected, setSelected] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
+  /**
+   * THE SAVE IS AN OVERWRITE, SO IT MUST NOT RUN FROM AN UNKNOWN BASELINE.
+   *
+   * complete_athlete_setup does `SET sports = v_clean`. A screen that starts
+   * empty and saves what is on it REPLACES the list. An athlete with 23 sports
+   * who opens this, taps one and saves loses the other 22, with a success
+   * toast -- which is exactly what happened on the first real test.
+   *
+   * 'loading' -> the existing list is still being read. 'ready' -> it loaded
+   * and `selected` is prefilled from it. 'failed' -> the read broke, and
+   * saving is refused, because an empty screen and a genuinely empty profile
+   * are indistinguishable from here and only one of them is safe to write.
+   */
+  const [baseline, setBaseline] = useState<'loading' | 'ready' | 'failed'>('loading');
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const { data: auth } = await supabase.auth.getUser();
+      if (!auth.user) {
+        if (!cancelled) setBaseline('failed');
+        return;
+      }
+      const current = await fetchOwnSports(supabase, auth.user.id);
+      if (cancelled) return;
+      // .success checked before .data: a failed read carries data undefined,
+      // and `?? []` on it would prefill empty and re-arm the overwrite.
+      if (!current.success || !current.data) {
+        logError(new Error(current.error ?? 'fetchOwnSports failed'), { action: 'AthleteSportsStep.prefill' });
+        setBaseline('failed');
+        return;
+      }
+      setSelected(current.data);
+      setBaseline('ready');
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // supabase is a stable client for this mount; re-running would refetch and
+    // stomp a selection the user has already started making.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const toggle = (sport: string) =>
     setSelected((prev) => (prev.includes(sport) ? prev.filter((s) => s !== sport) : [...prev, sport]));
@@ -70,6 +112,9 @@ function AthleteSportsStepInner() {
   const returnTo = sanitizeReturnTo(decodeReturnToParam(searchParams.get('returnTo'))) ?? '/';
 
   const onContinue = async () => {
+    // Refuse to write from an unknown baseline. Belt and braces with the
+    // disabled button below: the requirement is at the write, not the control.
+    if (baseline !== 'ready') return;
     setSaving(true);
     const result = await completeAthleteSetup(supabase, selected);
     if (result.success) {
@@ -138,7 +183,7 @@ function AthleteSportsStepInner() {
         <button
           type="button"
           onClick={onContinue}
-          disabled={selected.length === 0 || saving}
+          disabled={selected.length === 0 || saving || baseline !== 'ready'}
           className="mt-8 w-full rounded-full bg-tribe-green px-5 py-3 text-sm font-bold text-tribe-dark transition disabled:opacity-40"
         >
           {saving ? (isEs ? 'Guardando…' : 'Saving…') : isEs ? 'Continuar' : 'Continue'}

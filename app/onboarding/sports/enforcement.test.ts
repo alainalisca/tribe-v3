@@ -56,6 +56,31 @@ describe('sports is enforced at the write, not by the button', () => {
     expect(c).not.toMatch(/if\s*\(\s*!sports/);
   });
 
+  /**
+   * THE BASELINE GUARD IS IN THE HANDLER, NOT ONLY ON THE BUTTON.
+   *
+   * Asserted in SOURCE because it cannot be asserted from the DOM: React does
+   * not fire onClick on a disabled button, so a behaviour test that clicks
+   * while loading proves the button is disabled and says nothing about the
+   * handler. Deleting the handler's guard leaves every behaviour test green.
+   *
+   * It matters because the save is an OVERWRITE. Any future caller that
+   * invokes onContinue another way -- a keyboard submit, a form wrapper, an
+   * effect -- would write a list built from an unloaded screen and silently
+   * drop whatever the athlete already had.
+   */
+  it('the screen refuses to save before the existing sports have loaded', () => {
+    const c = code(SCREEN);
+    expect(c).toMatch(/if \(baseline !== 'ready'\) return;/);
+    // And the button, which is the courtesy layer on top of it.
+    expect(c).toContain("baseline !== 'ready'");
+  });
+
+  it('a failed read is not treated as an empty profile', () => {
+    // `?? []` on a failed read would prefill empty and re-arm the overwrite.
+    expect(code(SCREEN)).toMatch(/!current\.success \|\| !current\.data/);
+  });
+
   /** onboarding_completed_at is the intro TOUR, backfilled for every pre-156
    *  account. Giving it a second meaning is what made an earlier query
    *  conclude 27 athletes finished a wizard that does not exist. */
