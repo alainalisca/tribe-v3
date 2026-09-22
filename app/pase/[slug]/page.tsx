@@ -88,6 +88,31 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 const HERO_PX = 128;
 
 /**
+ * The white card's inset around the mark, on all four sides.
+ *
+ * BullBox's file is an opaque JPEG with a white background baked in, so on a
+ * dark page it lands as a stray white tile the size of the image. A card with
+ * even padding makes that white DELIBERATE: the mark then sits on a surface
+ * instead of ending at an edge nobody chose.
+ *
+ * It is the right treatment for a transparent PNG too, which is why this is
+ * not a workaround waiting to be removed -- a logo on its own white card is
+ * how a partner mark is usually presented on a dark ground.
+ *
+ * THE CARD IS PURE WHITE ON PURPOSE, AND THERE IS A FAINT SEAM. BullBox's
+ * baked-in background is NOT white: sampled from the file on 2026-09-22 its
+ * four corners read #EFF3F2, #FAF4F6, #F6F1EE and #F8F3F0 -- up to 17/255, or
+ * about 7%, off white. Against a #FFFFFF card that shows as a very faint inner
+ * rectangle.
+ *
+ * Do not fix that by tinting the card to match. It would suit exactly one
+ * partner's one file, and be wrong for the next partner and wrong for the
+ * better asset this one is waiting on. The seam is a property of the JPEG and
+ * disappears the moment a transparent PNG replaces it.
+ */
+const HERO_CARD_PAD_PX = 14;
+
+/**
  * How much wider than tall a logo may render before the container width takes
  * over. A wordmark is commonly 3:1 or 4:1; 2.5 keeps a wide mark large without
  * letting it run the full width of a 430px column and swamp the headline.
@@ -116,7 +141,25 @@ function PartnerHero({ config }: { config: PassConfig }) {
         // with a wide logo inside produces letterbox bars that read as part of
         // the mark; hugging means a square logo gets a square and a wordmark
         // gets a wordmark-shaped block.
-        <div className={`inline-flex items-center justify-center overflow-hidden ${shape} bg-white/5`}>
+        // ORGANIZATIONS GET THE WHITE CARD; PEOPLE DO NOT.
+        //
+        // isOrganizationPartner already decides square-vs-circle here (T-GYM1),
+        // and the same distinction decides this. A gym's mark belongs on a
+        // white surface. An independent instructor's pass shows a HEADSHOT,
+        // and a headshot inset inside a padded white circle looks like a
+        // mistake -- it wants to fill its circle, which is what it does today.
+        //
+        // The card hugs the image rather than boxing it, so the padding stays
+        // even on all four sides whatever the mark's aspect: a wordmark gets a
+        // wordmark-shaped card, a square logo gets a square one.
+        <div
+          className={
+            isOrganizationPartner(config)
+              ? `inline-flex items-center justify-center ${shape} bg-white shadow-lg shadow-black/30`
+              : `inline-flex items-center justify-center overflow-hidden ${shape} bg-white/5`
+          }
+          style={isOrganizationPartner(config) ? { padding: HERO_CARD_PAD_PX } : undefined}
+        >
           {/* eslint-disable-next-line @next/next/no-img-element -- Supabase storage host; next/image would need a loader entry for a URL that varies per partner row */}
           <img
             src={config.logoUrl}
