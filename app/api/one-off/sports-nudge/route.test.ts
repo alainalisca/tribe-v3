@@ -185,6 +185,25 @@ describe('what actually goes out', () => {
     expect(arg.headers['List-Unsubscribe-Post']).toBe('List-Unsubscribe=One-Click');
   });
 
+  it('sends from the same verified address as the rest of the app', async () => {
+    // A sender on an unverified domain is rejected by Resend at the API. The
+    // first draft of this route used a plausible-looking hola@tribeapp.co and
+    // would have failed all 28 with nothing visible to the recipients.
+    const { readFileSync } = await import('node:fs');
+    const nudge = readFileSync('app/api/one-off/sports-nudge/route.ts', 'utf8');
+    const existing = readFileSync('app/api/send-inactive-nudge/route.ts', 'utf8');
+    const addressIn = (src: string) =>
+      src
+        .match(/from:\s*'([^']+)'|const FROM = '([^']+)'/)
+        ?.slice(1)
+        .find(Boolean);
+    expect(addressIn(nudge)).toBeTruthy();
+    expect(addressIn(nudge)).toBe(addressIn(existing));
+
+    await POST(req({ dryRun: false }));
+    expect(send.mock.calls[0][0].from).toBe(addressIn(existing));
+  });
+
   it('both channels point at the sports step', async () => {
     await POST(req({ dryRun: false }));
     expect(send.mock.calls[0][0].html).toContain('/onboarding/sports');

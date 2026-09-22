@@ -63,7 +63,11 @@ import { copyFor } from '@/lib/oneOff/sportsNudgeCopy';
 const CAMPAIGN = 'sports_nudge_2026_09';
 const NOTIFICATION_TYPE = 'comeback'; // training_nudges category; push default_on
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://tribe-v3.vercel.app';
-const FROM = 'Tribe <hola@tribeapp.co>';
+// The verified Resend sender, identical to every other email this app sends.
+// tribeapp.co is not a domain Resend holds for this account, so a plausible
+// address on it would have had every one of these 28 emails rejected at the
+// API with nothing on the recipient's side to show for it.
+const FROM = 'Tribe <tribe@aplusfitnessllc.com>';
 
 interface Recipient {
   id: string;
