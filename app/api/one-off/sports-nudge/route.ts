@@ -167,12 +167,37 @@ export async function POST(request: Request) {
       results[id] = { ...(results[id] ?? {}), [ch]: o };
     };
 
+    // ONE PERSON'S FAILURE MUST NOT ABORT EVERYONE ELSE'S SEND.
+    //
+    // Found on the first real send: runPush threw `fetch failed` (a dead
+    // SITE_URL), the exception propagated to the outer catch, and the whole
+    // request 500'd. The email leg for that person never ran, and every
+    // recipient after them would have been skipped -- on a 34-person run, one
+    // network blip on person 3 silently drops persons 4 to 34 while leaving
+    // their claims behind, so the retry then skips them as already sent.
+    //
+    // A thrown error is now recorded against that person and that channel, and
+    // the loop continues. The outer catch stays for failures that are about
+    // the run as a whole, such as the audience query.
     for (const person of recipients) {
-      if (channels.includes('push')) {
-        note(person.id, 'push', await runPush(supabase, person, dryRun, campaign));
-      }
-      if (channels.includes('email')) {
-        note(person.id, 'email', await runEmail(supabase, person, dryRun, campaign));
+      for (const ch of ['push', 'email'] as OneOffChannel[]) {
+        if (!channels.includes(ch)) continue;
+        try {
+          note(
+            person.id,
+            ch,
+            ch === 'push'
+              ? await runPush(supabase, person, dryRun, campaign)
+              : await runEmail(supabase, person, dryRun, campaign)
+          );
+        } catch (err) {
+          const reason = err instanceof Error ? err.message : 'unknown';
+          logError(err, { route: '/api/one-off/sports-nudge', action: `run_${ch}`, userId: person.id });
+          // Record against the claim this person already holds, so a stranded
+          // 'claimed' row becomes a 'failed' row naming the reason.
+          await recordOneOffOutcome(supabase, campaign, person.id, ch, 'failed', reason);
+          note(person.id, ch, 'failed');
+        }
       }
     }
 
