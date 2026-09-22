@@ -21,8 +21,18 @@ import { copyFor } from '@/lib/oneOff/sportsNudgeCopy';
  * ═══════════════════════════════════════════════════════════════════════════
  *
  * Every other destructive control in this app is a flag that must be set to
- * stop something. This one must be set to START it. A route that mails 28 real
+ * stop something. This one must be set to START it. A route that mails 34 real
  * people should not do that because somebody curled it to see what it does.
+ *
+ * THE AUDIENCE IS 34, NOT 28, AND THE DIFFERENCE IS A LESSON.
+ * 28 athletes have neither sports nor a photo; 34 have no sports (the 28 plus
+ * 6 who have a photo but no sports). This route selects on SPORTS, because
+ * sports is what find_training_partners ranks on and what /instructors filters
+ * by -- a photo changes nothing about being findable. 28 was predicted for a
+ * query that counts 34, measured on apply. Same shape as migration 179, where
+ * a predicted 13 met an enforced 14 because the two counts carried different
+ * filters. A number is only comparable to another number over the same
+ * population, and the predicate is part of the number's definition.
  *
  * A dry run claims and then RELEASES each claim, so it cannot silently consume
  * the campaign. A dry run that left its claims behind would make the real run
@@ -60,7 +70,7 @@ const NOTIFICATION_TYPE = 'comeback'; // training_nudges category; push default_
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://tribe-v3.vercel.app';
 // The verified Resend sender, identical to every other email this app sends.
 // tribeapp.co is not a domain Resend holds for this account, so a plausible
-// address on it would have had every one of these 28 emails rejected at the
+// address on it would have had every one of these 34 emails rejected at the
 // API with nothing on the recipient's side to show for it.
 const FROM = 'Tribe <tribe@aplusfitnessllc.com>';
 

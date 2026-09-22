@@ -36,7 +36,9 @@ export default function ProfileCompletionBanner({ hasPhoto, hasSports, hasName =
   // Sports was previously a secondary text link behind the photo ask, and it
   // pointed at /profile/edit -- a form of fifteen optional fields where sports
   // is one row among many. Measured on 2026-09-21: of 60 non-test athletes, 28
-  // have neither sports nor photo and 6 have a photo but no sports. So sports
+  // have neither sports nor photo and 6 have a photo but no sports -- so 34
+  // have no sports, which is the population this banner's sports ask is for,
+  // and the number confirmed on the live database when 188 applied. So sports
   // is the more common gap AND the one this app cannot work without: it is
   // what find_training_partners ranks on and what /instructors filters by. An
   // athlete with no sports is invisible to both, whatever their photo says.

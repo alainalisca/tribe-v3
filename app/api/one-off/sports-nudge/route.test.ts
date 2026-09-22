@@ -1,5 +1,5 @@
 /**
- * The one-off sports nudge: 28 real people, so the properties that matter are
+ * The one-off sports nudge: 34 real people, so the properties that matter are
  * "does not send" ones.
  *
  * Every case here is about restraint -- default to not sending, never send
@@ -207,7 +207,7 @@ describe('what actually goes out', () => {
   it('sends from the same verified address as the rest of the app', async () => {
     // A sender on an unverified domain is rejected by Resend at the API. The
     // first draft of this route used a plausible-looking hola@tribeapp.co and
-    // would have failed all 28 with nothing visible to the recipients.
+    // would have failed all 34 with nothing visible to the recipients.
     const { readFileSync } = await import('node:fs');
     const nudge = readFileSync('app/api/one-off/sports-nudge/route.ts', 'utf8');
     const existing = readFileSync('app/api/send-inactive-nudge/route.ts', 'utf8');
