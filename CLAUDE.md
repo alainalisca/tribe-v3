@@ -966,6 +966,68 @@ grep neither adds to nor subtracts from what source already proves — an
 inconclusive instrument written up as inconclusive, rather than a number
 presented because it was available.
 
+**A CHECK THAT MATCHES PROSE DESCRIBING THE THING IT CHECKS. FOURTH INSTANCE, AND THE RULE WRITTEN AFTER THE FIRST THREE DID NOT STOP IT.**
+
+`migrationAppliedBeforeCode.test.ts` extracts column names with
+`/ADD COLUMN\s+(?:IF NOT EXISTS\s+)?([a-z_][a-z0-9_]*)/gi`, over the **raw**
+file. Migration 189's header contains, in a comment:
+
+```sql
+-- Set separately from ADD COLUMN so a re-run on a table that already
+-- has the column still installs the default.
+```
+
+So the guard learned about a column named **`so`**, concluded it belonged to an
+unapplied migration, and flagged every source file containing that English
+word. Thirty-odd offenders, `main` red for nine and a half minutes.
+
+**The four, in order:**
+
+|     | the check                                                            | the prose it ate                                                                           |
+| --- | -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| 1   | migration 165's counter guard, counting `auth.uid() IS NOT NULL AND` | a COMMENT inside the function body quoting the phrase while explaining the fix             |
+| 2   | the T-AUD3 translation guard, skipping keys containing `${`          | the defect **was** a template key, so the guard could not catch the bug it was written for |
+| 3   | the both-ways accent arm, scanning every source file for Spanish     | `'unete'` in `LEAVE_UNACCENTED`, its own exemption list, in executing code                 |
+| 4   | this one                                                             | its own migration's header explaining why a statement was split                            |
+
+**The rule for this class was already in this file when the fourth happened,
+written the same week as the third, by the same author who then shipped the
+fourth.** That is the part worth keeping: a rule that names a failure mode does
+not prevent it, because the moment of failure does not feel like the moment the
+rule describes. Writing `ADD COLUMN so a re-run...` in a comment does not feel
+like feeding a detector; it feels like writing a sentence.
+
+**And the copy I added was the one that broke.** `verify-migration-state.test.ts`
+already held **two byte-identical copies** of the naive stripper —
+
+```js
+.split('\n').map((line) => line.replace(/--.*$/, '')).join('\n')
+```
+
+— feeding the checks that decide whether a new `users` or `sessions` column was
+granted. Both were live hazards for the reason the tokeniser exists: 179's abort
+message contains `-- do NOT widen this to a range` inside a quoted string, so
+both would truncate it while producing a perfectly stable result. Neither had
+broken yet. Mine broke on its first real migration, which is what located the
+other two.
+
+**The fix is one tokeniser, three copies removed.** `supabase/executableSql.ts`
+gained `sqlWithoutComments`, sharing the same scanner: comments out, string
+literals intact. Unlike `executableSql` it strips comments **inside**
+`$$ ... $$` too — that function must keep them, because a function body is
+stored verbatim in `pg_proc` and a comment inside one is part of a database
+object, whereas here the question is "what DDL does this file perform" and
+prose inside a `DO` block is still prose.
+
+**So the generalisable form, given that the rule alone demonstrably does not
+hold: when a check reads source and matches a pattern, the comments are part of
+the corpus until something removes them, and "I would not write that in a
+comment" is not a mechanism.** Strip them with a tokeniser at the point of
+reading, and reach for the one that already exists rather than writing a fourth
+copy — this repo has now paid for that specific lesson in
+[[SPORTS_LIST in five modules]], [[two translation maps for the same 23 keys]],
+[[three hand-kept copies of the applied-migration list]] and here.
+
 **A DOCUMENTED PROCEDURE THAT NAMES A SCRIPT IS ONLY AS GOOD AS THE SCRIPT EXISTING — AND NOTHING CHECKS THAT, BECAUSE A BROKEN POINTER READS EXACTLY LIKE A WORKING ONE.**
 
 `supabase/migrations_applied.json` opened with an instruction: regenerate this

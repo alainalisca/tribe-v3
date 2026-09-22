@@ -6,6 +6,8 @@ import { logError } from '@/lib/logger';
 import { isValidCronAuth } from '@/lib/auth/cron';
 import { fetchSessionFields, fetchUserProfileMaybe, checkExistingParticipation } from '@/lib/dal';
 import { formatSessionLocation } from '@/lib/sessionLocation';
+import { shouldSendNotification } from '@/lib/dal/notificationPreferences';
+import { isEmailSuppressed, unsubUrlFor, unsubHeaders } from '@/lib/dal/emailUnsubscribe';
 
 function getResendClient() {
   const key = process.env.RESEND_API_KEY;
@@ -92,6 +94,40 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid data' }, { status: 400 });
     }
 
+    // AUTOMATED AND REPEATING, SO IT NEEDS AN EXIT.
+    //
+    // This reads as transactional -- it is about a session the recipient
+    // attended -- but it is fired by the post-session-followups cron as well as
+    // by a host action, so it arrives after every session without the recipient
+    // doing anything. That is the property that decides it, not the subject
+    // matter: a receipt is something you asked for by acting; this is something
+    // that keeps arriving.
+    //
+    // session_update is the type, whose category (session_updates) DEFAULTS ON,
+    // so nothing changes for anyone who has not opted out. The three gates are
+    // the same three as the recap and the nudge, in the same order: the hard
+    // opt-out outranks the policy, and the policy outranks nothing.
+    if (await isEmailSuppressed(service, userId)) {
+      return NextResponse.json({ success: true, suppressed: 'unsubscribed' });
+    }
+    if (!(await shouldSendNotification(service, userId, 'session_update', 'email'))) {
+      return NextResponse.json({ success: true, suppressed: 'preference' });
+    }
+
+    // NO LINK MEANS NO SEND. A missing token is 189's backfill not having
+    // reached this row; a non-2xx is how the cron's own logging surfaces it,
+    // which is what should happen to a bug rather than sending without an exit.
+    const unsub = await unsubUrlFor(service, userId, SITE_URL);
+    if (!unsub.success || !unsub.data) {
+      logError(new Error(unsub.error ?? 'no unsubscribe token'), {
+        route: '/api/send-attendance-notification',
+        action: 'unsubUrl',
+        userId,
+      });
+      return NextResponse.json({ error: 'No unsubscribe token for recipient' }, { status: 500 });
+    }
+    const unsubUrl = unsub.data;
+
     const lang = user.preferred_language || 'en';
     const isSpanish = lang === 'es';
 
@@ -134,6 +170,7 @@ export async function POST(request: Request) {
       from: 'Tribe <tribe@aplusfitnessllc.com>',
       to: user.email,
       subject: subject,
+      headers: unsubHeaders(unsubUrl),
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f9fafb; padding: 20px;">
           <div style="background: white; border-radius: 12px; padding: 30px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
@@ -162,6 +199,9 @@ export async function POST(request: Request) {
             <div style="border-top: 1px solid #e5e7eb; margin-top: 30px; padding-top: 20px;">
               <p style="color: #9ca3af; font-size: 12px; margin: 0;">
                 ${hostedBy}
+              </p>
+              <p style="color: #9ca3af; font-size: 12px; margin: 8px 0 0;">
+                <a href="${unsubUrl}" style="color: #9ca3af;">${isSpanish ? 'Cancelar la suscripción a estos correos' : 'Unsubscribe from these emails'}</a>
               </p>
             </div>
           </div>
