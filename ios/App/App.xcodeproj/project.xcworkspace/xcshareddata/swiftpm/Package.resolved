@@ -1,5 +1,5 @@
 {
-  "originHash" : "37aeca0e671e304e71fb5dbbc38d2122d44a10620162545c1f2cadcb586fbcf8",
+  "originHash" : "0f0e9867f4d6fa3b4633cd9569226adf64d390583d627132eb1fbb07fb99578f",
   "pins" : [
     {
       "identity" : "abseil-cpp-binary",
@@ -98,6 +98,15 @@
       "state" : {
         "revision" : "040d087ac2267d2ddd4cca36c757d1c6a05fdbfe",
         "version" : "101.0.0"
+      }
+    },
+    {
+      "identity" : "ion-ios-geolocation",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/ionic-team/ion-ios-geolocation.git",
+      "state" : {
+        "revision" : "db363927d3a954e3ea24d2e72b6e9814769a84be",
+        "version" : "2.1.1"
       }
     },
     {
