@@ -274,6 +274,32 @@ export async function isCommunityMember(
   }
 }
 
+/**
+ * The viewer's own role in one community, or null if they are not a member.
+ * The edit page needs this one value; loading the whole roster for it would
+ * fetch every member's profile to read a single row.
+ */
+export async function fetchMyCommunityRole(
+  supabase: SupabaseClient,
+  communityId: string,
+  userId: string
+): Promise<DalResult<CommunityMemberWithUser['role'] | null>> {
+  try {
+    const { data, error } = await supabase
+      .from('community_members')
+      .select('role')
+      .eq('community_id', communityId)
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (error) return { success: false, error: error.message };
+    return { success: true, data: (data?.role as CommunityMemberWithUser['role'] | undefined) ?? null };
+  } catch (error) {
+    logError(error, { action: 'fetchMyCommunityRole' });
+    return { success: false, error: 'Failed to check your role' };
+  }
+}
+
 export async function fetchCommunityMembers(
   supabase: SupabaseClient,
   communityId: string
@@ -484,22 +510,105 @@ export async function fetchCommunityPostComments(
 
 // ─── Banner / cover image management ───
 
+/** Returned when the database accepted the request but changed no row. */
+export const COMMUNITY_WRITE_REFUSED = 'COMMUNITY_WRITE_REFUSED';
+
+/**
+ * A PATCH that RLS refuses does not error. PostgREST returns 200 with zero
+ * rows, so a moderator changing the banner used to get a "Banner updated"
+ * toast while nothing changed. Asking for the id back turns "refused" into an
+ * empty array, which is reported as the failure it is.
+ */
 export async function updateCommunityCoverImage(
   supabase: SupabaseClient,
   communityId: string,
   coverImageUrl: string
 ): Promise<DalResult<null>> {
   try {
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('communities')
       .update({ cover_image_url: coverImageUrl })
-      .eq('id', communityId);
+      .eq('id', communityId)
+      .select('id');
 
     if (error) return { success: false, error: error.message };
+    if (!data || data.length === 0) return { success: false, error: COMMUNITY_WRITE_REFUSED };
     return { success: true };
   } catch (error) {
     logError(error, { action: 'updateCommunityCoverImage' });
     return { success: false, error: 'Failed to update community banner' };
+  }
+}
+
+// ─── Community details (edit page) ───
+
+/**
+ * The columns /communities/[id]/edit owns, and the ONLY columns
+ * updateCommunity will send. Migration 190 grants authenticated UPDATE on
+ * exactly these plus cover_image_url, so a key outside this list would be
+ * refused with 42501 anyway; filtering here means it is never sent.
+ *
+ * Deliberately absent: cover_image_url (the banner has its own control on the
+ * community page), creator_id, member_count, created_at, deleted_at.
+ */
+export const COMMUNITY_EDITABLE_COLUMNS = [
+  'name',
+  'description',
+  'sport',
+  'location_name',
+  'location_lat',
+  'location_lng',
+  'is_private',
+] as const;
+
+export type CommunityEditableColumn = (typeof COMMUNITY_EDITABLE_COLUMNS)[number];
+
+export interface CommunityEditableFields {
+  name: string;
+  description: string | null;
+  sport: string | null;
+  location_name: string | null;
+  location_lat: number | null;
+  location_lng: number | null;
+  is_private: boolean;
+}
+
+/**
+ * PATCH the named columns of one community. Only keys present in `patch` AND
+ * in COMMUNITY_EDITABLE_COLUMNS are sent, so a caller that builds its patch
+ * from a diff sends only what the person changed, and an empty field the form
+ * never loaded cannot overwrite anything (CLAUDE.md, the storefront sports
+ * near miss).
+ *
+ * Zero rows back means RLS refused: not a creator or admin, or the community
+ * was deleted. That is reported, never shown as saved.
+ */
+export async function updateCommunity(
+  supabase: SupabaseClient,
+  communityId: string,
+  patch: Partial<CommunityEditableFields>
+): Promise<DalResult<null>> {
+  const payload: Partial<CommunityEditableFields> = {};
+  for (const col of COMMUNITY_EDITABLE_COLUMNS) {
+    if (Object.prototype.hasOwnProperty.call(patch, col)) {
+      (payload as Record<CommunityEditableColumn, unknown>)[col] = patch[col];
+    }
+  }
+
+  if (Object.keys(payload).length === 0) return { success: true };
+  if ('name' in payload && !(payload.name ?? '').trim()) {
+    return { success: false, error: 'Community name is required' };
+  }
+
+  try {
+    const { data, error } = await supabase.from('communities').update(payload).eq('id', communityId).select('id');
+
+    if (error) return { success: false, error: error.message };
+    if (!data || data.length === 0) return { success: false, error: COMMUNITY_WRITE_REFUSED };
+    return { success: true };
+  } catch (error) {
+    logError(error, { action: 'updateCommunity' });
+    return { success: false, error: 'Failed to update community' };
   }
 }
 

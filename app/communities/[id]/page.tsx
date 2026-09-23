@@ -24,6 +24,7 @@ import {
   setCommunityPostPinned,
   reportCommunityPost,
   updateCommunityCoverImage,
+  COMMUNITY_WRITE_REFUSED,
   type CommunityWithCreator,
   type CommunityPostWithPin,
   type CommunityMemberWithUser,
@@ -32,6 +33,8 @@ import { compressImage } from '@/components/session/recapPhotosHelpers';
 import { sportTranslations } from '@/lib/translations';
 import Image from 'next/image';
 import CommunityEventsTab from '@/components/CommunityEventsTab';
+import { getCommunityPermissions } from '@/lib/communityPermissions';
+import { useTranslations } from '@/lib/i18n/useTranslations';
 import {
   ChevronLeft,
   Users,
@@ -45,6 +48,7 @@ import {
   PinOff,
   Flag,
   MoreHorizontal,
+  Pencil,
 } from 'lucide-react';
 
 const getTranslations = (language: 'en' | 'es') => ({
@@ -88,6 +92,7 @@ export default function CommunityDetailPage() {
   const { language } = useLanguage();
   const confirm = useConfirm();
   const t = getTranslations(language);
+  const tEdit = useTranslations('communityEdit');
   const bannerInputRef = useRef<HTMLInputElement>(null);
 
   const communityId = params?.id as string;
@@ -191,15 +196,19 @@ export default function CommunityDetailPage() {
     }
   }
 
-  // Owner = community creator. Admin = creator OR member with role admin/moderator.
-  const isOwner = !!userId && !!community && community.creator_id === userId;
+  // Every flag mirrors a production policy; see lib/communityPermissions.ts.
+  // Moderators used to see the banner button and Pin, and RLS refused both.
   const myMembership = members.find((m) => m.user_id === userId);
-  const isAdmin = isOwner || myMembership?.role === 'admin' || myMembership?.role === 'moderator';
+  const perms = getCommunityPermissions({
+    userId,
+    creatorId: community?.creator_id ?? null,
+    myRole: myMembership?.role ?? null,
+  });
 
   async function handleBannerUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file || !userId || !communityId) return;
-    if (!isOwner && !isAdmin) return;
+    if (!perms.canManage) return;
 
     setUploadingBanner(true);
     try {
@@ -217,7 +226,11 @@ export default function CommunityDetailPage() {
       const publicUrl = publicUrlData.publicUrl;
 
       const updateResult = await updateCommunityCoverImage(supabase, communityId, publicUrl);
-      if (!updateResult.success) throw new Error(updateResult.error);
+      // Zero rows back is RLS refusing, not a transport failure. Say so plainly
+      // instead of showing the internal sentinel.
+      if (!updateResult.success) {
+        throw new Error(updateResult.error === COMMUNITY_WRITE_REFUSED ? tEdit('refused') : updateResult.error);
+      }
 
       setCommunity((prev) => (prev ? { ...prev, cover_image_url: publicUrl } : prev));
       await haptic('success');
@@ -344,13 +357,23 @@ export default function CommunityDetailPage() {
             <ChevronLeft className="w-6 h-6 text-theme-primary" />
           </button>
           <h1 className="text-lg font-bold text-theme-primary flex-1 truncate">{community.name}</h1>
+          {perms.canManage && (
+            <Link
+              href={`/communities/${communityId}/edit`}
+              className="p-2 hover:bg-stone-100 dark:hover:bg-tribe-mid rounded-lg transition flex items-center gap-1 text-sm font-semibold text-theme-primary"
+              aria-label={tEdit('edit')}
+            >
+              <Pencil className="w-5 h-5" />
+              <span className="hidden sm:inline">{tEdit('edit')}</span>
+            </Link>
+          )}
         </div>
       </div>
 
       <div className="max-w-2xl md:max-w-4xl mx-auto">
         {/* Cover image with optional change-banner button */}
         <div className="relative w-full h-48 bg-cover bg-center" style={coverStyle}>
-          {(isOwner || isAdmin) && (
+          {perms.canManage && (
             <>
               <input
                 ref={bannerInputRef}
@@ -461,8 +484,8 @@ export default function CommunityDetailPage() {
                 {posts.length > 0 ? (
                   <div className="space-y-4">
                     {posts.map((post) => {
-                      const canDelete = userId === post.author_id || isAdmin;
-                      const canPin = isAdmin;
+                      const canDelete = userId === post.author_id || perms.canModeratePosts;
+                      const canPin = perms.canPin;
                       const canReport = !!userId && userId !== post.author_id;
                       const menuOpen = openMenuPostId === post.id;
 

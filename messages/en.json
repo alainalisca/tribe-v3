@@ -422,5 +422,27 @@
     "toggleError": "Could not update the lead.",
     "markedContacted": "Marked as contacted",
     "markedPending": "Marked as pending"
+  },
+  "communityEdit": {
+    "title": "Edit community",
+    "edit": "Edit",
+    "back": "Back",
+    "name": "Name",
+    "nameRequired": "Name is required",
+    "description": "Description",
+    "descriptionPlaceholder": "Tell us about your community...",
+    "sport": "Sport",
+    "none": "None",
+    "location": "Location",
+    "locationPlaceholder": "Search location...",
+    "isPrivate": "Private community",
+    "isPrivateDesc": "Only invited members can join",
+    "save": "Save changes",
+    "saving": "Saving...",
+    "cancel": "Cancel",
+    "noChanges": "Nothing to save yet",
+    "saved": "Community updated",
+    "refused": "You do not have permission to edit this community.",
+    "failed": "Could not save your changes."
   }
 }

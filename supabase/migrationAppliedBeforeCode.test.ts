@@ -91,6 +91,32 @@ function columnsFromUnappliedMigrations(): Array<{ column: string; migration: st
   return out;
 }
 
+/**
+ * COLUMN NAMES THAT ALREADY EXIST ON ANOTHER TABLE.
+ *
+ * This guard matches a column by NAME in source text, because it runs with no
+ * database and no parser. That is exact for a name nothing else uses
+ * (athlete_setup_completed_at) and useless for one that is everywhere:
+ * `deleted_at` already exists on public.users and appears in 18 source files
+ * that have nothing to do with communities. Adding communities.deleted_at in
+ * 190 would therefore flag all 18, and the branch carrying 190 could never
+ * merge before 190 is applied. That collides head-on with "merge the
+ * branch, then paste" (CLAUDE.md). One rule would force breaking the other.
+ *
+ * So a collision is listed here, keyed by `migration:column`, with the reason.
+ * Two things keep this from becoming a quiet hole:
+ *   1. The branch that adds the column must not reference it. 190's branch
+ *      does not: deletion goes through soft_delete_community(), and the SELECT
+ *      policy hides deleted rows from every client read.
+ *   2. The rot test below fails the moment the migration is recorded as
+ *      applied, so the exemption cannot outlive the window it exists for. The
+ *      mirror-sync commit after applying 190 must delete this line.
+ */
+const KNOWN_NAME_COLLISIONS: Record<string, string> = {
+  '190_community_soft_delete:deleted_at':
+    'users.deleted_at predates the record and is referenced across the app; 190 adds communities.deleted_at, which no source file in its branch reads or writes',
+};
+
 const ROOTS = ['app', 'components', 'lib', 'contexts', 'hooks'];
 const SELF = 'supabase/migrationAppliedBeforeCode.test.ts';
 
@@ -128,6 +154,7 @@ describe('a column must be applied before code references it', () => {
     const offenders: string[] = [];
 
     for (const { column, migration } of pending) {
+      if (`${migration}:${column}` in KNOWN_NAME_COLLISIONS) continue;
       // Comments stripped: a file EXPLAINING an upcoming column is not a file
       // writing it, and prose that names one must not block a merge.
       const users = sourceFiles().filter((f) => stripJsComments(readFileSync(f, 'utf8')).includes(column));
@@ -141,6 +168,19 @@ describe('a column must be applied before code references it', () => {
         '35-minute notification outage of 2026-09-21: code and migration shipped ' +
         'in one branch, the code deployed 35 minutes before the column existed, ' +
         'and every notification insert failed with PGRST204.'
+    ).toEqual([]);
+  });
+
+  /** A name-collision exemption covers ONE unapplied migration's column. Once
+   *  that migration is recorded, the exemption is doing nothing but hiding the
+   *  next collision under the same name, so it must be deleted. */
+  it('every known name collision still names a pending, unapplied column', () => {
+    const pending = new Set(columnsFromUnappliedMigrations().map(({ column, migration }) => `${migration}:${column}`));
+    const stale = Object.keys(KNOWN_NAME_COLLISIONS).filter((k) => !pending.has(k));
+    expect(
+      stale,
+      'These exemptions no longer match an unapplied migration. The migration was applied and ' +
+        'recorded, so delete its line from KNOWN_NAME_COLLISIONS in the same commit as the mirror sync.'
     ).toEqual([]);
   });
 

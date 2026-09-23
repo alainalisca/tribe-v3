@@ -1890,4 +1890,69 @@ select 'GUARD_189_one_token_per_person',
          else 'applied'
        end
 
+union all
+
+select '190_community_soft_delete',
+       case when exists (select 1 from information_schema.columns
+                          where table_schema='public' and table_name='communities'
+                            and column_name='deleted_at')
+       then 'applied' else 'MISSING' end
+
+union all
+
+-- The column existing is not the property. "Creator only" is, and it rests on
+-- the GRANT: the UPDATE policy lets admin members write the whole row, and RLS
+-- cannot compare NEW to OLD, so without the column grant an admin could take
+-- creator_id or set deleted_at directly. Checked per column, both directions:
+-- the locked ones refused, the ones the app writes still writable, because a
+-- REVOKE that took everything would break the banner and the edit page with
+-- 42501 while the refusal half read green.
+select 'GUARD_190_creator_only_delete',
+       case
+         when not exists (select 1 from information_schema.columns
+                           where table_schema='public' and table_name='communities'
+                             and column_name='deleted_at')
+           then 'MISSING -- communities.deleted_at absent'
+         when has_column_privilege('authenticated','public.communities','creator_id','UPDATE')
+           then 'MISSING -- authenticated can write creator_id; an admin member can take the community'
+         when has_column_privilege('authenticated','public.communities','deleted_at','UPDATE')
+           then 'MISSING -- authenticated can write deleted_at, skipping the creator check and the typed name'
+         when has_column_privilege('authenticated','public.communities','member_count','UPDATE')
+           then 'MISSING -- authenticated can write member_count'
+         when has_table_privilege('anon','public.communities','UPDATE')
+           then 'MISSING -- anon holds UPDATE on communities'
+         when not (has_column_privilege('authenticated','public.communities','name','UPDATE')
+                   and has_column_privilege('authenticated','public.communities','description','UPDATE')
+                   and has_column_privilege('authenticated','public.communities','sport','UPDATE')
+                   and has_column_privilege('authenticated','public.communities','location_name','UPDATE')
+                   and has_column_privilege('authenticated','public.communities','location_lat','UPDATE')
+                   and has_column_privilege('authenticated','public.communities','location_lng','UPDATE')
+                   and has_column_privilege('authenticated','public.communities','is_private','UPDATE')
+                   and has_column_privilege('authenticated','public.communities','cover_image_url','UPDATE'))
+           then 'MISSING -- a column the edit page or the banner writes lost its grant'
+         when not exists (select 1 from pg_policies
+                           where schemaname='public' and tablename='communities'
+                             and cmd='SELECT' and position('deleted_at' in qual) > 0)
+           then 'MISSING -- the SELECT policy does not hide deleted communities'
+         when not exists (select 1 from pg_policies
+                           where schemaname='public' and tablename='communities'
+                             and cmd='UPDATE' and position('deleted_at' in qual) > 0)
+           then 'MISSING -- the UPDATE policy still reaches deleted communities'
+         when exists (select 1 from pg_policies
+                       where schemaname='public' and tablename='communities'
+                         and cmd in ('DELETE','ALL'))
+           then 'MISSING -- a DELETE or ALL policy exists; hard delete is an admin decision, not a client one'
+         when to_regprocedure('public.soft_delete_community(uuid, text)') is null
+           then 'MISSING -- soft_delete_community absent'
+         when not (select pg_get_functiondef(p.oid) ~ 'Only the creator can delete' from pg_proc p
+                    where p.oid = to_regprocedure('public.soft_delete_community(uuid, text)'))
+           then 'MISSING -- soft_delete_community no longer refuses non-creators'
+         when not (select pg_get_functiondef(p.oid) ~ 'does not match the community name' from pg_proc p
+                    where p.oid = to_regprocedure('public.soft_delete_community(uuid, text)'))
+           then 'MISSING -- soft_delete_community no longer checks the typed name'
+         when has_function_privilege('anon','public.soft_delete_community(uuid, text)','EXECUTE')
+           then 'MISSING -- anon can call soft_delete_community'
+         else 'applied'
+       end
+
 order by migration;
