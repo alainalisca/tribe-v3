@@ -173,6 +173,22 @@ export default function SettingsPage() {
             </div>
             <p className="text-xs text-stone-500 dark:text-gray-400 mb-4">{txt.trainingPreferencesDesc}</p>
             <TrainingPreferencesForm userId={user.id} />
+
+            {/* Seeking preferences feed instructor lead discovery and are
+                stored separately from the offer side above. */}
+            <Link href="/settings/training-preferences" className="mt-3 block">
+              <Button
+                variant="ghost"
+                className="w-full p-4 rounded-xl text-left justify-start text-stone-700 dark:text-gray-300 bg-stone-100 dark:bg-tribe-surface hover:bg-stone-200 dark:hover:bg-tribe-mid"
+              >
+                <span className="flex flex-col items-start">
+                  <span className="font-semibold">{txt.lookingForTrainer}</span>
+                  <span className="text-xs font-normal text-stone-500 dark:text-gray-400">
+                    {txt.lookingForTrainerDesc}
+                  </span>
+                </span>
+              </Button>
+            </Link>
           </div>
         )}
 
@@ -229,6 +245,22 @@ export default function SettingsPage() {
                 )}
               </div>
             </button>
+
+            {/* The W2 per-category delivery matrix. It lives on its own page
+                because it is a table of categories x channels, not a toggle. */}
+            <Link href="/settings/notifications">
+              <Button
+                variant="ghost"
+                className="w-full p-4 rounded-xl text-left justify-start text-stone-700 dark:text-gray-300 bg-stone-100 dark:bg-tribe-surface hover:bg-stone-200 dark:hover:bg-tribe-mid"
+              >
+                <span className="flex flex-col items-start">
+                  <span className="font-semibold">{txt.notificationPreferences}</span>
+                  <span className="text-xs font-normal text-stone-500 dark:text-gray-400">
+                    {txt.notificationPreferencesDesc}
+                  </span>
+                </span>
+              </Button>
+            </Link>
           </div>
         </div>
 
@@ -440,6 +472,14 @@ export default function SettingsPage() {
                 className="w-full p-4 rounded-xl text-left justify-start text-stone-700 dark:text-gray-300 bg-stone-100 dark:bg-tribe-surface hover:bg-stone-200 dark:hover:bg-tribe-mid"
               >
                 {txt.safety}
+              </Button>
+            </Link>
+            <Link href="/legal/delete-account">
+              <Button
+                variant="ghost"
+                className="w-full p-4 rounded-xl text-left justify-start text-stone-700 dark:text-gray-300 bg-stone-100 dark:bg-tribe-surface hover:bg-stone-200 dark:hover:bg-tribe-mid"
+              >
+                {txt.deleteAccountHelp}
               </Button>
             </Link>
           </div>

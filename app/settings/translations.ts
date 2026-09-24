@@ -49,6 +49,17 @@ export function getSettingsTranslations(language: 'en' | 'es') {
       language === 'es'
         ? 'Configura tus deportes, horarios y preferencias para encontrar compañeros de entrenamiento'
         : 'Set your sports, schedule and preferences to find training partners',
+    notificationPreferences: language === 'es' ? 'Preferencias de Notificaciones' : 'Notification Preferences',
+    notificationPreferencesDesc:
+      language === 'es'
+        ? 'Elige qué te avisamos y si llega por push o por correo.'
+        : 'Choose what we tell you about, and whether it arrives by push or email.',
+    lookingForTrainer: language === 'es' ? '¿Buscando un Entrenador?' : 'Looking for a Trainer?',
+    lookingForTrainerDesc:
+      language === 'es'
+        ? 'Cuéntanos qué buscas y los entrenadores te encuentran a ti.'
+        : 'Tell us what you want and let trainers find you.',
+    deleteAccountHelp: language === 'es' ? 'Cómo Eliminar Tu Cuenta' : 'How to Delete Your Account',
     location: language === 'es' ? 'Ubicación' : 'Location',
     locationDesc:
       language === 'es'

@@ -271,7 +271,7 @@ export default function SearchPage() {
                   key={result.id}
                   session={result}
                   language={language}
-                  onSelect={() => router.push(`/sessions/${result.id}`)}
+                  onSelect={() => router.push(`/session/${result.id}`)}
                 />
               ))}
           </div>
