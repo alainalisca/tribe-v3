@@ -482,6 +482,25 @@ export async function fetchCommunityPostComments(
   }
 }
 
+export async function fetchCommunityPostById(
+  supabase: SupabaseClient,
+  postId: string
+): Promise<DalResult<CommunityPostWithAuthor>> {
+  try {
+    const { data, error } = await supabase
+      .from('community_posts')
+      .select('*, author:author_id(id, name, avatar_url)')
+      .eq('id', postId)
+      .single();
+
+    if (error) return { success: false, error: error.message };
+    return { success: true, data };
+  } catch (error) {
+    logError(error, { action: 'fetchCommunityPostById' });
+    return { success: false, error: 'Failed to fetch post' };
+  }
+}
+
 // ─── Banner / cover image management ───
 
 export async function updateCommunityCoverImage(

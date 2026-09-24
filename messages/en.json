@@ -422,5 +422,22 @@
     "toggleError": "Could not update the lead.",
     "markedContacted": "Marked as contacted",
     "markedPending": "Marked as pending"
+  },
+  "communityComments": {
+    "title": "Comments",
+    "backAria": "Back to the community",
+    "empty": "No comments yet. Start the conversation.",
+    "placeholder": "Write a comment",
+    "send": "Post",
+    "sending": "Posting...",
+    "required": "Write something first",
+    "postError": "Could not post your comment",
+    "loadError": "Could not load this post",
+    "loading": "Loading...",
+    "likeAria": "Like this post",
+    "unlikeAria": "Remove your like",
+    "likeError": "Could not update your like",
+    "signedOut": "Sign in to join the conversation",
+    "charsLeft": "{n} characters left"
   }
 }

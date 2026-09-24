@@ -422,5 +422,22 @@
     "toggleError": "No se pudo actualizar el lead.",
     "markedContacted": "Marcado como contactado",
     "markedPending": "Marcado como pendiente"
+  },
+  "communityComments": {
+    "title": "Comentarios",
+    "backAria": "Volver a la comunidad",
+    "empty": "Todavía no hay comentarios. Empieza tú la conversación.",
+    "placeholder": "Escribe un comentario",
+    "send": "Publicar",
+    "sending": "Publicando...",
+    "required": "Escribe algo primero",
+    "postError": "No pudimos publicar tu comentario",
+    "loadError": "No pudimos cargar esta publicación",
+    "loading": "Cargando...",
+    "likeAria": "Dar me gusta",
+    "unlikeAria": "Quitar tu me gusta",
+    "likeError": "No pudimos actualizar tu me gusta",
+    "signedOut": "Inicia sesión para unirte a la conversación",
+    "charsLeft": "Te quedan {n} caracteres"
   }
 }

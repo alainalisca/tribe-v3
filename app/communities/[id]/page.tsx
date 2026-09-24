@@ -563,10 +563,17 @@ export default function CommunityDetailPage() {
 
                           {/* Post stats */}
                           <div className="flex gap-4 text-sm text-stone-600 dark:text-gray-400 pt-2 border-t border-gray-200 dark:border-tribe-card">
-                            <button className="flex items-center gap-1 hover:text-red-500 transition">
+                            {/* Was a <button> with no onClick: it looked like a
+                                like control and did nothing. The working one
+                                lives on the comments page, so this opens it
+                                rather than pretending to act. */}
+                            <Link
+                              href={`/communities/${communityId}/post/${post.id}/comments`}
+                              className="flex items-center gap-1 hover:text-red-500 transition"
+                            >
                               <Heart className="w-4 h-4" />
                               {post.likes_count}
-                            </button>
+                            </Link>
                             <Link
                               href={`/communities/${communityId}/post/${post.id}/comments`}
                               className="flex items-center gap-1 hover:text-tribe-green transition"
