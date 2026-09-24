@@ -422,5 +422,27 @@
     "toggleError": "No se pudo actualizar el lead.",
     "markedContacted": "Marcado como contactado",
     "markedPending": "Marcado como pendiente"
+  },
+  "communityEdit": {
+    "title": "Editar comunidad",
+    "edit": "Editar",
+    "back": "Volver",
+    "name": "Nombre",
+    "nameRequired": "El nombre es obligatorio",
+    "description": "Descripción",
+    "descriptionPlaceholder": "Cuéntanos sobre tu comunidad...",
+    "sport": "Deporte",
+    "none": "Ninguno",
+    "location": "Ubicación",
+    "locationPlaceholder": "Buscar ubicación...",
+    "isPrivate": "Comunidad privada",
+    "isPrivateDesc": "Solo miembros invitados pueden unirse",
+    "save": "Guardar cambios",
+    "saving": "Guardando...",
+    "cancel": "Cancelar",
+    "noChanges": "No hay cambios por guardar",
+    "saved": "Comunidad actualizada",
+    "refused": "No tienes permiso para editar esta comunidad.",
+    "failed": "No se pudieron guardar los cambios."
   }
 }
