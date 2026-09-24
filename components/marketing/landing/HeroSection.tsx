@@ -5,15 +5,16 @@ import Link from 'next/link';
 import { useLanguage } from '@/lib/LanguageContext';
 import { getPopularNeighborhoods } from '@/lib/city-config';
 
-// Real Tribe sessions and instructors in Medellín, hosted locally so the
-// hero loads from one origin. Replaced the stock set (rowers, deadlift,
-// cycling, running) so the grid backs up the "gente real" promise.
+// Hero and handshake are the original shots (Al's). The other three are
+// real Tribe sessions and partners in Medellín, replacing the stock
+// deadlift / cycling / running images. All hosted locally so the grid
+// loads from one origin.
 const PHOTOS = {
-  hero: '/landing-rooftop-yoga.jpg',
+  hero: '/landing-hero.jpg',
+  handshake: '/landing-rowers.jpg',
   padwork: '/landing-boxing-padwork.jpg',
-  yogaDuo: '/landing-yoga-duo.jpg',
-  bjjGroup: '/landing-bjj-group.jpg',
-  boxingOutdoor: '/landing-boxing-outdoor.jpg',
+  rooftopYoga: '/landing-rooftop-yoga.jpg',
+  bullbox: '/landing-bullbox.jpg',
 };
 
 const PLAY_STORE = 'https://play.google.com/store/apps/details?id=prod.tribe.android';
@@ -29,11 +30,14 @@ const t = {
     active: (n: number) => `Active in ${n} neighborhoods across Medellín`,
     appStore: 'Download on the',
     playStore: 'GET IT ON',
-    altHero: 'Sunrise yoga session on a rooftop overlooking Medellín',
+    altHero: 'Barbell training in Medellín',
+    altHandshake: 'Athletes greeting each other after a CrossFit session',
     altPadwork: 'Boxing pad work with a Tribe coach at an outdoor night session',
-    altYogaDuo: 'Two people practicing yoga together in a studio',
-    altBjj: 'Jiu-jitsu group after training together',
-    altBoxingOutdoor: 'Outdoor boxing session in Medellín',
+    altRooftop: 'Sunrise yoga on a rooftop overlooking Medellín',
+    altBullbox: 'Barbell session at BullBox, a Tribe partner gym',
+    tagPadwork: 'Boxing',
+    tagRooftop: 'Rooftop yoga',
+    tagBullbox: 'BullBox · Partner',
   },
   es: {
     headline1: 'Nunca Entrenes',
@@ -44,13 +48,41 @@ const t = {
     active: (n: number) => `Activo en ${n} barrios en Medellín`,
     appStore: 'Descargar en',
     playStore: 'DISPONIBLE EN',
-    altHero: 'Sesión de yoga al amanecer en una terraza con vista a Medellín',
+    altHero: 'Entrenamiento con barra en Medellín',
+    altHandshake: 'Atletas saludándose después de una sesión de CrossFit',
     altPadwork: 'Boxeo con guantes de enfoque junto a un coach de Tribe en una sesión nocturna al aire libre',
-    altYogaDuo: 'Dos personas practicando yoga juntas en un estudio',
-    altBjj: 'Grupo de jiu-jitsu después de entrenar juntos',
-    altBoxingOutdoor: 'Sesión de boxeo al aire libre en Medellín',
+    altRooftop: 'Yoga al amanecer en una terraza con vista a Medellín',
+    altBullbox: 'Sesión con barra en BullBox, gimnasio aliado de Tribe',
+    tagPadwork: 'Boxeo',
+    tagRooftop: 'Yoga en terraza',
+    tagBullbox: 'BullBox · Aliado',
   },
 } as const;
+
+/* Square grid tile. The tag sits on the photo itself (gradient, no solid
+   block) and the image eases in slightly on hover so the grid feels alive. */
+function Tile({ src, alt, tag, position = '' }: { src: string; alt: string; tag?: string; position?: string }) {
+  return (
+    <div className="group relative aspect-square rounded-xl overflow-hidden shadow-[0_8px_24px_rgba(0,0,0,0.3)]">
+      <Image
+        src={src}
+        alt={alt}
+        fill
+        sizes="(min-width: 1024px) 260px, 50vw"
+        className={`object-cover ${position} transition-transform duration-700 ease-out group-hover:scale-[1.04]`}
+      />
+      {tag && (
+        <>
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/60 to-transparent" />
+          <span className="absolute left-3 bottom-3 inline-flex items-center gap-1.5 text-[11px] font-semibold tracking-wide text-white/95">
+            <span className="w-1.5 h-1.5 rounded-full bg-tribe-green" />
+            {tag}
+          </span>
+        </>
+      )}
+    </div>
+  );
+}
 
 export default function HeroSection() {
   const { language } = useLanguage();
@@ -144,28 +176,14 @@ export default function HeroSection() {
                   alt={s.altHero}
                   fill
                   sizes="(min-width: 1024px) 520px, 100vw"
-                  className="object-cover"
+                  className="object-cover object-[center_35%]"
                   priority
                 />
               </div>
-              <div className="relative aspect-square rounded-xl overflow-hidden shadow-[0_8px_24px_rgba(0,0,0,0.3)]">
-                <Image src={PHOTOS.padwork} alt={s.altPadwork} fill sizes="(min-width: 1024px) 260px, 50vw" className="object-cover" />
-              </div>
-              <div className="relative aspect-square rounded-xl overflow-hidden shadow-[0_8px_24px_rgba(0,0,0,0.3)]">
-                <Image
-                  src={PHOTOS.yogaDuo}
-                  alt={s.altYogaDuo}
-                  fill
-                  sizes="(min-width: 1024px) 260px, 50vw"
-                  className="object-cover"
-                />
-              </div>
-              <div className="relative aspect-square rounded-xl overflow-hidden shadow-[0_8px_24px_rgba(0,0,0,0.3)]">
-                <Image src={PHOTOS.bjjGroup} alt={s.altBjj} fill sizes="(min-width: 1024px) 260px, 50vw" className="object-cover" />
-              </div>
-              <div className="relative aspect-square rounded-xl overflow-hidden shadow-[0_8px_24px_rgba(0,0,0,0.3)]">
-                <Image src={PHOTOS.boxingOutdoor} alt={s.altBoxingOutdoor} fill sizes="(min-width: 1024px) 260px, 50vw" className="object-cover" />
-              </div>
+              <Tile src={PHOTOS.handshake} alt={s.altHandshake} position="object-top" />
+              <Tile src={PHOTOS.padwork} alt={s.altPadwork} tag={s.tagPadwork} />
+              <Tile src={PHOTOS.rooftopYoga} alt={s.altRooftop} tag={s.tagRooftop} />
+              <Tile src={PHOTOS.bullbox} alt={s.altBullbox} tag={s.tagBullbox} />
             </div>
           </div>
         </div>
