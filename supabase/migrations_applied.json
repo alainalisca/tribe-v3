@@ -13,6 +13,7 @@
     "186_sport_demand_counts",
     "187_athlete_setup",
     "188_one_off_sends",
-    "189_stable_unsub_token"
+    "189_stable_unsub_token",
+    "190_community_soft_delete"
   ]
 }

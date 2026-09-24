@@ -9,13 +9,16 @@ import { logError } from '@/lib/logger';
 import { showSuccess } from '@/lib/toast';
 import { SkeletonCard } from '@/components/Skeleton';
 import CommunityEditForm from '@/components/communities/CommunityEditForm';
+import DeleteCommunitySection from '@/components/communities/DeleteCommunitySection';
 import { getCommunityPermissions } from '@/lib/communityPermissions';
 import {
   fetchCommunityById,
   fetchMyCommunityRole,
   updateCommunity,
+  softDeleteCommunity,
   COMMUNITY_WRITE_REFUSED,
   type CommunityEditableFields,
+  type SoftDeleteCommunityError,
 } from '@/lib/dal/communities';
 
 /**
@@ -35,6 +38,7 @@ export default function EditCommunityPage() {
   const t = useTranslations('communityEdit');
 
   const [initial, setInitial] = useState<CommunityEditableFields | null>(null);
+  const [canDelete, setCanDelete] = useState(false);
 
   useEffect(() => {
     if (!communityId) return;
@@ -61,17 +65,18 @@ export default function EditCommunityPage() {
       }
 
       const row = communityRes.data;
-      const { canManage } = getCommunityPermissions({
+      const perms = getCommunityPermissions({
         userId: user.id,
         creatorId: row.creator_id,
         myRole: roleRes.success ? (roleRes.data ?? null) : null,
       });
-      if (!canManage) {
+      if (!perms.canManage) {
         router.replace(`/communities/${communityId}`);
         return;
       }
 
       if (!cancelled) {
+        setCanDelete(perms.canDelete);
         setInitial({
           name: row.name,
           description: row.description,
@@ -103,6 +108,25 @@ export default function EditCommunityPage() {
     return null;
   }
 
+  async function handleDelete(typedName: string): Promise<string | null> {
+    const res = await softDeleteCommunity(supabase, communityId, typedName);
+    if (!res.success) {
+      const key: Record<SoftDeleteCommunityError, string> = {
+        not_signed_in: 'deleteErrorNotSignedIn',
+        not_found: 'deleteErrorNotFound',
+        already_deleted: 'deleteErrorAlreadyDeleted',
+        not_creator: 'deleteErrorNotCreator',
+        name_mismatch: 'deleteErrorNameMismatch',
+        failed: 'deleteErrorFailed',
+      };
+      return t(key[res.reason ?? 'failed']);
+    }
+    showSuccess(t('deleted'));
+    // replace, not push: Back must not return to a community that is gone.
+    router.replace('/communities');
+    return null;
+  }
+
   return (
     <div className="min-h-screen bg-white dark:bg-tribe-surface">
       <div className="sticky top-0 safe-area-top bg-white dark:bg-tribe-surface border-b border-gray-200 dark:border-tribe-mid z-40">
@@ -120,11 +144,14 @@ export default function EditCommunityPage() {
 
       <div className="max-w-2xl md:max-w-4xl mx-auto px-4 py-8 pb-24">
         {initial ? (
-          <CommunityEditForm
-            initial={initial}
-            onSave={handleSave}
-            onCancel={() => router.push(`/communities/${communityId}`)}
-          />
+          <>
+            <CommunityEditForm
+              initial={initial}
+              onSave={handleSave}
+              onCancel={() => router.push(`/communities/${communityId}`)}
+            />
+            {canDelete && <DeleteCommunitySection communityName={initial.name} onDelete={handleDelete} />}
+          </>
         ) : (
           <div className="h-64">
             <SkeletonCard />

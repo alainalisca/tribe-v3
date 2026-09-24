@@ -76,6 +76,7 @@ export async function fetchCommunities(
       .from('communities')
       .select('*, creator:creator_id(id, name, avatar_url)')
       .eq('is_private', false)
+      .is('deleted_at', null)
       .order('member_count', { ascending: false })
       .limit(limit)
       .range(offset, offset + limit - 1);
@@ -116,6 +117,7 @@ export async function fetchUserCommunities(
       .from('communities')
       .select('*, creator:creator_id(id, name, avatar_url)')
       .in('id', communityIds)
+      .is('deleted_at', null)
       .order('created_at', { ascending: false });
 
     if (commError) return { success: false, error: commError.message };
@@ -135,6 +137,7 @@ export async function fetchCommunityById(
       .from('communities')
       .select('*, creator:creator_id(id, name, avatar_url)')
       .eq('id', communityId)
+      .is('deleted_at', null)
       .single();
 
     if (error) return { success: false, error: error.message };
@@ -656,5 +659,56 @@ export async function reportCommunityPost(
   } catch (error) {
     logError(error, { action: 'reportCommunityPost' });
     return { success: false, error: 'Failed to report post' };
+  }
+}
+
+// ─── Soft delete (migration 190) ───
+
+/** Why a delete was refused, from the SQLSTATE soft_delete_community raises. */
+export type SoftDeleteCommunityError =
+  | 'not_signed_in'
+  | 'not_found'
+  | 'already_deleted'
+  | 'not_creator'
+  | 'name_mismatch'
+  | 'failed';
+
+const SOFT_DELETE_ERRORS: Record<string, SoftDeleteCommunityError> = {
+  '28000': 'not_signed_in',
+  P0002: 'not_found',
+  '55000': 'already_deleted',
+  '42501': 'not_creator',
+  '22023': 'name_mismatch',
+};
+
+/**
+ * Soft delete a community through soft_delete_community(), the only path that
+ * can set deleted_at: authenticated holds no UPDATE on that column (190).
+ * Creator only, and the typed name is checked again on the server, so the
+ * browser check is the experience and this is the rule.
+ *
+ * A deleted row is invisible to its own creator afterwards, which is why this
+ * is an RPC and not a PATCH: PostgREST would ask for the row back and fail.
+ */
+export async function softDeleteCommunity(
+  supabase: SupabaseClient,
+  communityId: string,
+  typedName: string
+): Promise<DalResult<null> & { reason?: SoftDeleteCommunityError }> {
+  try {
+    const { error } = await supabase.rpc('soft_delete_community', {
+      p_community_id: communityId,
+      p_confirm_name: typedName,
+    });
+
+    if (error) {
+      const reason = SOFT_DELETE_ERRORS[error.code ?? ''] ?? 'failed';
+      if (reason === 'failed') logError(new Error(error.message), { action: 'softDeleteCommunity' });
+      return { success: false, error: error.message, reason };
+    }
+    return { success: true };
+  } catch (error) {
+    logError(error, { action: 'softDeleteCommunity' });
+    return { success: false, error: 'Failed to delete community', reason: 'failed' };
   }
 }

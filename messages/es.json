@@ -443,6 +443,19 @@
     "noChanges": "No hay cambios por guardar",
     "saved": "Comunidad actualizada",
     "refused": "No tienes permiso para editar esta comunidad.",
-    "failed": "No se pudieron guardar los cambios."
+    "failed": "No se pudieron guardar los cambios.",
+    "dangerTitle": "Eliminar comunidad",
+    "dangerBody": "La comunidad desaparece para todos, junto con sus publicaciones y eventos. No puedes deshacerlo desde la app.",
+    "deleteButton": "Eliminar comunidad",
+    "deleteConfirmLabel": "Para confirmar, escribe el nombre de la comunidad:",
+    "deleteConfirm": "Eliminar para siempre",
+    "deleting": "Eliminando...",
+    "deleted": "Comunidad eliminada",
+    "deleteErrorNotSignedIn": "Vuelve a iniciar sesión para eliminar esta comunidad.",
+    "deleteErrorNotFound": "Esta comunidad ya no existe.",
+    "deleteErrorAlreadyDeleted": "Esta comunidad ya fue eliminada.",
+    "deleteErrorNotCreator": "Solo quien creó esta comunidad puede eliminarla.",
+    "deleteErrorNameMismatch": "El nombre que escribiste no coincide.",
+    "deleteErrorFailed": "No se pudo eliminar la comunidad. Inténtalo de nuevo."
   }
 }
