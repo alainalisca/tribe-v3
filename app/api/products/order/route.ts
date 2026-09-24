@@ -11,11 +11,38 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { logError } from '@/lib/logger';
+import { log, logError } from '@/lib/logger';
 import { createProductOrder, getProductDetail } from '@/lib/dal/products';
+
+/**
+ * PAY-01 follow-up: this route was not covered by the original sweep.
+ * It creates a product_orders row and returns it for the client to pay
+ * "separately", so it is the opening move of an instructor purchase even
+ * though it moves no money itself. The five routes PAY-01 did gate all
+ * refuse while instructor payments are off; this one accepted orders from
+ * any authenticated caller. Nothing in the UI reached it, which is not a
+ * control: it is a live POST endpoint.
+ *
+ * Same shape as the gated routes on purpose: read at call time, not at
+ * module load, and absent means off.
+ */
+function isInstructorPaymentsEnabled(): boolean {
+  return process.env.INSTRUCTOR_PAYMENTS_ENABLED === 'true';
+}
 
 export async function POST(request: NextRequest) {
   try {
+    if (!isInstructorPaymentsEnabled()) {
+      // 503, not 403, matching the other PAY-01 gates: "not open yet",
+      // not "you may not". Logged so an attempt while the switch is off is
+      // visible rather than silent.
+      log('warn', 'instructor_payments_blocked', {
+        route: 'POST /api/products/order',
+        action: 'payments_disabled',
+      });
+      return NextResponse.json({ success: false, error: 'payments_disabled' }, { status: 503 });
+    }
+
     const supabase = await createClient();
 
     const {
