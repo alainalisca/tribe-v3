@@ -5,16 +5,15 @@ import Link from 'next/link';
 import { useLanguage } from '@/lib/LanguageContext';
 import { getPopularNeighborhoods } from '@/lib/city-config';
 
-// Hosting locally avoids the Unsplash rate-limit / dead-photo risk that the
-// previous external URLs carried, and keeps the hero loading from one origin.
-// cycling/running are the two stock photos we had before; downloaded into
-// /public so all four grid images are distinct and load from one origin.
+// Real Tribe sessions and instructors in Medellín, hosted locally so the
+// hero loads from one origin. Replaced the stock set (rowers, deadlift,
+// cycling, running) so the grid backs up the "gente real" promise.
 const PHOTOS = {
-  hero: '/landing-hero.jpg',
-  rowers: '/landing-rowers.jpg',
-  deadlift: '/landing-deadlift.jpg',
-  cycling: '/landing-cycling.jpg',
-  running: '/landing-running.jpg',
+  hero: '/landing-rooftop-yoga.jpg',
+  padwork: '/landing-boxing-padwork.jpg',
+  yogaDuo: '/landing-yoga-duo.jpg',
+  bjjGroup: '/landing-bjj-group.jpg',
+  boxingOutdoor: '/landing-boxing-outdoor.jpg',
 };
 
 const PLAY_STORE = 'https://play.google.com/store/apps/details?id=prod.tribe.android';
@@ -30,6 +29,11 @@ const t = {
     active: (n: number) => `Active in ${n} neighborhoods across Medellín`,
     appStore: 'Download on the',
     playStore: 'GET IT ON',
+    altHero: 'Sunrise yoga session on a rooftop overlooking Medellín',
+    altPadwork: 'Boxing pad work with a Tribe coach at an outdoor night session',
+    altYogaDuo: 'Two people practicing yoga together in a studio',
+    altBjj: 'Jiu-jitsu group after training together',
+    altBoxingOutdoor: 'Outdoor boxing session in Medellín',
   },
   es: {
     headline1: 'Nunca Entrenes',
@@ -40,6 +44,11 @@ const t = {
     active: (n: number) => `Activo en ${n} barrios en Medellín`,
     appStore: 'Descargar en',
     playStore: 'DISPONIBLE EN',
+    altHero: 'Sesión de yoga al amanecer en una terraza con vista a Medellín',
+    altPadwork: 'Boxeo con guantes de enfoque junto a un coach de Tribe en una sesión nocturna al aire libre',
+    altYogaDuo: 'Dos personas practicando yoga juntas en un estudio',
+    altBjj: 'Grupo de jiu-jitsu después de entrenar juntos',
+    altBoxingOutdoor: 'Sesión de boxeo al aire libre en Medellín',
   },
 } as const;
 
@@ -132,28 +141,30 @@ export default function HeroSection() {
               <div className="col-span-2 relative aspect-video rounded-2xl overflow-hidden shadow-[0_8px_24px_rgba(0,0,0,0.3)]">
                 <Image
                   src={PHOTOS.hero}
-                  alt="Barbell training in Medellín"
+                  alt={s.altHero}
                   fill
-                  className="object-cover object-[center_35%]"
+                  sizes="(min-width: 1024px) 520px, 100vw"
+                  className="object-cover"
                   priority
                 />
               </div>
               <div className="relative aspect-square rounded-xl overflow-hidden shadow-[0_8px_24px_rgba(0,0,0,0.3)]">
-                <Image src={PHOTOS.rowers} alt="CrossFit community" fill className="object-cover object-top" />
+                <Image src={PHOTOS.padwork} alt={s.altPadwork} fill sizes="(min-width: 1024px) 260px, 50vw" className="object-cover" />
               </div>
               <div className="relative aspect-square rounded-xl overflow-hidden shadow-[0_8px_24px_rgba(0,0,0,0.3)]">
                 <Image
-                  src={PHOTOS.deadlift}
-                  alt="Deadlift training"
+                  src={PHOTOS.yogaDuo}
+                  alt={s.altYogaDuo}
                   fill
-                  className="object-cover object-[center_30%]"
+                  sizes="(min-width: 1024px) 260px, 50vw"
+                  className="object-cover"
                 />
               </div>
               <div className="relative aspect-square rounded-xl overflow-hidden shadow-[0_8px_24px_rgba(0,0,0,0.3)]">
-                <Image src={PHOTOS.cycling} alt="Cycling" fill className="object-cover" />
+                <Image src={PHOTOS.bjjGroup} alt={s.altBjj} fill sizes="(min-width: 1024px) 260px, 50vw" className="object-cover" />
               </div>
               <div className="relative aspect-square rounded-xl overflow-hidden shadow-[0_8px_24px_rgba(0,0,0,0.3)]">
-                <Image src={PHOTOS.running} alt="Running" fill className="object-cover" />
+                <Image src={PHOTOS.boxingOutdoor} alt={s.altBoxingOutdoor} fill sizes="(min-width: 1024px) 260px, 50vw" className="object-cover" />
               </div>
             </div>
           </div>
