@@ -7,36 +7,32 @@ import { useScrollReveal } from '@/hooks/useScrollReveal';
 import { Activity, Flame, Ticket, type LucideIcon } from 'lucide-react';
 
 /**
- * High-quality Unsplash photos showing real fitness scenes.
- * Each one anchors a feature block so the section isn't a wall of text.
+ * Real Tribe sessions in Medellín, hosted locally. Each one anchors a
+ * feature block so the section isn't a wall of text.
  */
 const FEATURE_IMAGES = {
-  neighborhood: 'https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=800&q=80', // outdoor group training
-  freePaid: 'https://images.unsplash.com/photo-1534258936925-c58bed479fcb?w=800&q=80', // gym/boxing training
-  // "Connect After You Train" — soccer scene (Medellín plays a lot of pickup
-  // soccer; this maps directly to the "train together" thesis better than the
-  // earlier dance/cable-car shots). Swap for a real Medellín-shot photo when
-  // available.
-  connect: 'https://images.unsplash.com/photo-1551958219-acbc608c6377?w=800&q=80', // group playing soccer
+  neighborhood: '/landing-athletes-rooftop.jpg', // sunrise yoga on a rooftop, skyline behind
+  freePaid: '/landing-athletes-class.jpg', // group class at a partner gym
+  connect: '/landing-athletes-bjj-group.jpg', // jiu-jitsu group after training
 };
 
 const blocks = {
   en: [
     {
       image: FEATURE_IMAGES.neighborhood,
-      alt: 'Group training outdoors in Medellín',
+      alt: 'Sunrise yoga session on a rooftop overlooking Medellín',
       title: 'Sessions by Neighborhood',
       desc: "Find what's happening in El Poblado, Laureles, Envigado, and more. Training sessions around the corner — not across town.",
     },
     {
       image: FEATURE_IMAGES.freePaid,
-      alt: 'Boxing training session',
+      alt: 'Group training class at a gym in Medellín',
       title: 'Free and Paid Options',
       desc: 'Join free community sessions or book premium instructor-led coaching. First-timers often get promo codes.',
     },
     {
       image: FEATURE_IMAGES.connect,
-      alt: 'Friends playing pickup soccer in Medellín',
+      alt: 'Jiu-jitsu group together after training',
       title: 'Connect After You Train',
       desc: 'No cold DMs. Chat is session-gated — you build real relationships with people you actually trained with.',
     },
@@ -44,19 +40,19 @@ const blocks = {
   es: [
     {
       image: FEATURE_IMAGES.neighborhood,
-      alt: 'Entrenamiento grupal al aire libre en Medellín',
+      alt: 'Sesión de yoga al amanecer en una terraza con vista a Medellín',
       title: 'Sesiones por Barrio',
       desc: 'Descubre qué pasa en El Poblado, Laureles, Envigado y más. Sesiones de entrenamiento a la vuelta de la esquina.',
     },
     {
       image: FEATURE_IMAGES.freePaid,
-      alt: 'Sesión de boxeo',
+      alt: 'Clase grupal de entrenamiento en un gimnasio de Medellín',
       title: 'Opciones Gratis y Pagas',
       desc: 'Únete a sesiones comunitarias gratis o reserva coaching premium con instructores. Los nuevos suelen recibir códigos promo.',
     },
     {
       image: FEATURE_IMAGES.connect,
-      alt: 'Amigos jugando fútbol pickup en Medellín',
+      alt: 'Grupo de jiu-jitsu después de entrenar juntos',
       title: 'Conéctate Después de Entrenar',
       desc: 'Sin mensajes fríos. El chat está vinculado a sesiones — construyes relaciones reales con gente con la que entrenaste.',
     },

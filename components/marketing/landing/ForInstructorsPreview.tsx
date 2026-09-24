@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useLanguage } from '@/lib/LanguageContext';
 import { useScrollReveal } from '@/hooks/useScrollReveal';
 
-const INSTRUCTOR_PHOTO = 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=800&q=80'; // instructor leading group
+const INSTRUCTOR_PHOTO = '/landing-instructor-leading.jpg'; // Tribe instructor leading a session in Medellín
 
 const points = {
   en: [
