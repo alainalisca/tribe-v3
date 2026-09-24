@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS public.client_imports (
   updated integer NOT NULL DEFAULT 0,
   skipped integer NOT NULL DEFAULT 0,
   errors jsonb,
-  imported_by uuid NOT NULL REFERENCES public.users(id),
+  imported_by uuid REFERENCES public.users(id) ON DELETE SET NULL,
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
@@ -47,6 +47,24 @@ CREATE POLICY "client_imports_coach_insert"
     OR public.is_app_admin()
   );
 
+CREATE POLICY "client_imports_coach_update"
+  ON public.client_imports FOR UPDATE
+  TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.gym_coaches gc
+      WHERE gc.gym_id = client_imports.gym_id AND gc.user_id = auth.uid()
+    )
+    OR public.is_app_admin()
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.gym_coaches gc
+      WHERE gc.gym_id = client_imports.gym_id AND gc.user_id = auth.uid()
+    )
+    OR public.is_app_admin()
+  );
+
 CREATE POLICY "client_imports_coach_delete"
   ON public.client_imports FOR DELETE
   TO authenticated
@@ -57,3 +75,6 @@ CREATE POLICY "client_imports_coach_delete"
     )
     OR public.is_app_admin()
   );
+
+REVOKE ALL ON public.client_imports FROM PUBLIC;
+REVOKE ALL ON public.client_imports FROM anon;

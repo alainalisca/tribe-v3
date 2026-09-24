@@ -16,8 +16,8 @@ AS
     ca.id,
     ca.gym_id,
     ca.client_id,
-    ca.attended_at AS activity_at,
-    'tribe_session' AS source,
+    COALESCE(ca.attended_at, ca.created_at) AS activity_at,
+    'tribe_session'::text AS source,
     NULL::text AS class_name,
     NULL::text AS coach_name,
     ca.session_id,
@@ -40,3 +40,6 @@ AS
     cv.import_id,
     cv.created_at
   FROM public.client_visits cv;
+
+REVOKE ALL ON public.client_activity_v2 FROM PUBLIC;
+REVOKE ALL ON public.client_activity_v2 FROM anon;

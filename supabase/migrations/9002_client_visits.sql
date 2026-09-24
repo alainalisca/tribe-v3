@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS public.client_visits (
   coach_name text,
   source text NOT NULL CHECK (source IN ('mira_csv', 'csv', 'manual')),
   external_id text,
-  import_id uuid REFERENCES public.client_imports(id),
+  import_id uuid REFERENCES public.client_imports(id) ON DELETE SET NULL,
   created_at timestamptz NOT NULL DEFAULT now(),
   UNIQUE (gym_id, client_id, visited_at)
 );
@@ -41,11 +41,17 @@ CREATE POLICY "client_visits_coach_insert"
   ON public.client_visits FOR INSERT
   TO authenticated
   WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM public.gym_coaches gc
-      WHERE gc.gym_id = client_visits.gym_id AND gc.user_id = auth.uid()
+    (
+      EXISTS (
+        SELECT 1 FROM public.gym_coaches gc
+        WHERE gc.gym_id = client_visits.gym_id AND gc.user_id = auth.uid()
+      )
+      OR public.is_app_admin()
     )
-    OR public.is_app_admin()
+    AND EXISTS (
+      SELECT 1 FROM public.clients c
+      WHERE c.id = client_visits.client_id AND c.gym_id = client_visits.gym_id
+    )
   );
 
 CREATE POLICY "client_visits_coach_delete"
@@ -58,3 +64,6 @@ CREATE POLICY "client_visits_coach_delete"
     )
     OR public.is_app_admin()
   );
+
+REVOKE ALL ON public.client_visits FROM PUBLIC;
+REVOKE ALL ON public.client_visits FROM anon;

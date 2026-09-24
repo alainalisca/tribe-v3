@@ -131,6 +131,36 @@ describe('os-migration-check', () => {
     }
   });
 
+  it('rejects a Class A file with REFERENCES to consumer table without ON DELETE', () => {
+    const migFile = join(MIGRATIONS_DIR, '9005_test_unsafe_fk.sql');
+    try {
+      writeFileSync(
+        migFile,
+        `-- CLASS: A\n-- TABLE: tribe_os_imports (tribe-os)\nCREATE TABLE IF NOT EXISTS tribe_os_imports (\n  id uuid PRIMARY KEY,\n  imported_by uuid REFERENCES public.users(id)\n);\n`
+      );
+      const stderr = runGuardExpectFail();
+      expect(stderr).toContain('REFERENCES consumer table');
+      expect(stderr).toContain('users');
+      expect(stderr).toContain('NO ACTION');
+    } finally {
+      if (existsSync(migFile)) rmSync(migFile);
+    }
+  });
+
+  it('accepts a Class A file with REFERENCES to consumer table with ON DELETE SET NULL', () => {
+    const migFile = join(MIGRATIONS_DIR, '9005_test_safe_fk.sql');
+    try {
+      writeFileSync(
+        migFile,
+        `-- CLASS: A\n-- TABLE: tribe_os_imports (tribe-os)\nCREATE TABLE IF NOT EXISTS tribe_os_imports (\n  id uuid PRIMARY KEY,\n  imported_by uuid REFERENCES public.users(id) ON DELETE SET NULL\n);\n`
+      );
+      const output = runGuard();
+      expect(output).toContain('os-guard OK');
+    } finally {
+      if (existsSync(migFile)) rmSync(migFile);
+    }
+  });
+
   it('accepts a Class B file with .held.sql extension', () => {
     const migFile = join(MIGRATIONS_DIR, '9004_test_classb.held.sql');
     try {

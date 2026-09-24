@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS public.gym_import_mappings (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   gym_id uuid NOT NULL REFERENCES public.gyms(id) ON DELETE CASCADE,
   kind text NOT NULL CHECK (kind IN ('members', 'visits')),
-  name text,
+  name text NOT NULL DEFAULT 'default',
   mapping jsonb NOT NULL DEFAULT '{}',
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(),
@@ -74,3 +74,6 @@ CREATE POLICY "gym_import_mappings_coach_delete"
     )
     OR public.is_app_admin()
   );
+
+REVOKE ALL ON public.gym_import_mappings FROM PUBLIC;
+REVOKE ALL ON public.gym_import_mappings FROM anon;
