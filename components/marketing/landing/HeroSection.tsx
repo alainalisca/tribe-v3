@@ -13,7 +13,7 @@ const PHOTOS = {
   hero: '/landing-hero.jpg',
   handshake: '/landing-rowers.jpg',
   padwork: '/landing-boxing-padwork.jpg',
-  rooftopYoga: '/landing-rooftop-yoga.jpg',
+  acroYoga: '/landing-acro-yoga.jpg',
   bullbox: '/landing-bullbox.jpg',
 };
 
@@ -33,11 +33,8 @@ const t = {
     altHero: 'Barbell training in Medellín',
     altHandshake: 'Athletes greeting each other after a CrossFit session',
     altPadwork: 'Boxing pad work with a Tribe coach at an outdoor night session',
-    altRooftop: 'Sunrise yoga on a rooftop overlooking Medellín',
+    altAcro: 'Partner acro yoga session in an open-air studio',
     altBullbox: 'Barbell session at BullBox, a Tribe partner gym',
-    tagPadwork: 'Boxing',
-    tagRooftop: 'Rooftop yoga',
-    tagBullbox: 'BullBox · Partner',
   },
   es: {
     headline1: 'Nunca Entrenes',
@@ -51,17 +48,13 @@ const t = {
     altHero: 'Entrenamiento con barra en Medellín',
     altHandshake: 'Atletas saludándose después de una sesión de CrossFit',
     altPadwork: 'Boxeo con guantes de enfoque junto a un coach de Tribe en una sesión nocturna al aire libre',
-    altRooftop: 'Yoga al amanecer en una terraza con vista a Medellín',
+    altAcro: 'Sesión de acro yoga en pareja en un estudio al aire libre',
     altBullbox: 'Sesión con barra en BullBox, gimnasio aliado de Tribe',
-    tagPadwork: 'Boxeo',
-    tagRooftop: 'Yoga en terraza',
-    tagBullbox: 'BullBox · Aliado',
   },
 } as const;
 
-/* Square grid tile. The tag sits on the photo itself (gradient, no solid
-   block) and the image eases in slightly on hover so the grid feels alive. */
-function Tile({ src, alt, tag, position = '' }: { src: string; alt: string; tag?: string; position?: string }) {
+/* Square grid tile with a soft hover zoom so the grid feels alive. */
+function Tile({ src, alt, position = '' }: { src: string; alt: string; position?: string }) {
   return (
     <div className="group relative aspect-square rounded-xl overflow-hidden shadow-[0_8px_24px_rgba(0,0,0,0.3)]">
       <Image
@@ -71,15 +64,6 @@ function Tile({ src, alt, tag, position = '' }: { src: string; alt: string; tag?
         sizes="(min-width: 1024px) 260px, 50vw"
         className={`object-cover ${position} transition-transform duration-700 ease-out group-hover:scale-[1.04]`}
       />
-      {tag && (
-        <>
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/60 to-transparent" />
-          <span className="absolute left-3 bottom-3 inline-flex items-center gap-1.5 text-[11px] font-semibold tracking-wide text-white/95">
-            <span className="w-1.5 h-1.5 rounded-full bg-tribe-green" />
-            {tag}
-          </span>
-        </>
-      )}
     </div>
   );
 }
@@ -181,9 +165,9 @@ export default function HeroSection() {
                 />
               </div>
               <Tile src={PHOTOS.handshake} alt={s.altHandshake} position="object-top" />
-              <Tile src={PHOTOS.padwork} alt={s.altPadwork} tag={s.tagPadwork} />
-              <Tile src={PHOTOS.rooftopYoga} alt={s.altRooftop} tag={s.tagRooftop} />
-              <Tile src={PHOTOS.bullbox} alt={s.altBullbox} tag={s.tagBullbox} />
+              <Tile src={PHOTOS.padwork} alt={s.altPadwork} />
+              <Tile src={PHOTOS.acroYoga} alt={s.altAcro} />
+              <Tile src={PHOTOS.bullbox} alt={s.altBullbox} />
             </div>
           </div>
         </div>
