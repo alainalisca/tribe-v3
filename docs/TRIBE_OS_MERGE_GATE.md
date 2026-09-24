@@ -23,6 +23,15 @@ Al's written instruction — the exact words **"merge tribe-os into main"** — 
 - [ ] Manual production backup taken; backup ID recorded below.
 - [ ] Al's written instruction recorded below.
 
+## Branch-only artifacts to remove before merge
+
+These exist only for the `tribe-os/*` isolation and would break `main` if merged as-is:
+
+- [ ] **`.husky/pre-push`** — blocks pushes to `main`. Must be removed or made inert (exit 0 unconditionally) before merge, or every future push to main will fail.
+- [ ] **`predev` and `pretest` scripts in `package.json`** — call `os-guard.mjs` which fails on `main`. Must be removed before merge, or `npm run dev` and `npm test` will fail on main.
+- [ ] **`scripts/os-guard.mjs` and `scripts/os-migration-check.mjs`** — review whether to keep (with a main-compatible mode) or remove.
+- [ ] **`.githooks/pre-push`** — redundant copy of the hook (husky uses `.husky/pre-push`). Remove.
+
 ## Records
 
 **Backup ID:** _(fill at merge time)_

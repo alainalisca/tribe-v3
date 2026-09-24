@@ -129,7 +129,7 @@ Vercel preview deployments of `tribe-os/*` branches use the same Supabase as eve
 
 ## Acceptance checks
 
-1. Worktree on `tribe-os/main`, pushed. `git push origin HEAD:main` from it is rejected (paste output).
+1. Worktree on `tribe-os/main`, pushed. The pre-push hook rejects a push to main when tested by piping a fake `refs/heads/main` refspec into the hook script directly (never with a real `git push origin HEAD:main`).
 2. `os:guard` passes, and fails for each bad state (paste output).
 3. `os-migration-check` rejects a sample Class A file that contains a `CREATE TRIGGER` on `sessions` (unit test).
 4. Test gym exists with email digest off; seed and cleanup scripts refuse any gym not ending in `-prueba`.

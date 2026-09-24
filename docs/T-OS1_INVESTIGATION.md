@@ -181,3 +181,33 @@ column into the `medical` alias.
    alias means a Mira file could import health data silently.
 
 **Stopping here.** No Step 1 work has begun.
+
+---
+
+## Decisions
+
+_Recorded 2026-09-24, after T-OS0 acceptance checks._
+
+### Item 3 walkthrough (decided)
+
+- The account is **Al's own**. Al signs in himself in the browser; no credentials pass through the agent.
+- The gym is **`bullbox-prueba`**, created only after Al reviews the probe results and the seed SQL.
+- **Seed clients only** (tagged `seed`). Never seed `client_attendance` — inserting there fires six triggers and creates dual-writer conflicts (T-OS0 rule 3).
+- Visits come from the new **`client_visits`** table after T-OS1 Step 1; they are not faked in the existing attendance table.
+- The dev server runs on **port 3002** (`next dev -p 3002`) so it cannot clash with the main folder's port 3001.
+
+### health_notes (dato sensible, Ley 1581) (decided)
+
+- The new Mira import routes (`/api/tribe-os/import/members`, `/api/tribe-os/import/visits`) **never write `health_notes`** and must not map any CSV column named "medical", "health", "health notes", "nota médica", or any similar alias.
+- The existing main behavior — `health_notes` is shown on `/os/clients/[id]` and included in CSV export without explicit consent — is logged as a separate follow-up ticket: **T-LEGAL2** (not fixed in T-OS1).
+
+### client_visits integrity (decided)
+
+- Every `client_visits` insert must verify that the client's `gym_id` equals the target `gym_id`.
+- Clients with a `NULL` `gym_id` cannot receive visits.
+- Enforced by both the foreign key `(gym_id) REFERENCES gyms(id)` and an application-level check in the import route that rejects rows where `client.gym_id != targetGymId` or `client.gym_id IS NULL`.
+
+### Non-member permission probes (deferred)
+
+- Deferred until T-OS1 Step 1, when there are new tables (`client_visits`, `client_imports`, `gym_import_mappings`) to probe.
+- Al will name the existing non-admin account to use at that time.
