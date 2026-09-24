@@ -1,10 +1,10 @@
 'use client';
 
-import Image from 'next/image';
 import { useLanguage } from '@/lib/LanguageContext';
 import { useScrollReveal } from '@/hooks/useScrollReveal';
 
-// TODO: Al — replace with real testimonials and real photos from actual users
+// TODO: Al, replace with real testimonials from actual users. Avatars are
+// initials on purpose: no stock faces standing in for real people.
 const testimonials = {
   en: [
     {
@@ -13,7 +13,6 @@ const testimonials = {
       name: 'Sarah M.',
       role: 'Athlete',
       neighborhood: 'El Poblado',
-      avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&q=80&fit=crop',
     },
     {
       quote:
@@ -21,7 +20,6 @@ const testimonials = {
       name: 'Carlos R.',
       role: 'Instructor',
       neighborhood: 'Laureles',
-      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&q=80&fit=crop',
     },
     {
       quote:
@@ -29,7 +27,6 @@ const testimonials = {
       name: 'Daniela P.',
       role: 'Athlete',
       neighborhood: 'Envigado',
-      avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&q=80&fit=crop',
     },
   ],
   es: [
@@ -39,7 +36,6 @@ const testimonials = {
       name: 'Sarah M.',
       role: 'Atleta',
       neighborhood: 'El Poblado',
-      avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&q=80&fit=crop',
     },
     {
       quote:
@@ -47,14 +43,12 @@ const testimonials = {
       name: 'Carlos R.',
       role: 'Instructor',
       neighborhood: 'Laureles',
-      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&q=80&fit=crop',
     },
     {
       quote: 'Carreras gratis los fines de semana, clases HIIT entre semana. Tribe tiene algo para cada presupuesto.',
       name: 'Daniela P.',
       role: 'Atleta',
       neighborhood: 'Envigado',
-      avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&q=80&fit=crop',
     },
   ],
 } as const;
@@ -97,8 +91,11 @@ export default function TestimonialsSection() {
               <p className="text-gray-300 text-sm leading-relaxed mb-6 flex-1">{item.quote}</p>
               {/* Person */}
               <div className="flex items-center gap-3">
-                <div className="relative w-10 h-10 rounded-full overflow-hidden ring-2 ring-tribe-green/30">
-                  <Image src={item.avatar} alt={item.name} fill className="object-cover" sizes="40px" />
+                <div
+                  aria-hidden="true"
+                  className="w-10 h-10 rounded-full bg-tribe-green/15 ring-2 ring-tribe-green/30 flex items-center justify-center text-tribe-green font-bold text-sm"
+                >
+                  {item.name.charAt(0)}
                 </div>
                 <div>
                   <p className="text-white font-bold text-sm">{item.name}</p>

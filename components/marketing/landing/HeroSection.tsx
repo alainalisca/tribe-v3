@@ -13,7 +13,7 @@ const PHOTOS = {
   hero: '/landing-hero.jpg',
   handshake: '/landing-rowers.jpg',
   padwork: '/landing-boxing-padwork.jpg',
-  acroYoga: '/landing-acro-yoga.jpg',
+  yogaDuo: '/landing-yoga-duo.jpg',
   bullbox: '/landing-bullbox.jpg',
 };
 
@@ -33,7 +33,7 @@ const t = {
     altHero: 'Barbell training in Medellín',
     altHandshake: 'Athletes greeting each other after a CrossFit session',
     altPadwork: 'Boxing pad work with a Tribe coach at an outdoor night session',
-    altAcro: 'Partner acro yoga session in an open-air studio',
+    altYogaDuo: 'Two people practicing yoga together in a studio',
     altBullbox: 'Barbell session at BullBox, a Tribe partner gym',
   },
   es: {
@@ -48,7 +48,7 @@ const t = {
     altHero: 'Entrenamiento con barra en Medellín',
     altHandshake: 'Atletas saludándose después de una sesión de CrossFit',
     altPadwork: 'Boxeo con guantes de enfoque junto a un coach de Tribe en una sesión nocturna al aire libre',
-    altAcro: 'Sesión de acro yoga en pareja en un estudio al aire libre',
+    altYogaDuo: 'Dos personas practicando yoga juntas en un estudio',
     altBullbox: 'Sesión con barra en BullBox, gimnasio aliado de Tribe',
   },
 } as const;
@@ -166,7 +166,7 @@ export default function HeroSection() {
               </div>
               <Tile src={PHOTOS.handshake} alt={s.altHandshake} position="object-top" />
               <Tile src={PHOTOS.padwork} alt={s.altPadwork} />
-              <Tile src={PHOTOS.acroYoga} alt={s.altAcro} />
+              <Tile src={PHOTOS.yogaDuo} alt={s.altYogaDuo} />
               <Tile src={PHOTOS.bullbox} alt={s.altBullbox} />
             </div>
           </div>

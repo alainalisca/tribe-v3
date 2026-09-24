@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { useLanguage } from '@/lib/LanguageContext';
 import { useScrollReveal } from '@/hooks/useScrollReveal';
 
-const BG_PHOTO = 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=1400&q=80'; // gym/training wide shot
+const BG_PHOTO = '/landing-cta-bg.jpg'; // jiu-jitsu session in Medellín, sits under a dark overlay
 
 const t = {
   en: {
