@@ -34,13 +34,31 @@ function isClassAHeader(content) {
   return headerMatch[1].toUpperCase() === 'A';
 }
 
-function touchesConsumerTable(content) {
-  const touched = [];
+// Patterns that indicate a line MODIFIES a consumer table (not just references it).
+// A REFERENCES clause or EXISTS subquery reading from a consumer table is safe.
+const CONSUMER_MODIFY_PATTERNS = [
+  /\bALTER\s+TABLE\b/i,
+  /\bINSERT\s+INTO\b/i,
+  /\bUPDATE\b/i,
+  /\bDELETE\s+FROM\b/i,
+  /\bCREATE\s+TRIGGER\b/i,
+  /\bDROP\s+TABLE\b/i,
+  /\bTRUNCATE\b/i,
+  /\bCREATE\s+INDEX\b/i,
+  /\bCREATE\s+POLICY\b/i,
+  /\bALTER\s+POLICY\b/i,
+  /\bDROP\s+POLICY\b/i,
+];
+
+function lineModifiesConsumerTable(line) {
   for (const table of CONSUMER_TABLES) {
     const pat = new RegExp(`\\b${table}\\b`, 'i');
-    if (pat.test(content)) touched.push(table);
+    if (!pat.test(line)) continue;
+    for (const modPat of CONSUMER_MODIFY_PATTERNS) {
+      if (modPat.test(line)) return table;
+    }
   }
-  return touched;
+  return null;
 }
 
 export async function checkMigrations() {
@@ -91,17 +109,13 @@ export async function checkMigrations() {
         }
       }
 
-      const consumerHits = touchesConsumerTable(content);
-      for (const table of consumerHits) {
-        const lines = content.split('\n');
-        for (let i = 0; i < lines.length; i++) {
-          const line = lines[i].trim();
-          if (line.startsWith('--')) continue;
-          const pat = new RegExp(`\\b${table}\\b`, 'i');
-          if (pat.test(line)) {
-            errors.push(`${file}:${i + 1}: Class A file references consumer table '${table}'`);
-            break;
-          }
+      const contentLines = content.split('\n');
+      for (let i = 0; i < contentLines.length; i++) {
+        const line = contentLines[i].trim();
+        if (line.startsWith('--')) continue;
+        const hit = lineModifiesConsumerTable(line);
+        if (hit) {
+          errors.push(`${file}:${i + 1}: Class A file modifies consumer table '${hit}'`);
         }
       }
     } else {

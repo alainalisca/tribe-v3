@@ -1,41 +1,44 @@
--- T-OS0 Step 4: Create the test gym
--- CLASS: A (new rows only, Tribe.OS-owned tables)
+-- T-OS0 Step 4: Convert Al's existing dormant gym into the test gym
+-- CLASS: A (update existing Tribe.OS-owned row)
 -- Run manually in Supabase SQL editor. Do NOT run from code.
 --
--- owner_user_id is looked up by email; a wrong email fails on NOT NULL
--- instead of inserting garbage.
+-- Why UPDATE not INSERT: getGymForUser picks the OLDEST owned gym while
+-- the premium gate picks the first ACTIVE gym, so a second owned gym
+-- makes some routes open the wrong gym. Converting the existing dormant
+-- gym avoids that.
 
-INSERT INTO gyms (
-  id,
-  name,
-  slug,
-  owner_user_id,
-  timezone,
-  tribe_os_status,
-  tribe_os_tier,
-  tribe_os_granted_at,
-  tribe_os_granted_by,
-  intelligence_email_enabled,
-  created_at
-)
-VALUES (
-  gen_random_uuid(),
-  'BullBox (Prueba)',
-  'bullbox-prueba',
-  (SELECT id FROM auth.users WHERE email = 'alainalisca@aplusfitnessllc.com'),
-  'America/Bogota',
-  'active',
-  'team_studio',
-  now(),
-  'manual:t-os0-test-gym',
-  false,
-  now()
-)
-ON CONFLICT (slug) DO NOTHING;
+-- Convert the gym
+UPDATE gyms
+SET
+  name                      = 'BullBox (Prueba)',
+  slug                      = 'bullbox-prueba',
+  tribe_os_status           = 'active',
+  tribe_os_tier             = 'team_studio',
+  tribe_os_granted_at       = now(),
+  tribe_os_granted_by       = 'manual:t-os0-test-gym',
+  intelligence_email_enabled = false
+WHERE id = 'd585af30-5ed5-448b-bd9c-ab82b2e99970'
+  AND owner_user_id = 'eaff348f-5df3-4df5-bd80-69ec233aad0e';
 
--- Add Al as owner in gym_coaches
+-- Ensure Al is in gym_coaches as owner
 INSERT INTO gym_coaches (gym_id, user_id, role)
-SELECT g.id, g.owner_user_id, 'owner'
-FROM gyms g
-WHERE g.slug = 'bullbox-prueba'
+VALUES (
+  'd585af30-5ed5-448b-bd9c-ab82b2e99970',
+  'eaff348f-5df3-4df5-bd80-69ec233aad0e',
+  'owner'
+)
 ON CONFLICT (gym_id, user_id) DO NOTHING;
+
+-- ============================================================
+-- REVERT (uncomment and run to restore the gym to its original state)
+-- ============================================================
+-- UPDATE gyms
+-- SET
+--   slug                      = 'alainalisca-53a8bc',
+--   tribe_os_status           = NULL,
+--   tribe_os_tier             = 'solo',
+--   tribe_os_granted_at       = NULL,
+--   tribe_os_granted_by       = NULL,
+--   intelligence_email_enabled = true
+-- WHERE id = 'd585af30-5ed5-448b-bd9c-ab82b2e99970'
+--   AND owner_user_id = 'eaff348f-5df3-4df5-bd80-69ec233aad0e';

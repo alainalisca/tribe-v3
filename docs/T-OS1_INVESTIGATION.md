@@ -191,7 +191,7 @@ _Recorded 2026-09-24, after T-OS0 acceptance checks._
 ### Item 3 walkthrough (decided)
 
 - The account is **Al's own**. Al signs in himself in the browser; no credentials pass through the agent.
-- The gym is **`bullbox-prueba`**, created only after Al reviews the probe results and the seed SQL.
+- The gym is **`bullbox-prueba`** — Al's existing dormant gym (`d585af30-5ed5-448b-bd9c-ab82b2e99970`, previously `alainalisca-53a8bc`) converted via UPDATE, not a new INSERT. A second owned gym would cause a **gym resolution mismatch**: `getGymForUser` picks the OLDEST owned gym while the premium gate picks the first ACTIVE gym, so different routes would resolve to different gyms. This mismatch is a known issue for the merge gate — a user with two gyms gets inconsistent gym resolution.
 - **Seed clients only** (tagged `seed`). Never seed `client_attendance` — inserting there fires six triggers and creates dual-writer conflicts (T-OS0 rule 3).
 - Visits come from the new **`client_visits`** table after T-OS1 Step 1; they are not faked in the existing attendance table.
 - The dev server runs on **port 3002** (`next dev -p 3002`) so it cannot clash with the main folder's port 3001.

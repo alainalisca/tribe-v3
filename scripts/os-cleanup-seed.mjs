@@ -1,72 +1,40 @@
 #!/usr/bin/env node
 /**
- * T-OS0 Step 4: Cleanup seed data from a -prueba test gym.
+ * T-OS0 Step 4: Generate a SQL file that cleans up seed data from
+ * the bullbox-prueba test gym. Al runs the output in the SQL editor.
  *
  * Usage:
- *   SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... \
- *   node scripts/os-cleanup-seed.mjs --gym-slug=bullbox-prueba
+ *   node scripts/os-cleanup-seed.mjs
+ *
+ * Output:
+ *   scripts/generated/os-cleanup-seed.sql
  *
  * Safety:
- *   - REFUSES to run against any gym whose slug does not end in '-prueba'.
- *   - Only deletes clients tagged 'seed'.
- *   - Cascading deletes handle client_attendance via ON DELETE CASCADE.
- *
- * ⚠️  DO NOT RUN until Al reviews and approves.
+ *   - Does NOT connect to the database. Generates SQL only.
+ *   - Only deletes clients tagged 'seed' in the test gym.
+ *   - The 4 existing clients (not tagged 'seed') are untouched.
+ *   - Cascading deletes handle client_attendance and client_visits.
  */
-import { createClient } from '@supabase/supabase-js';
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 
-const SLUG_SUFFIX = '-prueba';
-const TAG = 'seed';
+const GYM_ID = 'd585af30-5ed5-448b-bd9c-ab82b2e99970';
 
-const gymSlug = process.argv.find(a => a.startsWith('--gym-slug='))?.split('=')[1];
-if (!gymSlug) {
-  console.error('Usage: node scripts/os-cleanup-seed.mjs --gym-slug=<slug>');
-  process.exit(1);
-}
+const sql = `-- T-OS0: Clean up seed data from bullbox-prueba
+-- Run manually in Supabase SQL editor. Do NOT run from code.
+-- Only deletes clients tagged 'seed'. The 4 existing clients are untouched.
+-- Cascading deletes handle client_attendance and client_visits (ON DELETE CASCADE).
 
-if (!gymSlug.endsWith(SLUG_SUFFIX)) {
-  console.error(`❌ REFUSED: gym slug '${gymSlug}' does not end in '${SLUG_SUFFIX}'.`);
-  console.error('   This script only cleans up test gyms.');
-  process.exit(1);
-}
+DELETE FROM clients
+WHERE gym_id = '${GYM_ID}'
+  AND 'seed' = ANY(tags);
+`;
 
-const url = process.env.SUPABASE_URL;
-const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-if (!url || !key) {
-  console.error('Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.');
-  process.exit(1);
-}
+const outDir = join(import.meta.dirname, 'generated');
+mkdirSync(outDir, { recursive: true });
+const outPath = join(outDir, 'os-cleanup-seed.sql');
+writeFileSync(outPath, sql);
+console.log(`✅ Generated ${outPath}`);
+console.log(`   Deletes only seed-tagged clients in gym ${GYM_ID}.`);
+console.log(`   Run this SQL in the Supabase SQL editor.`);
 
-const supabase = createClient(url, key, {
-  auth: { autoRefreshToken: false, persistSession: false },
-});
-
-const { data: gym, error: gymErr } = await supabase
-  .from('gyms')
-  .select('id, slug')
-  .eq('slug', gymSlug)
-  .single();
-
-if (gymErr || !gym) {
-  console.error(`❌ Gym '${gymSlug}' not found.`, gymErr?.message);
-  process.exit(1);
-}
-
-if (!gym.slug.endsWith(SLUG_SUFFIX)) {
-  console.error(`❌ REFUSED: resolved gym slug '${gym.slug}' does not end in '${SLUG_SUFFIX}'.`);
-  process.exit(1);
-}
-
-const { data: deleted, error: delErr } = await supabase
-  .from('clients')
-  .delete()
-  .eq('gym_id', gym.id)
-  .contains('tags', [TAG])
-  .select('id');
-
-if (delErr) {
-  console.error('❌ Cleanup failed:', delErr.message);
-  process.exit(1);
-}
-
-console.log(`✅ Cleaned up ${deleted.length} seed-tagged clients from gym '${gymSlug}' (${gym.id}).`);

@@ -1,102 +1,93 @@
 #!/usr/bin/env node
 /**
- * T-OS0 Step 4: Seed fake members into a -prueba test gym.
+ * T-OS0 Step 4: Generate a SQL file that seeds 150 fake members into
+ * the bullbox-prueba test gym. Al runs the output in the SQL editor.
  *
  * Usage:
- *   SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... \
- *   node scripts/os-seed-members.mjs --gym-slug=bullbox-prueba
+ *   node scripts/os-seed-members.mjs
+ *
+ * Output:
+ *   scripts/generated/os-seed-members.sql
  *
  * Safety:
- *   - REFUSES to run against any gym whose slug does not end in '-prueba'.
- *   - All created clients are tagged '{seed}'.
- *   - No auth users are created (T-OS0 rule 5).
- *   - No writes to consumer tables.
- *
- * ⚠️  DO NOT RUN until Al reviews and approves.
+ *   - Does NOT connect to the database. Generates SQL only.
+ *   - All rows are tagged '{seed}'.
+ *   - Never touches the 4 existing clients in the gym.
+ *   - Never writes client_attendance.
+ *   - Emails use @example.com (RFC 2606 reserved domain).
+ *   - Phones use +573000000xx (fake Colombian mobiles).
  */
-import { createClient } from '@supabase/supabase-js';
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 
-const SLUG_SUFFIX = '-prueba';
-const TAG = 'seed';
-
-const gymSlug = process.argv.find(a => a.startsWith('--gym-slug='))?.split('=')[1];
-if (!gymSlug) {
-  console.error('Usage: node scripts/os-seed-members.mjs --gym-slug=<slug>');
-  process.exit(1);
-}
-
-if (!gymSlug.endsWith(SLUG_SUFFIX)) {
-  console.error(`❌ REFUSED: gym slug '${gymSlug}' does not end in '${SLUG_SUFFIX}'.`);
-  console.error('   This script only operates on test gyms.');
-  process.exit(1);
-}
-
-const url = process.env.SUPABASE_URL;
-const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-if (!url || !key) {
-  console.error('Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.');
-  process.exit(1);
-}
-
-const supabase = createClient(url, key, {
-  auth: { autoRefreshToken: false, persistSession: false },
-});
-
-const { data: gym, error: gymErr } = await supabase
-  .from('gyms')
-  .select('id, slug')
-  .eq('slug', gymSlug)
-  .single();
-
-if (gymErr || !gym) {
-  console.error(`❌ Gym '${gymSlug}' not found.`, gymErr?.message);
-  process.exit(1);
-}
-
-if (!gym.slug.endsWith(SLUG_SUFFIX)) {
-  console.error(`❌ REFUSED: resolved gym slug '${gym.slug}' does not end in '${SLUG_SUFFIX}'.`);
-  process.exit(1);
-}
+const GYM_ID = 'd585af30-5ed5-448b-bd9c-ab82b2e99970';
+const INSTRUCTOR_ID = 'eaff348f-5df3-4df5-bd80-69ec233aad0e';
+const COUNT = 150;
 
 const FIRST_NAMES = [
   'Carlos', 'María', 'Andrés', 'Laura', 'Diego', 'Valentina',
   'Santiago', 'Camila', 'Julián', 'Daniela', 'Felipe', 'Isabella',
   'Mateo', 'Sofía', 'Sebastián', 'Natalia', 'David', 'Gabriela',
-  'Nicolás', 'Paula',
+  'Nicolás', 'Paula', 'Alejandro', 'Mariana', 'Tomás', 'Luciana',
+  'Samuel', 'Catalina', 'Emilio', 'Valeria', 'Martín', 'Sara',
+  'José', 'Andrea', 'Daniel', 'Carolina', 'Luis', 'Ana',
+  'Miguel', 'Paola', 'Javier', 'Claudia', 'Ricardo', 'Lorena',
+  'Jorge', 'Diana', 'Esteban', 'Marcela', 'Fernando', 'Viviana',
+  'Iván', 'Tatiana',
 ];
 
 const LAST_NAMES = [
   'García', 'Rodríguez', 'Martínez', 'López', 'González',
   'Hernández', 'Díaz', 'Moreno', 'Muñoz', 'Álvarez',
+  'Ramírez', 'Torres', 'Sánchez', 'Castillo', 'Vargas',
+  'Rojas', 'Herrera', 'Medina', 'Gutiérrez', 'Reyes',
+  'Ruiz', 'Ortiz', 'Salazar', 'Cruz', 'Peña',
+  'Ríos', 'Cardona', 'Ospina', 'Mejía', 'Valencia',
 ];
 
-const STATUSES = ['active', 'active', 'active', 'active', 'inactive', 'lapsed', 'lead'];
+const STATUSES = ['active', 'active', 'active', 'active', 'active',
+  'active', 'inactive', 'inactive', 'lapsed', 'lead'];
 
-const members = [];
-for (let i = 0; i < 20; i++) {
+function esc(s) {
+  return s.replace(/'/g, "''");
+}
+
+const lines = [];
+lines.push(`-- T-OS0: Seed 150 fake members into bullbox-prueba`);
+lines.push(`-- Run manually in Supabase SQL editor. Do NOT run from code.`);
+lines.push(`-- All rows tagged 'seed'. The 4 existing clients are untouched.`);
+lines.push(`-- Never writes client_attendance.`);
+lines.push(``);
+lines.push(`INSERT INTO clients (`);
+lines.push(`  gym_id, instructor_user_id, name, email, phone, status, tags, created_at`);
+lines.push(`) VALUES`);
+
+const values = [];
+const now = Date.now();
+for (let i = 0; i < COUNT; i++) {
   const first = FIRST_NAMES[i % FIRST_NAMES.length];
   const last = LAST_NAMES[i % LAST_NAMES.length];
-  members.push({
-    gym_id: gym.id,
-    first_name: first,
-    last_name: last,
-    email: `seed.${first.toLowerCase()}.${last.toLowerCase()}${i}@prueba.test`,
-    phone: `+5730000${String(i).padStart(4, '0')}`,
-    status: STATUSES[i % STATUSES.length],
-    tags: [TAG],
-    created_at: new Date(Date.now() - (180 - i * 7) * 86400000).toISOString(),
-  });
+  const suffix = i < FIRST_NAMES.length ? '' : String(Math.floor(i / FIRST_NAMES.length));
+  const name = `${first} ${last}`;
+  const email = `seed.${first.toLowerCase()}.${last.toLowerCase().replace(/[áéíóú]/g, c => ({á:'a',é:'e',í:'i',ó:'o',ú:'u'})[c])}${suffix}@example.com`;
+  const phone = `+5730000${String(i).padStart(4, '0')}`;
+  const status = STATUSES[i % STATUSES.length];
+  const daysAgo = 180 - Math.floor(i * 1.2);
+  const createdAt = new Date(now - Math.max(daysAgo, 1) * 86400000).toISOString();
+
+  values.push(
+    `  ('${GYM_ID}', '${INSTRUCTOR_ID}', '${esc(name)}', '${esc(email)}', '${phone}', '${status}', '{seed}', '${createdAt}')`
+  );
 }
 
-const { data: inserted, error: insertErr } = await supabase
-  .from('clients')
-  .upsert(members, { onConflict: 'gym_id,email', ignoreDuplicates: true })
-  .select('id, first_name, last_name');
+lines.push(values.join(',\n'));
+lines.push(`ON CONFLICT DO NOTHING;`);
+lines.push(``);
 
-if (insertErr) {
-  console.error('❌ Insert failed:', insertErr.message);
-  process.exit(1);
-}
-
-console.log(`✅ Seeded ${inserted.length} members into gym '${gymSlug}' (${gym.id}).`);
-console.log('   All tagged with seed. Use os-cleanup-seed.mjs to remove.');
+const outDir = join(import.meta.dirname, 'generated');
+mkdirSync(outDir, { recursive: true });
+const outPath = join(outDir, 'os-seed-members.sql');
+writeFileSync(outPath, lines.join('\n') + '\n');
+console.log(`✅ Generated ${outPath}`);
+console.log(`   ${COUNT} members, all tagged 'seed', emails @example.com`);
+console.log(`   Run this SQL in the Supabase SQL editor.`);
