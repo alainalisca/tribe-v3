@@ -308,7 +308,11 @@ export default function OSShell({ children }: { children: React.ReactNode }) {
           >
             <Menu className="w-5 h-5" />
           </button>
-          <h1 className="text-lg font-semibold text-tribe-dark">{s.topBarTitle}</h1>
+          <h1 className="text-lg font-semibold text-tribe-dark">
+            {NAV_ITEMS.find((n) => isActive(pathname, n.matchPrefix))
+              ? s.nav[NAV_ITEMS.find((n) => isActive(pathname, n.matchPrefix))!.labelKey]
+              : s.topBarTitle}
+          </h1>
           <div className="flex-1" />
           {/* Quick switch back to the consumer Tribe app. Premium
               owners flip between Tribe.OS and the community/training
