@@ -185,6 +185,47 @@ describe('retention scoring', () => {
     expect(result.score).toBeGreaterThan(0);
   });
 
+  it('14d-no-visits reason is dropped when days-absent reason is present', () => {
+    const baseline = makeActivities({ startDaysAgo: 180, endDaysAgo: 56, perWeek: 4 });
+    const recent = makeActivities({ startDaysAgo: 56, endDaysAgo: 16, perWeek: 2 });
+    const result = scoreRetention({
+      client_id: 'c-dedup',
+      gym_id: GYM,
+      joined_on: '2025-06-01',
+      plan_ends_on: '2027-01-01',
+      activities: [...baseline, ...recent],
+      now: NOW,
+    });
+    expect(result.reasons.some((r) => r.includes('días sin venir'))).toBe(true);
+    expect(result.reasons.some((r) => r.includes('Sin visitas en 14'))).toBe(false);
+    expect(result.reasons.some((r) => r.includes('No visits in 14d'))).toBe(false);
+  });
+
+  it('plan expiry uses "hoy" for 0 days and "mañana" for 1 day', () => {
+    const activities = makeActivities({ startDaysAgo: 90, endDaysAgo: 1, perWeek: 3 });
+    const todayResult = scoreRetention({
+      client_id: 'c-today',
+      gym_id: GYM,
+      joined_on: '2026-04-01',
+      plan_ends_on: '2026-09-25',
+      activities,
+      now: NOW,
+    });
+    expect(todayResult.reasons.some((r) => r.includes('vence hoy'))).toBe(true);
+    expect(todayResult.reasons.some((r) => r.includes('expires today'))).toBe(true);
+
+    const tomorrowResult = scoreRetention({
+      client_id: 'c-tomorrow',
+      gym_id: GYM,
+      joined_on: '2026-04-01',
+      plan_ends_on: '2026-09-26',
+      activities,
+      now: NOW,
+    });
+    expect(tomorrowResult.reasons.some((r) => r.includes('vence mañana'))).toBe(true);
+    expect(tomorrowResult.reasons.some((r) => r.includes('expires tomorrow'))).toBe(true);
+  });
+
   it('score is between 0 and 1', () => {
     const activities = makeActivities({ startDaysAgo: 180, endDaysAgo: 30, perWeek: 4 });
     const result = scoreRetention({

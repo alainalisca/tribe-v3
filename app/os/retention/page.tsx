@@ -15,7 +15,6 @@ const copy = {
     loadingLabel: 'Loading',
     redirectingLabel: 'Redirecting',
     activeMembersLabel: 'Active members',
-    activeMembersSub: 'At least 1 visit in 30d',
     contactTodayLabel: 'Contact today',
     winBackLabel: 'Win back',
     recalculate: 'Recalculate',
@@ -24,9 +23,10 @@ const copy = {
     viewAll: 'View all',
     viewLess: 'View less',
     winBackSection: 'Win back',
-    newMembers: 'New members',
-    daysAgo: 'days',
-    visits: 'visits',
+    newNeedSupport: 'New members who need support',
+    newDoingWell: 'New members doing well',
+    joinedAgo: (d: number) => (d === 1 ? 'Joined 1 day ago' : `Joined ${d} days ago`),
+    visitCount: (n: number) => (n === 1 ? '1 visit' : `${n} visits`),
     noScores: 'No retention scores yet. Press "Recalculate" to generate them.',
     waMessage: (name: string) => `Hola ${name}, ¡te extrañamos en el gym! ¿Cuándo vienes?`,
   },
@@ -36,7 +36,6 @@ const copy = {
     loadingLabel: 'Cargando',
     redirectingLabel: 'Redirigiendo',
     activeMembersLabel: 'Miembros activos',
-    activeMembersSub: 'Al menos 1 visita en 30d',
     contactTodayLabel: 'Para contactar hoy',
     winBackLabel: 'Recuperar',
     recalculate: 'Recalcular',
@@ -45,9 +44,10 @@ const copy = {
     viewAll: 'Ver todos',
     viewLess: 'Ver menos',
     winBackSection: 'Recuperar',
-    newMembers: 'Nuevos',
-    daysAgo: 'días',
-    visits: 'visitas',
+    newNeedSupport: 'Nuevos que necesitan apoyo',
+    newDoingWell: 'Nuevos que van bien',
+    joinedAgo: (d: number) => (d === 1 ? 'Se unió hace 1 día' : `Se unió hace ${d} días`),
+    visitCount: (n: number) => (n === 1 ? '1 visita' : `${n} visitas`),
     noScores: 'No hay puntajes todavía. Presiona "Recalcular" para generarlos.',
     waMessage: (name: string) => `Hola ${name}, ¡te extrañamos en el gym! ¿Cuándo vienes?`,
   },
@@ -92,7 +92,18 @@ function firstName(name: string | null): string {
 function deduplicateReasons(reasons: string[]): string[] {
   const hasDaysAbsent = reasons.some((r) => r.includes('días sin venir') || r.includes('days absent'));
   if (!hasDaysAbsent) return reasons;
-  return reasons.filter((r) => !r.includes('menos que su promedio') && !r.includes('less than average'));
+  return reasons.filter(
+    (r) =>
+      !r.includes('menos que su promedio') &&
+      !r.includes('less than average') &&
+      !r.includes('Sin visitas en 14') &&
+      !r.includes('No visits in 14d')
+  );
+}
+
+function daysSinceJoined(joinedOn: string | null): number | null {
+  if (!joinedOn) return null;
+  return Math.floor((Date.now() - new Date(joinedOn).getTime()) / 86_400_000);
 }
 
 export default function RetentionPage() {
@@ -105,6 +116,7 @@ export default function RetentionPage() {
   const [recomputing, setRecomputing] = useState(false);
   const [showAllContact, setShowAllContact] = useState(false);
   const [winBackOpen, setWinBackOpen] = useState(false);
+  const [wellOpen, setWellOpen] = useState(false);
 
   const fetchScores = useCallback(async () => {
     setLoading(true);
@@ -163,7 +175,24 @@ export default function RetentionPage() {
 
   const activeCount = allMembers.filter((m) => m.visits_last_14d > 0 || m.visits_last_28d > 0).length;
 
-  const newMembers = allMembers.filter((m) => m.level === 'new');
+  const newAll = allMembers.filter((m) => m.level === 'new');
+
+  const newNeedSupport = newAll
+    .filter((m) => {
+      const dj = daysSinceJoined(m.joined_on);
+      if (dj === null || dj === 0) return false;
+      const weeksSinceJoin = dj / 7;
+      const totalVisits = m.visits_last_28d;
+      const pace = totalVisits / weeksSinceJoin;
+      if (pace < 1.5) return true;
+      if (m.days_since_last_activity !== null && m.days_since_last_activity >= 5) return true;
+      return false;
+    })
+    .sort((a, b) => (a.visits_last_28d ?? 0) - (b.visits_last_28d ?? 0))
+    .slice(0, 5);
+
+  const newSupportIds = new Set(newNeedSupport.map((m) => m.id));
+  const newDoingWell = newAll.filter((m) => !newSupportIds.has(m.id));
 
   const contactVisible = showAllContact ? contactToday : contactToday.slice(0, 10);
 
@@ -188,9 +217,9 @@ export default function RetentionPage() {
         ) : (
           <>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <StatCard icon={Users} label={s.activeMembersLabel} value={activeCount} />
-              <StatCard icon={Phone} label={s.contactTodayLabel} value={contactToday.length} />
-              <StatCard icon={RotateCcw} label={s.winBackLabel} value={winBack.length} />
+              <StatCard icon={Users} label={s.activeMembersLabel} value={activeCount} changeLabel="" />
+              <StatCard icon={Phone} label={s.contactTodayLabel} value={contactToday.length} changeLabel="" />
+              <StatCard icon={RotateCcw} label={s.winBackLabel} value={winBack.length} changeLabel="" />
             </div>
 
             {contactToday.length > 0 && (
@@ -237,14 +266,38 @@ export default function RetentionPage() {
               </section>
             )}
 
-            {newMembers.length > 0 && (
+            {newNeedSupport.length > 0 && (
               <section>
-                <h2 className="text-lg font-bold text-tribe-dark mb-3">{s.newMembers}</h2>
+                <h2 className="text-lg font-bold text-tribe-dark mb-3">{s.newNeedSupport}</h2>
                 <div className="space-y-2">
-                  {newMembers.map((m) => (
-                    <MemberCard key={m.id} member={m} language={language} s={s} />
+                  {newNeedSupport.map((m) => (
+                    <NewMemberCard key={m.id} member={m} language={language} s={s} />
                   ))}
                 </div>
+              </section>
+            )}
+
+            {newDoingWell.length > 0 && (
+              <section>
+                <button
+                  type="button"
+                  onClick={() => setWellOpen(!wellOpen)}
+                  className="flex items-center gap-2 w-full text-left"
+                >
+                  <h2 className="text-lg font-bold text-tribe-dark">
+                    {s.newDoingWell} ({newDoingWell.length})
+                  </h2>
+                  <ChevronDown
+                    className={`h-5 w-5 text-tribe-dark-80 transition-transform ${wellOpen ? 'rotate-180' : ''}`}
+                  />
+                </button>
+                {wellOpen && (
+                  <div className="space-y-2 mt-3">
+                    {newDoingWell.map((m) => (
+                      <NewMemberCard key={m.id} member={m} language={language} s={s} />
+                    ))}
+                  </div>
+                )}
               </section>
             )}
           </>
@@ -284,11 +337,51 @@ function MemberCard({
           <Badge variant={badge.variant}>{language === 'es' ? badge.es : badge.en}</Badge>
         </div>
         {reasonText && <p className="text-xs text-tribe-dark-80 mt-0.5 truncate">{reasonText}</p>}
-        {m.level === 'new' && m.visits_last_28d > 0 && (
-          <p className="text-xs text-tribe-dark-80 mt-0.5">
-            {m.visits_last_28d} {s.visits}
-          </p>
-        )}
+      </div>
+      {waUrl && (
+        <a
+          href={waUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="shrink-0 p-2 rounded-tribe bg-tribe-green-50 hover:bg-tribe-green transition-colors"
+          aria-label={`WhatsApp ${firstName(m.name)}`}
+        >
+          <MessageCircle className="h-5 w-5 text-tribe-green-dark" />
+        </a>
+      )}
+    </div>
+  );
+}
+
+function NewMemberCard({
+  member: m,
+  language,
+  s,
+}: {
+  member: MemberRow;
+  language: 'en' | 'es';
+  s: (typeof copy)['en'] | (typeof copy)['es'];
+}) {
+  const waUrl = buildWhatsAppUrl(m.phone, {
+    message: s.waMessage(firstName(m.name)),
+  });
+
+  const dj = daysSinceJoined(m.joined_on);
+  const joinedLabel = dj !== null ? s.joinedAgo(dj) : '';
+  const visitLabel = s.visitCount(m.visits_last_28d);
+
+  return (
+    <div className="bg-white rounded-tribe shadow-tribe px-4 py-3 flex items-center gap-3">
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="font-semibold text-tribe-dark truncate">{m.name ?? 'Sin nombre'}</span>
+          <Badge variant="info">{language === 'es' ? 'Nuevo' : 'New'}</Badge>
+        </div>
+        <p className="text-xs text-tribe-dark-80 mt-0.5">
+          {joinedLabel}
+          {joinedLabel && visitLabel ? ' · ' : ''}
+          {visitLabel}
+        </p>
       </div>
       {waUrl && (
         <a

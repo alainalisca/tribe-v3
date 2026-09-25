@@ -67,6 +67,16 @@ export function computeSignals(input: MemberInput): RetentionSignals {
   };
 }
 
+function daysAbsentReason(d: number): string {
+  return d === 1 ? '1 día sin venir / 1 day absent' : `${d} días sin venir / ${d} days absent`;
+}
+
+function planExpiryReason(d: number): string {
+  if (d === 0) return 'Su plan vence hoy / Plan expires today';
+  if (d === 1) return 'Su plan vence mañana / Plan expires tomorrow';
+  return `Su plan vence en ${d} días / Plan expires in ${d} days`;
+}
+
 export function scoreRetention(input: MemberInput): RetentionResult {
   const signals = computeSignals(input);
   const reasons: string[] = [];
@@ -85,8 +95,11 @@ export function scoreRetention(input: MemberInput): RetentionResult {
       };
     }
     if (signals.days_since_last_activity !== null) {
+      const d = signals.days_since_last_activity;
       reasons.push(
-        `Nuevo y lleva ${signals.days_since_last_activity} días sin venir / New and ${signals.days_since_last_activity} days absent`
+        d === 1
+          ? 'Nuevo y lleva 1 día sin venir / New and 1 day absent'
+          : `Nuevo y lleva ${d} días sin venir / New and ${d} days absent`
       );
       score += 0.4;
     } else {
@@ -109,14 +122,10 @@ export function scoreRetention(input: MemberInput): RetentionResult {
   if (!signals.is_new) {
     if (signals.days_since_last_activity >= T.high_days_inactive) {
       score += 0.4;
-      reasons.push(
-        `${signals.days_since_last_activity} días sin venir / ${signals.days_since_last_activity} days absent`
-      );
+      reasons.push(daysAbsentReason(signals.days_since_last_activity));
     } else if (signals.days_since_last_activity >= T.medium_days_inactive) {
       score += 0.2;
-      reasons.push(
-        `${signals.days_since_last_activity} días sin venir / ${signals.days_since_last_activity} days absent`
-      );
+      reasons.push(daysAbsentReason(signals.days_since_last_activity));
     }
   }
 
@@ -133,30 +142,33 @@ export function scoreRetention(input: MemberInput): RetentionResult {
   if (signals.plan_ends_in_days !== null && signals.plan_ends_in_days < 0 && signals.plan_ends_in_days >= -30) {
     const ago = Math.abs(signals.plan_ends_in_days);
     score += 0.3;
-    reasons.push(`Su plan venció hace ${ago} días / Plan expired ${ago} days ago`);
+    reasons.push(
+      ago === 1
+        ? 'Su plan venció hace 1 día / Plan expired 1 day ago'
+        : `Su plan venció hace ${ago} días / Plan expired ${ago} days ago`
+    );
   } else if (
     signals.plan_ends_in_days !== null &&
     signals.plan_ends_in_days >= 0 &&
     signals.plan_ends_in_days <= T.plan_expiry_urgent_days
   ) {
     score += 0.2;
-    reasons.push(
-      `Su plan vence en ${signals.plan_ends_in_days} días / Plan expires in ${signals.plan_ends_in_days} days`
-    );
+    reasons.push(planExpiryReason(signals.plan_ends_in_days));
   } else if (
     signals.plan_ends_in_days !== null &&
     signals.plan_ends_in_days >= 0 &&
     signals.plan_ends_in_days <= T.plan_expiry_warning_days
   ) {
     score += 0.1;
-    reasons.push(
-      `Su plan vence en ${signals.plan_ends_in_days} días / Plan expires in ${signals.plan_ends_in_days} days`
-    );
+    reasons.push(planExpiryReason(signals.plan_ends_in_days));
   }
 
+  const hasAbsenceReason = reasons.some((r) => r.includes('días sin venir') || r.includes('days absent'));
   if (signals.visits_last_14d === 0 && signals.visits_last_28d > 0) {
-    score += 0.1;
-    reasons.push('Sin visitas en 14 días pero activo en 28 / No visits in 14d but active in 28d');
+    if (!hasAbsenceReason) {
+      score += 0.1;
+      reasons.push('Sin visitas en 14 días pero activo en 28 / No visits in 14d but active in 28d');
+    }
   }
 
   score = Math.min(Math.round(score * 1000) / 1000, 1);
