@@ -2,6 +2,36 @@ import { NextResponse } from 'next/server';
 import { logError } from '@/lib/logger';
 import { requireTribeOSPremium } from '@/lib/auth/premium';
 import { scoreRetention } from '@/lib/tribe-os/retention';
+import type { SupabaseClient } from '@supabase/supabase-js';
+
+const PAGE_SIZE = 1000;
+const ACTIVITY_LOOKBACK_DAYS = 70;
+
+export async function fetchAllActivities(
+  supabase: SupabaseClient,
+  gymId: string,
+  since: string
+): Promise<{ client_id: string; activity_at: string }[]> {
+  const all: { client_id: string; activity_at: string }[] = [];
+  let from = 0;
+
+  for (;;) {
+    const { data, error } = await supabase
+      .from('client_activity_v2')
+      .select('client_id, activity_at')
+      .eq('gym_id', gymId)
+      .gte('activity_at', since)
+      .range(from, from + PAGE_SIZE - 1);
+
+    if (error) throw error;
+    if (!data) break;
+    all.push(...data);
+    if (data.length < PAGE_SIZE) break;
+    from += PAGE_SIZE;
+  }
+
+  return all;
+}
 
 export async function POST(): Promise<NextResponse> {
   const gate = await requireTribeOSPremium();
@@ -23,18 +53,12 @@ export async function POST(): Promise<NextResponse> {
       return NextResponse.json({ success: true, data: { computed: 0 } });
     }
 
-    const clientIds = members.map((m) => m.id);
-
-    const { data: activities, error: actErr } = await supabase
-      .from('client_activity_v2')
-      .select('client_id, activity_at')
-      .eq('gym_id', gymId)
-      .in('client_id', clientIds);
-
-    if (actErr) throw actErr;
+    const since = new Date();
+    since.setDate(since.getDate() - ACTIVITY_LOOKBACK_DAYS);
+    const activities = await fetchAllActivities(supabase, gymId, since.toISOString());
 
     const actByClient = new Map<string, { activity_at: string }[]>();
-    for (const a of activities ?? []) {
+    for (const a of activities) {
       const list = actByClient.get(a.client_id) ?? [];
       list.push({ activity_at: a.activity_at });
       actByClient.set(a.client_id, list);

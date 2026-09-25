@@ -1,5 +1,6 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { scoreRetention } from './compute';
+import { fetchAllActivities } from '@/app/api/tribe-os/retention/recompute/route';
 
 const GYM = 'd585af30-5ed5-448b-bd9c-ab82b2e99970';
 const NOW = new Date('2026-09-24T12:00:00-05:00');
@@ -27,6 +28,37 @@ function makeActivities(
   }
   return acts;
 }
+
+describe('fetchAllActivities pagination', () => {
+  it('collects every page when results exceed PAGE_SIZE', async () => {
+    const total = 2500;
+    const allRows = Array.from({ length: total }, (_, i) => ({
+      client_id: `c-${i}`,
+      activity_at: new Date(2026, 8, 1, 0, 0, i).toISOString(),
+    }));
+
+    const mockRange = vi.fn().mockImplementation((from: number, to: number) => {
+      const slice = allRows.slice(from, to + 1);
+      return Promise.resolve({ data: slice, error: null });
+    });
+
+    const fakeSupa = {
+      from: () => ({
+        select: () => ({
+          eq: () => ({
+            gte: () => ({
+              range: mockRange,
+            }),
+          }),
+        }),
+      }),
+    } as unknown as Parameters<typeof fetchAllActivities>[0];
+
+    const result = await fetchAllActivities(fakeSupa, 'gym-1', '2026-08-01');
+    expect(result).toHaveLength(total);
+    expect(mockRange).toHaveBeenCalledTimes(3);
+  });
+});
 
 describe('retention scoring', () => {
   it('steady regular → low', () => {
@@ -123,6 +155,34 @@ describe('retention scoring', () => {
       now: NOW,
     });
     expect(result.level).toBe('insufficient_data');
+  });
+
+  it('new member absent >7 days is scored, not "new"', () => {
+    const activities = makeActivities({ startDaysAgo: 20, endDaysAgo: 10, perWeek: 3 });
+    const result = scoreRetention({
+      client_id: 'c-new-absent',
+      gym_id: GYM,
+      joined_on: '2026-09-04',
+      plan_ends_on: '2027-01-04',
+      activities,
+      now: NOW,
+    });
+    expect(result.level).not.toBe('new');
+    expect(result.reasons.some((r) => r.includes('Nuevo y lleva'))).toBe(true);
+  });
+
+  it('expired plan adds reason and score', () => {
+    const activities = makeActivities({ startDaysAgo: 90, endDaysAgo: 1, perWeek: 3 });
+    const result = scoreRetention({
+      client_id: 'c-expired',
+      gym_id: GYM,
+      joined_on: '2026-04-01',
+      plan_ends_on: '2026-09-10',
+      activities,
+      now: NOW,
+    });
+    expect(result.reasons.some((r) => r.includes('plan venció hace'))).toBe(true);
+    expect(result.score).toBeGreaterThan(0);
   });
 
   it('score is between 0 and 1', () => {

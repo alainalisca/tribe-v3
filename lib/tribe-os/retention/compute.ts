@@ -73,14 +73,26 @@ export function scoreRetention(input: MemberInput): RetentionResult {
   let score = 0;
 
   if (signals.is_new) {
-    return {
-      client_id: input.client_id,
-      gym_id: input.gym_id,
-      score: 0,
-      level: 'new',
-      reasons: ['Miembro nuevo / New member'],
-      signals,
-    };
+    const recentlyActive = signals.days_since_last_activity !== null && signals.days_since_last_activity <= 7;
+    if (recentlyActive) {
+      return {
+        client_id: input.client_id,
+        gym_id: input.gym_id,
+        score: 0,
+        level: 'new',
+        reasons: ['Miembro nuevo / New member'],
+        signals,
+      };
+    }
+    if (signals.days_since_last_activity !== null) {
+      reasons.push(
+        `Nuevo y lleva ${signals.days_since_last_activity} días sin venir / New and ${signals.days_since_last_activity} days absent`
+      );
+      score += 0.4;
+    } else {
+      reasons.push('Nuevo, sin actividad registrada / New, no recorded activity');
+      score += 0.2;
+    }
   }
 
   if (signals.days_since_last_activity === null) {
@@ -94,16 +106,18 @@ export function scoreRetention(input: MemberInput): RetentionResult {
     };
   }
 
-  if (signals.days_since_last_activity >= T.high_days_inactive) {
-    score += 0.4;
-    reasons.push(
-      `${signals.days_since_last_activity} días sin venir / ${signals.days_since_last_activity} days absent`
-    );
-  } else if (signals.days_since_last_activity >= T.medium_days_inactive) {
-    score += 0.2;
-    reasons.push(
-      `${signals.days_since_last_activity} días sin venir / ${signals.days_since_last_activity} days absent`
-    );
+  if (!signals.is_new) {
+    if (signals.days_since_last_activity >= T.high_days_inactive) {
+      score += 0.4;
+      reasons.push(
+        `${signals.days_since_last_activity} días sin venir / ${signals.days_since_last_activity} days absent`
+      );
+    } else if (signals.days_since_last_activity >= T.medium_days_inactive) {
+      score += 0.2;
+      reasons.push(
+        `${signals.days_since_last_activity} días sin venir / ${signals.days_since_last_activity} days absent`
+      );
+    }
   }
 
   if (signals.trend_ratio !== null && signals.trend_ratio <= T.trend_drop_severe) {
@@ -116,7 +130,11 @@ export function scoreRetention(input: MemberInput): RetentionResult {
     reasons.push(`Viene ${pct}% menos que su promedio / Visiting ${pct}% less than average`);
   }
 
-  if (
+  if (signals.plan_ends_in_days !== null && signals.plan_ends_in_days < 0 && signals.plan_ends_in_days >= -30) {
+    const ago = Math.abs(signals.plan_ends_in_days);
+    score += 0.3;
+    reasons.push(`Su plan venció hace ${ago} días / Plan expired ${ago} days ago`);
+  } else if (
     signals.plan_ends_in_days !== null &&
     signals.plan_ends_in_days >= 0 &&
     signals.plan_ends_in_days <= T.plan_expiry_urgent_days
