@@ -14,6 +14,7 @@
     "187_athlete_setup",
     "188_one_off_sends",
     "189_stable_unsub_token",
-    "190_community_soft_delete"
+    "190_community_soft_delete",
+    "191_close_open_community_comments_read"
   ]
 }

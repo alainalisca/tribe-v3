@@ -1722,7 +1722,8 @@ select 'GUARD_184_mirror_matches_applied_table',
     ('187_athlete_setup'),
     ('188_one_off_sends'),
     ('189_stable_unsub_token'),
-    ('190_community_soft_delete')
+    ('190_community_soft_delete'),
+    ('191_close_open_community_comments_read')
     -- <<<END_MIRROR_LIST>>>
            ) as mirror(migration)
            where not exists (select 1 from public.migrations_applied a
@@ -1743,7 +1744,8 @@ select 'GUARD_184_mirror_matches_applied_table',
     ('187_athlete_setup'),
     ('188_one_off_sends'),
     ('189_stable_unsub_token'),
-    ('190_community_soft_delete')
+    ('190_community_soft_delete'),
+    ('191_close_open_community_comments_read')
     -- <<<END_MIRROR_LIST>>>
            ))
            then 'MISSING -- this database has recorded a migration the JSON mirror omits; re-sync it'
