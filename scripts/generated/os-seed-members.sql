@@ -15,455 +15,455 @@
 
 BEGIN;
 
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Natalia Valencia Salazar', 'natalia.valencia.000@example.com', '+573053459051', '{seed}', 'mira_csv', 'MIRA-0001', '2025-05-20', '3x semana', '2026-09-28')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Natalia Valencia Salazar', 'natalia.valencia.000@example.com', '+573053459051', '{seed}', 'mira_csv', 'MIRA-0001', '2025-05-20', '3x semana', '2026-09-28')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Catalina Sánchez Hernández', 'catalina.sanchez.001@example.com', '+573266495588', '{seed}', 'mira_csv', 'MIRA-0002', '2025-10-10', 'Ilimitado', '2026-09-30')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Catalina Sánchez Hernández', 'catalina.sanchez.001@example.com', '+573266495588', '{seed}', 'mira_csv', 'MIRA-0002', '2025-10-10', 'Ilimitado', '2026-09-30')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Valentina Restrepo Rodríguez', 'valentina.restrepo.002@example.com', '+573075773020', '{seed}', 'mira_csv', 'MIRA-0003', '2026-01-25', 'Ilimitado', '2026-09-30')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Valentina Restrepo Rodríguez', 'valentina.restrepo.002@example.com', '+573075773020', '{seed}', 'mira_csv', 'MIRA-0003', '2026-01-25', 'Ilimitado', '2026-09-30')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Camila Rivera Rodríguez', 'camila.rivera.003@example.com', '+573056370565', '{seed}', 'mira_csv', 'MIRA-0004', '2025-08-07', 'Ilimitado', '2026-09-26')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Camila Rivera Rodríguez', 'camila.rivera.003@example.com', '+573056370565', '{seed}', 'mira_csv', 'MIRA-0004', '2025-08-07', 'Ilimitado', '2026-09-26')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Adriana Muñoz Díaz', 'adriana.munoz.004@example.com', '+573121672251', '{seed}', 'mira_csv', 'MIRA-0005', '2025-07-26', '3x semana', '2026-09-29')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Adriana Muñoz Díaz', 'adriana.munoz.004@example.com', '+573121672251', '{seed}', 'mira_csv', 'MIRA-0005', '2025-07-26', '3x semana', '2026-09-29')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Jhon Flores Castaño', 'jhon.flores.005@example.com', '+573011142586', '{seed}', 'mira_csv', 'MIRA-0006', '2025-10-06', 'Ilimitado', '2027-01-24')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Jhon Flores Castaño', 'jhon.flores.005@example.com', '+573011142586', '{seed}', 'mira_csv', 'MIRA-0006', '2025-10-06', 'Ilimitado', '2027-01-24')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Esteban Castaño Restrepo', 'esteban.castano.006@example.com', '+573215682847', '{seed}', 'mira_csv', 'MIRA-0007', '2026-02-13', '2x semana', '2027-03-23')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Esteban Castaño Restrepo', 'esteban.castano.006@example.com', '+573215682847', '{seed}', 'mira_csv', 'MIRA-0007', '2026-02-13', '2x semana', '2027-03-23')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'María Jiménez Ramírez', 'maria.jimenez.007@example.com', '+573237564725', '{seed}', 'mira_csv', 'MIRA-0008', '2025-10-17', 'Ilimitado', '2027-02-28')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'María Jiménez Ramírez', 'maria.jimenez.007@example.com', '+573237564725', '{seed}', 'mira_csv', 'MIRA-0008', '2025-10-17', 'Ilimitado', '2027-02-28')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Tatiana Flores Vargas', 'tatiana.flores.008@example.com', '+573117270493', '{seed}', 'mira_csv', 'MIRA-0009', '2025-06-18', 'Ilimitado', '2027-03-09')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Tatiana Flores Vargas', 'tatiana.flores.008@example.com', '+573117270493', '{seed}', 'mira_csv', 'MIRA-0009', '2025-06-18', 'Ilimitado', '2027-03-09')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Verónica López Arango', 'veronica.lopez.009@example.com', '+573077297221', '{seed}', 'mira_csv', 'MIRA-0010', '2025-10-30', 'Ilimitado', '2026-11-17')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Verónica López Arango', 'veronica.lopez.009@example.com', '+573077297221', '{seed}', 'mira_csv', 'MIRA-0010', '2025-10-30', 'Ilimitado', '2026-11-17')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Alejandro Castillo Suárez', 'alejandro.castillo.010@example.com', '+573174536512', '{seed}', 'mira_csv', 'MIRA-0011', '2025-05-21', 'Ilimitado', '2026-12-18')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Alejandro Castillo Suárez', 'alejandro.castillo.010@example.com', '+573174536512', '{seed}', 'mira_csv', 'MIRA-0011', '2025-05-21', 'Ilimitado', '2026-12-18')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Juliana Suárez Montoya', 'juliana.suarez.011@example.com', '+573065403182', '{seed}', 'mira_csv', 'MIRA-0012', '2026-03-11', 'Ilimitado', '2027-02-07')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Juliana Suárez Montoya', 'juliana.suarez.011@example.com', '+573065403182', '{seed}', 'mira_csv', 'MIRA-0012', '2026-03-11', 'Ilimitado', '2027-02-07')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Daniel Ramírez García', 'daniel.ramirez.012@example.com', '+573096151164', '{seed}', 'mira_csv', 'MIRA-0013', '2026-01-28', '2x semana', '2026-11-18')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Daniel Ramírez García', 'daniel.ramirez.012@example.com', '+573096151164', '{seed}', 'mira_csv', 'MIRA-0013', '2026-01-28', '2x semana', '2026-11-18')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Juan Rivera Flores', 'juan.rivera.013@example.com', '+573234025087', '{seed}', 'mira_csv', 'MIRA-0014', '2025-11-30', '2x semana', '2027-01-06')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Juan Rivera Flores', 'juan.rivera.013@example.com', '+573234025087', '{seed}', 'mira_csv', 'MIRA-0014', '2025-11-30', '2x semana', '2027-01-06')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Paola Morales Sánchez', 'paola.morales.014@example.com', '+573137023661', '{seed}', 'mira_csv', 'MIRA-0015', '2026-01-26', 'Ilimitado', '2027-02-05')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Paola Morales Sánchez', 'paola.morales.014@example.com', '+573137023661', '{seed}', 'mira_csv', 'MIRA-0015', '2026-01-26', 'Ilimitado', '2027-02-05')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Andrés Rodríguez Jiménez', 'andres.rodriguez.015@example.com', '+573044419370', '{seed}', 'mira_csv', 'MIRA-0016', '2025-05-03', '3x semana', '2027-02-23')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Andrés Rodríguez Jiménez', 'andres.rodriguez.015@example.com', '+573044419370', '{seed}', 'mira_csv', 'MIRA-0016', '2025-05-03', '3x semana', '2027-02-23')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Ricardo Muñoz Valencia', 'ricardo.munoz.016@example.com', '+573342319363', '{seed}', 'mira_csv', 'MIRA-0017', '2025-06-10', '3x semana', '2026-11-24')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Ricardo Muñoz Valencia', 'ricardo.munoz.016@example.com', '+573342319363', '{seed}', 'mira_csv', 'MIRA-0017', '2025-06-10', '3x semana', '2026-11-24')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Claudia Gómez Valencia', 'claudia.gomez.017@example.com', '+573371481901', '{seed}', 'mira_csv', 'MIRA-0018', '2026-01-26', 'Ilimitado', '2027-01-08')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Claudia Gómez Valencia', 'claudia.gomez.017@example.com', '+573371481901', '{seed}', 'mira_csv', 'MIRA-0018', '2026-01-26', 'Ilimitado', '2027-01-08')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Claudia Correa Castillo', 'claudia.correa.018@example.com', '+573386394502', '{seed}', 'mira_csv', 'MIRA-0019', '2025-10-18', 'Ilimitado', '2027-03-05')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Claudia Correa Castillo', 'claudia.correa.018@example.com', '+573386394502', '{seed}', 'mira_csv', 'MIRA-0019', '2025-10-18', 'Ilimitado', '2027-03-05')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Jhon Castillo Sánchez', 'jhon.castillo.019@example.com', '+573314291750', '{seed}', 'mira_csv', 'MIRA-0020', '2026-02-26', 'Ilimitado', '2027-01-29')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Jhon Castillo Sánchez', 'jhon.castillo.019@example.com', '+573314291750', '{seed}', 'mira_csv', 'MIRA-0020', '2026-02-26', 'Ilimitado', '2027-01-29')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Adriana Rivera Mejía', 'adriana.rivera.020@example.com', '+573022252247', '{seed}', 'mira_csv', 'MIRA-0021', '2025-12-13', 'Ilimitado', '2026-12-29')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Adriana Rivera Mejía', 'adriana.rivera.020@example.com', '+573022252247', '{seed}', 'mira_csv', 'MIRA-0021', '2025-12-13', 'Ilimitado', '2026-12-29')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Paula Duarte Hernández', 'paula.duarte.021@example.com', '+573254991893', '{seed}', 'mira_csv', 'MIRA-0022', '2025-10-14', '3x semana', '2026-12-27')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Paula Duarte Hernández', 'paula.duarte.021@example.com', '+573254991893', '{seed}', 'mira_csv', 'MIRA-0022', '2025-10-14', '3x semana', '2026-12-27')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Nicolás Muñoz Restrepo', 'nicolas.munoz.022@example.com', '+573256826370', '{seed}', 'mira_csv', 'MIRA-0023', '2026-02-08', '3x semana', '2026-10-24')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Nicolás Muñoz Restrepo', 'nicolas.munoz.022@example.com', '+573256826370', '{seed}', 'mira_csv', 'MIRA-0023', '2026-02-08', '3x semana', '2026-10-24')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Sofía Suárez Flores', 'sofia.suarez.023@example.com', '+573208395037', '{seed}', 'mira_csv', 'MIRA-0024', '2025-11-15', 'Ilimitado', '2026-11-27')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Sofía Suárez Flores', 'sofia.suarez.023@example.com', '+573208395037', '{seed}', 'mira_csv', 'MIRA-0024', '2025-11-15', 'Ilimitado', '2026-11-27')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Isabella Castaño Arias', 'isabella.castano.024@example.com', '+573275939274', '{seed}', 'mira_csv', 'MIRA-0025', '2025-09-19', '2x semana', '2026-11-19')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Isabella Castaño Arias', 'isabella.castano.024@example.com', '+573275939274', '{seed}', 'mira_csv', 'MIRA-0025', '2025-09-19', '2x semana', '2026-11-19')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Mateo Morales Salazar', 'mateo.morales.025@example.com', '+573259789816', '{seed}', 'mira_csv', 'MIRA-0026', '2025-11-05', 'Ilimitado', '2026-12-14')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Mateo Morales Salazar', 'mateo.morales.025@example.com', '+573259789816', '{seed}', 'mira_csv', 'MIRA-0026', '2025-11-05', 'Ilimitado', '2026-12-14')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Carolina Díaz Castaño', 'carolina.diaz.026@example.com', '+573325665242', '{seed}', 'mira_csv', 'MIRA-0027', '2025-04-25', '2x semana', '2027-02-04')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Carolina Díaz Castaño', 'carolina.diaz.026@example.com', '+573325665242', '{seed}', 'mira_csv', 'MIRA-0027', '2025-04-25', '2x semana', '2027-02-04')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Camila Gómez Arias', 'camila.gomez.027@example.com', '+573265988581', '{seed}', 'mira_csv', 'MIRA-0028', '2025-04-13', '3x semana', '2027-03-21')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Camila Gómez Arias', 'camila.gomez.027@example.com', '+573265988581', '{seed}', 'mira_csv', 'MIRA-0028', '2025-04-13', '3x semana', '2027-03-21')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Gabriel Salazar Valencia', 'gabriel.salazar.028@example.com', '+573183852627', '{seed}', 'mira_csv', 'MIRA-0029', '2025-10-30', '2x semana', '2026-12-14')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Gabriel Salazar Valencia', 'gabriel.salazar.028@example.com', '+573183852627', '{seed}', 'mira_csv', 'MIRA-0029', '2025-10-30', '2x semana', '2026-12-14')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Juliana Suárez Salazar', 'juliana.suarez.029@example.com', '+573029652992', '{seed}', 'mira_csv', 'MIRA-0030', '2025-12-19', '3x semana', '2027-01-27')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Juliana Suárez Salazar', 'juliana.suarez.029@example.com', '+573029652992', '{seed}', 'mira_csv', 'MIRA-0030', '2025-12-19', '3x semana', '2027-01-27')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Alejandra Hernández Valencia', 'alejandra.hernandez.030@example.com', '+573355241915', '{seed}', 'mira_csv', 'MIRA-0031', '2026-02-09', 'Ilimitado', '2026-10-01')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Alejandra Hernández Valencia', 'alejandra.hernandez.030@example.com', '+573355241915', '{seed}', 'mira_csv', 'MIRA-0031', '2026-02-09', 'Ilimitado', '2026-10-01')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Diego Castillo Mejía', 'diego.castillo.031@example.com', '+573202508328', '{seed}', 'mira_csv', 'MIRA-0032', '2026-05-24', 'Ilimitado', '2026-09-27')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Diego Castillo Mejía', 'diego.castillo.031@example.com', '+573202508328', '{seed}', 'mira_csv', 'MIRA-0032', '2026-05-24', 'Ilimitado', '2026-09-27')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Alejandra Martínez García', 'alejandra.martinez.032@example.com', '+573173427052', '{seed}', 'mira_csv', 'MIRA-0033', '2026-01-05', '2x semana', '2026-10-01')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Alejandra Martínez García', 'alejandra.martinez.032@example.com', '+573173427052', '{seed}', 'mira_csv', 'MIRA-0033', '2026-01-05', '2x semana', '2026-10-01')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Sebastián Castillo Morales', 'sebastian.castillo.033@example.com', '+573123341170', '{seed}', 'mira_csv', 'MIRA-0034', '2026-02-03', '3x semana', '2026-09-28')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Sebastián Castillo Morales', 'sebastian.castillo.033@example.com', '+573123341170', '{seed}', 'mira_csv', 'MIRA-0034', '2026-02-03', '3x semana', '2026-09-28')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Cristian Salazar Montoya', 'cristian.salazar.034@example.com', '+573001298411', '{seed}', 'mira_csv', 'MIRA-0035', '2026-04-21', 'Ilimitado', '2026-09-26')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Cristian Salazar Montoya', 'cristian.salazar.034@example.com', '+573001298411', '{seed}', 'mira_csv', 'MIRA-0035', '2026-04-21', 'Ilimitado', '2026-09-26')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Adriana Ramírez Ospina', 'adriana.ramirez.035@example.com', '+573078187548', '{seed}', 'mira_csv', 'MIRA-0036', '2026-05-01', 'Ilimitado', '2026-12-07')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Adriana Ramírez Ospina', 'adriana.ramirez.035@example.com', '+573078187548', '{seed}', 'mira_csv', 'MIRA-0036', '2026-05-01', 'Ilimitado', '2026-12-07')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Sebastián Duarte Flores', 'sebastian.duarte.036@example.com', '+573375441765', '{seed}', 'mira_csv', 'MIRA-0037', '2026-05-09', '2x semana', '2026-10-19')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Sebastián Duarte Flores', 'sebastian.duarte.036@example.com', '+573375441765', '{seed}', 'mira_csv', 'MIRA-0037', '2026-05-09', '2x semana', '2026-10-19')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Gabriela Duarte Morales', 'gabriela.duarte.037@example.com', '+573066425091', '{seed}', 'mira_csv', 'MIRA-0038', '2026-05-01', '3x semana', '2026-12-17')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Gabriela Duarte Morales', 'gabriela.duarte.037@example.com', '+573066425091', '{seed}', 'mira_csv', 'MIRA-0038', '2026-05-01', '3x semana', '2026-12-17')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Sofía Castaño Jiménez', 'sofia.castano.038@example.com', '+573103936446', '{seed}', 'mira_csv', 'MIRA-0039', '2025-11-28', '3x semana', '2026-10-27')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Sofía Castaño Jiménez', 'sofia.castano.038@example.com', '+573103936446', '{seed}', 'mira_csv', 'MIRA-0039', '2025-11-28', '3x semana', '2026-10-27')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Luciana Ospina Muñoz', 'luciana.ospina.039@example.com', '+573081787140', '{seed}', 'mira_csv', 'MIRA-0040', '2025-09-25', 'Ilimitado', '2026-10-24')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Luciana Ospina Muñoz', 'luciana.ospina.039@example.com', '+573081787140', '{seed}', 'mira_csv', 'MIRA-0040', '2025-09-25', 'Ilimitado', '2026-10-24')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Juliana Gómez Salazar', 'juliana.gomez.040@example.com', '+573098463112', '{seed}', 'mira_csv', 'MIRA-0041', '2026-05-01', 'Ilimitado', '2026-11-16')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Juliana Gómez Salazar', 'juliana.gomez.040@example.com', '+573098463112', '{seed}', 'mira_csv', 'MIRA-0041', '2026-05-01', 'Ilimitado', '2026-11-16')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'David Morales Gómez', 'david.morales.041@example.com', '+573084272411', '{seed}', 'mira_csv', 'MIRA-0042', '2026-04-18', '3x semana', '2026-11-15')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'David Morales Gómez', 'david.morales.041@example.com', '+573084272411', '{seed}', 'mira_csv', 'MIRA-0042', '2026-04-18', '3x semana', '2026-11-15')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Sofía Montoya Arias', 'sofia.montoya.042@example.com', '+573281483818', '{seed}', 'mira_csv', 'MIRA-0043', '2026-01-26', '3x semana', '2026-11-14')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Sofía Montoya Arias', 'sofia.montoya.042@example.com', '+573281483818', '{seed}', 'mira_csv', 'MIRA-0043', '2026-01-26', '3x semana', '2026-11-14')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Natalia Jiménez García', 'natalia.jimenez.043@example.com', '+573207219905', '{seed}', 'mira_csv', 'MIRA-0044', '2026-03-17', 'Ilimitado', '2026-12-02')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Natalia Jiménez García', 'natalia.jimenez.043@example.com', '+573207219905', '{seed}', 'mira_csv', 'MIRA-0044', '2026-03-17', 'Ilimitado', '2026-12-02')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Gabriel Montoya Rivera', 'gabriel.montoya.044@example.com', '+573055454283', '{seed}', 'mira_csv', 'MIRA-0045', '2026-02-17', '3x semana', '2026-12-05')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Gabriel Montoya Rivera', 'gabriel.montoya.044@example.com', '+573055454283', '{seed}', 'mira_csv', 'MIRA-0045', '2026-02-17', '3x semana', '2026-12-05')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Paola Castaño Correa', 'paola.castano.045@example.com', '+573109194465', '{seed}', 'mira_csv', 'MIRA-0046', '2026-02-04', 'Ilimitado', '2026-11-14')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Paola Castaño Correa', 'paola.castano.045@example.com', '+573109194465', '{seed}', 'mira_csv', 'MIRA-0046', '2026-02-04', 'Ilimitado', '2026-11-14')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Juliana Valencia Ospina', 'juliana.valencia.046@example.com', '+573399704112', '{seed}', 'mira_csv', 'MIRA-0047', '2025-10-05', '2x semana', '2026-12-09')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Juliana Valencia Ospina', 'juliana.valencia.046@example.com', '+573399704112', '{seed}', 'mira_csv', 'MIRA-0047', '2025-10-05', '2x semana', '2026-12-09')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Javier Rodríguez Gómez', 'javier.rodriguez.047@example.com', '+573367984798', '{seed}', 'mira_csv', 'MIRA-0048', '2025-11-06', 'Ilimitado', '2026-11-11')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Javier Rodríguez Gómez', 'javier.rodriguez.047@example.com', '+573367984798', '{seed}', 'mira_csv', 'MIRA-0048', '2025-11-06', 'Ilimitado', '2026-11-11')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Daniela González Torres', 'daniela.gonzalez.048@example.com', '+573202242212', '{seed}', 'mira_csv', 'MIRA-0049', '2026-01-06', 'Ilimitado', '2026-11-05')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Daniela González Torres', 'daniela.gonzalez.048@example.com', '+573202242212', '{seed}', 'mira_csv', 'MIRA-0049', '2026-01-06', 'Ilimitado', '2026-11-05')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'María Duarte Arias', 'maria.duarte.049@example.com', '+573068877535', '{seed}', 'mira_csv', 'MIRA-0050', '2026-01-14', 'Ilimitado', '2026-12-16')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'María Duarte Arias', 'maria.duarte.049@example.com', '+573068877535', '{seed}', 'mira_csv', 'MIRA-0050', '2026-01-14', 'Ilimitado', '2026-12-16')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Ricardo Castillo Sánchez', 'ricardo.castillo.050@example.com', '+573159962631', '{seed}', 'mira_csv', 'MIRA-0051', '2026-01-13', 'Ilimitado', '2026-10-13')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Ricardo Castillo Sánchez', 'ricardo.castillo.050@example.com', '+573159962631', '{seed}', 'mira_csv', 'MIRA-0051', '2026-01-13', 'Ilimitado', '2026-10-13')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'María Jiménez Valencia', 'maria.jimenez.051@example.com', '+573152521203', '{seed}', 'mira_csv', 'MIRA-0052', '2026-05-07', '2x semana', '2026-11-29')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'María Jiménez Valencia', 'maria.jimenez.051@example.com', '+573152521203', '{seed}', 'mira_csv', 'MIRA-0052', '2026-05-07', '2x semana', '2026-11-29')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Carolina Castillo Suárez', 'carolina.castillo.052@example.com', '+573301543605', '{seed}', 'mira_csv', 'MIRA-0053', '2025-10-18', 'Ilimitado', '2026-10-08')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Carolina Castillo Suárez', 'carolina.castillo.052@example.com', '+573301543605', '{seed}', 'mira_csv', 'MIRA-0053', '2025-10-18', 'Ilimitado', '2026-10-08')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Sofía Arias Ospina', 'sofia.arias.053@example.com', '+573048433970', '{seed}', 'mira_csv', 'MIRA-0054', '2026-05-03', 'Ilimitado', '2026-12-04')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Sofía Arias Ospina', 'sofia.arias.053@example.com', '+573048433970', '{seed}', 'mira_csv', 'MIRA-0054', '2026-05-03', 'Ilimitado', '2026-12-04')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Gabriel Jiménez Valencia', 'gabriel.jimenez.054@example.com', '+573246293420', '{seed}', 'mira_csv', 'MIRA-0055', '2026-01-15', '3x semana', '2026-10-22')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Gabriel Jiménez Valencia', 'gabriel.jimenez.054@example.com', '+573246293420', '{seed}', 'mira_csv', 'MIRA-0055', '2026-01-15', '3x semana', '2026-10-22')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Catalina Restrepo Montoya', 'catalina.restrepo.055@example.com', '+573346367024', '{seed}', 'mira_csv', 'MIRA-0056', '2025-12-25', 'Ilimitado', '2026-12-22')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Catalina Restrepo Montoya', 'catalina.restrepo.055@example.com', '+573346367024', '{seed}', 'mira_csv', 'MIRA-0056', '2025-12-25', 'Ilimitado', '2026-12-22')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Sara Montoya Muñoz', 'sara.montoya.056@example.com', '+573322356760', '{seed}', 'mira_csv', 'MIRA-0057', '2025-09-28', 'Ilimitado', '2026-11-15')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Sara Montoya Muñoz', 'sara.montoya.056@example.com', '+573322356760', '{seed}', 'mira_csv', 'MIRA-0057', '2025-09-28', 'Ilimitado', '2026-11-15')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Camilo Castillo Arango', 'camilo.castillo.057@example.com', '+573193014939', '{seed}', 'mira_csv', 'MIRA-0058', '2026-04-03', '2x semana', '2026-11-16')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Camilo Castillo Arango', 'camilo.castillo.057@example.com', '+573193014939', '{seed}', 'mira_csv', 'MIRA-0058', '2026-04-03', '2x semana', '2026-11-16')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Andrés Castaño Castillo', 'andres.castano.058@example.com', '+573154280729', '{seed}', 'mira_csv', 'MIRA-0059', '2026-05-09', '3x semana', '2026-11-20')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Andrés Castaño Castillo', 'andres.castano.058@example.com', '+573154280729', '{seed}', 'mira_csv', 'MIRA-0059', '2026-05-09', '3x semana', '2026-11-20')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Carolina Suárez Jiménez', 'carolina.suarez.059@example.com', '+573346678133', '{seed}', 'mira_csv', 'MIRA-0060', '2026-01-15', '3x semana', '2026-11-27')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Carolina Suárez Jiménez', 'carolina.suarez.059@example.com', '+573346678133', '{seed}', 'mira_csv', 'MIRA-0060', '2026-01-15', '3x semana', '2026-11-27')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Samuel García Mejía', 'samuel.garcia.060@example.com', '+573131170582', '{seed}', 'mira_csv', 'MIRA-0061', '2025-10-25', 'Ilimitado', '2026-09-17')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Samuel García Mejía', 'samuel.garcia.060@example.com', '+573131170582', '{seed}', 'mira_csv', 'MIRA-0061', '2025-10-25', 'Ilimitado', '2026-09-17')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Mariana Mejía Díaz', 'mariana.mejia.061@example.com', '+573164061836', '{seed}', 'mira_csv', 'MIRA-0062', '2025-11-05', 'Ilimitado', '2026-09-29')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Mariana Mejía Díaz', 'mariana.mejia.061@example.com', '+573164061836', '{seed}', 'mira_csv', 'MIRA-0062', '2025-11-05', 'Ilimitado', '2026-09-29')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Felipe Suárez Valencia', 'felipe.suarez.062@example.com', '+573342568059', '{seed}', 'mira_csv', 'MIRA-0063', '2025-11-06', '3x semana', '2026-10-01')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Felipe Suárez Valencia', 'felipe.suarez.062@example.com', '+573342568059', '{seed}', 'mira_csv', 'MIRA-0063', '2025-11-06', '3x semana', '2026-10-01')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Samuel Montoya Jiménez', 'samuel.montoya.063@example.com', '+573008717040', '{seed}', 'mira_csv', 'MIRA-0064', '2025-12-02', 'Ilimitado', '2026-09-25')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Samuel Montoya Jiménez', 'samuel.montoya.063@example.com', '+573008717040', '{seed}', 'mira_csv', 'MIRA-0064', '2025-12-02', 'Ilimitado', '2026-09-25')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Diana Muñoz Montoya', 'diana.munoz.064@example.com', '+573303026933', '{seed}', 'mira_csv', 'MIRA-0065', '2026-01-19', '2x semana', '2026-09-25')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Diana Muñoz Montoya', 'diana.munoz.064@example.com', '+573303026933', '{seed}', 'mira_csv', 'MIRA-0065', '2026-01-19', '2x semana', '2026-09-25')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Juan Ramírez Ospina', 'juan.ramirez.065@example.com', '+573383144928', '{seed}', 'mira_csv', 'MIRA-0066', '2025-12-15', '3x semana', '2026-11-11')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Juan Ramírez Ospina', 'juan.ramirez.065@example.com', '+573383144928', '{seed}', 'mira_csv', 'MIRA-0066', '2025-12-15', '3x semana', '2026-11-11')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Javier Díaz Flores', 'javier.diaz.066@example.com', '+573011435361', '{seed}', 'mira_csv', 'MIRA-0067', '2026-02-04', 'Ilimitado', '2026-11-01')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Javier Díaz Flores', 'javier.diaz.066@example.com', '+573011435361', '{seed}', 'mira_csv', 'MIRA-0067', '2026-02-04', 'Ilimitado', '2026-11-01')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Javier Mejía Rivera', 'javier.mejia.067@example.com', '+573173623685', '{seed}', 'mira_csv', 'MIRA-0068', '2026-03-01', '3x semana', '2026-11-16')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Javier Mejía Rivera', 'javier.mejia.067@example.com', '+573173623685', '{seed}', 'mira_csv', 'MIRA-0068', '2026-03-01', '3x semana', '2026-11-16')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Jhon Rodríguez Arias', 'jhon.rodriguez.068@example.com', '+573206576687', '{seed}', 'mira_csv', 'MIRA-0069', '2026-03-26', '2x semana', '2026-10-18')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Jhon Rodríguez Arias', 'jhon.rodriguez.068@example.com', '+573206576687', '{seed}', 'mira_csv', 'MIRA-0069', '2026-03-26', '2x semana', '2026-10-18')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'María García Torres', 'maria.garcia.069@example.com', '+573035337260', '{seed}', 'mira_csv', 'MIRA-0070', '2026-05-22', '3x semana', '2026-11-12')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'María García Torres', 'maria.garcia.069@example.com', '+573035337260', '{seed}', 'mira_csv', 'MIRA-0070', '2026-05-22', '3x semana', '2026-11-12')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Samuel Salazar Duarte', 'samuel.salazar.070@example.com', '+573388986253', '{seed}', 'mira_csv', 'MIRA-0071', '2025-10-06', 'Ilimitado', '2026-11-15')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Samuel Salazar Duarte', 'samuel.salazar.070@example.com', '+573388986253', '{seed}', 'mira_csv', 'MIRA-0071', '2025-10-06', 'Ilimitado', '2026-11-15')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Ricardo Montoya Díaz', 'ricardo.montoya.071@example.com', '+573009585653', '{seed}', 'mira_csv', 'MIRA-0072', '2025-10-30', '3x semana', '2026-11-06')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Ricardo Montoya Díaz', 'ricardo.montoya.071@example.com', '+573009585653', '{seed}', 'mira_csv', 'MIRA-0072', '2025-10-30', '3x semana', '2026-11-06')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Valentina Valencia Díaz', 'valentina.valencia.072@example.com', '+573231699967', '{seed}', 'mira_csv', 'MIRA-0073', '2025-08-03', 'Ilimitado', '2026-11-03')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Valentina Valencia Díaz', 'valentina.valencia.072@example.com', '+573231699967', '{seed}', 'mira_csv', 'MIRA-0073', '2025-08-03', 'Ilimitado', '2026-11-03')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Óscar Rodríguez Montoya', 'oscar.rodriguez.073@example.com', '+573199545723', '{seed}', 'mira_csv', 'MIRA-0074', '2026-04-09', '2x semana', '2026-10-21')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Óscar Rodríguez Montoya', 'oscar.rodriguez.073@example.com', '+573199545723', '{seed}', 'mira_csv', 'MIRA-0074', '2026-04-09', '2x semana', '2026-10-21')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Carolina Castillo Ospina', 'carolina.castillo.074@example.com', '+573208942596', '{seed}', 'mira_csv', 'MIRA-0075', '2025-11-02', '3x semana', '2026-11-14')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Carolina Castillo Ospina', 'carolina.castillo.074@example.com', '+573208942596', '{seed}', 'mira_csv', 'MIRA-0075', '2025-11-02', '3x semana', '2026-11-14')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Sebastián Castaño Hernández', 'sebastian.castano.075@example.com', '+573066479561', '{seed}', 'mira_csv', 'MIRA-0076', '2026-01-06', '3x semana', '2026-10-24')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Sebastián Castaño Hernández', 'sebastian.castano.075@example.com', '+573066479561', '{seed}', 'mira_csv', 'MIRA-0076', '2026-01-06', '3x semana', '2026-10-24')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Isabella Castillo Ospina', 'isabella.castillo.076@example.com', '+573288691762', '{seed}', 'mira_csv', 'MIRA-0077', '2025-09-12', '3x semana', '2026-10-29')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Isabella Castillo Ospina', 'isabella.castillo.076@example.com', '+573288691762', '{seed}', 'mira_csv', 'MIRA-0077', '2025-09-12', '3x semana', '2026-10-29')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Samuel Arango Montoya', 'samuel.arango.077@example.com', '+573199151625', '{seed}', 'mira_csv', 'MIRA-0078', '2025-12-14', 'Ilimitado', '2026-10-20')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Samuel Arango Montoya', 'samuel.arango.077@example.com', '+573199151625', '{seed}', 'mira_csv', 'MIRA-0078', '2025-12-14', 'Ilimitado', '2026-10-20')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Sara Mejía Ramírez', 'sara.mejia.078@example.com', '+573309538890', '{seed}', 'mira_csv', 'MIRA-0079', '2025-12-26', '3x semana', '2026-10-20')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Sara Mejía Ramírez', 'sara.mejia.078@example.com', '+573309538890', '{seed}', 'mira_csv', 'MIRA-0079', '2025-12-26', '3x semana', '2026-10-20')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Alejandro García Mejía', 'alejandro.garcia.079@example.com', '+573021344482', '{seed}', 'mira_csv', 'MIRA-0080', '2026-04-28', '2x semana', '2026-11-02')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Alejandro García Mejía', 'alejandro.garcia.079@example.com', '+573021344482', '{seed}', 'mira_csv', 'MIRA-0080', '2026-04-28', '2x semana', '2026-11-02')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Camilo Jiménez Sánchez', 'camilo.jimenez.080@example.com', '+573387657385', '{seed}', 'mira_csv', 'MIRA-0081', '2025-12-19', '3x semana', '2026-11-05')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Camilo Jiménez Sánchez', 'camilo.jimenez.080@example.com', '+573387657385', '{seed}', 'mira_csv', 'MIRA-0081', '2025-12-19', '3x semana', '2026-11-05')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Carlos Flores Restrepo', 'carlos.flores.081@example.com', '+573232707205', '{seed}', 'mira_csv', 'MIRA-0082', '2025-09-08', '3x semana', '2026-11-23')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Carlos Flores Restrepo', 'carlos.flores.081@example.com', '+573232707205', '{seed}', 'mira_csv', 'MIRA-0082', '2025-09-08', '3x semana', '2026-11-23')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Paola Muñoz Torres', 'paola.munoz.082@example.com', '+573321544366', '{seed}', 'mira_csv', 'MIRA-0083', '2026-05-21', '3x semana', '2026-11-11')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Paola Muñoz Torres', 'paola.munoz.082@example.com', '+573321544366', '{seed}', 'mira_csv', 'MIRA-0083', '2026-05-21', '3x semana', '2026-11-11')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Samuel Torres Arango', 'samuel.torres.083@example.com', '+573178723709', '{seed}', 'mira_csv', 'MIRA-0084', '2026-02-28', '2x semana', '2026-10-25')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Samuel Torres Arango', 'samuel.torres.083@example.com', '+573178723709', '{seed}', 'mira_csv', 'MIRA-0084', '2026-02-28', '2x semana', '2026-10-25')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Julián Arias Suárez', 'julian.arias.084@example.com', '+573126546692', '{seed}', 'mira_csv', 'MIRA-0085', '2026-02-25', '3x semana', '2026-11-14')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Julián Arias Suárez', 'julian.arias.084@example.com', '+573126546692', '{seed}', 'mira_csv', 'MIRA-0085', '2026-02-25', '3x semana', '2026-11-14')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Andrea Montoya Flores', 'andrea.montoya.085@example.com', '+573381774836', '{seed}', 'mira_csv', 'MIRA-0086', '2026-09-02', '2x semana', '2027-01-07')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Andrea Montoya Flores', 'andrea.montoya.085@example.com', '+573381774836', '{seed}', 'mira_csv', 'MIRA-0086', '2026-09-02', '2x semana', '2027-01-07')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Óscar Torres Vargas', 'oscar.torres.086@example.com', '+573344301340', '{seed}', 'mira_csv', 'MIRA-0087', '2026-09-22', '3x semana', '2026-11-19')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Óscar Torres Vargas', 'oscar.torres.086@example.com', '+573344301340', '{seed}', 'mira_csv', 'MIRA-0087', '2026-09-22', '3x semana', '2026-11-19')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Paola Muñoz Hernández', 'paola.munoz.087@example.com', '+573083575304', '{seed}', 'mira_csv', 'MIRA-0088', '2026-08-25', 'Ilimitado', '2026-12-23')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Paola Muñoz Hernández', 'paola.munoz.087@example.com', '+573083575304', '{seed}', 'mira_csv', 'MIRA-0088', '2026-08-25', 'Ilimitado', '2026-12-23')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Alejandro Díaz Suárez', 'alejandro.diaz.088@example.com', '+573364478755', '{seed}', 'mira_csv', 'MIRA-0089', '2026-09-18', '2x semana', '2026-12-15')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Alejandro Díaz Suárez', 'alejandro.diaz.088@example.com', '+573364478755', '{seed}', 'mira_csv', 'MIRA-0089', '2026-09-18', '2x semana', '2026-12-15')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Sara Gómez Ospina', 'sara.gomez.089@example.com', '+573068294044', '{seed}', 'mira_csv', 'MIRA-0090', '2026-09-19', '3x semana', '2026-11-23')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Sara Gómez Ospina', 'sara.gomez.089@example.com', '+573068294044', '{seed}', 'mira_csv', 'MIRA-0090', '2026-09-19', '3x semana', '2026-11-23')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Isabella Muñoz Arias', 'isabella.munoz.090@example.com', '+573105490505', '{seed}', 'mira_csv', 'MIRA-0091', '2026-08-31', 'Ilimitado', '2026-12-06')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Isabella Muñoz Arias', 'isabella.munoz.090@example.com', '+573105490505', '{seed}', 'mira_csv', 'MIRA-0091', '2026-08-31', 'Ilimitado', '2026-12-06')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Paola Muñoz Valencia', 'paola.munoz.091@example.com', '+573311019964', '{seed}', 'mira_csv', 'MIRA-0092', '2026-08-31', '2x semana', '2026-12-10')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Paola Muñoz Valencia', 'paola.munoz.091@example.com', '+573311019964', '{seed}', 'mira_csv', 'MIRA-0092', '2026-08-31', '2x semana', '2026-12-10')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Alejandro Correa Rivera', 'alejandro.correa.092@example.com', '+573026608262', '{seed}', 'mira_csv', 'MIRA-0093', '2026-09-01', '3x semana', '2027-01-19')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Alejandro Correa Rivera', 'alejandro.correa.092@example.com', '+573026608262', '{seed}', 'mira_csv', 'MIRA-0093', '2026-09-01', '3x semana', '2027-01-19')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Tatiana Mejía Valencia', 'tatiana.mejia.093@example.com', '+573111537141', '{seed}', 'mira_csv', 'MIRA-0094', '2026-09-05', '3x semana', '2026-11-18')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Tatiana Mejía Valencia', 'tatiana.mejia.093@example.com', '+573111537141', '{seed}', 'mira_csv', 'MIRA-0094', '2026-09-05', '3x semana', '2026-11-18')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Catalina Arango Morales', 'catalina.arango.094@example.com', '+573303700331', '{seed}', 'mira_csv', 'MIRA-0095', '2026-09-04', '3x semana', '2027-01-22')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Catalina Arango Morales', 'catalina.arango.094@example.com', '+573303700331', '{seed}', 'mira_csv', 'MIRA-0095', '2026-09-04', '3x semana', '2027-01-22')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Verónica Arango Correa', 'veronica.arango.095@example.com', '+573369144130', '{seed}', 'mira_csv', 'MIRA-0096', '2026-09-07', 'Ilimitado', '2026-10-27')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Verónica Arango Correa', 'veronica.arango.095@example.com', '+573369144130', '{seed}', 'mira_csv', 'MIRA-0096', '2026-09-07', 'Ilimitado', '2026-10-27')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Julián Díaz Salazar', 'julian.diaz.096@example.com', '+573073677784', '{seed}', 'mira_csv', 'MIRA-0097', '2026-09-19', 'Ilimitado', '2026-11-10')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Julián Díaz Salazar', 'julian.diaz.096@example.com', '+573073677784', '{seed}', 'mira_csv', 'MIRA-0097', '2026-09-19', 'Ilimitado', '2026-11-10')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Sara Sánchez Suárez', 'sara.sanchez.097@example.com', '+573223987856', '{seed}', 'mira_csv', 'MIRA-0098', '2026-09-06', 'Ilimitado', '2027-01-13')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Sara Sánchez Suárez', 'sara.sanchez.097@example.com', '+573223987856', '{seed}', 'mira_csv', 'MIRA-0098', '2026-09-06', 'Ilimitado', '2027-01-13')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Verónica Salazar Mejía', 'veronica.salazar.098@example.com', '+573024707437', '{seed}', 'mira_csv', 'MIRA-0099', '2026-08-26', 'Ilimitado', '2026-11-07')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Verónica Salazar Mejía', 'veronica.salazar.098@example.com', '+573024707437', '{seed}', 'mira_csv', 'MIRA-0099', '2026-08-26', 'Ilimitado', '2026-11-07')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Sara Montoya Castaño', 'sara.montoya.099@example.com', '+573212783857', '{seed}', 'mira_csv', 'MIRA-0100', '2026-08-28', '3x semana', '2026-11-29')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Sara Montoya Castaño', 'sara.montoya.099@example.com', '+573212783857', '{seed}', 'mira_csv', 'MIRA-0100', '2026-08-28', '3x semana', '2026-11-29')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Mateo Castillo Torres', 'mateo.castillo.100@example.com', '+573068863757', '{seed}', 'mira_csv', 'MIRA-0101', '2026-09-21', 'Ilimitado', '2026-10-27')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Mateo Castillo Torres', 'mateo.castillo.100@example.com', '+573068863757', '{seed}', 'mira_csv', 'MIRA-0101', '2026-09-21', 'Ilimitado', '2026-10-27')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Jhon Suárez Torres', 'jhon.suarez.101@example.com', '+573135550369', '{seed}', 'mira_csv', 'MIRA-0102', '2026-09-16', 'Ilimitado', '2026-12-25')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Jhon Suárez Torres', 'jhon.suarez.101@example.com', '+573135550369', '{seed}', 'mira_csv', 'MIRA-0102', '2026-09-16', 'Ilimitado', '2026-12-25')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Claudia Vargas Rodríguez', 'claudia.vargas.102@example.com', '+573356865454', '{seed}', 'mira_csv', 'MIRA-0103', '2026-09-19', 'Ilimitado', '2026-12-13')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Claudia Vargas Rodríguez', 'claudia.vargas.102@example.com', '+573356865454', '{seed}', 'mira_csv', 'MIRA-0103', '2026-09-19', 'Ilimitado', '2026-12-13')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Alejandro Díaz Gómez', 'alejandro.diaz.103@example.com', '+573135708422', '{seed}', 'mira_csv', 'MIRA-0104', '2026-09-21', '3x semana', '2026-12-08')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Alejandro Díaz Gómez', 'alejandro.diaz.103@example.com', '+573135708422', '{seed}', 'mira_csv', 'MIRA-0104', '2026-09-21', '3x semana', '2026-12-08')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Santiago Restrepo Díaz', 'santiago.restrepo.104@example.com', '+573198901078', '{seed}', 'mira_csv', 'MIRA-0105', '2026-09-11', '3x semana', '2026-12-20')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Santiago Restrepo Díaz', 'santiago.restrepo.104@example.com', '+573198901078', '{seed}', 'mira_csv', 'MIRA-0105', '2026-09-11', '3x semana', '2026-12-20')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Luciana Salazar Correa', 'luciana.salazar.105@example.com', '+573264083897', '{seed}', 'mira_csv', 'MIRA-0106', '2026-09-06', '3x semana', '2026-11-16')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Luciana Salazar Correa', 'luciana.salazar.105@example.com', '+573264083897', '{seed}', 'mira_csv', 'MIRA-0106', '2026-09-06', '3x semana', '2026-11-16')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Juan Rivera González', 'juan.rivera.106@example.com', '+573133150555', '{seed}', 'mira_csv', 'MIRA-0107', '2026-09-14', 'Ilimitado', '2026-11-15')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Juan Rivera González', 'juan.rivera.106@example.com', '+573133150555', '{seed}', 'mira_csv', 'MIRA-0107', '2026-09-14', 'Ilimitado', '2026-11-15')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Carlos Correa Ospina', 'carlos.correa.107@example.com', '+573106064996', '{seed}', 'mira_csv', 'MIRA-0108', '2026-09-18', 'Ilimitado', '2027-01-07')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Carlos Correa Ospina', 'carlos.correa.107@example.com', '+573106064996', '{seed}', 'mira_csv', 'MIRA-0108', '2026-09-18', 'Ilimitado', '2027-01-07')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'María Duarte Jiménez', 'maria.duarte.108@example.com', '+573186597427', '{seed}', 'mira_csv', 'MIRA-0109', '2026-09-16', 'Ilimitado', '2026-12-25')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'María Duarte Jiménez', 'maria.duarte.108@example.com', '+573186597427', '{seed}', 'mira_csv', 'MIRA-0109', '2026-09-16', 'Ilimitado', '2026-12-25')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Paula Correa Ospina', 'paula.correa.109@example.com', '+573012098842', '{seed}', 'mira_csv', 'MIRA-0110', '2026-09-02', '2x semana', '2026-12-07')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Paula Correa Ospina', 'paula.correa.109@example.com', '+573012098842', '{seed}', 'mira_csv', 'MIRA-0110', '2026-09-02', '2x semana', '2026-12-07')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Gabriel Suárez Sánchez', 'gabriel.suarez.110@example.com', '+573198880251', '{seed}', 'mira_csv', 'MIRA-0111', '2026-09-23', '3x semana', '2026-12-10')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Gabriel Suárez Sánchez', 'gabriel.suarez.110@example.com', '+573198880251', '{seed}', 'mira_csv', 'MIRA-0111', '2026-09-23', '3x semana', '2026-12-10')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Sebastián Rodríguez Flores', 'sebastian.rodriguez.111@example.com', '+573188706925', '{seed}', 'mira_csv', 'MIRA-0112', '2026-09-22', '3x semana', '2027-01-16')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Sebastián Rodríguez Flores', 'sebastian.rodriguez.111@example.com', '+573188706925', '{seed}', 'mira_csv', 'MIRA-0112', '2026-09-22', '3x semana', '2027-01-16')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Sara Gómez Duarte', 'sara.gomez.112@example.com', '+573283845701', '{seed}', 'mira_csv', 'MIRA-0113', '2026-09-20', 'Ilimitado', '2026-12-07')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Sara Gómez Duarte', 'sara.gomez.112@example.com', '+573283845701', '{seed}', 'mira_csv', 'MIRA-0113', '2026-09-20', 'Ilimitado', '2026-12-07')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Carolina Castillo Montoya', 'carolina.castillo.113@example.com', '+573273578250', '{seed}', 'mira_csv', 'MIRA-0114', '2026-09-22', 'Ilimitado', '2026-10-25')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Carolina Castillo Montoya', 'carolina.castillo.113@example.com', '+573273578250', '{seed}', 'mira_csv', 'MIRA-0114', '2026-09-22', 'Ilimitado', '2026-10-25')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Mateo Martínez Restrepo', 'mateo.martinez.114@example.com', '+573141873442', '{seed}', 'mira_csv', 'MIRA-0115', '2026-08-26', '3x semana', '2026-12-06')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Mateo Martínez Restrepo', 'mateo.martinez.114@example.com', '+573141873442', '{seed}', 'mira_csv', 'MIRA-0115', '2026-08-26', '3x semana', '2026-12-06')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Sebastián Arango Jiménez', 'sebastian.arango.115@example.com', '+573011716207', '{seed}', 'mira_csv', 'MIRA-0116', '2026-04-26', 'Ilimitado', '2026-11-21')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Sebastián Arango Jiménez', 'sebastian.arango.115@example.com', '+573011716207', '{seed}', 'mira_csv', 'MIRA-0116', '2026-04-26', 'Ilimitado', '2026-11-21')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Alejandro Flores Arias', 'alejandro.flores.116@example.com', '+573014992352', '{seed}', 'mira_csv', 'MIRA-0117', '2026-01-13', '2x semana', '2026-09-02')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Alejandro Flores Arias', 'alejandro.flores.116@example.com', '+573014992352', '{seed}', 'mira_csv', 'MIRA-0117', '2026-01-13', '2x semana', '2026-09-02')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Paola Arango Rivera', 'paola.arango.117@example.com', '+573141921328', '{seed}', 'mira_csv', 'MIRA-0118', '2025-09-07', '2x semana', '2026-09-15')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Paola Arango Rivera', 'paola.arango.117@example.com', '+573141921328', '{seed}', 'mira_csv', 'MIRA-0118', '2025-09-07', '2x semana', '2026-09-15')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Juliana Flores Restrepo', 'juliana.flores.118@example.com', '+573222666938', '{seed}', 'mira_csv', 'MIRA-0119', '2025-05-07', '3x semana', '2026-10-09')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Juliana Flores Restrepo', 'juliana.flores.118@example.com', '+573222666938', '{seed}', 'mira_csv', 'MIRA-0119', '2025-05-07', '3x semana', '2026-10-09')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Fernando Ramírez Torres', 'fernando.ramirez.119@example.com', '+573135593221', '{seed}', 'mira_csv', 'MIRA-0120', '2025-07-24', '2x semana', '2026-10-18')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Fernando Ramírez Torres', 'fernando.ramirez.119@example.com', '+573135593221', '{seed}', 'mira_csv', 'MIRA-0120', '2025-07-24', '2x semana', '2026-10-18')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Sebastián Correa Muñoz', 'sebastian.correa.120@example.com', '+573077721193', '{seed}', 'mira_csv', 'MIRA-0121', '2025-12-13', '3x semana', '2026-11-11')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Sebastián Correa Muñoz', 'sebastian.correa.120@example.com', '+573077721193', '{seed}', 'mira_csv', 'MIRA-0121', '2025-12-13', '3x semana', '2026-11-11')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Luciana Duarte Flores', 'luciana.duarte.121@example.com', '+573298054297', '{seed}', 'mira_csv', 'MIRA-0122', '2026-04-26', '3x semana', '2026-10-18')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Luciana Duarte Flores', 'luciana.duarte.121@example.com', '+573298054297', '{seed}', 'mira_csv', 'MIRA-0122', '2026-04-26', '3x semana', '2026-10-18')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Sandra Jiménez Castaño', 'sandra.jimenez.122@example.com', '+573117503149', '{seed}', 'mira_csv', 'MIRA-0123', '2026-06-09', '3x semana', '2026-09-13')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Sandra Jiménez Castaño', 'sandra.jimenez.122@example.com', '+573117503149', '{seed}', 'mira_csv', 'MIRA-0123', '2026-06-09', '3x semana', '2026-09-13')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Javier Castaño Vargas', 'javier.castano.123@example.com', '+573145068477', '{seed}', 'mira_csv', 'MIRA-0124', '2026-03-13', 'Ilimitado', '2026-09-29')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Javier Castaño Vargas', 'javier.castano.123@example.com', '+573145068477', '{seed}', 'mira_csv', 'MIRA-0124', '2026-03-13', 'Ilimitado', '2026-09-29')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Mariana Gómez Martínez', 'mariana.gomez.124@example.com', '+573094855682', '{seed}', 'mira_csv', 'MIRA-0125', '2025-09-11', '3x semana', '2026-12-16')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Mariana Gómez Martínez', 'mariana.gomez.124@example.com', '+573094855682', '{seed}', 'mira_csv', 'MIRA-0125', '2025-09-11', '3x semana', '2026-12-16')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Carolina Rivera Rodríguez', 'carolina.rivera.125@example.com', '+573119298006', '{seed}', 'mira_csv', 'MIRA-0126', '2025-07-25', '2x semana', '2026-10-25')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Carolina Rivera Rodríguez', 'carolina.rivera.125@example.com', '+573119298006', '{seed}', 'mira_csv', 'MIRA-0126', '2025-07-25', '2x semana', '2026-10-25')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Tomás Arias Hernández', 'tomas.arias.126@example.com', '+573391418824', '{seed}', 'mira_csv', 'MIRA-0127', '2025-06-01', 'Ilimitado', '2026-10-29')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Tomás Arias Hernández', 'tomas.arias.126@example.com', '+573391418824', '{seed}', 'mira_csv', 'MIRA-0127', '2025-06-01', 'Ilimitado', '2026-10-29')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Óscar Castaño Arias', 'oscar.castano.127@example.com', '+573033891838', '{seed}', 'mira_csv', 'MIRA-0128', '2026-03-20', 'Ilimitado', '2026-12-23')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Óscar Castaño Arias', 'oscar.castano.127@example.com', '+573033891838', '{seed}', 'mira_csv', 'MIRA-0128', '2026-03-20', 'Ilimitado', '2026-12-23')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Nicolás Hernández Morales', 'nicolas.hernandez.128@example.com', '+573323886553', '{seed}', 'mira_csv', 'MIRA-0129', '2026-04-17', '3x semana', '2026-12-11')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Nicolás Hernández Morales', 'nicolas.hernandez.128@example.com', '+573323886553', '{seed}', 'mira_csv', 'MIRA-0129', '2026-04-17', '3x semana', '2026-12-11')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Mariana Suárez Muñoz', 'mariana.suarez.129@example.com', '+573076878090', '{seed}', 'mira_csv', 'MIRA-0130', '2026-06-15', 'Ilimitado', '2026-09-04')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Mariana Suárez Muñoz', 'mariana.suarez.129@example.com', '+573076878090', '{seed}', 'mira_csv', 'MIRA-0130', '2026-06-15', 'Ilimitado', '2026-09-04')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Laura Arias Hernández', 'laura.arias.130@example.com', '+573118508285', '{seed}', 'mira_csv', 'MIRA-0131', '2026-03-02', 'Ilimitado', '2026-11-17')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Laura Arias Hernández', 'laura.arias.130@example.com', '+573118508285', '{seed}', 'mira_csv', 'MIRA-0131', '2026-03-02', 'Ilimitado', '2026-11-17')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Nicolás Castillo Mejía', 'nicolas.castillo.131@example.com', '+573203887140', '{seed}', 'mira_csv', 'MIRA-0132', '2025-08-27', '3x semana', '2026-09-05')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Nicolás Castillo Mejía', 'nicolas.castillo.131@example.com', '+573203887140', '{seed}', 'mira_csv', 'MIRA-0132', '2025-08-27', '3x semana', '2026-09-05')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Paula Jiménez Vargas', 'paula.jimenez.132@example.com', '+573311060197', '{seed}', 'mira_csv', 'MIRA-0133', '2026-06-02', '3x semana', '2026-12-22')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Paula Jiménez Vargas', 'paula.jimenez.132@example.com', '+573311060197', '{seed}', 'mira_csv', 'MIRA-0133', '2026-06-02', '3x semana', '2026-12-22')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Valentina Suárez Valencia', 'valentina.suarez.133@example.com', '+573009467310', '{seed}', 'mira_csv', 'MIRA-0134', '2026-05-13', '3x semana', '2026-11-13')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Valentina Suárez Valencia', 'valentina.suarez.133@example.com', '+573009467310', '{seed}', 'mira_csv', 'MIRA-0134', '2026-05-13', '3x semana', '2026-11-13')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Samuel Montoya Suárez', 'samuel.montoya.134@example.com', '+573084147230', '{seed}', 'mira_csv', 'MIRA-0135', '2025-07-27', 'Ilimitado', '2026-12-16')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Samuel Montoya Suárez', 'samuel.montoya.134@example.com', '+573084147230', '{seed}', 'mira_csv', 'MIRA-0135', '2025-07-27', 'Ilimitado', '2026-12-16')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Luciana Valencia Arango', 'luciana.valencia.135@example.com', '+573228304614', '{seed}', 'mira_csv', 'MIRA-0136', '2025-11-26', '2x semana', '2026-10-31')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Luciana Valencia Arango', 'luciana.valencia.135@example.com', '+573228304614', '{seed}', 'mira_csv', 'MIRA-0136', '2025-11-26', '2x semana', '2026-10-31')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Óscar Castaño García', 'oscar.castano.136@example.com', '+573265634162', '{seed}', 'mira_csv', 'MIRA-0137', '2026-05-20', '3x semana', '2026-11-12')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Óscar Castaño García', 'oscar.castano.136@example.com', '+573265634162', '{seed}', 'mira_csv', 'MIRA-0137', '2026-05-20', '3x semana', '2026-11-12')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Luciana López Martínez', 'luciana.lopez.137@example.com', '+573114145404', '{seed}', 'mira_csv', 'MIRA-0138', '2026-05-31', '2x semana', '2026-11-10')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Luciana López Martínez', 'luciana.lopez.137@example.com', '+573114145404', '{seed}', 'mira_csv', 'MIRA-0138', '2026-05-31', '2x semana', '2026-11-10')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Jhon Rodríguez Duarte', 'jhon.rodriguez.138@example.com', '+573023285075', '{seed}', 'mira_csv', 'MIRA-0139', '2025-11-04', '3x semana', '2026-12-22')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Jhon Rodríguez Duarte', 'jhon.rodriguez.138@example.com', '+573023285075', '{seed}', 'mira_csv', 'MIRA-0139', '2025-11-04', '3x semana', '2026-12-22')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Laura Castillo Gómez', 'laura.castillo.139@example.com', '+573069539199', '{seed}', 'mira_csv', 'MIRA-0140', '2026-07-03', 'Ilimitado', '2026-12-14')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Laura Castillo Gómez', 'laura.castillo.139@example.com', '+573069539199', '{seed}', 'mira_csv', 'MIRA-0140', '2026-07-03', 'Ilimitado', '2026-12-14')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Mateo Vargas Salazar', 'mateo.vargas.140@example.com', '+573171612995', '{seed}', 'mira_csv', 'MIRA-0141', '2025-12-29', '2x semana', '2026-09-10')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Mateo Vargas Salazar', 'mateo.vargas.140@example.com', '+573171612995', '{seed}', 'mira_csv', 'MIRA-0141', '2025-12-29', '2x semana', '2026-09-10')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Alejandra Mejía Castillo', 'alejandra.mejia.141@example.com', '+573103534470', '{seed}', 'mira_csv', 'MIRA-0142', '2026-04-01', '2x semana', '2026-11-15')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Alejandra Mejía Castillo', 'alejandra.mejia.141@example.com', '+573103534470', '{seed}', 'mira_csv', 'MIRA-0142', '2026-04-01', '2x semana', '2026-11-15')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Luciana Suárez Muñoz', 'luciana.suarez.142@example.com', '+573373191526', '{seed}', 'mira_csv', 'MIRA-0143', '2025-10-21', '2x semana', '2026-08-28')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Luciana Suárez Muñoz', 'luciana.suarez.142@example.com', '+573373191526', '{seed}', 'mira_csv', 'MIRA-0143', '2025-10-21', '2x semana', '2026-08-28')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Tatiana Restrepo Vargas', 'tatiana.restrepo.143@example.com', '+573161628800', '{seed}', 'mira_csv', 'MIRA-0144', '2025-11-12', 'Ilimitado', '2026-09-05')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Tatiana Restrepo Vargas', 'tatiana.restrepo.143@example.com', '+573161628800', '{seed}', 'mira_csv', 'MIRA-0144', '2025-11-12', 'Ilimitado', '2026-09-05')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Óscar González Hernández', 'oscar.gonzalez.144@example.com', '+573243872846', '{seed}', 'mira_csv', 'MIRA-0145', '2025-10-10', 'Ilimitado', '2026-11-13')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Óscar González Hernández', 'oscar.gonzalez.144@example.com', '+573243872846', '{seed}', 'mira_csv', 'MIRA-0145', '2025-10-10', 'Ilimitado', '2026-11-13')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Gabriel Correa González', 'gabriel.correa.145@example.com', '+573304763312', '{seed}', 'mira_csv', 'MIRA-0146', '2025-10-11', 'Ilimitado', '2026-10-02')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Gabriel Correa González', 'gabriel.correa.145@example.com', '+573304763312', '{seed}', 'mira_csv', 'MIRA-0146', '2025-10-11', 'Ilimitado', '2026-10-02')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'María Mejía Gómez', 'maria.mejia.146@example.com', '+573368141605', '{seed}', 'mira_csv', 'MIRA-0147', '2025-05-06', '3x semana', '2026-11-08')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'María Mejía Gómez', 'maria.mejia.146@example.com', '+573368141605', '{seed}', 'mira_csv', 'MIRA-0147', '2025-05-06', '3x semana', '2026-11-08')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Tatiana Rodríguez Torres', 'tatiana.rodriguez.147@example.com', '+573345917530', '{seed}', 'mira_csv', 'MIRA-0148', '2026-03-16', '3x semana', '2026-10-25')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Tatiana Rodríguez Torres', 'tatiana.rodriguez.147@example.com', '+573345917530', '{seed}', 'mira_csv', 'MIRA-0148', '2026-03-16', '3x semana', '2026-10-25')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Daniela Morales Correa', 'daniela.morales.148@example.com', '+573217428680', '{seed}', 'mira_csv', 'MIRA-0149', '2025-09-05', 'Ilimitado', '2026-11-07')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Daniela Morales Correa', 'daniela.morales.148@example.com', '+573217428680', '{seed}', 'mira_csv', 'MIRA-0149', '2025-09-05', 'Ilimitado', '2026-11-07')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
-INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', NULL, 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Alejandro Ramírez Sánchez', 'alejandro.ramirez.149@example.com', '+573275426102', '{seed}', 'mira_csv', 'MIRA-0150', '2026-03-26', '2x semana', '2026-08-30')
+INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('d585af30-5ed5-448b-bd9c-ab82b2e99970', 'eaff348f-5df3-4df5-bd80-69ec233aad0e', 'Alejandro Ramírez Sánchez', 'alejandro.ramirez.149@example.com', '+573275426102', '{seed}', 'mira_csv', 'MIRA-0150', '2026-03-26', '2x semana', '2026-08-30')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
 
 COMMIT;

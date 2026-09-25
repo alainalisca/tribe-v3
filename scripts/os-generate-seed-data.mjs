@@ -162,8 +162,8 @@ BEGIN;
 
 `;
 for (const m of members) {
-  msql += `INSERT INTO public.clients (gym_id, user_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
-VALUES ('${GYM}', NULL, '${INSTRUCTOR}', ${q(m.name)}, ${q(m.email)}, ${q(m.phone)}, '{seed}', 'mira_csv', '${m.extId}', '${dfmt(m.joinedOn)}', ${q(m.plan)}, '${dfmt(m.planEndsOn)}')
+  msql += `INSERT INTO public.clients (gym_id, instructor_user_id, name, email, phone, tags, external_source, external_id, joined_on, membership_plan, plan_ends_on)
+VALUES ('${GYM}', '${INSTRUCTOR}', ${q(m.name)}, ${q(m.email)}, ${q(m.phone)}, '{seed}', 'mira_csv', '${m.extId}', '${dfmt(m.joinedOn)}', ${q(m.plan)}, '${dfmt(m.planEndsOn)}')
 ON CONFLICT (gym_id, external_source, external_id) WHERE external_id IS NOT NULL DO NOTHING;
 `;
 }
