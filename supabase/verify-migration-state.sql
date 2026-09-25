@@ -1957,4 +1957,38 @@ select 'GUARD_190_creator_only_delete',
          else 'applied'
        end
 
+union all
+
+select '191_close_open_community_comments_read',
+       case when exists (select 1 from pg_policies
+                          where schemaname='public' and tablename='community_post_comments'
+                            and policyname='community_post_comments_select')
+             and not exists (select 1 from pg_policies
+                              where schemaname='public' and tablename='community_post_comments'
+                                and policyname='Users can read comments on visible posts')
+       then 'applied' else 'MISSING' end
+
+union all
+
+-- The dropped policy being gone is not the property. NO open read policy on
+-- this table is: policies are OR'd, so any `true` SELECT policy, under any
+-- name, cancels the scoped one again. And the scoped one must still be there,
+-- or every comment read fails, public ones included.
+select 'GUARD_191_private_comments_stay_private',
+       case
+         when exists (select 1 from pg_policies
+                       where schemaname='public' and tablename='community_post_comments'
+                         and cmd in ('SELECT','ALL')
+                         and regexp_replace(coalesce(qual,''), '\s+', '', 'g') in ('true','(true)'))
+           then 'MISSING -- an open read policy is back; private-community comments are public again'
+         when not exists (select 1 from pg_policies
+                           where schemaname='public' and tablename='community_post_comments'
+                             and policyname='community_post_comments_select'
+                             and position('is_community_member' in qual) > 0)
+           then 'MISSING -- the scoped read policy is gone or changed; comment reads may fail'
+         when not has_table_privilege('anon','public.community_post_comments','SELECT')
+           then 'MISSING -- anon cannot read comments; public community comments stop rendering'
+         else 'applied'
+       end
+
 order by migration;
