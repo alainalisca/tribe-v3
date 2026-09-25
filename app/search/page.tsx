@@ -129,6 +129,7 @@ export default function SearchPage() {
           .from('communities')
           .select('id, name, sport, member_count')
           .eq('is_private', false)
+          .is('deleted_at', null)
           .or(`name.ilike.${query},sport.ilike.${query}`)
           .limit(10);
 
