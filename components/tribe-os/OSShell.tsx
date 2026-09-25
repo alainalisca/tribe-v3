@@ -31,6 +31,7 @@ import {
   Calendar,
   DollarSign,
   Brain,
+  HeartPulse,
   Settings as SettingsIcon,
   HelpCircle,
   Home as HomeIcon,
@@ -65,6 +66,7 @@ const copy = {
       revenue: 'Revenue',
       messages: 'Messages',
       intelligence: 'Intelligence',
+      retention: 'Retention',
       settings: 'Settings',
     },
     bellAria: 'Notifications',
@@ -88,6 +90,7 @@ const copy = {
       revenue: 'Ingresos',
       messages: 'Mensajes',
       intelligence: 'Inteligencia',
+      retention: 'Retención',
       settings: 'Ajustes',
     },
     bellAria: 'Notificaciones',
@@ -119,6 +122,7 @@ const NAV_ITEMS: readonly NavItem[] = [
   { href: '/os/schedule', labelKey: 'schedule', Icon: Calendar, matchPrefix: '/os/schedule' },
   { href: '/os/revenue', labelKey: 'revenue', Icon: DollarSign, matchPrefix: '/os/revenue' },
   { href: '/os/intelligence', labelKey: 'intelligence', Icon: Brain, matchPrefix: '/os/intelligence' },
+  { href: '/os/retention', labelKey: 'retention', Icon: HeartPulse, matchPrefix: '/os/retention' },
   { href: '/os/settings', labelKey: 'settings', Icon: SettingsIcon, matchPrefix: '/os/settings' },
 ] as const;
 
