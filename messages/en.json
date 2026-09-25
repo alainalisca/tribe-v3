@@ -457,5 +457,9 @@
     "deleteErrorNotCreator": "Only the person who created this community can delete it.",
     "deleteErrorNameMismatch": "The name you typed does not match.",
     "deleteErrorFailed": "Could not delete the community. Try again."
+  },
+  "communityCover": {
+    "uploadImage": "Upload image",
+    "pasteUrl": "Or paste an image URL"
   }
 }

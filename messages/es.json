@@ -457,5 +457,9 @@
     "deleteErrorNotCreator": "Solo quien creó esta comunidad puede eliminarla.",
     "deleteErrorNameMismatch": "El nombre que escribiste no coincide.",
     "deleteErrorFailed": "No se pudo eliminar la comunidad. Inténtalo de nuevo."
+  },
+  "communityCover": {
+    "uploadImage": "Subir imagen",
+    "pasteUrl": "O pega una URL de imagen"
   }
 }

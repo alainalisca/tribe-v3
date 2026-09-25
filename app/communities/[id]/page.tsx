@@ -23,12 +23,12 @@ import {
   deleteCommunityPost,
   setCommunityPostPinned,
   reportCommunityPost,
-  updateCommunityCoverImage,
   COMMUNITY_WRITE_REFUSED,
   type CommunityWithCreator,
   type CommunityPostWithPin,
   type CommunityMemberWithUser,
 } from '@/lib/dal/communities';
+import { setCommunityBanner } from '@/lib/dal/communityBanner';
 import { compressImage } from '@/components/session/recapPhotosHelpers';
 import { sportTranslations } from '@/lib/translations';
 import Image from 'next/image';
@@ -213,24 +213,15 @@ export default function CommunityDetailPage() {
     setUploadingBanner(true);
     try {
       const compressed = await compressImage(file);
-      const fileName = `${communityId}/banner-${Date.now()}.jpg`;
-
-      const { error: uploadError } = await supabase.storage.from('community-banners').upload(fileName, compressed, {
-        contentType: 'image/jpeg',
-        upsert: true,
-      });
-
-      if (uploadError) throw uploadError;
-
-      const { data: publicUrlData } = supabase.storage.from('community-banners').getPublicUrl(fileName);
-      const publicUrl = publicUrlData.publicUrl;
-
-      const updateResult = await updateCommunityCoverImage(supabase, communityId, publicUrl);
+      // One fixed file per community, replaced in place (T-COMM1). The old
+      // timestamped names left every previous banner behind in storage.
+      const result = await setCommunityBanner(supabase, communityId, compressed);
       // Zero rows back is RLS refusing, not a transport failure. Say so plainly
       // instead of showing the internal sentinel.
-      if (!updateResult.success) {
-        throw new Error(updateResult.error === COMMUNITY_WRITE_REFUSED ? tEdit('refused') : updateResult.error);
+      if (!result.success || !result.data) {
+        throw new Error(result.error === COMMUNITY_WRITE_REFUSED ? tEdit('refused') : result.error);
       }
+      const publicUrl = result.data;
 
       setCommunity((prev) => (prev ? { ...prev, cover_image_url: publicUrl } : prev));
       await haptic('success');

@@ -1993,4 +1993,47 @@ select 'GUARD_191_private_comments_stay_private',
          else 'applied'
        end
 
+union all
+
+select '192_community_banner_storage_scope',
+       case when to_regprocedure('public.can_manage_community_banner(text)') is not null
+             and exists (select 1 from pg_policies
+                          where schemaname='storage' and tablename='objects'
+                            and policyname='Community managers can upload banners')
+             and not exists (select 1 from pg_policies
+                              where schemaname='storage' and tablename='objects'
+                                and policyname='Authenticated users can upload community banners')
+       then 'applied' else 'MISSING' end
+
+union all
+
+-- The 090 policies being gone is not the property. NO write policy on this
+-- bucket without the manager check is: storage policies are OR'd, so a
+-- bucket-only policy under any name reopens every community's folder.
+select 'GUARD_192_banner_writes_scoped',
+       case
+         when exists (select 1 from pg_policies
+                       where schemaname='storage' and tablename='objects'
+                         and cmd in ('INSERT','UPDATE','DELETE','ALL')
+                         and (coalesce(qual,'') || coalesce(with_check,'')) like '%community-banners%'
+                         and position('can_manage_community_banner' in coalesce(qual,'') || coalesce(with_check,'')) = 0)
+           then 'MISSING -- a banner write policy skips the manager check; any signed-in user can write any community''s banner'
+         when (select count(distinct cmd) from pg_policies
+                where schemaname='storage' and tablename='objects'
+                  and policyname like 'Community managers can % banners') <> 3
+           then 'MISSING -- the INSERT, UPDATE or DELETE banner policy is gone; upsert or cleanup will fail'
+         when to_regprocedure('public.can_manage_community_banner(text)') is null
+           then 'MISSING -- can_manage_community_banner absent; every banner upload fails'
+         when not has_function_privilege('authenticated','public.can_manage_community_banner(text)','EXECUTE')
+           then 'MISSING -- authenticated cannot execute can_manage_community_banner; every banner upload fails'
+         when not (select pg_get_functiondef(p.oid) ~ 'deleted_at IS NULL' from pg_proc p
+                    where p.oid = to_regprocedure('public.can_manage_community_banner(text)'))
+           then 'MISSING -- can_manage_community_banner no longer refuses deleted communities'
+         when not exists (select 1 from storage.buckets
+                           where id='community-banners' and public
+                             and file_size_limit is not null and allowed_mime_types is not null)
+           then 'MISSING -- the community-banners bucket lost its size or type limit, or is no longer public'
+         else 'applied'
+       end
+
 order by migration;
