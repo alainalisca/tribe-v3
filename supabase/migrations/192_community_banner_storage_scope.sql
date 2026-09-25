@@ -214,7 +214,13 @@ BEGIN
    WHERE schemaname = 'storage' AND tablename = 'objects'
      AND cmd IN ('INSERT', 'UPDATE', 'DELETE', 'ALL')
      AND (coalesce(qual, '') || coalesce(with_check, '')) LIKE '%community-banners%'
-     AND position('can_manage_community_banner' IN coalesce(qual, '') || coalesce(with_check, '')) = 0;
+     -- Each expression that decides a write must check it. For UPDATE that is
+     -- both: USING picks the files that may be overwritten, WITH CHECK where
+     -- they may end up. One open half is still an open policy.
+     AND (   (cmd IN ('UPDATE', 'DELETE', 'ALL')
+              AND position('can_manage_community_banner' IN coalesce(qual, '')) = 0)
+          OR (cmd IN ('INSERT', 'UPDATE', 'ALL')
+              AND position('can_manage_community_banner' IN coalesce(with_check, '')) = 0));
   IF v_n <> 0 THEN
     RAISE EXCEPTION '192 ABORTED: % write policy(ies) on community-banners do not check can_manage_community_banner.', v_n;
   END IF;
@@ -280,7 +286,10 @@ SELECT
     WHERE schemaname = 'storage' AND tablename = 'objects'
       AND cmd IN ('INSERT', 'UPDATE', 'DELETE', 'ALL')
       AND (coalesce(qual, '') || coalesce(with_check, '')) LIKE '%community-banners%'
-      AND position('can_manage_community_banner' IN coalesce(qual, '') || coalesce(with_check, '')) = 0) = 0
+      AND (   (cmd IN ('UPDATE', 'DELETE', 'ALL')
+               AND position('can_manage_community_banner' IN coalesce(qual, '')) = 0)
+           OR (cmd IN ('INSERT', 'UPDATE', 'ALL')
+               AND position('can_manage_community_banner' IN coalesce(with_check, '')) = 0))) = 0
                                                                                     AS no_open_write_policy_ok,
   (SELECT count(*) FROM pg_policies
     WHERE schemaname = 'storage' AND tablename = 'objects'

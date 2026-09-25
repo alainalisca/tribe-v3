@@ -5,15 +5,22 @@
 -- deliberate RAISE, verdicts kept in a variable, and Z1 proving the unwind.
 --
 -- The cases write straight into storage.objects as the authenticated role,
--- which is what the Storage API itself does on upload (INSERT, or INSERT ...
--- ON CONFLICT DO UPDATE for upsert), so the policies are exercised exactly as
--- the app meets them. No file bytes are involved; only the metadata rows, and
+-- the role the Storage API itself uses, so the policies are exercised as the
+-- app meets them: INSERT for a new file, UPDATE to replace an existing one,
+-- DELETE for the cleanup. No file bytes are involved; only the metadata rows, and
 -- those are discarded by the unwind.
+--
+-- NO ON CONFLICT. Production's storage.objects has no unique constraint that
+-- ON CONFLICT (bucket_id, name) can infer (the first production run returned
+-- 42P10 on the three arms that tried it), so how the Storage API implements
+-- upsert is its own business. What the policies see is an INSERT for a new
+-- path and an UPDATE for an existing one, and both are covered below. The
+-- API's upsert itself is proven by the first real banner save after deploy.
 --
 -- WHAT IS WORTH REHEARSING. That 192 closes the hole (B1 and B2 before, C
 -- arms after), and that it does not close too much: the creator, an admin member
 -- (including on a PRIVATE community, where the communities SELECT policy hides
--- the row from the admin), upsert, cleanup deletes and public reads must all
+-- the row from the admin), replacing the fixed file, cleanup deletes and public reads must all
 -- still work (S arms). Every refusal is paired with a success on the same path.
 --
 -- DELETE ARMS. Newer Supabase storage refuses a direct SQL DELETE on
@@ -233,7 +240,13 @@ BEGIN
            WHERE schemaname = 'storage' AND tablename = 'objects'
              AND cmd IN ('INSERT', 'UPDATE', 'DELETE', 'ALL')
              AND (coalesce(qual, '') || coalesce(with_check, '')) LIKE '%community-banners%'
-             AND position('can_manage_community_banner' IN coalesce(qual, '') || coalesce(with_check, '')) = 0;
+             -- Each expression that decides a write must check it. For UPDATE that is
+             -- both: USING picks the files that may be overwritten, WITH CHECK where
+             -- they may end up. One open half is still an open policy.
+             AND (   (cmd IN ('UPDATE', 'DELETE', 'ALL')
+                      AND position('can_manage_community_banner' IN coalesce(qual, '')) = 0)
+                  OR (cmd IN ('INSERT', 'UPDATE', 'ALL')
+                      AND position('can_manage_community_banner' IN coalesce(with_check, '')) = 0));
           IF v_n <> 0 THEN
             RAISE EXCEPTION '192 ABORTED: % write policy(ies) on community-banners do not check can_manage_community_banner.', v_n;
           END IF;
@@ -285,7 +298,7 @@ BEGIN
           -- Refusals. Each has a matching success below.
           format('C1 outsider can NO LONGER upload into another community''s folder (same write as B1)^^O^^err=rls^^INSERT INTO storage.objects (bucket_id, name) VALUES (''community-banners'', %L)', c_pub || '/vandal.jpg'),
           format('C2 outsider can NO LONGER overwrite that banner (same write as B2)^^O^^rows=0^^UPDATE storage.objects SET metadata = ''{"vandal":true}'' WHERE bucket_id = ''community-banners'' AND name = %L', c_pub || '/banner.jpg'),
-          format('C3 outsider cannot upsert over that banner (the Storage API upsert path)^^O^^err=rls^^INSERT INTO storage.objects (bucket_id, name) VALUES (''community-banners'', %L) ON CONFLICT (bucket_id, name) DO UPDATE SET metadata = ''{"vandal":true}''', c_pub || '/banner.jpg'),
+          format('C3 outsider cannot overwrite a PRIVATE community''s banner either^^O^^rows=0^^UPDATE storage.objects SET metadata = ''{"vandal":true}'' WHERE bucket_id = ''community-banners'' AND name = %L', c_priv || '/banner.jpg'),
           format('C4 outsider cannot delete that banner^^O^^rows=0^^DELETE FROM storage.objects WHERE bucket_id = ''community-banners'' AND name = %L', c_pub || '/banner.jpg'),
           format('C5 a moderator cannot upload (matches the UI since T-COMM2)^^M^^err=rls^^INSERT INTO storage.objects (bucket_id, name) VALUES (''community-banners'', %L)', c_pub || '/mod.jpg'),
           format('C6 a moderator cannot overwrite^^M^^rows=0^^UPDATE storage.objects SET metadata = ''{"m":1}'' WHERE bucket_id = ''community-banners'' AND name = %L', c_pub || '/banner.jpg'),
@@ -298,10 +311,10 @@ BEGIN
           format('C13 signed out (anon) cannot upload^^anon^^err=rls^^INSERT INTO storage.objects (bucket_id, name) VALUES (''community-banners'', %L)', c_pub || '/anon.jpg'),
           -- Successes.
           format('S1 the creator uploads a new banner^^A^^rows=1^^INSERT INTO storage.objects (bucket_id, name) VALUES (''community-banners'', %L)', c_pub || '/banner-new.jpg'),
-          format('S2 the creator upserts over the fixed banner path (what the app now does every time)^^A^^rows=1^^INSERT INTO storage.objects (bucket_id, name) VALUES (''community-banners'', %L) ON CONFLICT (bucket_id, name) DO UPDATE SET metadata = ''{"a":2}''', c_pub || '/banner.jpg'),
+          format('S2 the creator replaces the file at the fixed banner path (what every save after the first does)^^A^^rows=1^^UPDATE storage.objects SET metadata = ''{"a":2}'' WHERE bucket_id = ''community-banners'' AND name = %L', c_pub || '/banner.jpg'),
           format('S3 an admin member (not creator) now uploads into the public community (gained)^^B^^rows=1^^INSERT INTO storage.objects (bucket_id, name) VALUES (''community-banners'', %L)', c_pub || '/by-admin.jpg'),
           format('S4 an admin member of a PRIVATE community overwrites its banner (the communities SELECT policy hides that row from them)^^B^^rows=1^^UPDATE storage.objects SET metadata = ''{"b":2}'' WHERE bucket_id = ''community-banners'' AND name = %L', c_priv || '/banner.jpg'),
-          format('S5 an admin upserts over a private community''s banner^^B^^rows=1^^INSERT INTO storage.objects (bucket_id, name) VALUES (''community-banners'', %L) ON CONFLICT (bucket_id, name) DO UPDATE SET metadata = ''{"b":3}''', c_priv || '/banner.jpg'),
+          format('S5 an admin uploads a NEW file into a private community''s folder^^B^^rows=1^^INSERT INTO storage.objects (bucket_id, name) VALUES (''community-banners'', %L)', c_priv || '/new.jpg'),
           format('S6 the creator deletes an old banner file (the app''s cleanup after a save)^^A^^rows=1^^DELETE FROM storage.objects WHERE bucket_id = ''community-banners'' AND name = %L', c_pub || '/banner-123.jpg'),
           format('S7 an admin deletes an old file in a private community^^B^^rows=1^^DELETE FROM storage.objects WHERE bucket_id = ''community-banners'' AND name = %L', c_priv || '/banner.jpg'),
           format('S8 an admin renames within the same community (UPDATE WITH CHECK passes)^^B^^rows=1^^UPDATE storage.objects SET name = %L WHERE bucket_id = ''community-banners'' AND name = %L', c_pub || '/renamed.jpg', c_pub || '/banner-123.jpg'),

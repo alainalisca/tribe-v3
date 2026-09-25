@@ -2016,7 +2016,10 @@ select 'GUARD_192_banner_writes_scoped',
                        where schemaname='storage' and tablename='objects'
                          and cmd in ('INSERT','UPDATE','DELETE','ALL')
                          and (coalesce(qual,'') || coalesce(with_check,'')) like '%community-banners%'
-                         and position('can_manage_community_banner' in coalesce(qual,'') || coalesce(with_check,'')) = 0)
+                         and (   (cmd in ('UPDATE','DELETE','ALL')
+                                  and position('can_manage_community_banner' in coalesce(qual,'')) = 0)
+                              or (cmd in ('INSERT','UPDATE','ALL')
+                                  and position('can_manage_community_banner' in coalesce(with_check,'')) = 0)))
            then 'MISSING -- a banner write policy skips the manager check; any signed-in user can write any community''s banner'
          when (select count(distinct cmd) from pg_policies
                 where schemaname='storage' and tablename='objects'
