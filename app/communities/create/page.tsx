@@ -6,7 +6,11 @@ import { createClient } from '@/lib/supabase/client';
 import { useLanguage } from '@/lib/LanguageContext';
 import { logError } from '@/lib/logger';
 import LocationPicker from '@/components/LocationPicker';
+import CommunityCoverPicker from '@/components/communities/CommunityCoverPicker';
 import { createCommunity } from '@/lib/dal/communities';
+import { setCommunityBanner } from '@/lib/dal/communityBanner';
+import { compressImage } from '@/components/session/recapPhotosHelpers';
+import { showError } from '@/lib/toast';
 import { sportTranslations } from '@/lib/translations';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,7 +35,21 @@ const getTranslations = (language: 'en' | 'es') => ({
   error: language === 'es' ? 'Error al crear comunidad' : 'Error creating community',
   success: language === 'es' ? 'Comunidad creada' : 'Community created',
   required: language === 'es' ? 'Campo requerido' : 'Field required',
+  coverFailed:
+    language === 'es'
+      ? 'La comunidad se creó, pero la portada no se pudo subir. Agrégala desde la página de la comunidad.'
+      : 'Community created, but the cover image did not upload. Add it from the community page.',
 });
+
+// compressImage has no error path: a file the browser cannot decode never
+// resolves. Here the community already exists when it runs, so a hang would
+// strand the user on a spinner. Bound it and treat a timeout as a failed cover.
+function compressCover(file: File): Promise<Blob> {
+  return Promise.race([
+    compressImage(file),
+    new Promise<never>((_, reject) => setTimeout(() => reject(new Error('cover compression timed out')), 15000)),
+  ]);
+}
 
 export default function CreateCommunityPage() {
   const router = useRouter();
@@ -53,6 +71,17 @@ export default function CreateCommunityPage() {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [userId, setUserId] = useState<string | null>(null);
+  // T-COMM1: a picked cover is held here and uploaded only once the community
+  // exists, into that community's own banner folder. Uploading on pick left a
+  // file behind in profile-images for every re-pick and every abandoned form.
+  const [coverFile, setCoverFile] = useState<File | null>(null);
+  const [coverPreview, setCoverPreview] = useState<string | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (coverPreview) URL.revokeObjectURL(coverPreview);
+    };
+  }, [coverPreview]);
 
   useEffect(() => {
     async function getUser() {
@@ -86,7 +115,8 @@ export default function CreateCommunityPage() {
       const result = await createCommunity(supabase, {
         name: formData.name,
         description: formData.description || undefined,
-        cover_image_url: formData.cover_image_url || undefined,
+        // A picked file wins over a pasted URL; it is attached after the insert.
+        cover_image_url: coverFile ? undefined : formData.cover_image_url || undefined,
         sport: formData.sport || undefined,
         location_lat: formData.location_lat || undefined,
         location_lng: formData.location_lng || undefined,
@@ -95,14 +125,28 @@ export default function CreateCommunityPage() {
         is_private: formData.is_private,
       });
 
-      if (!result.success) {
+      if (!result.success || !result.data) {
         setErrors({ submit: result.error || t.error });
         setLoading(false);
         return;
       }
 
+      const communityId = result.data;
+      if (coverFile) {
+        // The community already exists at this point, so a failed cover must
+        // not undo it or block the redirect. Say so, and let them retry from
+        // the community page.
+        try {
+          const cover = await setCommunityBanner(supabase, communityId, await compressCover(coverFile));
+          if (!cover.success) throw new Error(cover.error ?? 'cover upload failed');
+        } catch (coverError) {
+          logError(coverError, { action: 'createCommunity.cover', communityId });
+          showError(t.coverFailed);
+        }
+      }
+
       // Redirect to community page
-      router.push(`/communities/${result.data}`);
+      router.push(`/communities/${communityId}`);
     } catch (error) {
       logError(error, { action: 'createCommunity' });
       setErrors({ submit: t.error });
@@ -181,57 +225,23 @@ export default function CreateCommunityPage() {
             </select>
           </div>
 
-          {/* Cover Image — upload (with URL fallback for already-set images) */}
-          <div className="space-y-2">
-            <label className="block text-sm font-semibold text-theme-primary">{t.coverImage}</label>
-            <p className="text-xs text-stone-500 dark:text-gray-400">{t.coverImageHint}</p>
-            <div className="flex items-center gap-3">
-              <input
-                id="community-cover-upload"
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                className="hidden"
-                onChange={async (e) => {
-                  // BUG-021: replaced the URL-only input with a real upload.
-                  // Falls back to the URL input below for already-hosted images.
-                  const file = e.target.files?.[0];
-                  if (!file || !userId) return;
-                  const path = `community-covers/${userId}-${Date.now()}.${file.name.split('.').pop()}`;
-                  const { error: upErr } = await supabase.storage
-                    .from('profile-images')
-                    .upload(path, file, { contentType: file.type, upsert: true });
-                  if (upErr) {
-                    logError(upErr, { action: 'communityCoverUpload' });
-                    return;
-                  }
-                  const {
-                    data: { publicUrl },
-                  } = supabase.storage.from('profile-images').getPublicUrl(path);
-                  setFormData((prev) => ({ ...prev, cover_image_url: publicUrl }));
-                }}
-              />
-              <label
-                htmlFor="community-cover-upload"
-                className="px-4 py-2 bg-tribe-green text-slate-900 rounded-lg font-semibold text-sm cursor-pointer hover:bg-lime-500 transition"
-              >
-                {language === 'es' ? 'Subir imagen' : 'Upload image'}
-              </label>
-              {formData.cover_image_url && (
-                <img
-                  src={formData.cover_image_url}
-                  alt=""
-                  className="w-12 h-12 rounded-lg object-cover border border-stone-200 dark:border-tribe-card"
-                />
-              )}
-            </div>
-            <input
-              type="url"
-              placeholder={language === 'es' ? 'O pega una URL de imagen' : 'Or paste an image URL'}
-              value={formData.cover_image_url}
-              onChange={(e) => setFormData({ ...formData, cover_image_url: e.target.value })}
-              className="w-full px-4 py-3 bg-stone-100 dark:bg-tribe-mid rounded-lg border border-stone-200 dark:border-tribe-card text-theme-primary placeholder-stone-400 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-tribe-green focus:border-transparent text-sm"
-            />
-          </div>
+          {/* Cover image: upload, or paste a hosted URL (BUG-021). */}
+          <CommunityCoverPicker
+            label={t.coverImage}
+            hint={t.coverImageHint}
+            previewUrl={coverPreview || formData.cover_image_url || null}
+            urlValue={formData.cover_image_url}
+            onPickFile={(file) => {
+              setCoverFile(file);
+              setCoverPreview(URL.createObjectURL(file));
+              setFormData((prev) => ({ ...prev, cover_image_url: '' }));
+            }}
+            onUrlChange={(url) => {
+              setCoverFile(null);
+              setCoverPreview(null);
+              setFormData((prev) => ({ ...prev, cover_image_url: url }));
+            }}
+          />
 
           {/* Location */}
           <div className="space-y-2">
