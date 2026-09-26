@@ -48,9 +48,18 @@ export interface AthleteValueConfig {
   features: string[] | null;
 }
 
-/** Minimal shape of the Supabase client this module needs. Keeps it mockable. */
+/**
+ * Minimal shape of the Supabase client this module needs. Keeps it mockable,
+ * and keeps next/headers out of a unit test.
+ *
+ * `PromiseLike`, not `Promise`: supabase-js's `rpc()` returns a
+ * PostgrestFilterBuilder, which is a thenable with no `catch` or `finally`.
+ * Typing it as a Promise compiles against a hand-written mock and fails
+ * against the real client -- a fixture-shaped type rather than a
+ * call-site-shaped one.
+ */
 export interface AdminRpcClient {
-  rpc(fn: string): Promise<{ data: unknown; error: unknown }>;
+  rpc(fn: string): PromiseLike<{ data: unknown; error: unknown }>;
 }
 
 function splitList(raw: string | undefined): string[] {

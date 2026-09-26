@@ -60,11 +60,18 @@ if (existsSync(TOKEN_FILE)) {
   env.SUPABASE_ACCESS_TOKEN = readFileSync(TOKEN_FILE, 'utf8').trim();
 }
 
-const args = ['db', 'dump', '--schema-only'];
+// `supabase db dump` is schema-only BY DEFAULT -- there is no --schema-only
+// flag, and passing one makes the CLI print its usage and exit non-zero, which
+// reads exactly like a permissions failure. `--data-only` is the opposite of
+// what we want and is never passed here.
+const args = ['db', 'dump'];
 if (dbUrl) args.push('--db-url', dbUrl);
 else args.push('--linked');
 
-console.log(`av:schema:pull -> supabase ${args.join(' ').replace(dbUrl, '<db-url>')}`);
+// Guard the redaction: `''.replace('')` inserts at position 0 rather than
+// doing nothing, so an unset SUPABASE_DB_URL would print `<db-url>db dump`.
+const shown = dbUrl ? args.join(' ').replace(dbUrl, '<db-url>') : args.join(' ');
+console.log(`av:schema:pull -> supabase ${shown}`);
 
 const dump = spawnSync('supabase', args, { cwd: ROOT, encoding: 'utf8', env });
 
