@@ -1,0 +1,69 @@
+#!/bin/sh
+#
+# T-AV0, Step 2. The last thing between this worktree and main.
+#
+# Rule 1 of T-AV0's hard line: never commit to, merge into, rebase onto,
+# cherry-pick onto, or PUSH TO `main`. A rule that depends on remembering
+# fails on the day you are busy -- this repo has three duplicate migration
+# numbers on record from exactly that -- so it is a hook, not a habit.
+#
+# Refuses three things, in this order:
+#   1. any push whose REMOTE ref is refs/heads/main, however it is spelled
+#      (`git push origin HEAD:main`, `git push origin athlete/main:main`, ...)
+#   2. any push of a LOCAL branch that is not athlete/*, feat/t-av* or
+#      fix/t-av*
+#   3. anything av-guard refuses (branch, migrations, db target, send modes)
+#
+# It reads the remote ref rather than the branch name, because the branch
+# name is not what decides where a push lands: `git push origin HEAD:main`
+# from athlete/main writes to main while every branch check says athlete.
+# Asserting on the destination is the capability question; asserting on the
+# branch name is the "is this spelled the way I expected" question, and
+# CLAUDE.md has four worked examples of the second one being wrong.
+#
+# Installed per-worktree:
+#   git config --worktree core.hooksPath .githooks
+# so the main tribe-v3 folder keeps husky and is unaffected.
+#
+# stdin is one line per ref being pushed:
+#   <local ref> <local sha> <remote ref> <remote sha>
+
+set -e
+
+FAILED=0
+
+while read -r local_ref local_sha remote_ref remote_sha; do
+  # A branch delete sends a zero local sha; still not allowed to target main.
+  case "$remote_ref" in
+    refs/heads/main)
+      echo "pre-push REFUSED: this push writes to refs/heads/main." >&2
+      echo "  local ref: ${local_ref:-<delete>}" >&2
+      echo "" >&2
+      echo "  T-AV0 hard line, rule 1: nothing in the athlete-value program" >&2
+      echo "  reaches main until Al writes the words \"merge athlete into main\"." >&2
+      echo "  Push to athlete/main, or to a feat/t-av* or fix/t-av* branch." >&2
+      FAILED=1
+      ;;
+  esac
+
+  case "$local_ref" in
+    '' ) : ;;                       # deleting a remote ref; the case above judged it
+    refs/heads/athlete/*) : ;;
+    refs/heads/feat/t-av*) : ;;
+    refs/heads/feat/T-AV*) : ;;
+    refs/heads/fix/t-av*) : ;;
+    refs/heads/fix/T-AV*) : ;;
+    refs/heads/*)
+      echo "pre-push REFUSED: \"${local_ref#refs/heads/}\" is not an athlete-value branch." >&2
+      echo "  Allowed: athlete/*, feat/t-av*, fix/t-av*. Cut it from athlete/main." >&2
+      FAILED=1
+      ;;
+    *) : ;;                          # tags and other refs are not this hook's question
+  esac
+done
+
+if [ "$FAILED" -ne 0 ]; then
+  exit 1
+fi
+
+node scripts/av-guard.mjs || exit 1

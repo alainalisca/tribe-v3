@@ -16,7 +16,19 @@
     "test:e2e:ui": "playwright test --ui",
     "prepare": "husky",
     "verify:share": "node scripts/verify-share-routes.mjs",
-    "test:complete": "vitest run --reporter=json --outputFile=.vitest-results.json; node scripts/assertSuiteComplete.mjs"
+    "test:complete": "vitest run --reporter=json --outputFile=.vitest-results.json; node scripts/assertSuiteComplete.mjs",
+    "av:guard": "node scripts/av-guard.mjs",
+    "av:migrations": "node scripts/av-migration-check.mjs",
+    "predev:av": "npm run av:guard",
+    "dev:av": "node --env-file=.env.av.local node_modules/next/dist/bin/next dev -p 3001",
+    "pretest": "npm run av:guard",
+    "pretest:complete": "npm run av:guard",
+    "db:start": "node scripts/av-guard.mjs --db && supabase start",
+    "db:stop": "node scripts/av-guard.mjs --db && supabase stop",
+    "db:status": "node scripts/av-guard.mjs --db && supabase status",
+    "db:reset": "node scripts/av-guard.mjs --db && supabase db reset",
+    "av:schema:pull": "node scripts/av-schema-pull.mjs",
+    "av:seed": "node scripts/av-guard.mjs --db && node --env-file=.env.av.local scripts/av-seed-local.mjs"
   },
   "dependencies": {
     "@capacitor-firebase/messaging": "^8.0.1",

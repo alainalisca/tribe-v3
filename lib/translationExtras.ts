@@ -278,6 +278,12 @@ export const extEn = {
   videoUploadError: 'Could not upload video. Please try again.',
   videoSaved: 'Video saved.',
   videoRemoved: 'Video removed.',
+
+  // T-AV0 placeholder pass catalog (/pase). Behind the athlete_value flag.
+  avPaseCatalogTitle: 'Pass catalog',
+  avPaseCatalogLead: 'Gyms and studios you can train at with your Tribe pass.',
+  avPaseCatalogEmpty: 'Nothing here yet — this screen is still being built.',
+  avPreviewBadge: 'Preview',
 };
 
 export const extEs: Record<keyof typeof extEn, string> = {
@@ -559,4 +565,10 @@ export const extEs: Record<keyof typeof extEn, string> = {
   videoUploadError: 'No se pudo subir el video. Intenta de nuevo.',
   videoSaved: 'Video guardado.',
   videoRemoved: 'Video eliminado.',
+
+  // T-AV0 placeholder pass catalog (/pase). Behind the athlete_value flag.
+  avPaseCatalogTitle: 'Catálogo de pases',
+  avPaseCatalogLead: 'Gimnasios y estudios donde puedes entrenar con tu pase Tribe.',
+  avPaseCatalogEmpty: 'Todavía no hay nada aquí — esta pantalla está en construcción.',
+  avPreviewBadge: 'Vista previa',
 };

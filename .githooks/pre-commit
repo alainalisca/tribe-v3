@@ -1,0 +1,13 @@
+#!/bin/sh
+#
+# T-AV0, Step 2, footnote.
+#
+# Pointing core.hooksPath at .githooks for this worktree replaces husky
+# wholesale -- git consults exactly one hooks directory, so .husky/_/pre-commit
+# stops running here the moment the pre-push hook starts. That is a silent loss
+# of lint-staged, visible only as formatting drift in a diff weeks later.
+#
+# So this exists to keep the behaviour identical to .husky/pre-commit, which is
+# one line: `npx lint-staged`. If that file ever grows, this one has to follow,
+# and the guard for that is that they are two lines apart in the same repo.
+npx lint-staged
