@@ -2074,4 +2074,18 @@ select 'GUARD_193_private_communities_members_only',
          else 'applied'
        end
 
+union all
+
+-- 194 removes the orphaned push_send_bearer Vault secret (the project
+-- service_role key, left behind after 136 dropped its only reader,
+-- send_push_notification_webhook). 'applied' = the secret is gone. This is an
+-- ongoing security guard: if the secret is ever re-created, this flips to
+-- MISSING. Assumes the supabase_vault extension, which every Tribe environment
+-- has (the whole push/chat webhook path in 111 depends on it).
+select '194_scrub_push_send_bearer',
+       case when not exists (select 1 from vault.secrets where name = 'push_send_bearer')
+            then 'applied'
+            else 'MISSING -- push_send_bearer is present in Vault; the service_role key is still stored as the push auth token'
+       end
+
 order by migration;
