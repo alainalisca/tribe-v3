@@ -30,6 +30,7 @@ const ImportBody = z.object({
   rows: z.array(VisitRowSchema).min(1).max(500),
   source: z.enum(['mira_csv', 'csv']).default('csv'),
   file_name: z.string().max(200).optional(),
+  tags: z.array(z.string().max(50)).max(10).optional(),
 });
 
 // ---------------------------------------------------------------------------

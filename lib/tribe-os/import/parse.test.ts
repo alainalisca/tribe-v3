@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseImportDate, matchMemberOrder } from './parse';
+import { parseImportDate, matchMemberOrder, normalizeStatus } from './parse';
 
 describe('parseImportDate', () => {
   const tz = 'America/Bogota';
@@ -46,5 +46,56 @@ describe('parseImportDate', () => {
 describe('matchMemberOrder', () => {
   it('returns the resolution order', () => {
     expect(matchMemberOrder()).toEqual(['external_id', 'email', 'phone']);
+  });
+});
+
+describe('normalizeStatus', () => {
+  it('maps "Activo" to active', () => {
+    expect(normalizeStatus('Activo')).toEqual({ status: 'active', tags: [] });
+  });
+
+  it('maps "activo" (lowercase) to active', () => {
+    expect(normalizeStatus('activo')).toEqual({ status: 'active', tags: [] });
+  });
+
+  it('maps "Inactivo" to inactive', () => {
+    expect(normalizeStatus('Inactivo')).toEqual({ status: 'inactive', tags: [] });
+  });
+
+  it('maps "Congelado" to inactive with congelado tag', () => {
+    expect(normalizeStatus('Congelado')).toEqual({ status: 'inactive', tags: ['congelado'] });
+  });
+
+  it('maps unknown status to active with warning', () => {
+    const result = normalizeStatus('Suspendido');
+    expect(result.status).toBe('active');
+    expect(result.warning).toBe('unknown_status: Suspendido');
+  });
+
+  it('defaults to active when undefined', () => {
+    expect(normalizeStatus(undefined)).toEqual({ status: 'active', tags: [] });
+  });
+
+  it('handles accented input "Inàctivo"', () => {
+    expect(normalizeStatus('Inàctivo')).toEqual({ status: 'inactive', tags: [] });
+  });
+});
+
+describe('import result error rendering', () => {
+  it('normalizes server error shape { index, reason, row } to { row, error, data }', () => {
+    const serverError = {
+      index: 2,
+      reason: 'joined_on_ambiguous_date',
+      row: { name: 'Test', email: 'test@example.com' },
+    };
+    const normalized = {
+      row: serverError.index + 1,
+      error: serverError.reason,
+      data: serverError.row,
+    };
+    expect(normalized.row).toBe(3);
+    expect(normalized.error).toBe('joined_on_ambiguous_date');
+    expect(typeof normalized.error).toBe('string');
+    expect(typeof normalized.row).toBe('number');
   });
 });

@@ -108,12 +108,18 @@ const copy = {
 type Tab = 'members' | 'visits';
 type Step = 'upload' | 'mapping' | 'preview' | 'importing' | 'result';
 
+interface ImportError {
+  row: number;
+  error: string;
+  data?: Record<string, string>;
+}
+
 interface ImportResult {
   import_id: string;
   inserted: number;
   updated: number;
   skipped: number;
-  errors: Array<{ row: number; error: string; data?: Record<string, unknown> }>;
+  errors: ImportError[];
 }
 
 const MEMBER_FIELDS = [
@@ -296,17 +302,30 @@ export default function ImportPage() {
 
     for (const batch of batches) {
       try {
+        const isSeed = fileName.startsWith('mira_like_');
         const res = await fetch(endpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ rows: batch, source: 'csv', file_name: fileName }),
+          body: JSON.stringify({
+            rows: batch,
+            source: 'csv',
+            file_name: fileName,
+            ...(isSeed ? { tags: ['seed'] } : {}),
+          }),
         });
         const json = await res.json();
         if (json.success) {
           totalInserted += json.data.inserted;
           totalUpdated += json.data.updated;
           totalSkipped += json.data.skipped;
-          allErrors = allErrors.concat(json.data.errors ?? []);
+          const normalized: ImportError[] = (json.data.errors ?? []).map(
+            (e: { index?: number; reason?: string; row?: Record<string, string>; error?: string }) => ({
+              row: (e.index ?? 0) + 1,
+              error: e.reason ?? e.error ?? 'unknown',
+              data: typeof e.row === 'object' ? e.row : undefined,
+            })
+          );
+          allErrors = allErrors.concat(normalized);
           importId = json.data.import_id;
         }
       } catch {}
@@ -544,7 +563,7 @@ export default function ImportPage() {
                 <div className="max-h-40 overflow-y-auto text-xs bg-gray-50 rounded-tribe p-3 space-y-1">
                   {result.errors.slice(0, 20).map((e, i) => (
                     <p key={i} className="text-tribe-dark-80">
-                      Row {e.row}: {e.error}
+                      {s.errorRow} {e.row}: {e.error}
                     </p>
                   ))}
                   {result.errors.length > 20 && (

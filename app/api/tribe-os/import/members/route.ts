@@ -10,7 +10,7 @@ import { z } from 'zod';
 import { logError } from '@/lib/logger';
 import { requireTribeOSPremium } from '@/lib/auth/premium';
 import { writeAuditEntry } from '@/lib/dal/auditLog';
-import { parseImportDate } from '@/lib/tribe-os/import/parse';
+import { parseImportDate, normalizeStatus } from '@/lib/tribe-os/import/parse';
 
 // ---------------------------------------------------------------------------
 // Validation
@@ -31,6 +31,7 @@ const ImportBody = z.object({
   rows: z.array(MemberRowSchema).min(1).max(500),
   source: z.enum(['mira_csv', 'csv']).default('csv'),
   file_name: z.string().max(200).optional(),
+  tags: z.array(z.string().max(50)).max(10).optional(),
 });
 
 // ---------------------------------------------------------------------------
@@ -83,10 +84,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ success: false, error: msg }, { status: 400 });
     }
 
-    const { rows, source, file_name } = parsed.data;
+    const { rows, source, file_name, tags: batchTags } = parsed.data;
 
     // --- Process rows ------------------------------------------------------
     const errorRows: ErrorRow[] = [];
+    const warnings: Array<{ index: number; warning: string }> = [];
     let inserted = 0;
     let updated = 0;
 
@@ -158,15 +160,23 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         if (data) existingId = data.id;
       }
 
+      // Status mapping (Spanish → canonical)
+      const statusResult = normalizeStatus(row.status);
+      if (statusResult.warning) {
+        warnings.push({ index: i, warning: statusResult.warning });
+      }
+
       // Build the payload (only non-null fields, NEVER health_notes)
+      const rowTags = [...(batchTags ?? []), ...statusResult.tags];
       const payload: Record<string, unknown> = {
         external_source: source,
+        status: statusResult.status,
       };
+      if (rowTags.length > 0) payload.tags = rowTags;
       if (row.name != null) payload.name = row.name;
       if (row.email != null) payload.email = row.email;
       if (row.phone != null) payload.phone = row.phone;
       if (row.external_id != null) payload.external_id = row.external_id;
-      if (row.status != null) payload.status = row.status;
       if (joinedDate != null) payload.joined_on = joinedDate;
       if (row.membership_plan != null) payload.membership_plan = row.membership_plan;
       if (planEndsDate != null) payload.plan_ends_on = planEndsDate;
@@ -231,6 +241,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         updated,
         skipped: errorRows.length,
         errors: errorRows,
+        warnings,
       },
     });
   } catch (error) {

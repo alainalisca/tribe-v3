@@ -174,3 +174,20 @@ export function parseImportDateTime(
 export function matchMemberOrder(): string[] {
   return ['external_id', 'email', 'phone'];
 }
+
+// ---------------------------------------------------------------------------
+// normalizeStatus
+// ---------------------------------------------------------------------------
+
+export function normalizeStatus(raw: string | undefined): {
+  status: string;
+  tags: string[];
+  warning?: string;
+} {
+  if (!raw) return { status: 'active', tags: [] };
+  const lower = raw.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+  if (lower === 'activo' || lower === 'active') return { status: 'active', tags: [] };
+  if (lower === 'inactivo' || lower === 'inactive') return { status: 'inactive', tags: [] };
+  if (lower === 'congelado' || lower === 'frozen') return { status: 'inactive', tags: ['congelado'] };
+  return { status: 'active', tags: [], warning: `unknown_status: ${raw}` };
+}
