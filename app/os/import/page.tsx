@@ -1,0 +1,577 @@
+'use client';
+
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useLanguage } from '@/lib/LanguageContext';
+import { useTribeOSPremiumGate } from '@/hooks/useTribeOSPremiumGate';
+import { trackEvent } from '@/lib/analytics';
+import { Button, Badge } from '@/components/tribe-os/ui';
+import { Upload, FileSpreadsheet, AlertTriangle, CheckCircle2, Download } from 'lucide-react';
+import Papa from 'papaparse';
+
+// ---------------------------------------------------------------------------
+// Copy
+// ---------------------------------------------------------------------------
+
+const copy = {
+  en: {
+    pageTitle: 'Import',
+    subtitle: 'Upload your gym data',
+    loading: 'Loading',
+    redirecting: 'Redirecting',
+    tabMembers: 'Members',
+    tabVisits: 'Visits',
+    uploadTitle: 'Upload CSV',
+    uploadHint: 'Drag a CSV file or click to browse',
+    chooseFile: 'Choose file',
+    mapping: 'Map columns',
+    mappingHint: 'Match each CSV column to a Tribe field',
+    skip: '— Skip —',
+    preview: 'Preview',
+    previewHint: 'First 10 rows after mapping',
+    confirm: 'Import',
+    importing: 'Importing…',
+    back: 'Back',
+    resultTitle: 'Import complete',
+    inserted: 'Inserted',
+    updated: 'Updated',
+    skipped: 'Errors',
+    downloadErrors: 'Download error rows',
+    importAnother: 'Import another file',
+    errorRow: 'Row error',
+    memberFields: {
+      name: 'Name',
+      email: 'Email',
+      phone: 'Phone',
+      external_id: 'Member ID',
+      status: 'Status',
+      joined_on: 'Joined date',
+      membership_plan: 'Plan',
+      plan_ends_on: 'Plan end date',
+    } as Record<string, string>,
+    visitFields: {
+      external_id: 'Member ID',
+      email: 'Email',
+      phone: 'Phone',
+      visit_date: 'Visit date',
+      visit_time: 'Visit time',
+      class_name: 'Class',
+      coach_name: 'Coach',
+    } as Record<string, string>,
+  },
+  es: {
+    pageTitle: 'Importar',
+    subtitle: 'Sube los datos de tu gym',
+    loading: 'Cargando',
+    redirecting: 'Redirigiendo',
+    tabMembers: 'Miembros',
+    tabVisits: 'Visitas',
+    uploadTitle: 'Subir CSV',
+    uploadHint: 'Arrastra un archivo CSV o haz clic para buscar',
+    chooseFile: 'Elegir archivo',
+    mapping: 'Mapear columnas',
+    mappingHint: 'Asocia cada columna del CSV con un campo de Tribe',
+    skip: '— Omitir —',
+    preview: 'Vista previa',
+    previewHint: 'Primeras 10 filas mapeadas',
+    confirm: 'Importar',
+    importing: 'Importando…',
+    back: 'Volver',
+    resultTitle: 'Importación completa',
+    inserted: 'Insertados',
+    updated: 'Actualizados',
+    skipped: 'Errores',
+    downloadErrors: 'Descargar filas con error',
+    importAnother: 'Importar otro archivo',
+    errorRow: 'Error en fila',
+    memberFields: {
+      name: 'Nombre',
+      email: 'Correo',
+      phone: 'Celular',
+      external_id: 'ID Socio',
+      status: 'Estado',
+      joined_on: 'Fecha de inscripción',
+      membership_plan: 'Plan',
+      plan_ends_on: 'Fecha de vencimiento',
+    } as Record<string, string>,
+    visitFields: {
+      external_id: 'ID Socio',
+      email: 'Correo',
+      phone: 'Celular',
+      visit_date: 'Fecha de visita',
+      visit_time: 'Hora',
+      class_name: 'Clase',
+      coach_name: 'Coach',
+    } as Record<string, string>,
+  },
+} as const;
+
+type Tab = 'members' | 'visits';
+type Step = 'upload' | 'mapping' | 'preview' | 'importing' | 'result';
+
+interface ImportResult {
+  import_id: string;
+  inserted: number;
+  updated: number;
+  skipped: number;
+  errors: Array<{ row: number; error: string; data?: Record<string, unknown> }>;
+}
+
+const MEMBER_FIELDS = [
+  'name',
+  'email',
+  'phone',
+  'external_id',
+  'status',
+  'joined_on',
+  'membership_plan',
+  'plan_ends_on',
+];
+const VISIT_FIELDS = ['external_id', 'email', 'phone', 'visit_date', 'visit_time', 'class_name', 'coach_name'];
+
+const BATCH_SIZE = 500;
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function guessMapping(csvHeaders: string[], tribeFields: string[]): Record<string, string> {
+  const map: Record<string, string> = {};
+  const aliases: Record<string, string[]> = {
+    name: ['nombre', 'name', 'nombre completo', 'full name'],
+    email: ['correo', 'email', 'correo electrónico', 'e-mail', 'mail'],
+    phone: ['celular', 'phone', 'teléfono', 'telefono', 'tel', 'móvil', 'movil', 'whatsapp'],
+    external_id: ['id socio', 'member id', 'id', 'external_id', 'socio', 'código', 'codigo', 'id miembro'],
+    status: ['estado', 'status', 'estatus'],
+    joined_on: [
+      'fecha de inscripción',
+      'fecha de inscripcion',
+      'joined date',
+      'joined',
+      'fecha inscripcion',
+      'fecha ingreso',
+      'inscripción',
+      'inscripcion',
+    ],
+    membership_plan: ['plan', 'membership plan', 'membresía', 'membresia', 'tipo plan'],
+    plan_ends_on: [
+      'vence',
+      'plan end date',
+      'vencimiento',
+      'fecha de vencimiento',
+      'fecha vencimiento',
+      'expira',
+      'expires',
+    ],
+    visit_date: ['fecha', 'date', 'visit date', 'fecha visita'],
+    visit_time: ['hora', 'time', 'visit time', 'hora visita'],
+    class_name: ['clase', 'class', 'actividad', 'activity'],
+    coach_name: ['coach', 'instructor', 'entrenador', 'profesor'],
+  };
+
+  for (const field of tribeFields) {
+    const fieldAliases = aliases[field] ?? [field];
+    for (const csvH of csvHeaders) {
+      const lower = csvH.toLowerCase().trim();
+      if (fieldAliases.includes(lower) && !Object.values(map).includes(csvH)) {
+        map[field] = csvH;
+        break;
+      }
+    }
+  }
+  return map;
+}
+
+function applyMapping(rawRows: Record<string, string>[], mapping: Record<string, string>): Record<string, string>[] {
+  return rawRows.map((row) => {
+    const mapped: Record<string, string> = {};
+    for (const [tribeField, csvCol] of Object.entries(mapping)) {
+      if (csvCol && row[csvCol] !== undefined) {
+        mapped[tribeField] = row[csvCol];
+      }
+    }
+    return mapped;
+  });
+}
+
+function downloadCsv(rows: Record<string, unknown>[], filename: string) {
+  const csv = Papa.unparse(rows);
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ---------------------------------------------------------------------------
+// Page
+// ---------------------------------------------------------------------------
+
+export default function ImportPage() {
+  const { language } = useLanguage();
+  const s = copy[language];
+  const gate = useTribeOSPremiumGate();
+
+  const [tab, setTab] = useState<Tab>('members');
+  const [step, setStep] = useState<Step>('upload');
+  const [fileName, setFileName] = useState('');
+  const [csvHeaders, setCsvHeaders] = useState<string[]>([]);
+  const [rawRows, setRawRows] = useState<Record<string, string>[]>([]);
+  const [mapping, setMapping] = useState<Record<string, string>>({});
+  const [savedMappings, setSavedMappings] = useState<Record<string, Record<string, string>>>({});
+  const [result, setResult] = useState<ImportResult | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const fields = tab === 'members' ? MEMBER_FIELDS : VISIT_FIELDS;
+  const fieldLabels = tab === 'members' ? s.memberFields : s.visitFields;
+
+  // Load saved mappings
+  useEffect(() => {
+    if (gate.state !== 'allowed') return;
+    (async () => {
+      try {
+        const res = await fetch(`/api/tribe-os/import/mappings?kind=${tab}`);
+        const json = await res.json();
+        if (json.success && json.data?.mapping) {
+          setSavedMappings((prev) => ({ ...prev, [tab]: json.data.mapping }));
+        }
+      } catch {}
+    })();
+  }, [gate.state, tab]);
+
+  const handleFile = useCallback(
+    (file: File) => {
+      setFileName(file.name);
+      Papa.parse<Record<string, string>>(file, {
+        header: true,
+        skipEmptyLines: true,
+        complete: (results) => {
+          const headers = results.meta.fields ?? [];
+          setCsvHeaders(headers);
+          setRawRows(results.data);
+          const saved = savedMappings[tab];
+          const autoMap = saved ?? guessMapping(headers, fields);
+          setMapping(autoMap);
+          setStep('mapping');
+        },
+      });
+    },
+    [fields, tab, savedMappings]
+  );
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      const file = e.dataTransfer.files[0];
+      if (file?.name.endsWith('.csv')) handleFile(file);
+    },
+    [handleFile]
+  );
+
+  const handleFileInput = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (file) handleFile(file);
+    },
+    [handleFile]
+  );
+
+  const mappedRows = applyMapping(rawRows, mapping);
+  const previewRows = mappedRows.slice(0, 10);
+
+  const handleImport = async () => {
+    setStep('importing');
+    const batches: Record<string, string>[][] = [];
+    for (let i = 0; i < mappedRows.length; i += BATCH_SIZE) {
+      batches.push(mappedRows.slice(i, i + BATCH_SIZE));
+    }
+
+    const endpoint = tab === 'members' ? '/api/tribe-os/import/members' : '/api/tribe-os/import/visits';
+    let totalInserted = 0;
+    let totalUpdated = 0;
+    let totalSkipped = 0;
+    let allErrors: ImportResult['errors'] = [];
+    let importId = '';
+
+    for (const batch of batches) {
+      try {
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ rows: batch, source: 'csv', file_name: fileName }),
+        });
+        const json = await res.json();
+        if (json.success) {
+          totalInserted += json.data.inserted;
+          totalUpdated += json.data.updated;
+          totalSkipped += json.data.skipped;
+          allErrors = allErrors.concat(json.data.errors ?? []);
+          importId = json.data.import_id;
+        }
+      } catch {}
+    }
+
+    // Save mapping for next time
+    try {
+      await fetch('/api/tribe-os/import/mappings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kind: tab, mapping }),
+      });
+    } catch {}
+
+    // Trigger retention recompute after visits import
+    if (tab === 'visits') {
+      try {
+        await fetch('/api/tribe-os/retention/recompute', { method: 'POST' });
+      } catch {}
+    }
+
+    setResult({
+      import_id: importId,
+      inserted: totalInserted,
+      updated: totalUpdated,
+      skipped: totalSkipped,
+      errors: allErrors,
+    });
+    trackEvent('tribe_os_import_completed', {
+      kind: tab,
+      inserted: totalInserted,
+      updated: totalUpdated,
+      skipped: totalSkipped,
+    });
+    setStep('result');
+  };
+
+  const resetFlow = () => {
+    setStep('upload');
+    setFileName('');
+    setCsvHeaders([]);
+    setRawRows([]);
+    setMapping({});
+    setResult(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const switchTab = (t: Tab) => {
+    setTab(t);
+    resetFlow();
+  };
+
+  if (gate.state !== 'allowed') {
+    return (
+      <main className="flex items-center justify-center px-4 py-24">
+        <p className="text-tribe-dark-80 text-sm uppercase tracking-[0.1em]">
+          {gate.state === 'redirecting' ? s.redirecting : s.loading}...
+        </p>
+      </main>
+    );
+  }
+
+  return (
+    <div className="px-4 lg:px-8 py-6 lg:py-8">
+      <div className="max-w-4xl mx-auto space-y-5">
+        <header>
+          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-tribe-dark">{s.pageTitle}</h1>
+          <p className="text-sm text-tribe-dark-80 mt-1">{s.subtitle}</p>
+        </header>
+
+        {/* Tabs */}
+        <div className="flex gap-1 bg-gray-100 rounded-tribe p-1 w-fit">
+          {(['members', 'visits'] as const).map((t) => (
+            <button
+              key={t}
+              type="button"
+              onClick={() => switchTab(t)}
+              className={`px-4 py-2 text-sm font-medium rounded-tribe transition-colors ${
+                tab === t ? 'bg-white text-tribe-dark shadow-sm' : 'text-tribe-dark-80 hover:text-tribe-dark'
+              }`}
+            >
+              {t === 'members' ? s.tabMembers : s.tabVisits}
+            </button>
+          ))}
+        </div>
+
+        {/* Step: Upload */}
+        {step === 'upload' && (
+          <div
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={handleDrop}
+            className="border-2 border-dashed border-gray-300 rounded-tribe p-8 sm:p-12 text-center hover:border-tribe-green transition-colors cursor-pointer"
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <Upload className="h-10 w-10 text-tribe-dark-80 mx-auto mb-3" />
+            <p className="text-sm font-medium text-tribe-dark">{s.uploadTitle}</p>
+            <p className="text-xs text-tribe-dark-80 mt-1">{s.uploadHint}</p>
+            <input ref={fileInputRef} type="file" accept=".csv" className="hidden" onChange={handleFileInput} />
+          </div>
+        )}
+
+        {/* Step: Mapping */}
+        {step === 'mapping' && (
+          <section className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-tribe-dark">{s.mapping}</h2>
+                <p className="text-xs text-tribe-dark-80">{s.mappingHint}</p>
+              </div>
+              <Badge variant="info">{fileName}</Badge>
+            </div>
+            <div className="grid gap-3">
+              {fields.map((field) => (
+                <div key={field} className="flex items-center gap-3">
+                  <label className="text-sm font-medium text-tribe-dark w-40 shrink-0">
+                    {fieldLabels[field] ?? field}
+                  </label>
+                  <select
+                    value={mapping[field] ?? ''}
+                    onChange={(e) => setMapping((prev) => ({ ...prev, [field]: e.target.value }))}
+                    className="flex-1 text-sm border border-gray-300 rounded-tribe px-3 py-2 bg-white text-tribe-dark"
+                  >
+                    <option value="">{s.skip}</option>
+                    {csvHeaders.map((h) => (
+                      <option key={h} value={h}>
+                        {h}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <Button variant="secondary" size="sm" onClick={resetFlow}>
+                {s.back}
+              </Button>
+              <Button size="sm" onClick={() => setStep('preview')}>
+                {s.preview}
+              </Button>
+            </div>
+          </section>
+        )}
+
+        {/* Step: Preview */}
+        {step === 'preview' && (
+          <section className="space-y-4">
+            <div>
+              <h2 className="text-lg font-bold text-tribe-dark">{s.preview}</h2>
+              <p className="text-xs text-tribe-dark-80">
+                {s.previewHint} ({rawRows.length} total)
+              </p>
+            </div>
+            <div className="overflow-x-auto -mx-4 px-4">
+              <table className="min-w-full text-xs border-collapse">
+                <thead>
+                  <tr className="bg-gray-50">
+                    <th className="px-3 py-2 text-left font-medium text-tribe-dark-80">#</th>
+                    {fields
+                      .filter((f) => mapping[f])
+                      .map((f) => (
+                        <th key={f} className="px-3 py-2 text-left font-medium text-tribe-dark-80">
+                          {fieldLabels[f] ?? f}
+                        </th>
+                      ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {previewRows.map((row, i) => {
+                    const hasData = fields.some((f) => mapping[f] && row[f]?.trim());
+                    return (
+                      <tr key={i} className={`border-t border-gray-100 ${!hasData ? 'bg-red-50' : ''}`}>
+                        <td className="px-3 py-2 text-tribe-dark-80">{i + 1}</td>
+                        {fields
+                          .filter((f) => mapping[f])
+                          .map((f) => (
+                            <td key={f} className="px-3 py-2 text-tribe-dark truncate max-w-[160px]">
+                              {row[f] ?? ''}
+                            </td>
+                          ))}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="secondary" size="sm" onClick={() => setStep('mapping')}>
+                {s.back}
+              </Button>
+              <Button size="sm" onClick={handleImport}>
+                {s.confirm} ({rawRows.length})
+              </Button>
+            </div>
+          </section>
+        )}
+
+        {/* Step: Importing */}
+        {step === 'importing' && (
+          <div className="py-16 text-center">
+            <FileSpreadsheet className="h-10 w-10 text-tribe-dark-80 mx-auto mb-3 animate-pulse" />
+            <p className="text-sm font-medium text-tribe-dark">{s.importing}</p>
+          </div>
+        )}
+
+        {/* Step: Result */}
+        {step === 'result' && result && (
+          <section className="space-y-4">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="h-6 w-6 text-green-600" />
+              <h2 className="text-lg font-bold text-tribe-dark">{s.resultTitle}</h2>
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <div className="bg-green-50 rounded-tribe p-4 text-center">
+                <p className="text-2xl font-bold text-green-700">{result.inserted}</p>
+                <p className="text-xs text-green-600">{s.inserted}</p>
+              </div>
+              <div className="bg-blue-50 rounded-tribe p-4 text-center">
+                <p className="text-2xl font-bold text-blue-700">{result.updated}</p>
+                <p className="text-xs text-blue-600">{s.updated}</p>
+              </div>
+              <div className="bg-red-50 rounded-tribe p-4 text-center">
+                <p className="text-2xl font-bold text-red-700">{result.skipped}</p>
+                <p className="text-xs text-red-600">{s.skipped}</p>
+              </div>
+            </div>
+            {result.errors.length > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4 text-red-500" />
+                  <span className="text-sm font-medium text-tribe-dark">
+                    {result.errors.length} {s.errorRow}
+                    {result.errors.length > 1 ? 's' : ''}
+                  </span>
+                </div>
+                <div className="max-h-40 overflow-y-auto text-xs bg-gray-50 rounded-tribe p-3 space-y-1">
+                  {result.errors.slice(0, 20).map((e, i) => (
+                    <p key={i} className="text-tribe-dark-80">
+                      Row {e.row}: {e.error}
+                    </p>
+                  ))}
+                  {result.errors.length > 20 && (
+                    <p className="text-tribe-dark-80">…+{result.errors.length - 20} more</p>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    downloadCsv(
+                      result.errors.map((e) => ({ row: e.row, error: e.error, ...e.data })),
+                      `import-errors-${Date.now()}.csv`
+                    )
+                  }
+                  className="flex items-center gap-1 text-xs text-tribe-green-dark hover:underline"
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  {s.downloadErrors}
+                </button>
+              </div>
+            )}
+            <Button size="sm" variant="secondary" onClick={resetFlow}>
+              {s.importAnother}
+            </Button>
+          </section>
+        )}
+      </div>
+    </div>
+  );
+}

@@ -1,0 +1,21 @@
+Nombre,Correo,Celular,ID Socio,Estado,Fecha de inscripción,Plan,Vence
+Alejandro Restrepo,arestrepo@example.com,+573014567821,MIRA-001,Activo,15/03/2025,Anual,15/03/2027
+Valentina Ospina,vospina@example.com,+573025678932,MIRA-002,Activo,22/06/2025,Semestral,22/12/2026
+Carlos Andrés Mejía,camejia@example.com,+573036789043,MIRA-003,Activo,10/01/2026,Trimestral,10/04/2027
+María Fernanda López,mflopez@example.com,+573047890154,MIRA-004,Inactivo,05/08/2025,Mensual,05/09/2026
+Juan Esteban Giraldo,jegiraldo@example.com,+573058901265,MIRA-005,Activo,18/11/2025,Anual,18/11/2026
+Daniela Castaño,dcastano@example.com,+573069012376,MIRA-006,Congelado,03/02/2026,Semestral,03/08/2027
+Sebastián Ríos,srios@example.com,+573070123487,MIRA-007,Activo,27/04/2025,Anual,27/04/2027
+Laura Camila Henao,lchenao@example.com,+573081234598,MIRA-008,Activo,14/09/2025,Trimestral,14/12/2026
+Andrés Felipe Zuluaga,afzuluaga@example.com,+573092345609,MIRA-009,Inactivo,30/05/2025,Mensual,30/06/2026
+Camila Andrea Bedoya,cabedoya@example.com,+573103456710,MIRA-010,Activo,08/12/2025,Semestral,08/06/2027
+Santiago Arango,sarango@example.com,+573114567821,MIRA-011,Activo,21/07/2025,Anual,21/07/2027
+Natalia Gómez,ngomez@example.com,+573125678932,MIRA-012,Activo,16/03/2026,Trimestral,16/06/2027
+Diego Alejandro Correa,dacorrea@example.com,+573136789043,MIRA-013,Congelado,09/10/2025,Mensual,09/11/2026
+Juliana Montoya,jmontoya@example.com,+573147890154,MIRA-014,Activo,25/01/2026,Semestral,25/07/2027
+Miguel Ángel Botero,mabotero@example.com,+573158901265,MIRA-015,Activo,12/06/2025,Anual,12/06/2027
+Sara Jaramillo,sjaramillo@example.com,+573169012376,MIRA-016,Inactivo,04/04/2026,Mensual,04/05/2027
+Felipe Londoño,flondono@example.com,+573170123487,MIRA-017,Activo,19/08/2025,Trimestral,19/11/2026
+Isabela Rendón,irendon@example.com,+573181234598,MIRA-018,Activo,07/02/2026,Anual,07/02/2027
+Mateo Salazar,msalazar@example.com,+573192345609,MIRA-019,Congelado,23/11/2025,Semestral,23/05/2027
+Luciana Vélez,lvelez@example.com,+573203456710,MIRA-020,Activo,01/05/2026,Trimestral,01/08/2027

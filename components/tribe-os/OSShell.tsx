@@ -32,6 +32,7 @@ import {
   DollarSign,
   Brain,
   HeartPulse,
+  Upload,
   Settings as SettingsIcon,
   HelpCircle,
   Home as HomeIcon,
@@ -67,6 +68,7 @@ const copy = {
       messages: 'Messages',
       intelligence: 'Intelligence',
       retention: 'Retention',
+      import: 'Import',
       settings: 'Settings',
     },
     bellAria: 'Notifications',
@@ -91,6 +93,7 @@ const copy = {
       messages: 'Mensajes',
       intelligence: 'Inteligencia',
       retention: 'Retención',
+      import: 'Importar',
       settings: 'Ajustes',
     },
     bellAria: 'Notificaciones',
@@ -123,6 +126,7 @@ const NAV_ITEMS: readonly NavItem[] = [
   { href: '/os/revenue', labelKey: 'revenue', Icon: DollarSign, matchPrefix: '/os/revenue' },
   { href: '/os/intelligence', labelKey: 'intelligence', Icon: Brain, matchPrefix: '/os/intelligence' },
   { href: '/os/retention', labelKey: 'retention', Icon: HeartPulse, matchPrefix: '/os/retention' },
+  { href: '/os/import', labelKey: 'import', Icon: Upload, matchPrefix: '/os/import' },
   { href: '/os/settings', labelKey: 'settings', Icon: SettingsIcon, matchPrefix: '/os/settings' },
 ] as const;
 
