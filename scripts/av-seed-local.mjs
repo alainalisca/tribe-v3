@@ -150,6 +150,25 @@ async function seedAuthUsers() {
   return PEOPLE.length;
 }
 
+/**
+ * `role` above was decoration until 2026-09-26: it reached the database only
+ * inside the bio STRING, so `is_instructor` was false on all seven accounts
+ * while this file's own header said it creates instructors and
+ * docs/AV_LOCAL_STACK.md named elena@ and felipe@ as the instructors. A seed
+ * that describes a role in prose and not in the column the app gates on
+ * produces a database where every instructor surface is empty and nothing
+ * says why -- `lib/dal/admin.ts` filters on `is_instructor`, so "Instructors"
+ * returned nobody and read as a working filter over a real dataset.
+ *
+ * Writing the column is the whole fix, but note WHY it is permitted here:
+ * `protect_verified_instructor()` -- live in production, in no migration in
+ * this repo, and present locally only because the schema came from a dump --
+ * guards `is_verified_instructor`, `total_earnings_cents` and
+ * `total_participants_served`. It does NOT guard `is_instructor`. So this
+ * write is legal for an ordinary caller too, and verified instructors are
+ * deliberately NOT seeded: that flag is an admin-only write by design, and
+ * faking it here would seed a state the app cannot produce.
+ */
 async function seedProfiles() {
   const rows = PEOPLE.map((p) => ({
     id: p.id,
@@ -158,6 +177,9 @@ async function seedProfiles() {
     bio: `Cuenta de prueba local (${p.role}). No es una persona real.`,
     location: 'Medellín',
     sports: p.sports,
+    is_instructor: p.role === 'instructor',
+    instructor_bio: p.role === 'instructor' ? `Instructor de ${p.sports[0]} (cuenta de prueba).` : null,
+    instructor_since: p.role === 'instructor' ? new Date().toISOString() : null,
   }));
   const { error } = await db.from('users').upsert(rows, { onConflict: 'id' });
   if (error) die('public.users', error);
@@ -242,12 +264,31 @@ const partnerId = await seedPartner();
 const sessions = await seedSessions(partnerId);
 const joins = await seedJoins(sessions);
 
+/**
+ * READ THE ROLE SPLIT BACK OUT OF THE DATABASE, do not report the input.
+ *
+ * Every other number below is `rows.length` -- the length of an array this
+ * file just built -- under a comment claiming to print what was WRITTEN. That
+ * is the distinction CLAUDE.md keeps paying for: asserting the attempt is not
+ * asserting the result, and `is_instructor` was false on all seven accounts
+ * for as long as this seed existed while the report said seven profiles and
+ * was perfectly correct about it. A count that comes back from the database
+ * is the only one that can disagree with the intent.
+ */
+async function readRoleSplit() {
+  const { data, error } = await db.from('users').select('id, is_instructor');
+  if (error) die('read-back of public.users', error);
+  const instructors = data.filter((u) => u.is_instructor === true).length;
+  return `${data.length} in db (${instructors} is_instructor, ${data.length - instructors} not)`;
+}
+const roleSplit = await readRoleSplit();
+
 // Print what was WRITTEN, not just that it finished. A seed that reports
 // "done" over zero rows is indistinguishable from one that worked.
 console.log(
   `av-seed-local OK against ${RAW_URL}\n` +
     `  auth users        ${authUsers}\n` +
-    `  profiles          ${profiles}\n` +
+    `  profiles          ${profiles}  ->  ${roleSplit}\n` +
     `  partner           BullBox (Prueba)  pass_active=true  id=${partnerId ?? 'n/a'}\n` +
     `  sessions          ${sessions}  (3 past, the rest today .. +28 days)\n` +
     `  joins             ${joins}\n` +

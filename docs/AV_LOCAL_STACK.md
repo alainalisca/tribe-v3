@@ -42,26 +42,77 @@ is 436,584 bytes and is gitignored — it is a copy of production's shape at a
 moment in time, it goes stale, and a committed copy would be read as
 authoritative.
 
-`npm run db:reset` loads it. `npm run av:seed` then writes the rows. Measured
-after both, against the database rather than against the scripts' own output:
+`npm run db:reset` loads it. `npm run av:seed` then writes the rows.
 
-| object                         | count |
-| ------------------------------ | ----- |
-| public tables                  | 97    |
-| public views                   | 6     |
-| public functions               | 98    |
-| policies                       | 263   |
-| triggers (non-internal)        | 52    |
-| indexes                        | 333   |
-| auth users / public.users      | 7 / 7 |
-| featured_partners, pass_active | 1     |
-| sessions (3 past, 15 upcoming) | 18    |
-| confirmed session_participants | 24    |
+Measured after both, against the database rather than against the scripts' own
+output, and re-measured 2026-09-25 after a full drop, reload and re-seed.
+**The predicate is part of each number**, because two of these are counts that
+change meaning without it:
+
+| object                          | count | counted as                              |
+| ------------------------------- | ----- | --------------------------------------- |
+| public tables                   | 97    | `pg_tables where schemaname='public'`   |
+| public views                    | 6     | `pg_views where schemaname='public'`    |
+| public functions                | 98    | `pg_proc` joined to namespace `public`  |
+| policies                        | 263   | `pg_policies`, all schemas              |
+| triggers (non-internal)         | 52    | **`public` only** — see below           |
+| indexes                         | 333   | `pg_indexes where schemaname='public'`  |
+| auth users / public.users       | 7 / 7 | both tables                             |
+| of those, `is_instructor`       | 2     | elena@, felipe@                         |
+| featured_partners, pass_active  | 1     | `where pass_active`                     |
+| sessions (3 past, 15 upcoming)  | 18    | `date < current_date` / `>=`            |
+| confirmed session_participants  | 24    | `where status='confirmed'`              |
+| rows through users_discoverable | 7     | the production view, not the base table |
+
+**Triggers is the one that bites.** Database-wide the answer is **60**; the 52
+above is `public` alone. The other eight belong to `storage` (7) and
+`realtime` (1) and are created by the CLI's own "Initialising schema" step, not
+by the dump — the same boundary that made the `av_probe` attempt below report
+456 imaginary errors. `av:schema:verify` says 52 because it counts what the
+dump DECLARES, which happens to coincide; the two numbers agreeing is not the
+same fact twice.
+
+The index row is the mirror image: 333 exist in `public`, and
+`av:schema:verify` declares 189, because constraint-backed indexes arrive with
+their constraints rather than as `CREATE INDEX`.
 
 Test accounts are `ana@`, `beto@`, `caro@`, `diego@` (athletes), `elena@`,
 `felipe@` (instructors) and `bullbox@` (the gym), all `@av.local`, all with the
 password `tribe-local-1234`. `ana@av.local` is the id in
 `ATHLETE_VALUE_ALLOWLIST` in `.env.av.example`.
+
+### The two instructors were instructors in the prose and not in the column
+
+Re-measured 2026-09-25: `is_instructor` was **false on all seven accounts**.
+`PEOPLE` carries a `role` field, and until now that field reached the database
+only inside the bio STRING -- `seedProfiles()` wrote `id, email, name, bio,
+location, sports` and nothing else. So this document named elena@ and felipe@
+as the instructors, the script's own header said it creates instructors, and
+`lib/dal/admin.ts` -- which filters on `is_instructor` -- had nobody to return.
+
+An empty instructor surface over a correctly-seeded database looks exactly
+like a working filter over a dataset that happens to have no instructors.
+Nothing fails, and the thing you are testing is the thing that is missing.
+
+Fixed by writing the column the app gates on. Verified against the database
+rather than the seed's report:
+
+| account         | is_instructor | is_verified_instructor |
+| --------------- | ------------- | ---------------------- |
+| elena@av.local  | true          | false                  |
+| felipe@av.local | true          | false                  |
+| the other five  | false         | false                  |
+
+`is_verified_instructor` is deliberately still false everywhere.
+`protect_verified_instructor()` -- live in production, in no migration in this
+repo, present locally only because the schema came from a dump -- makes that
+an admin-only write. Seeding it would create a state the app cannot produce.
+
+**And the seed's own report was the reason this survived.** It printed
+`profiles 7`, which was true, and was `rows.length` -- the length of an array
+the script had just built -- under a comment claiming to print what was
+WRITTEN. It now reads the role split back out of the database, so the line can
+disagree with the intent that produced it.
 
 ## `supabase db reset` SUCCEEDS SILENTLY. Do not read its exit code as a load.
 
@@ -85,6 +136,51 @@ than a bare PASS.
 It compares **names**, not definitions. An object present under the right name
 with the wrong body passes. Proven able to fail by appending three
 non-existent objects to a COPY of the dump and watching it name all three.
+
+### How to actually SEE the load errors, without the bare-database trap
+
+`av:schema:verify` answers "is every object there". It does not answer "did any
+statement fail", and those are different questions -- a statement can fail
+while leaving the object it touches present under the right name. To enumerate
+the failures, reproduce the seed step under psql **in the database the CLI has
+already initialised**:
+
+```bash
+supabase db reset --no-seed        # CLI-initialised: auth, storage, realtime, roles, empty public
+psql "$SUPABASE_DB_URL_LOCAL" -v ON_ERROR_STOP=0 --echo-errors \
+     -f supabase/av-local-schema.sql > load.out 2> load.err
+```
+
+`--no-seed` is what makes this honest. It is the same database, with the same
+`auth`/`storage`/`extensions`/`graphql` schemas and the same
+`supabase_realtime` publication -- which is precisely what the `av_probe`
+attempt above lacked, and why that one invented 456 errors.
+
+Measured 2026-09-25: **0 errors, 0 bytes on stderr, 2298 successful command
+tags.**
+
+| tag                                                             | n       | tag                      | n   |
+| --------------------------------------------------------------- | ------- | ------------------------ | --- |
+| GRANT                                                           | 816     | CREATE TABLE             | 97  |
+| ALTER TABLE                                                     | 508     | COMMENT                  | 88  |
+| CREATE POLICY                                                   | 263     | CREATE TRIGGER           | 52  |
+| CREATE INDEX                                                    | 189     | REVOKE                   | 41  |
+| CREATE/ALTER FUNCTION                                           | 98 each | ALTER DEFAULT PRIVILEGES | 12  |
+| CREATE VIEW / ALTER VIEW / ALTER PUBLICATION / CREATE EXTENSION | 6 each  | SET                      | 11  |
+
+**A silent stderr and a broken capture path look identical, so the capture was
+proved able to report.** Four deliberate errors were fed to the same command
+-- duplicate table, undefined table, undefined table in a `CREATE POLICY`,
+undefined column in a foreign key -- and all four surfaced. Re-run with the
+dump's own `SET client_min_messages = warning` prepended: still 4 of 4, so
+that setting suppresses NOTICE and not ERROR. The first of those four also
+fails with `relation "users" already exists`, which independently proves the
+dump had landed.
+
+Two things that could have swallowed an error were checked rather than
+assumed: the dump has **no top-level `DO` blocks**, and its three
+`EXCEPTION WHEN` handlers are all inside `CREATE FUNCTION` bodies, where they
+are stored text at load time and cannot catch anything during the load.
 
 ### The probe that was wrong first, because the shape recurs
 
@@ -149,6 +245,81 @@ set to `allowlist` and `ana@av.local` in it, exactly one surface differs —
 It captures text and structure, not pixels: dev-mode markup carries build ids
 and chunk hashes that differ between two servers started seconds apart, and a
 pixel diff over antialiased text produces differences that mean nothing.
+
+### Re-run 2026-09-25, and the three traps that are not in the recipe above
+
+Both arms reproduce. Flag off: **no differences at all**, 6025 bytes compared.
+Flag on with ana allowlisted: exactly one block differs, `/pase/`, and home,
+profile, session detail and the nav stay byte-identical.
+
+```
+ === pase (T-AV gated) (/pase/) ===
+-NAV: A:/:Home | A:/messages/:Messages | ... | A:/profile/:Profile
+-TEXT: 404 Page not found This link doesn't exist or is no longer available. ...
++NAV:
++TEXT: Preview Pass catalog Gyms and studios you can train at with your Tribe pass. ...
+```
+
+Per-user gating, in ONE server process, flag `allowlist` holding ana's id only:
+`ana@av.local` -> `{"enabled":true}` and the catalog; `beto@av.local` ->
+`{"enabled":false}` and the 404.
+
+**Trap 1 -- a leftover dev server answers, and the arm passes for the wrong
+reason.** Arm 2 first reported **no differences**, which reads as "the flag
+does nothing". It was not the flag: `:3011` was still held by a server from an
+earlier run and the newly-launched one had died on `EADDRINUSE`. The snapshot
+dutifully captured the old server. **`nohup ... &` returning 0 is not a server
+starting**, and a successful HTTP 200 from the port proves only that
+_something_ is listening. Kill by port, assert the port is free before
+launching, and assert `EADDRINUSE` is absent from the log afterwards --
+all three, because the first two do not catch a server that dies after binding.
+
+**Trap 2 -- one directory cannot run two `next dev`.** The second fails with
+`Unable to acquire lock at .next/dev/lock`. If the worktree already has a dev
+server on `:3001`, materialise the branch elsewhere rather than killing
+someone else's process: `git archive <commit> | tar -x -C <dir>`. That also
+leaves the locked worktree untouched, which `git worktree add` would not.
+
+**Trap 3 -- Turbopack rejects a symlinked `node_modules`.**
+`Symlink node_modules is invalid, it points out of the filesystem root`, and it
+is a FATAL panic, not a warning. Use `cp -c -R node_modules <dir>` instead --
+APFS clonefile, so 926 MB costs almost no space and a few seconds. Check first
+that the branch did not change dependencies (here `dependencies`,
+`devDependencies` and `package-lock.json` are all identical to the merge-base,
+which is why sharing them is legitimate at all).
+
+### What this instrument CANNOT see: the HTTP status
+
+`av-snapshot.mjs` captures `document.body.innerText`, the nav, and
+`location.pathname`. It never reads the response status, so two pages with
+identical text and different status codes diff as identical. Measured
+separately, on a production build (`next build && next start`), because it is
+the axis the snapshot is blind to:
+
+| request                             | branch | main |
+| ----------------------------------- | ------ | ---- |
+| `/pase/` signed out                 | 200    | 404  |
+| `/pase/` signed in, not allowlisted | 200    | 404  |
+| `/g/no-such-gym-xyz/`               | 200    | 200  |
+| `/pase/no-such-slug-xyz/`           | 200    | 200  |
+
+**Read the bottom two rows before drawing a conclusion from the top two.**
+Every `notFound()` in this app returns **200 with the 404 page as its body**,
+on `main` as much as on the branch -- `app/not-found.tsx` rendered from a
+dynamic route. Only a path with no route at all returns a real 404, which is
+what `main`'s `/pase/` is.
+
+So the gated refusal is indistinguishable from every other "this does not
+exist" answer the app gives, which is the property that matters, and it is
+**not** something T-AV0 introduced. What is wrong is one clause in
+`app/pase/page.tsx`'s comment: "the same response `/pase` gave before this
+file existed". Before the file existed `/pase/` had no route and returned 404;
+now it returns 200. The weaker claim in the same comment -- "the app's
+ordinary 404" -- is exactly right.
+
+The first version of this finding was going to be reported as a status-code
+leak in the gate. The two rows that make it a pre-existing app-wide property
+cost one extra command.
 
 ## Replaying supabase/migrations/ is NOT a substitute for the dump. Measured.
 

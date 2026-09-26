@@ -93,7 +93,7 @@ refused by objects the catalog does not show.
 
 - [ ] Renumbered out of the 8000 block into `main`'s sequence, reading
       `origin/main` AT THAT MOMENT (`git fetch origin && git ls-tree
-  --name-only origin/main supabase/migrations/ | tail -5`). A number is
+--name-only origin/main supabase/migrations/ | tail -5`). A number is
       claimed by whoever merges first; this repo has three collisions on record
       and two of them merged.
 - [ ] Each renumbered file states in its header what it was numbered before and
@@ -138,30 +138,62 @@ refused by objects the catalog does not show.
 
 ---
 
-## Already measured, 2026-09-26 (evidence, not a tick)
+## Already measured, re-run from scratch 2026-09-25 (evidence, not a tick)
 
 These were run during T-AV0 and are recorded so the gate starts from facts
 rather than from memory. **None of them ticks a box above** — every one of them
 expires, and the boxes are about the tree as it stands on merge day.
 
+Everything below was re-run end to end on 2026-09-25 — database dropped and
+reloaded, re-seeded, both snapshot arms re-captured — rather than copied
+forward from the previous session's commit message.
+
 - Local stack loaded from the production dump and verified object-by-object:
   97 tables, 6 views, 98 functions, 189 indexes, 52 triggers, 263 policies,
   313 constraints declared, **0 missing** (`npm run av:schema:verify`).
+- The load itself enumerated, which `supabase db reset` will not do:
+  `--no-seed` then psql with `ON_ERROR_STOP=0` into the same CLI-initialised
+  database. **0 errors, 2298 successful command tags**, and the capture path
+  proved able to report by feeding it four deliberate errors.
 - Seeded: 7 accounts, BullBox (Prueba) with `pass_active = true`, 18 sessions
-  (3 past), 24 confirmed joins — counted in the database, not taken from the
-  seed script's own report.
+  (3 past, 15 upcoming), 24 confirmed joins, 7 rows through
+  `users_discoverable` — counted in the database, not taken from the seed
+  script's own report.
 - Parity with `main` at the merge-base `6ff6eeef`, flag off, signed in as a
-  seeded athlete: home, profile, session detail and nav **byte-identical**.
-  With the flag on for an allowlisted user, `/pase/` and only `/pase/` differs.
-  Re-runnable: `scripts/av-snapshot.mjs`.
+  seeded athlete: home, profile, session detail and nav **byte-identical**,
+  6025 bytes compared, empty diff. With the flag on for an allowlisted user,
+  `/pase/` and only `/pase/` differs. Re-runnable: `scripts/av-snapshot.mjs`.
 - Per-user gating confirmed in one server process: `ana@av.local` (allowlisted)
-  gets the catalog, `beto@av.local` gets the 404.
-- `tsc` clean, eslint within budget, `npm run test:complete` green.
+  gets the catalog and `{"enabled":true}`, `beto@av.local` gets the 404 and
+  `{"enabled":false}`.
+- `npx tsc --noEmit` clean; `npm run test:complete` — **258 of 258 files, 2395
+  tests, 0 failures**; `npx next build` exit 0 with `/pase` as `ƒ (Dynamic)`.
+
+**Two things the re-run found that the first pass did not, both recorded in
+docs/AV_LOCAL_STACK.md:**
+
+1. **`is_instructor` was false on all seven seeded accounts.** The seed's
+   `role` field reached the database only inside a bio string, so the two
+   documented instructors were ordinary athletes and every instructor surface
+   was legitimately empty. Fixed, and the seed now reads the role split back
+   out of the database instead of reporting its own input.
+2. **The snapshot instrument cannot see the HTTP status.** Measured
+   separately: the gated `/pase/` answers **200** with the 404 page as its
+   body, where `main`'s `/pase/` — a path with no route — answers **404**.
+   This is not a leak the gate introduced: every `notFound()` in this app
+   returns 200, on `main` too (`/g/no-such-gym-xyz/` → 200 on both). One
+   clause in `app/pase/page.tsx`'s comment is wrong as a result — "the same
+   response `/pase` gave before this file existed" — and should be corrected
+   or dropped before merge. **Not a blocker; a false sentence in the file that
+   explains the gate.**
 
 **What is NOT covered by any of that:** the local database is production's
 SHAPE, not its data, and `av:schema:verify` compares names, not definitions,
 policy predicates, function bodies or grants. The role-by-role probe in section
 2 is still the thing that has to be done by hand, against the real objects.
+Two roles were exercised here — an allowlisted athlete and a non-allowlisted
+one. **anon, instructor, a DIFFERENT instructor and app admin were not**, and
+those are the four rows of section 2 that actually leak.
 
 ## Things T-AV0 changed in SHARED files, which this gate has to decide about
 
@@ -199,7 +231,7 @@ decided deliberately rather than discovered afterwards.
       under `--experimental-strip-types`. Legal only with `noEmit`, which is
       set. Keep unless the migration check goes.
 - [ ] **`supabase/config.toml`** (new file) with `[db.migrations] enabled =
-  false`. It configures the LOCAL stack only and has no effect on
+false`. It configures the LOCAL stack only and has no effect on
       production, but it will read as "this repo's migrations are disabled" to
       the next person. Keep the explanatory comment with it or drop the file.
 - [ ] **`lib/translationExtras.ts`**: four `av*` keys. Dead once the
