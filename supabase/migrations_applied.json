@@ -16,6 +16,7 @@
     "189_stable_unsub_token",
     "190_community_soft_delete",
     "191_close_open_community_comments_read",
-    "192_community_banner_storage_scope"
+    "192_community_banner_storage_scope",
+    "193_private_communities_visible_to_members"
   ]
 }
