@@ -2074,4 +2074,45 @@ select 'GUARD_193_private_communities_members_only',
          else 'applied'
        end
 
+union all
+
+select '195_notifications_forgery_guard',
+       case when exists (select 1 from pg_policies
+                          where schemaname='public' and tablename='notifications' and cmd='INSERT'
+                            and position('actor_id = auth.uid()' in with_check) > 0)
+       then 'applied' else 'MISSING' end
+
+union all
+
+-- A SIGNED-IN USER MUST NOT BE ABLE TO WRITE INTO SOMEONE ELSE'S BELL.
+--
+-- The count check is the load-bearing one, and it is here because of the rule
+-- CLAUDE.md pays for repeatedly: permissive policies OR together, so ADDING a
+-- second INSERT policy reopens the hole completely while leaving 195's policy
+-- untouched and looking correct. Tightening one of two permissive policies is
+-- theatre; the only safe state is exactly one.
+select 'GUARD_195_notification_forgery',
+       case
+         when (select count(*) from pg_policies
+                where schemaname='public' and tablename='notifications' and cmd in ('INSERT','ALL')) <> 1
+           then 'MISSING -- notifications has more or fewer than one INSERT policy; a second permissive one reopens forgery'
+         when not exists (select 1 from pg_policies
+                           where schemaname='public' and tablename='notifications' and cmd='INSERT'
+                             and position('actor_id = auth.uid()' in with_check) > 0
+                             and position('recipient_id = auth.uid()' in with_check) > 0)
+           then 'MISSING -- the INSERT policy lost the actor arm or the null-actor-to-self arm'
+         when not exists (select 1 from pg_policies
+                           where schemaname='public' and tablename='notifications' and cmd='INSERT'
+                             and position('^//' in with_check) > 0)
+           then 'MISSING -- the action_url check lost its protocol-relative arm; //evil.com would be accepted'
+         when not exists (select 1 from pg_policies
+                           where schemaname='public' and tablename='notifications' and cmd='INSERT'
+                             and position('achievement' in with_check) > 0)
+           then 'MISSING -- the type allow-list is gone, or lost achievement and trg_first_in_area now breaks session creation'
+         when (select relrowsecurity from pg_class
+                where oid = 'public.notifications'::regclass) is not true
+           then 'MISSING -- RLS is disabled on notifications; every policy above is inert'
+         else 'applied'
+       end
+
 order by migration;
