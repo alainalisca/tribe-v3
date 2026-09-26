@@ -42,9 +42,9 @@
  * own production default. So unset fails, and the message says where to set it.
  */
 import { spawnSync } from 'node:child_process';
-import { readFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
+import { readEnvFile } from './envFile.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -119,23 +119,6 @@ if (mig.status !== 0) {
 const migCount = /OK: (\d+) migration/.exec(mig.stdout ?? '')?.[1] ?? '?';
 
 // ── env resolution ─────────────────────────────────────────────────────────
-/** Minimal KEY=VALUE reader. No dependency: T-AV0's budget is $0 and no new npm package. */
-function readEnvFile(file) {
-  const out = {};
-  if (!existsSync(file)) return out;
-  for (const raw of readFileSync(file, 'utf8').split('\n')) {
-    const line = raw.trim();
-    if (line === '' || line.startsWith('#')) continue;
-    const eq = line.indexOf('=');
-    if (eq === -1) continue;
-    const key = line.slice(0, eq).trim().replace(/^export\s+/, '');
-    let value = line.slice(eq + 1).trim();
-    if (/^(['"]).*\1$/.test(value)) value = value.slice(1, -1);
-    out[key] = value;
-  }
-  return out;
-}
-
 /** Returns { value, source } so the success line can say where a value came from. */
 function resolve(key) {
   if (process.env[key] !== undefined && process.env[key] !== '') {

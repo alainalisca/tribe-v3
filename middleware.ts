@@ -88,6 +88,15 @@ const publicApiPaths = [
   '/api/send-attendance-notification', // cron (CRON_SECRET) or user session — both checked in the handler
   '/api/send-welcome-email', // welcome onboarding email cron (CRON_SECRET); enforced via isValidCronAuth() in the handler
 
+  // T-AV0. "Is the athlete_value flag on for me" must be answerable WITHOUT a
+  // session, because a signed-out visitor is one of the answers -- and it is
+  // the answer `no`. Behind the auth gate the endpoint 307s to /auth, so a
+  // client component on a public page would read a redirect as an outage
+  // rather than as a flag being off, and would have every reason to guess.
+  // Nothing is exposed: the route reports a boolean about the caller and never
+  // what is behind the flag. Each T-AV route and page gates itself.
+  '/api/features',
+
   // Clicked from an inbox, where there is no session cookie by definition.
   // Without this the auth gate redirects the unsubscribe link to /auth and the
   // only way to stop receiving email silently stops working -- the same shape

@@ -38,9 +38,29 @@
  * what it can and leaving a half-populated database that looks seeded.
  */
 import { createClient } from '@supabase/supabase-js';
+import { fileURLToPath } from 'node:url';
+import path from 'node:path';
+import { readEnvFile } from './envFile.mjs';
+
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+
+/**
+ * The same file av-guard checked and the dev server runs on, read with the
+ * same parser. A seed that resolved its target differently from the guard
+ * that just vouched for it would make the guard a statement about a different
+ * environment -- which is the failure this repo keeps finding, an instrument
+ * measuring something adjacent to the question.
+ *
+ * A real environment variable WINS, so an explicit
+ * `SUPABASE_URL=https://... node scripts/av-seed-local.mjs` still reaches the
+ * refusal below rather than being quietly overridden by the local file.
+ */
+const fileEnv = readEnvFile(path.join(ROOT, '.env.av.local'));
+const pick = (key) =>
+  process.env[key] !== undefined && process.env[key] !== '' ? process.env[key] : fileEnv[key];
 
 // ── the refusal, before anything else ──────────────────────────────────────
-const RAW_URL = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
+const RAW_URL = pick('SUPABASE_URL') ?? pick('NEXT_PUBLIC_SUPABASE_URL') ?? '';
 
 function isLocal(raw) {
   try {
@@ -67,7 +87,7 @@ if (!isLocal(RAW_URL)) {
   process.exit(1);
 }
 
-const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
+const SERVICE_KEY = pick('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 if (!SERVICE_KEY) {
   console.error(
     `av-seed-local FAILED: SUPABASE_SERVICE_ROLE_KEY is not set.\n` +
