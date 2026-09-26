@@ -325,7 +325,8 @@
     "venueRequestApproved": "{gym} aprobó {title} en su sede",
     "venueRequestDeclined": "{gym} rechazó {title} en su sede. Tu sesión sigue publicada con la dirección.",
     "anInstructor": "Un instructor",
-    "aSession": "una sesión"
+    "aSession": "una sesión",
+    "unknownSender": "Alguien"
   },
   "gymPage": {
     "call": "Llamar",
