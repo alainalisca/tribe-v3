@@ -2041,4 +2041,35 @@ select 'GUARD_192_banner_writes_scoped',
          else 'applied'
        end
 
+union all
+
+select '193_private_communities_visible_to_members',
+       case when exists (select 1 from pg_policies
+                          where schemaname='public' and tablename='communities'
+                            and policyname='Public communities are visible to all'
+                            and position('is_community_member' in qual) > 0)
+       then 'applied' else 'MISSING' end
+
+union all
+
+-- Members must see their private community, and nothing else may widen the
+-- read: policies are OR'd, so a second read policy could reopen private or
+-- deleted communities to everyone.
+select 'GUARD_193_private_communities_members_only',
+       case
+         when (select count(*) from pg_policies
+                where schemaname='public' and tablename='communities' and cmd in ('SELECT','ALL')) <> 1
+           then 'MISSING -- communities has more or fewer than one read policy; private or deleted rows may be exposed'
+         when not exists (select 1 from pg_policies
+                           where schemaname='public' and tablename='communities'
+                             and policyname='Public communities are visible to all'
+                             and position('deleted_at IS NULL' in qual) > 0
+                             and position('is_community_member' in qual) > 0)
+           then 'MISSING -- the read policy lost the member arm or the deleted_at filter'
+         when not (select prosecdef from pg_proc
+                    where oid = to_regprocedure('public.is_community_member(uuid, uuid)'))
+           then 'MISSING -- is_community_member is not SECURITY DEFINER; the read policy would loop through community_members'
+         else 'applied'
+       end
+
 order by migration;
