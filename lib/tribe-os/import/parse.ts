@@ -52,6 +52,60 @@ function dateFromTzComponents(
 }
 
 // ---------------------------------------------------------------------------
+// Date format detection
+// ---------------------------------------------------------------------------
+
+export type SlashFormat = 'dm' | 'md';
+
+function isUSTimezone(tz: string): boolean {
+  return (
+    tz.startsWith('America/New_York') ||
+    tz.startsWith('America/Chicago') ||
+    tz.startsWith('America/Denver') ||
+    tz.startsWith('America/Los_Angeles') ||
+    tz.startsWith('America/Phoenix') ||
+    tz.startsWith('America/Anchorage') ||
+    tz.startsWith('Pacific/Honolulu') ||
+    tz.startsWith('US/')
+  );
+}
+
+export type DateFormatResult = { format: SlashFormat; error?: never } | { format?: never; error: 'conflict' };
+
+/**
+ * Scan all slash-format values in a column and determine whether the column
+ * is DD/MM/YYYY or MM/DD/YYYY.
+ *
+ * - If any value has first part > 12, the column is DD/MM.
+ * - If any value has second part > 12, the column is MM/DD.
+ * - If both happen, it is a conflict error.
+ * - If neither (all values are ambiguous), default by timezone.
+ */
+export function detectDateFormat(values: string[], timezone: string): DateFormatResult {
+  let seenFirstGt12 = false;
+  let seenSecondGt12 = false;
+
+  for (const raw of values) {
+    const trimmed = raw?.trim();
+    if (!trimmed) continue;
+    const m = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (!m) continue;
+    const a = parseInt(m[1], 10);
+    const b = parseInt(m[2], 10);
+    if (a > 12) seenFirstGt12 = true;
+    if (b > 12) seenSecondGt12 = true;
+  }
+
+  if (seenFirstGt12 && seenSecondGt12) return { error: 'conflict' };
+  if (seenFirstGt12) return { format: 'dm' };
+  if (seenSecondGt12) return { format: 'md' };
+
+  // All ambiguous — default by locale
+  if (isUSTimezone(timezone)) return { format: 'md' };
+  return { format: 'dm' };
+}
+
+// ---------------------------------------------------------------------------
 // parseImportDate
 // ---------------------------------------------------------------------------
 
@@ -60,31 +114,31 @@ function dateFromTzComponents(
  *
  * Accepted formats:
  *   - ISO:       2026-09-24  or  2026-09-24T14:00:00
- *   - DD/MM/YYYY
+ *   - A/B/YYYY:  interpreted as DD/MM or MM/DD based on `slashFormat`.
  *
- * Ambiguity rule for DD/MM/YYYY:
- *   If day > 12 -> unambiguous (can only be DD/MM).
- *   If day === month -> unambiguous (both interpretations yield the same date).
- *   If day <= 12 AND month <= 12 AND day !== month -> "ambiguous_date".
+ * `slashFormat` must be determined per-column before calling this function,
+ * using `detectDateFormat()`.
  */
-export function parseImportDate(raw: string | null | undefined, timezone: string): DateResult {
+export function parseImportDate(
+  raw: string | null | undefined,
+  timezone: string,
+  slashFormat: SlashFormat = 'dm'
+): DateResult {
   if (raw == null || raw.trim() === '') {
     return { error: 'empty' };
   }
 
   const trimmed = raw.trim();
 
-  // --- DD/MM/YYYY format ---------------------------------------------------
+  // --- Slash format (DD/MM/YYYY or MM/DD/YYYY) ----------------------------
   const slashMatch = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
   if (slashMatch) {
-    const dayNum = parseInt(slashMatch[1], 10);
-    const monthNum = parseInt(slashMatch[2], 10);
+    const a = parseInt(slashMatch[1], 10);
+    const b = parseInt(slashMatch[2], 10);
     const yearNum = parseInt(slashMatch[3], 10);
 
-    // Ambiguity check: both <= 12 and different -> ambiguous
-    if (dayNum <= 12 && monthNum <= 12 && dayNum !== monthNum) {
-      return { error: 'ambiguous_date' };
-    }
+    const dayNum = slashFormat === 'dm' ? a : b;
+    const monthNum = slashFormat === 'dm' ? b : a;
 
     // Validate the calendar date
     const candidate = new Date(yearNum, monthNum - 1, dayNum);
@@ -107,7 +161,6 @@ export function parseImportDate(raw: string | null | undefined, timezone: string
   if (isoDateOnly) {
     const d = parse(trimmed, 'yyyy-MM-dd', new Date());
     if (!isValid(d)) return { error: 'invalid_format' };
-    // Verify the parsed components match (catches Feb 30, etc.)
     if (format(d, 'yyyy-MM-dd') !== trimmed) return { error: 'invalid_format' };
     return { date: trimmed };
   }
@@ -116,7 +169,6 @@ export function parseImportDate(raw: string | null | undefined, timezone: string
   if (isoDateTime) {
     const d = new Date(trimmed);
     if (!isValid(d) || isNaN(d.getTime())) return { error: 'invalid_format' };
-    // Convert to the target timezone's calendar date
     return { date: formatDateInTz(d, timezone) };
   }
 
@@ -135,9 +187,10 @@ export function parseImportDate(raw: string | null | undefined, timezone: string
 export function parseImportDateTime(
   raw: string | null | undefined,
   timeRaw: string | undefined,
-  timezone: string
+  timezone: string,
+  slashFormat: SlashFormat = 'dm'
 ): DateTimeResult {
-  const dateResult = parseImportDate(raw, timezone);
+  const dateResult = parseImportDate(raw, timezone, slashFormat);
   if (dateResult.error) return { error: dateResult.error };
 
   let hours = 12;

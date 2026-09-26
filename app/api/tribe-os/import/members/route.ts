@@ -10,7 +10,8 @@ import { z } from 'zod';
 import { logError } from '@/lib/logger';
 import { requireTribeOSPremium } from '@/lib/auth/premium';
 import { writeAuditEntry } from '@/lib/dal/auditLog';
-import { parseImportDate, normalizeStatus } from '@/lib/tribe-os/import/parse';
+import { parseImportDate, detectDateFormat, normalizeStatus } from '@/lib/tribe-os/import/parse';
+import type { SlashFormat } from '@/lib/tribe-os/import/parse';
 
 // ---------------------------------------------------------------------------
 // Validation
@@ -32,6 +33,7 @@ const ImportBody = z.object({
   source: z.enum(['mira_csv', 'csv']).default('csv'),
   file_name: z.string().max(200).optional(),
   tags: z.array(z.string().max(50)).max(10).optional(),
+  date_formats: z.record(z.string(), z.enum(['dm', 'md'])).optional(),
 });
 
 // ---------------------------------------------------------------------------
@@ -54,6 +56,18 @@ const TZ = 'America/Bogota';
 
 function hasIdentifier(row: MemberRow): boolean {
   return !!(row.name || row.email || row.phone || row.external_id);
+}
+
+function getDateFormat(
+  field: string,
+  rows: MemberRow[],
+  overrides: Record<string, SlashFormat> | undefined
+): SlashFormat {
+  if (overrides?.[field]) return overrides[field];
+  const values = rows.map((r) => (r as Record<string, string | undefined>)[field] ?? '');
+  const detected = detectDateFormat(values, TZ);
+  if (detected.error) return 'dm';
+  return detected.format;
 }
 
 // ---------------------------------------------------------------------------
@@ -84,7 +98,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ success: false, error: msg }, { status: 400 });
     }
 
-    const { rows, source, file_name, tags: batchTags } = parsed.data;
+    const { rows, source, file_name, tags: batchTags, date_formats } = parsed.data;
+
+    // Detect date format per column across all rows
+    const joinedFormat = getDateFormat('joined_on', rows, date_formats);
+    const planEndsFormat = getDateFormat('plan_ends_on', rows, date_formats);
 
     // --- Process rows ------------------------------------------------------
     const errorRows: ErrorRow[] = [];
@@ -106,7 +124,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       let planEndsDate: string | null = null;
 
       if (row.joined_on) {
-        const result = parseImportDate(row.joined_on, TZ);
+        const result = parseImportDate(row.joined_on, TZ, joinedFormat);
         if (result.error) {
           errorRows.push({ index: i, reason: `joined_on_${result.error}`, row });
           continue;
@@ -115,7 +133,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       }
 
       if (row.plan_ends_on) {
-        const result = parseImportDate(row.plan_ends_on, TZ);
+        const result = parseImportDate(row.plan_ends_on, TZ, planEndsFormat);
         if (result.error) {
           errorRows.push({ index: i, reason: `plan_ends_on_${result.error}`, row });
           continue;
@@ -125,39 +143,49 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
       // --- Upsert logic ----------------------------------------------------
       let existingId: string | null = null;
+      let existingTags: string[] = [];
 
       // 1) Match by external_id
       if (!existingId && row.external_id) {
         const { data } = await supabase
           .from('clients')
-          .select('id')
+          .select('id, tags')
           .eq('gym_id', gymId)
           .eq('external_source', 'csv')
           .eq('external_id', row.external_id)
           .maybeSingle();
-        if (data) existingId = data.id;
+        if (data) {
+          existingId = data.id;
+          existingTags = data.tags ?? [];
+        }
       }
 
       // 2) Match by email
       if (!existingId && row.email) {
         const { data } = await supabase
           .from('clients')
-          .select('id')
+          .select('id, tags')
           .eq('gym_id', gymId)
           .eq('email', row.email)
           .maybeSingle();
-        if (data) existingId = data.id;
+        if (data) {
+          existingId = data.id;
+          existingTags = data.tags ?? [];
+        }
       }
 
       // 3) Match by phone
       if (!existingId && row.phone) {
         const { data } = await supabase
           .from('clients')
-          .select('id')
+          .select('id, tags')
           .eq('gym_id', gymId)
           .eq('phone', row.phone)
           .maybeSingle();
-        if (data) existingId = data.id;
+        if (data) {
+          existingId = data.id;
+          existingTags = data.tags ?? [];
+        }
       }
 
       // Status mapping (Spanish → canonical)
@@ -166,13 +194,15 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         warnings.push({ index: i, warning: statusResult.warning });
       }
 
+      // Merge tags: existing + batch + status-derived, deduplicated
+      const mergedTags = [...new Set([...existingTags, ...(batchTags ?? []), ...statusResult.tags])];
+
       // Build the payload (only non-null fields, NEVER health_notes)
-      const rowTags = [...(batchTags ?? []), ...statusResult.tags];
       const payload: Record<string, unknown> = {
         external_source: source,
         status: statusResult.status,
+        tags: mergedTags,
       };
-      if (rowTags.length > 0) payload.tags = rowTags;
       if (row.name != null) payload.name = row.name;
       if (row.email != null) payload.email = row.email;
       if (row.phone != null) payload.phone = row.phone;

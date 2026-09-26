@@ -1,12 +1,14 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLanguage } from '@/lib/LanguageContext';
 import { useTribeOSPremiumGate } from '@/hooks/useTribeOSPremiumGate';
 import { trackEvent } from '@/lib/analytics';
 import { Button, Badge } from '@/components/tribe-os/ui';
 import { Upload, FileSpreadsheet, AlertTriangle, CheckCircle2, Download } from 'lucide-react';
 import Papa from 'papaparse';
+import { detectDateFormat } from '@/lib/tribe-os/import/parse';
+import type { SlashFormat } from '@/lib/tribe-os/import/parse';
 
 // ---------------------------------------------------------------------------
 // Copy
@@ -38,6 +40,10 @@ const copy = {
     downloadErrors: 'Download error rows',
     importAnother: 'Import another file',
     errorRow: 'Row error',
+    dateFormatDM: 'Day/Month',
+    dateFormatMD: 'Month/Day',
+    dateConflict:
+      'This column has conflicting date formats — some rows have day first, others month first. Fix the CSV.',
     memberFields: {
       name: 'Name',
       email: 'Email',
@@ -83,6 +89,9 @@ const copy = {
     downloadErrors: 'Descargar filas con error',
     importAnother: 'Importar otro archivo',
     errorRow: 'Error en fila',
+    dateFormatDM: 'Día/Mes',
+    dateFormatMD: 'Mes/Día',
+    dateConflict: 'Esta columna tiene formatos de fecha contradictorios. Corrige el CSV.',
     memberFields: {
       name: 'Nombre',
       email: 'Correo',
@@ -134,6 +143,8 @@ const MEMBER_FIELDS = [
 ];
 const VISIT_FIELDS = ['external_id', 'email', 'phone', 'visit_date', 'visit_time', 'class_name', 'coach_name'];
 
+const DATE_FIELDS = new Set(['joined_on', 'plan_ends_on', 'visit_date']);
+const GYM_TZ = 'America/Bogota';
 const BATCH_SIZE = 500;
 
 // ---------------------------------------------------------------------------
@@ -210,6 +221,32 @@ function downloadCsv(rows: Record<string, unknown>[], filename: string) {
   URL.revokeObjectURL(url);
 }
 
+interface DateFormatState {
+  detected: SlashFormat | null;
+  conflict: boolean;
+  override: SlashFormat | null;
+}
+
+function detectFormatsFromData(
+  rawRows: Record<string, string>[],
+  mapping: Record<string, string>,
+  fields: string[]
+): Record<string, DateFormatState> {
+  const result: Record<string, DateFormatState> = {};
+  for (const field of fields) {
+    if (!DATE_FIELDS.has(field) || !mapping[field]) continue;
+    const csvCol = mapping[field];
+    const values = rawRows.map((r) => r[csvCol] ?? '');
+    const detected = detectDateFormat(values, GYM_TZ);
+    if (detected.error) {
+      result[field] = { detected: null, conflict: true, override: null };
+    } else {
+      result[field] = { detected: detected.format, conflict: false, override: null };
+    }
+  }
+  return result;
+}
+
 // ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
@@ -227,10 +264,33 @@ export default function ImportPage() {
   const [mapping, setMapping] = useState<Record<string, string>>({});
   const [savedMappings, setSavedMappings] = useState<Record<string, Record<string, string>>>({});
   const [result, setResult] = useState<ImportResult | null>(null);
+  const [dateFormats, setDateFormats] = useState<Record<string, DateFormatState>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fields = tab === 'members' ? MEMBER_FIELDS : VISIT_FIELDS;
   const fieldLabels = tab === 'members' ? s.memberFields : s.visitFields;
+
+  // Recompute date formats when mapping or rawRows change
+  useEffect(() => {
+    if (rawRows.length === 0) return;
+    setDateFormats(detectFormatsFromData(rawRows, mapping, fields));
+  }, [rawRows, mapping, fields]);
+
+  // Check if any date column has an unresolved conflict
+  const hasDateConflict = useMemo(
+    () => Object.values(dateFormats).some((df) => df.conflict && !df.override),
+    [dateFormats]
+  );
+
+  // Build the date_formats object for the API
+  const apiDateFormats = useMemo(() => {
+    const result: Record<string, SlashFormat> = {};
+    for (const [field, df] of Object.entries(dateFormats)) {
+      const fmt = df.override ?? df.detected;
+      if (fmt) result[field] = fmt;
+    }
+    return result;
+  }, [dateFormats]);
 
   // Load saved mappings
   useEffect(() => {
@@ -310,6 +370,7 @@ export default function ImportPage() {
             rows: batch,
             source: 'csv',
             file_name: fileName,
+            date_formats: apiDateFormats,
             ...(isSeed ? { tags: ['seed'] } : {}),
           }),
         });
@@ -369,6 +430,7 @@ export default function ImportPage() {
     setCsvHeaders([]);
     setRawRows([]);
     setMapping({});
+    setDateFormats({});
     setResult(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
@@ -438,31 +500,66 @@ export default function ImportPage() {
               <Badge variant="info">{fileName}</Badge>
             </div>
             <div className="grid gap-3">
-              {fields.map((field) => (
-                <div key={field} className="flex items-center gap-3">
-                  <label className="text-sm font-medium text-tribe-dark w-40 shrink-0">
-                    {fieldLabels[field] ?? field}
-                  </label>
-                  <select
-                    value={mapping[field] ?? ''}
-                    onChange={(e) => setMapping((prev) => ({ ...prev, [field]: e.target.value }))}
-                    className="flex-1 text-sm border border-gray-300 rounded-tribe px-3 py-2 bg-white text-tribe-dark"
-                  >
-                    <option value="">{s.skip}</option>
-                    {csvHeaders.map((h) => (
-                      <option key={h} value={h}>
-                        {h}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              ))}
+              {fields.map((field) => {
+                const df = dateFormats[field];
+                const isDateField = DATE_FIELDS.has(field) && mapping[field];
+                return (
+                  <div key={field} className="space-y-1">
+                    <div className="flex items-center gap-3">
+                      <label className="text-sm font-medium text-tribe-dark w-40 shrink-0">
+                        {fieldLabels[field] ?? field}
+                      </label>
+                      <select
+                        value={mapping[field] ?? ''}
+                        onChange={(e) => setMapping((prev) => ({ ...prev, [field]: e.target.value }))}
+                        className="flex-1 text-sm border border-gray-300 rounded-tribe px-3 py-2 bg-white text-tribe-dark"
+                      >
+                        <option value="">{s.skip}</option>
+                        {csvHeaders.map((h) => (
+                          <option key={h} value={h}>
+                            {h}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    {isDateField && df && (
+                      <div className="ml-40 pl-3">
+                        {df.conflict && !df.override ? (
+                          <p className="text-xs text-red-600">{s.dateConflict}</p>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setDateFormats((prev) => ({
+                                  ...prev,
+                                  [field]: {
+                                    ...prev[field],
+                                    override: (df.override ?? df.detected) === 'dm' ? 'md' : 'dm',
+                                    conflict: false,
+                                  },
+                                }))
+                              }
+                              className="text-xs px-2 py-0.5 rounded border border-gray-300 text-tribe-dark hover:bg-gray-50 transition-colors"
+                            >
+                              {(df.override ?? df.detected) === 'dm' ? s.dateFormatDM : s.dateFormatMD}
+                            </button>
+                            <span className="text-xs text-tribe-dark-80">
+                              {(df.override ?? df.detected) === 'dm' ? '15/03 → Mar 15' : '03/15 → Mar 15'}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
             <div className="flex gap-2">
               <Button variant="secondary" size="sm" onClick={resetFlow}>
                 {s.back}
               </Button>
-              <Button size="sm" onClick={() => setStep('preview')}>
+              <Button size="sm" onClick={() => setStep('preview')} disabled={hasDateConflict}>
                 {s.preview}
               </Button>
             </div>

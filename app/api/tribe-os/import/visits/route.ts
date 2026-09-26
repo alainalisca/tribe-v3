@@ -10,7 +10,8 @@ import { z } from 'zod';
 import { logError } from '@/lib/logger';
 import { requireTribeOSPremium } from '@/lib/auth/premium';
 import { writeAuditEntry } from '@/lib/dal/auditLog';
-import { parseImportDateTime } from '@/lib/tribe-os/import/parse';
+import { parseImportDateTime, detectDateFormat } from '@/lib/tribe-os/import/parse';
+import type { SlashFormat } from '@/lib/tribe-os/import/parse';
 
 // ---------------------------------------------------------------------------
 // Validation
@@ -31,6 +32,7 @@ const ImportBody = z.object({
   source: z.enum(['mira_csv', 'csv']).default('csv'),
   file_name: z.string().max(200).optional(),
   tags: z.array(z.string().max(50)).max(10).optional(),
+  date_formats: z.record(z.string(), z.enum(['dm', 'md'])).optional(),
 });
 
 // ---------------------------------------------------------------------------
@@ -79,7 +81,17 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ success: false, error: msg }, { status: 400 });
     }
 
-    const { rows, source, file_name } = parsed.data;
+    const { rows, source, file_name, date_formats } = parsed.data;
+
+    // Detect date format for visit_date column across all rows
+    let visitDateFormat: SlashFormat = 'dm';
+    if (date_formats?.visit_date) {
+      visitDateFormat = date_formats.visit_date;
+    } else {
+      const values = rows.map((r) => r.visit_date);
+      const detected = detectDateFormat(values, TZ);
+      if (!detected.error) visitDateFormat = detected.format;
+    }
 
     // --- Create the import record first so we have an import_id ------------
     const { data: importRecord, error: importErr } = await supabase
@@ -156,7 +168,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       }
 
       // --- Parse visit datetime --------------------------------------------
-      const dtResult = parseImportDateTime(row.visit_date, row.visit_time, TZ);
+      const dtResult = parseImportDateTime(row.visit_date, row.visit_time, TZ, visitDateFormat);
       if (dtResult.error) {
         errorRows.push({ index: i, reason: `visit_date_${dtResult.error}`, row });
         continue;
