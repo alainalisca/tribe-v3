@@ -6,7 +6,7 @@ import { useTribeOSPremiumGate } from '@/hooks/useTribeOSPremiumGate';
 import { trackEvent } from '@/lib/analytics';
 import { buildWhatsAppUrl } from '@/lib/phone';
 import { StatCard, Badge, Button } from '@/components/tribe-os/ui';
-import { Users, Phone, RotateCcw, MessageCircle, RefreshCw, ChevronDown } from 'lucide-react';
+import { Users, Phone, RotateCcw, MessageCircle, RefreshCw, ChevronDown, Check } from 'lucide-react';
 
 const copy = {
   en: {
@@ -28,6 +28,11 @@ const copy = {
     joinedAgo: (d: number) => (d === 1 ? 'Joined 1 day ago' : `Joined ${d} days ago`),
     visitCount: (n: number) => (n === 1 ? '1 visit' : `${n} visits`),
     noScores: 'No retention scores yet. Press "Recalculate" to generate them.',
+    markContacted: 'Mark contacted',
+    contactedSection: 'Contacted this week',
+    contactedAgo: (d: number) =>
+      d === 0 ? 'Contacted today' : d === 1 ? 'Contacted 1 day ago' : `Contacted ${d} days ago`,
+    cameBack: 'Came back',
     waMessage: (name: string) => `Hola ${name}, ¡te extrañamos en el gym! ¿Cuándo vienes?`,
   },
   es: {
@@ -49,6 +54,11 @@ const copy = {
     joinedAgo: (d: number) => (d === 1 ? 'Se unió hace 1 día' : `Se unió hace ${d} días`),
     visitCount: (n: number) => (n === 1 ? '1 visita' : `${n} visitas`),
     noScores: 'No hay puntajes todavía. Presiona "Recalcular" para generarlos.',
+    markContacted: 'Marcar contactado',
+    contactedSection: 'Contactados esta semana',
+    contactedAgo: (d: number) =>
+      d === 0 ? 'Contactado hoy' : d === 1 ? 'Contactado hace 1 día' : `Contactado hace ${d} días`,
+    cameBack: 'Volvió',
     waMessage: (name: string) => `Hola ${name}, ¡te extrañamos en el gym! ¿Cuándo vienes?`,
   },
 } as const;
@@ -66,6 +76,7 @@ interface MemberRow {
   visits_last_14d: number;
   visits_last_28d: number;
   computed_at: string | null;
+  last_touch: { channel: string; created_at: string } | null;
 }
 
 interface RetentionData {
@@ -117,6 +128,7 @@ export default function RetentionPage() {
   const [showAllContact, setShowAllContact] = useState(false);
   const [winBackOpen, setWinBackOpen] = useState(false);
   const [wellOpen, setWellOpen] = useState(false);
+  const [contactedOpen, setContactedOpen] = useState(false);
 
   const fetchScores = useCallback(async () => {
     setLoading(true);
@@ -128,6 +140,24 @@ export default function RetentionPage() {
       setLoading(false);
     }
   }, []);
+
+  const recordTouch = useCallback(
+    async (clientId: string, channel: 'whatsapp' | 'call' | 'in_person' | 'other') => {
+      try {
+        const res = await fetch('/api/tribe-os/retention/touches', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ client_id: clientId, channel }),
+        });
+        const json = await res.json();
+        if (json.success) {
+          trackEvent(channel === 'whatsapp' ? 'tribe_os_retention_touch_whatsapp' : 'tribe_os_retention_touch_manual');
+          await fetchScores();
+        }
+      } catch {}
+    },
+    [fetchScores]
+  );
 
   useEffect(() => {
     if (gate.state === 'allowed') {
@@ -159,14 +189,20 @@ export default function RetentionPage() {
 
   const allMembers = data?.members ?? [];
 
-  const contactToday = allMembers
-    .filter(
-      (m) =>
-        (m.level === 'high' || m.level === 'medium') &&
-        m.days_since_last_activity !== null &&
-        m.days_since_last_activity >= 7 &&
-        m.days_since_last_activity <= 30
-    )
+  const contactCandidates = allMembers.filter(
+    (m) =>
+      (m.level === 'high' || m.level === 'medium') &&
+      m.days_since_last_activity !== null &&
+      m.days_since_last_activity >= 7 &&
+      m.days_since_last_activity <= 30
+  );
+
+  const contactedThisWeek = contactCandidates
+    .filter((m) => m.last_touch !== null)
+    .sort((a, b) => new Date(b.last_touch!.created_at).getTime() - new Date(a.last_touch!.created_at).getTime());
+
+  const contactToday = contactCandidates
+    .filter((m) => m.last_touch === null)
     .sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
 
   const winBack = allMembers
@@ -227,7 +263,7 @@ export default function RetentionPage() {
                 <h2 className="text-lg font-bold text-tribe-dark mb-3">{s.talkToday}</h2>
                 <div className="space-y-2">
                   {contactVisible.map((m) => (
-                    <MemberCard key={m.id} member={m} language={language} s={s} />
+                    <MemberCard key={m.id} member={m} language={language} s={s} onTouch={recordTouch} />
                   ))}
                 </div>
                 {contactToday.length > 10 && (
@@ -259,7 +295,31 @@ export default function RetentionPage() {
                 {winBackOpen && (
                   <div className="space-y-2 mt-3">
                     {winBack.map((m) => (
-                      <MemberCard key={m.id} member={m} language={language} s={s} />
+                      <MemberCard key={m.id} member={m} language={language} s={s} onTouch={recordTouch} />
+                    ))}
+                  </div>
+                )}
+              </section>
+            )}
+
+            {contactedThisWeek.length > 0 && (
+              <section>
+                <button
+                  type="button"
+                  onClick={() => setContactedOpen(!contactedOpen)}
+                  className="flex items-center gap-2 w-full text-left"
+                >
+                  <h2 className="text-lg font-bold text-tribe-dark">
+                    {s.contactedSection} ({contactedThisWeek.length})
+                  </h2>
+                  <ChevronDown
+                    className={`h-5 w-5 text-tribe-dark-80 transition-transform ${contactedOpen ? 'rotate-180' : ''}`}
+                  />
+                </button>
+                {contactedOpen && (
+                  <div className="space-y-2 mt-3">
+                    {contactedThisWeek.map((m) => (
+                      <ContactedCard key={m.id} member={m} language={language} s={s} />
                     ))}
                   </div>
                 )}
@@ -311,10 +371,12 @@ function MemberCard({
   member: m,
   language,
   s,
+  onTouch,
 }: {
   member: MemberRow;
   language: 'en' | 'es';
   s: (typeof copy)['en'] | (typeof copy)['es'];
+  onTouch: (clientId: string, channel: 'whatsapp' | 'call' | 'in_person' | 'other') => void;
 }) {
   const badge = levelBadge[m.level ?? 'insufficient_data'] ?? levelBadge.insufficient_data;
   const waUrl = buildWhatsAppUrl(m.phone, {
@@ -338,11 +400,20 @@ function MemberCard({
         </div>
         {reasonText && <p className="text-xs text-tribe-dark-80 mt-0.5 truncate">{reasonText}</p>}
       </div>
+      <button
+        type="button"
+        onClick={() => onTouch(m.id, 'in_person')}
+        className="shrink-0 text-xs text-tribe-dark-80 hover:text-tribe-dark transition-colors"
+        title={s.markContacted}
+      >
+        <Check className="h-4 w-4" />
+      </button>
       {waUrl && (
         <a
           href={waUrl}
           target="_blank"
           rel="noopener noreferrer"
+          onClick={() => onTouch(m.id, 'whatsapp')}
           className="shrink-0 p-2 rounded-tribe bg-tribe-green-50 hover:bg-tribe-green transition-colors"
           aria-label={`WhatsApp ${firstName(m.name)}`}
         >
@@ -353,7 +424,7 @@ function MemberCard({
   );
 }
 
-function NewMemberCard({
+function ContactedCard({
   member: m,
   language,
   s,
@@ -361,6 +432,51 @@ function NewMemberCard({
   member: MemberRow;
   language: 'en' | 'es';
   s: (typeof copy)['en'] | (typeof copy)['es'];
+}) {
+  const badge = levelBadge[m.level ?? 'insufficient_data'] ?? levelBadge.insufficient_data;
+
+  const touchDaysAgo = m.last_touch
+    ? Math.floor((Date.now() - new Date(m.last_touch.created_at).getTime()) / 86_400_000)
+    : 0;
+
+  const hasVisitAfterTouch =
+    m.last_touch && m.days_since_last_activity !== null && m.days_since_last_activity < touchDaysAgo;
+
+  const reasons = deduplicateReasons(m.reasons);
+  const reasonText = reasons
+    .map((r) => {
+      const parts = r.split(' / ');
+      return language === 'es' ? parts[0] : (parts[1] ?? parts[0]);
+    })
+    .join(' · ');
+
+  return (
+    <div className="bg-white rounded-tribe shadow-tribe px-4 py-3 flex items-center gap-3">
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="font-semibold text-tribe-dark truncate">{m.name ?? 'Sin nombre'}</span>
+          <Badge variant={badge.variant}>{language === 'es' ? badge.es : badge.en}</Badge>
+          {hasVisitAfterTouch && <Badge variant="success">{s.cameBack}</Badge>}
+        </div>
+        <p className="text-xs text-tribe-dark-80 mt-0.5 truncate">
+          {s.contactedAgo(touchDaysAgo)}
+          {reasonText ? ` · ${reasonText}` : ''}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function NewMemberCard({
+  member: m,
+  language,
+  s,
+  onTouch,
+}: {
+  member: MemberRow;
+  language: 'en' | 'es';
+  s: (typeof copy)['en'] | (typeof copy)['es'];
+  onTouch?: (clientId: string, channel: 'whatsapp' | 'call' | 'in_person' | 'other') => void;
 }) {
   const waUrl = buildWhatsAppUrl(m.phone, {
     message: s.waMessage(firstName(m.name)),
@@ -388,6 +504,7 @@ function NewMemberCard({
           href={waUrl}
           target="_blank"
           rel="noopener noreferrer"
+          onClick={() => onTouch?.(m.id, 'whatsapp')}
           className="shrink-0 p-2 rounded-tribe bg-tribe-green-50 hover:bg-tribe-green transition-colors"
           aria-label={`WhatsApp ${firstName(m.name)}`}
         >

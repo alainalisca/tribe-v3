@@ -233,6 +233,8 @@ type EventName =
   | 'tribe_os_portal_opened' // user clicked manage subscription -> Stripe portal
   | 'tribe_os_retention_viewed' // /os/retention page rendered
   | 'tribe_os_retention_recomputed' // recompute button clicked on /os/retention
+  | 'tribe_os_retention_touch_whatsapp'
+  | 'tribe_os_retention_touch_manual'
 
   // Demand signal for not-yet-built paid flows (honest "notify me")
   | 'tribe_plus_interest' // user tapped Tribe+ subscribe before billing is live

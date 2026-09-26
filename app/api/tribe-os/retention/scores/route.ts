@@ -32,9 +32,26 @@ export async function GET(): Promise<NextResponse> {
     const sevenDaysAgo = new Date(now);
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
+    const { data: touches, error: touchesErr } = await supabase
+      .from('client_touches')
+      .select('client_id, channel, created_at')
+      .eq('gym_id', gymId)
+      .gte('created_at', sevenDaysAgo.toISOString())
+      .order('created_at', { ascending: false });
+
+    if (touchesErr) throw touchesErr;
+
+    const touchMap = new Map<string, { channel: string; created_at: string }>();
+    for (const t of touches ?? []) {
+      if (!touchMap.has(t.client_id)) {
+        touchMap.set(t.client_id, { channel: t.channel, created_at: t.created_at });
+      }
+    }
+
     const rows = (members ?? []).map((m) => {
       const s = scoreMap.get(m.id);
       const lastActivity = s?.signals?.days_since_last_activity;
+      const touch = touchMap.get(m.id);
       return {
         id: m.id,
         name: m.name,
@@ -48,6 +65,7 @@ export async function GET(): Promise<NextResponse> {
         visits_last_14d: s?.signals?.visits_last_14d ?? 0,
         visits_last_28d: s?.signals?.visits_last_28d ?? 0,
         computed_at: s?.computed_at ?? null,
+        last_touch: touch ?? null,
       };
     });
 

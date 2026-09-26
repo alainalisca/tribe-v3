@@ -201,15 +201,16 @@ describe('retention scoring', () => {
     expect(result.reasons.some((r) => r.includes('No visits in 14d'))).toBe(false);
   });
 
-  it('plan expiry uses "hoy" for 0 days and "mañana" for 1 day', () => {
+  it('plan_ends_on equal to today in Bogotá produces "vence hoy"', () => {
     const activities = makeActivities({ startDaysAgo: 90, endDaysAgo: 1, perWeek: 3 });
     const todayResult = scoreRetention({
       client_id: 'c-today',
       gym_id: GYM,
       joined_on: '2026-04-01',
-      plan_ends_on: '2026-09-25',
+      plan_ends_on: '2026-09-24',
       activities,
       now: NOW,
+      timezone: 'America/Bogota',
     });
     expect(todayResult.reasons.some((r) => r.includes('vence hoy'))).toBe(true);
     expect(todayResult.reasons.some((r) => r.includes('expires today'))).toBe(true);
@@ -218,12 +219,28 @@ describe('retention scoring', () => {
       client_id: 'c-tomorrow',
       gym_id: GYM,
       joined_on: '2026-04-01',
-      plan_ends_on: '2026-09-26',
+      plan_ends_on: '2026-09-25',
       activities,
       now: NOW,
+      timezone: 'America/Bogota',
     });
     expect(tomorrowResult.reasons.some((r) => r.includes('vence mañana'))).toBe(true);
     expect(tomorrowResult.reasons.some((r) => r.includes('expires tomorrow'))).toBe(true);
+  });
+
+  it('plan_ends_on today at 23:30 Bogotá still produces "vence hoy"', () => {
+    const lateNight = new Date('2026-09-24T23:30:00-05:00');
+    const activities = makeActivities({ startDaysAgo: 90, endDaysAgo: 1, perWeek: 3 }, lateNight);
+    const result = scoreRetention({
+      client_id: 'c-late',
+      gym_id: GYM,
+      joined_on: '2026-04-01',
+      plan_ends_on: '2026-09-24',
+      activities,
+      now: lateNight,
+      timezone: 'America/Bogota',
+    });
+    expect(result.reasons.some((r) => r.includes('vence hoy'))).toBe(true);
   });
 
   it('score is between 0 and 1', () => {

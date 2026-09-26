@@ -11,10 +11,33 @@ interface MemberInput {
   plan_ends_on: string | null;
   activities: ActivityRow[];
   now?: Date;
+  timezone?: string;
 }
 
 function daysBetween(a: Date, b: Date): number {
   return Math.floor((a.getTime() - b.getTime()) / 86_400_000);
+}
+
+function calendarDate(d: Date, tz: string): { year: number; month: number; day: number } {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: tz,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(d);
+  return {
+    year: Number(parts.find((p) => p.type === 'year')!.value),
+    month: Number(parts.find((p) => p.type === 'month')!.value),
+    day: Number(parts.find((p) => p.type === 'day')!.value),
+  };
+}
+
+function calendarDaysDiff(dateStr: string, now: Date, tz: string): number {
+  const a = calendarDate(new Date(dateStr + 'T12:00:00'), tz);
+  const b = calendarDate(now, tz);
+  const aMs = Date.UTC(a.year, a.month - 1, a.day);
+  const bMs = Date.UTC(b.year, b.month - 1, b.day);
+  return Math.round((aMs - bMs) / 86_400_000);
 }
 
 function countInRange(dates: Date[], from: Date, to: Date): number {
@@ -23,6 +46,7 @@ function countInRange(dates: Date[], from: Date, to: Date): number {
 
 export function computeSignals(input: MemberInput): RetentionSignals {
   const now = input.now ?? new Date();
+  const tz = input.timezone ?? 'America/Bogota';
   const activities = input.activities.map((a) => new Date(a.activity_at)).sort((a, b) => b.getTime() - a.getTime());
 
   const days_since_last_activity = activities.length > 0 ? daysBetween(now, activities[0]) : null;
@@ -51,10 +75,10 @@ export function computeSignals(input: MemberInput): RetentionSignals {
 
   let plan_ends_in_days: number | null = null;
   if (input.plan_ends_on) {
-    plan_ends_in_days = daysBetween(new Date(input.plan_ends_on), now);
+    plan_ends_in_days = calendarDaysDiff(input.plan_ends_on, now, tz);
   }
 
-  const is_new = input.joined_on ? daysBetween(now, new Date(input.joined_on)) <= T.new_member_days : false;
+  const is_new = input.joined_on ? -calendarDaysDiff(input.joined_on, now, tz) <= T.new_member_days : false;
 
   return {
     days_since_last_activity,
