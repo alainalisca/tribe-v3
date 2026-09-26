@@ -79,6 +79,9 @@ refused by objects the catalog does not show.
 ## 4. Real devices, the flows from the program spec
 
 - [ ] iOS Safari, on a real iPhone, on the LOCAL stack over the LAN.
+      **`.env.av.local` must name the Mac's LAN address, not 127.0.0.1** —
+      from the phone, 127.0.0.1 is the phone. The CSP allowance covers
+      RFC-1918 addresses over http for exactly this reason.
 - [ ] Android Chrome, on a real phone, same.
 - [ ] Every acceptance criterion in the program spec exercised end to end, by
       hand, in both languages.
@@ -90,7 +93,7 @@ refused by objects the catalog does not show.
 
 - [ ] Renumbered out of the 8000 block into `main`'s sequence, reading
       `origin/main` AT THAT MOMENT (`git fetch origin && git ls-tree
-    --name-only origin/main supabase/migrations/ | tail -5`). A number is
+  --name-only origin/main supabase/migrations/ | tail -5`). A number is
       claimed by whoever merges first; this repo has three collisions on record
       and two of them merged.
 - [ ] Each renumbered file states in its header what it was numbered before and
@@ -135,6 +138,31 @@ refused by objects the catalog does not show.
 
 ---
 
+## Already measured, 2026-09-26 (evidence, not a tick)
+
+These were run during T-AV0 and are recorded so the gate starts from facts
+rather than from memory. **None of them ticks a box above** — every one of them
+expires, and the boxes are about the tree as it stands on merge day.
+
+- Local stack loaded from the production dump and verified object-by-object:
+  97 tables, 6 views, 98 functions, 189 indexes, 52 triggers, 263 policies,
+  313 constraints declared, **0 missing** (`npm run av:schema:verify`).
+- Seeded: 7 accounts, BullBox (Prueba) with `pass_active = true`, 18 sessions
+  (3 past), 24 confirmed joins — counted in the database, not taken from the
+  seed script's own report.
+- Parity with `main` at the merge-base `6ff6eeef`, flag off, signed in as a
+  seeded athlete: home, profile, session detail and nav **byte-identical**.
+  With the flag on for an allowlisted user, `/pase/` and only `/pase/` differs.
+  Re-runnable: `scripts/av-snapshot.mjs`.
+- Per-user gating confirmed in one server process: `ana@av.local` (allowlisted)
+  gets the catalog, `beto@av.local` gets the 404.
+- `tsc` clean, eslint within budget, `npm run test:complete` green.
+
+**What is NOT covered by any of that:** the local database is production's
+SHAPE, not its data, and `av:schema:verify` compares names, not definitions,
+policy predicates, function bodies or grants. The role-by-role probe in section
+2 is still the thing that has to be done by hand, against the real objects.
+
 ## Things T-AV0 changed in SHARED files, which this gate has to decide about
 
 These are not athlete-value features. They are branch scaffolding that will
@@ -154,12 +182,24 @@ decided deliberately rather than discovered afterwards.
       anywhere else. Nothing to undo, but `extensions.worktreeConfig` is now
       true on this clone's `.git/config` — a property of the clone, not of the
       branch.
+- [ ] **`middleware.ts`: `buildCsp()` appends the local Supabase origin.**
+      Fires only for an `http:` URL on a loopback or RFC-1918 address, so a
+      production URL — always https — adds nothing and the directive stays
+      byte-identical. Asserted directly in `lib/features/athleteValueCsp.test.ts`
+      and mutation-proven on four arms, including "protocol guard removed" and
+      "private range widened". **This one should STAY after the merge:** it is
+      what makes local and phone testing against the local stack possible at
+      all, and without it the parity snapshot in this gate cannot be re-run.
+      Read the https arm of that test before agreeing.
+- [ ] **`middleware.ts`: `/api/features` in `publicApiPaths`.** Needed because
+      "you are signed out, so no" is one of the flag's real answers. Goes when
+      the flag goes.
 - [ ] **`tsconfig.json`: `allowImportingTsExtensions: true`.** Needed because
       `supabase/avMigrationCheck.ts` is imported both by vitest and by node
       under `--experimental-strip-types`. Legal only with `noEmit`, which is
       set. Keep unless the migration check goes.
 - [ ] **`supabase/config.toml`** (new file) with `[db.migrations] enabled =
-    false`. It configures the LOCAL stack only and has no effect on
+  false`. It configures the LOCAL stack only and has no effect on
       production, but it will read as "this repo's migrations are disabled" to
       the next person. Keep the explanatory comment with it or drop the file.
 - [ ] **`lib/translationExtras.ts`**: four `av*` keys. Dead once the
