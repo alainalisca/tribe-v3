@@ -34,17 +34,17 @@ export async function GET(): Promise<NextResponse> {
 
     const { data: touches, error: touchesErr } = await supabase
       .from('client_touches')
-      .select('client_id, channel, created_at')
+      .select('id, client_id, channel, created_at')
       .eq('gym_id', gymId)
       .gte('created_at', sevenDaysAgo.toISOString())
       .order('created_at', { ascending: false });
 
     if (touchesErr) throw touchesErr;
 
-    const touchMap = new Map<string, { channel: string; created_at: string }>();
+    const touchMap = new Map<string, { id: string; channel: string; created_at: string }>();
     for (const t of touches ?? []) {
       if (!touchMap.has(t.client_id)) {
-        touchMap.set(t.client_id, { channel: t.channel, created_at: t.created_at });
+        touchMap.set(t.client_id, { id: t.id, channel: t.channel, created_at: t.created_at });
       }
     }
 

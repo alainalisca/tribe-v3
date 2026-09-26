@@ -28,11 +28,17 @@ const copy = {
     joinedAgo: (d: number) => (d === 1 ? 'Joined 1 day ago' : `Joined ${d} days ago`),
     visitCount: (n: number) => (n === 1 ? '1 visit' : `${n} visits`),
     noScores: 'No retention scores yet. Press "Recalculate" to generate them.',
-    markContacted: 'Mark contacted',
+    contacted: 'Contacted',
     contactedSection: 'Contacted this week',
     contactedAgo: (d: number) =>
       d === 0 ? 'Contacted today' : d === 1 ? 'Contacted 1 day ago' : `Contacted ${d} days ago`,
     cameBack: 'Came back',
+    undo: 'Undo',
+    channelWhatsapp: 'WhatsApp',
+    channelCall: 'Call',
+    channelInPerson: 'In person',
+    viaChannel: (ch: string) =>
+      ch === 'whatsapp' ? 'via WhatsApp' : ch === 'call' ? 'via call' : ch === 'in_person' ? 'in person' : '',
     waMessage: (name: string) => `Hola ${name}, ¡te extrañamos en el gym! ¿Cuándo vienes?`,
   },
   es: {
@@ -54,11 +60,17 @@ const copy = {
     joinedAgo: (d: number) => (d === 1 ? 'Se unió hace 1 día' : `Se unió hace ${d} días`),
     visitCount: (n: number) => (n === 1 ? '1 visita' : `${n} visitas`),
     noScores: 'No hay puntajes todavía. Presiona "Recalcular" para generarlos.',
-    markContacted: 'Marcar contactado',
+    contacted: 'Contactado',
     contactedSection: 'Contactados esta semana',
     contactedAgo: (d: number) =>
       d === 0 ? 'Contactado hoy' : d === 1 ? 'Contactado hace 1 día' : `Contactado hace ${d} días`,
     cameBack: 'Volvió',
+    undo: 'Deshacer',
+    channelWhatsapp: 'WhatsApp',
+    channelCall: 'Llamada',
+    channelInPerson: 'En persona',
+    viaChannel: (ch: string) =>
+      ch === 'whatsapp' ? 'por WhatsApp' : ch === 'call' ? 'por llamada' : ch === 'in_person' ? 'en persona' : '',
     waMessage: (name: string) => `Hola ${name}, ¡te extrañamos en el gym! ¿Cuándo vienes?`,
   },
 } as const;
@@ -76,7 +88,7 @@ interface MemberRow {
   visits_last_14d: number;
   visits_last_28d: number;
   computed_at: string | null;
-  last_touch: { channel: string; created_at: string } | null;
+  last_touch: { id: string; channel: string; created_at: string } | null;
 }
 
 interface RetentionData {
@@ -154,6 +166,21 @@ export default function RetentionPage() {
           trackEvent(channel === 'whatsapp' ? 'tribe_os_retention_touch_whatsapp' : 'tribe_os_retention_touch_manual');
           await fetchScores();
         }
+      } catch {}
+    },
+    [fetchScores]
+  );
+
+  const undoTouch = useCallback(
+    async (touchId: string) => {
+      try {
+        const res = await fetch('/api/tribe-os/retention/touches', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ touch_id: touchId }),
+        });
+        const json = await res.json();
+        if (json.success) await fetchScores();
       } catch {}
     },
     [fetchScores]
@@ -319,7 +346,7 @@ export default function RetentionPage() {
                 {contactedOpen && (
                   <div className="space-y-2 mt-3">
                     {contactedThisWeek.map((m) => (
-                      <ContactedCard key={m.id} member={m} language={language} s={s} />
+                      <ContactedCard key={m.id} member={m} language={language} s={s} onUndo={undoTouch} />
                     ))}
                   </div>
                 )}
@@ -367,6 +394,8 @@ export default function RetentionPage() {
   );
 }
 
+type Channel = 'whatsapp' | 'call' | 'in_person' | 'other';
+
 function MemberCard({
   member: m,
   language,
@@ -376,8 +405,9 @@ function MemberCard({
   member: MemberRow;
   language: 'en' | 'es';
   s: (typeof copy)['en'] | (typeof copy)['es'];
-  onTouch: (clientId: string, channel: 'whatsapp' | 'call' | 'in_person' | 'other') => void;
+  onTouch: (clientId: string, channel: Channel) => void;
 }) {
+  const [picking, setPicking] = useState(false);
   const badge = levelBadge[m.level ?? 'insufficient_data'] ?? levelBadge.insufficient_data;
   const waUrl = buildWhatsAppUrl(m.phone, {
     message: s.waMessage(firstName(m.name)),
@@ -391,8 +421,13 @@ function MemberCard({
     })
     .join(' · ');
 
+  const pickChannel = (ch: Channel) => {
+    setPicking(false);
+    onTouch(m.id, ch);
+  };
+
   return (
-    <div className="bg-white rounded-tribe shadow-tribe px-4 py-3 flex items-center gap-3">
+    <div className="bg-white rounded-tribe shadow-tribe px-4 py-3 flex items-center gap-2 sm:gap-3">
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="font-semibold text-tribe-dark truncate">{m.name ?? 'Sin nombre'}</span>
@@ -400,26 +435,54 @@ function MemberCard({
         </div>
         {reasonText && <p className="text-xs text-tribe-dark-80 mt-0.5 truncate">{reasonText}</p>}
       </div>
-      <button
-        type="button"
-        onClick={() => onTouch(m.id, 'in_person')}
-        className="shrink-0 text-xs text-tribe-dark-80 hover:text-tribe-dark transition-colors"
-        title={s.markContacted}
-      >
-        <Check className="h-4 w-4" />
-      </button>
-      {waUrl && (
-        <a
-          href={waUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={() => onTouch(m.id, 'whatsapp')}
-          className="shrink-0 p-2 rounded-tribe bg-tribe-green-50 hover:bg-tribe-green transition-colors"
-          aria-label={`WhatsApp ${firstName(m.name)}`}
-        >
-          <MessageCircle className="h-5 w-5 text-tribe-green-dark" />
-        </a>
-      )}
+      <div className="shrink-0 flex items-center gap-1.5">
+        {picking ? (
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => pickChannel('whatsapp')}
+              className="px-2 py-1 text-[11px] font-medium rounded-tribe bg-tribe-green-50 text-tribe-green-dark hover:bg-tribe-green transition-colors"
+            >
+              {s.channelWhatsapp}
+            </button>
+            <button
+              type="button"
+              onClick={() => pickChannel('call')}
+              className="px-2 py-1 text-[11px] font-medium rounded-tribe bg-gray-100 text-tribe-dark hover:bg-gray-200 transition-colors"
+            >
+              {s.channelCall}
+            </button>
+            <button
+              type="button"
+              onClick={() => pickChannel('in_person')}
+              className="px-2 py-1 text-[11px] font-medium rounded-tribe bg-gray-100 text-tribe-dark hover:bg-gray-200 transition-colors"
+            >
+              {s.channelInPerson}
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setPicking(true)}
+            className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-tribe bg-gray-100 text-tribe-dark hover:bg-gray-200 transition-colors"
+          >
+            <Check className="h-3.5 w-3.5" />
+            {s.contacted}
+          </button>
+        )}
+        {waUrl && (
+          <a
+            href={waUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => onTouch(m.id, 'whatsapp')}
+            className="shrink-0 p-2 rounded-tribe bg-tribe-green-50 hover:bg-tribe-green transition-colors"
+            aria-label={`WhatsApp ${firstName(m.name)}`}
+          >
+            <MessageCircle className="h-5 w-5 text-tribe-green-dark" />
+          </a>
+        )}
+      </div>
     </div>
   );
 }
@@ -428,10 +491,12 @@ function ContactedCard({
   member: m,
   language,
   s,
+  onUndo,
 }: {
   member: MemberRow;
   language: 'en' | 'es';
   s: (typeof copy)['en'] | (typeof copy)['es'];
+  onUndo: (touchId: string) => void;
 }) {
   const badge = levelBadge[m.level ?? 'insufficient_data'] ?? levelBadge.insufficient_data;
 
@@ -442,13 +507,7 @@ function ContactedCard({
   const hasVisitAfterTouch =
     m.last_touch && m.days_since_last_activity !== null && m.days_since_last_activity < touchDaysAgo;
 
-  const reasons = deduplicateReasons(m.reasons);
-  const reasonText = reasons
-    .map((r) => {
-      const parts = r.split(' / ');
-      return language === 'es' ? parts[0] : (parts[1] ?? parts[0]);
-    })
-    .join(' · ');
+  const channelLabel = m.last_touch ? s.viaChannel(m.last_touch.channel) : '';
 
   return (
     <div className="bg-white rounded-tribe shadow-tribe px-4 py-3 flex items-center gap-3">
@@ -460,9 +519,18 @@ function ContactedCard({
         </div>
         <p className="text-xs text-tribe-dark-80 mt-0.5 truncate">
           {s.contactedAgo(touchDaysAgo)}
-          {reasonText ? ` · ${reasonText}` : ''}
+          {channelLabel ? ` ${channelLabel}` : ''}
         </p>
       </div>
+      {m.last_touch && (
+        <button
+          type="button"
+          onClick={() => onUndo(m.last_touch!.id)}
+          className="shrink-0 text-xs text-tribe-dark-80 hover:text-red-600 transition-colors"
+        >
+          {s.undo}
+        </button>
+      )}
     </div>
   );
 }

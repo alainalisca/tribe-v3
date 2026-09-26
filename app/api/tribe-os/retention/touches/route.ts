@@ -9,6 +9,10 @@ const TouchBody = z.object({
   note: z.string().max(500).optional(),
 });
 
+const DeleteBody = z.object({
+  touch_id: z.string().uuid(),
+});
+
 export async function POST(req: NextRequest): Promise<NextResponse> {
   const gate = await requireTribeOSPremium();
   if (!gate.ok) return gate.response;
@@ -44,6 +48,33 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ success: true, data });
   } catch (error) {
     logError(error, { route: 'POST /api/tribe-os/retention/touches' });
+    return NextResponse.json({ success: false, error: 'internal_error' }, { status: 500 });
+  }
+}
+
+export async function DELETE(req: NextRequest): Promise<NextResponse> {
+  const gate = await requireTribeOSPremium();
+  if (!gate.ok) return gate.response;
+  const { supabase, gymId } = gate;
+
+  if (!gymId) {
+    return NextResponse.json({ success: false, error: 'gym_required' }, { status: 400 });
+  }
+
+  try {
+    const body = await req.json();
+    const parsed = DeleteBody.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ success: false, error: 'invalid_body' }, { status: 400 });
+    }
+
+    const { error } = await supabase.from('client_touches').delete().eq('id', parsed.data.touch_id).eq('gym_id', gymId);
+
+    if (error) throw error;
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    logError(error, { route: 'DELETE /api/tribe-os/retention/touches' });
     return NextResponse.json({ success: false, error: 'internal_error' }, { status: 500 });
   }
 }
