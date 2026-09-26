@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseImportDate, detectDateFormat, matchMemberOrder, normalizeStatus } from './parse';
+import { parseImportDate, detectDateFormat, matchMemberOrder, normalizeStatus, humanizeImportError } from './parse';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import Papa from 'papaparse';
@@ -145,6 +145,47 @@ describe('normalizeStatus', () => {
 
   it('defaults to active when undefined', () => {
     expect(normalizeStatus(undefined)).toEqual({ status: 'active', tags: [] });
+  });
+});
+
+describe('humanizeImportError', () => {
+  it('maps missing_identifier to Spanish', () => {
+    expect(humanizeImportError('missing_identifier', 'es')).toBe(
+      'Falta un identificador (nombre, correo, celular o ID)'
+    );
+  });
+
+  it('maps missing_name to English', () => {
+    expect(humanizeImportError('missing_name', 'en')).toBe('Name is required for new members');
+  });
+
+  it('maps unresolved_member to Spanish', () => {
+    expect(humanizeImportError('unresolved_member', 'es')).toBe('Miembro no encontrado');
+  });
+
+  it('maps db_error with not-null constraint to Spanish', () => {
+    expect(
+      humanizeImportError("db_error: null value in column 'instructor_user_id' violates not-null constraint", 'es')
+    ).toBe('Falta un dato obligatorio');
+  });
+
+  it('maps db_error with unique constraint to English', () => {
+    expect(humanizeImportError('db_error: duplicate key value violates unique constraint', 'en')).toBe(
+      'Duplicate entry'
+    );
+  });
+
+  it('maps unknown db_error to generic message', () => {
+    expect(humanizeImportError('db_error: something weird', 'es')).toBe('Error de base de datos');
+  });
+
+  it('maps unknown reason to generic message', () => {
+    expect(humanizeImportError('some_random_thing', 'en')).toBe('Unknown error');
+  });
+
+  it('maps date errors', () => {
+    expect(humanizeImportError('joined_on_invalid_format', 'es')).toBe('Fecha de inscripción inválida');
+    expect(humanizeImportError('visit_date_empty', 'en')).toBe('Visit date is empty');
   });
 });
 

@@ -7,7 +7,7 @@ import { trackEvent } from '@/lib/analytics';
 import { Button, Badge } from '@/components/tribe-os/ui';
 import { Upload, FileSpreadsheet, AlertTriangle, CheckCircle2, Download } from 'lucide-react';
 import Papa from 'papaparse';
-import { detectDateFormat } from '@/lib/tribe-os/import/parse';
+import { detectDateFormat, humanizeImportError } from '@/lib/tribe-os/import/parse';
 import type { SlashFormat } from '@/lib/tribe-os/import/parse';
 
 // ---------------------------------------------------------------------------
@@ -34,6 +34,8 @@ const copy = {
     importing: 'Importing…',
     back: 'Back',
     resultTitle: 'Import complete',
+    resultTitleFailed: 'Import failed',
+    resultTitlePartial: 'Partial import',
     inserted: 'Inserted',
     updated: 'Updated',
     skipped: 'Errors',
@@ -83,6 +85,8 @@ const copy = {
     importing: 'Importando…',
     back: 'Volver',
     resultTitle: 'Importación completa',
+    resultTitleFailed: 'La importación falló',
+    resultTitlePartial: 'Importación parcial',
     inserted: 'Insertados',
     updated: 'Actualizados',
     skipped: 'Errores',
@@ -628,65 +632,75 @@ export default function ImportPage() {
         )}
 
         {/* Step: Result */}
-        {step === 'result' && result && (
-          <section className="space-y-4">
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="h-6 w-6 text-green-600" />
-              <h2 className="text-lg font-bold text-tribe-dark">{s.resultTitle}</h2>
-            </div>
-            <div className="grid grid-cols-3 gap-4">
-              <div className="bg-green-50 rounded-tribe p-4 text-center">
-                <p className="text-2xl font-bold text-green-700">{result.inserted}</p>
-                <p className="text-xs text-green-600">{s.inserted}</p>
-              </div>
-              <div className="bg-blue-50 rounded-tribe p-4 text-center">
-                <p className="text-2xl font-bold text-blue-700">{result.updated}</p>
-                <p className="text-xs text-blue-600">{s.updated}</p>
-              </div>
-              <div className="bg-red-50 rounded-tribe p-4 text-center">
-                <p className="text-2xl font-bold text-red-700">{result.skipped}</p>
-                <p className="text-xs text-red-600">{s.skipped}</p>
-              </div>
-            </div>
-            {result.errors.length > 0 && (
-              <div className="space-y-2">
+        {step === 'result' &&
+          result &&
+          (() => {
+            const totalSuccess = result.inserted + result.updated;
+            const isFailed = totalSuccess === 0 && result.skipped > 0;
+            const isPartial = totalSuccess > 0 && result.skipped > 0;
+            const resultTitle = isFailed ? s.resultTitleFailed : isPartial ? s.resultTitlePartial : s.resultTitle;
+            const Icon = isFailed ? AlertTriangle : isPartial ? AlertTriangle : CheckCircle2;
+            const iconColor = isFailed ? 'text-red-600' : isPartial ? 'text-yellow-600' : 'text-green-600';
+            return (
+              <section className="space-y-4">
                 <div className="flex items-center gap-2">
-                  <AlertTriangle className="h-4 w-4 text-red-500" />
-                  <span className="text-sm font-medium text-tribe-dark">
-                    {result.errors.length} {s.errorRow}
-                    {result.errors.length > 1 ? 's' : ''}
-                  </span>
+                  <Icon className={`h-6 w-6 ${iconColor}`} />
+                  <h2 className="text-lg font-bold text-tribe-dark">{resultTitle}</h2>
                 </div>
-                <div className="max-h-40 overflow-y-auto text-xs bg-gray-50 rounded-tribe p-3 space-y-1">
-                  {result.errors.slice(0, 20).map((e, i) => (
-                    <p key={i} className="text-tribe-dark-80">
-                      {s.errorRow} {e.row}: {e.error}
-                    </p>
-                  ))}
-                  {result.errors.length > 20 && (
-                    <p className="text-tribe-dark-80">…+{result.errors.length - 20} more</p>
-                  )}
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="bg-green-50 rounded-tribe p-4 text-center">
+                    <p className="text-2xl font-bold text-green-700">{result.inserted}</p>
+                    <p className="text-xs text-green-600">{s.inserted}</p>
+                  </div>
+                  <div className="bg-blue-50 rounded-tribe p-4 text-center">
+                    <p className="text-2xl font-bold text-blue-700">{result.updated}</p>
+                    <p className="text-xs text-blue-600">{s.updated}</p>
+                  </div>
+                  <div className="bg-red-50 rounded-tribe p-4 text-center">
+                    <p className="text-2xl font-bold text-red-700">{result.skipped}</p>
+                    <p className="text-xs text-red-600">{s.skipped}</p>
+                  </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={() =>
-                    downloadCsv(
-                      result.errors.map((e) => ({ row: e.row, error: e.error, ...e.data })),
-                      `import-errors-${Date.now()}.csv`
-                    )
-                  }
-                  className="flex items-center gap-1 text-xs text-tribe-green-dark hover:underline"
-                >
-                  <Download className="h-3.5 w-3.5" />
-                  {s.downloadErrors}
-                </button>
-              </div>
-            )}
-            <Button size="sm" variant="secondary" onClick={resetFlow}>
-              {s.importAnother}
-            </Button>
-          </section>
-        )}
+                {result.errors.length > 0 && (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle className="h-4 w-4 text-red-500" />
+                      <span className="text-sm font-medium text-tribe-dark">
+                        {result.errors.length} {s.errorRow}
+                        {result.errors.length > 1 ? 's' : ''}
+                      </span>
+                    </div>
+                    <div className="max-h-40 overflow-y-auto text-xs bg-gray-50 rounded-tribe p-3 space-y-1">
+                      {result.errors.slice(0, 20).map((e, i) => (
+                        <p key={i} className="text-tribe-dark-80">
+                          {s.errorRow} {e.row}: {humanizeImportError(e.error, language)}
+                        </p>
+                      ))}
+                      {result.errors.length > 20 && (
+                        <p className="text-tribe-dark-80">…+{result.errors.length - 20} more</p>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        downloadCsv(
+                          result.errors.map((e) => ({ row: e.row, error: e.error, ...e.data })),
+                          `import-errors-${Date.now()}.csv`
+                        )
+                      }
+                      className="flex items-center gap-1 text-xs text-tribe-green-dark hover:underline"
+                    >
+                      <Download className="h-3.5 w-3.5" />
+                      {s.downloadErrors}
+                    </button>
+                  </div>
+                )}
+                <Button size="sm" variant="secondary" onClick={resetFlow}>
+                  {s.importAnother}
+                </Button>
+              </section>
+            );
+          })()}
       </div>
     </div>
   );

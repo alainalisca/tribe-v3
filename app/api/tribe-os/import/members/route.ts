@@ -83,6 +83,16 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ success: false, error: 'gym_required' }, { status: 400 });
   }
 
+  // Look up the gym owner — every imported client belongs to the gym owner
+  const { data: gym, error: gymErr } = await supabase.from('gyms').select('owner_user_id').eq('id', gymId).single();
+
+  if (gymErr || !gym?.owner_user_id) {
+    logError(gymErr ?? 'gym_owner_not_found', { route: '/api/tribe-os/import/members', gymId });
+    return NextResponse.json({ success: false, error: 'gym_not_found' }, { status: 400 });
+  }
+
+  const ownerUserId = gym.owner_user_id;
+
   try {
     // --- Parse body --------------------------------------------------------
     let body: unknown;
@@ -220,8 +230,14 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         }
         updated++;
       } else {
-        // INSERT
-        const { error } = await supabase.from('clients').insert({ gym_id: gymId, ...payload });
+        // INSERT — name and instructor_user_id are NOT NULL
+        if (!payload.name || !(payload.name as string).trim()) {
+          errorRows.push({ index: i, reason: 'missing_name', row });
+          continue;
+        }
+        const { error } = await supabase
+          .from('clients')
+          .insert({ gym_id: gymId, instructor_user_id: ownerUserId, ...payload });
         if (error) {
           errorRows.push({ index: i, reason: `db_error: ${error.message}`, row });
           continue;

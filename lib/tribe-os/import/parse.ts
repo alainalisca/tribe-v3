@@ -244,3 +244,50 @@ export function normalizeStatus(raw: string | undefined): {
   if (lower === 'congelado' || lower === 'frozen') return { status: 'inactive', tags: ['congelado'] };
   return { status: 'active', tags: [], warning: `unknown_status: ${raw}` };
 }
+
+// ---------------------------------------------------------------------------
+// humanizeImportError — map raw error reasons to user-friendly messages
+// ---------------------------------------------------------------------------
+
+const ERROR_MAP: Record<string, { en: string; es: string }> = {
+  missing_identifier: {
+    en: 'Missing identifier (name, email, phone, or ID)',
+    es: 'Falta un identificador (nombre, correo, celular o ID)',
+  },
+  missing_name: {
+    en: 'Name is required for new members',
+    es: 'El nombre es obligatorio para miembros nuevos',
+  },
+  unresolved_member: {
+    en: 'Member not found',
+    es: 'Miembro no encontrado',
+  },
+  joined_on_empty: { en: 'Joined date is empty', es: 'La fecha de inscripción está vacía' },
+  joined_on_invalid_format: { en: 'Invalid joined date', es: 'Fecha de inscripción inválida' },
+  plan_ends_on_empty: { en: 'Plan end date is empty', es: 'La fecha de vencimiento está vacía' },
+  plan_ends_on_invalid_format: { en: 'Invalid plan end date', es: 'Fecha de vencimiento inválida' },
+  visit_date_empty: { en: 'Visit date is empty', es: 'La fecha de visita está vacía' },
+  visit_date_invalid_format: { en: 'Invalid visit date', es: 'Fecha de visita inválida' },
+};
+
+const DB_ERROR_PATTERNS: Array<{ pattern: RegExp; en: string; es: string }> = [
+  { pattern: /not-null constraint/i, en: 'A required field is missing', es: 'Falta un dato obligatorio' },
+  { pattern: /check constraint/i, en: 'A value is out of range', es: 'Un valor está fuera de rango' },
+  { pattern: /unique constraint|duplicate key/i, en: 'Duplicate entry', es: 'Registro duplicado' },
+  { pattern: /foreign key/i, en: 'Referenced record not found', es: 'Registro referenciado no encontrado' },
+];
+
+export function humanizeImportError(reason: string, lang: 'en' | 'es'): string {
+  const exact = ERROR_MAP[reason];
+  if (exact) return exact[lang];
+
+  if (reason.startsWith('db_error: ')) {
+    const dbMsg = reason.slice('db_error: '.length);
+    for (const { pattern, en, es } of DB_ERROR_PATTERNS) {
+      if (pattern.test(dbMsg)) return lang === 'en' ? en : es;
+    }
+    return lang === 'en' ? 'Database error' : 'Error de base de datos';
+  }
+
+  return lang === 'en' ? 'Unknown error' : 'Error desconocido';
+}
