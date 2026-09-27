@@ -7,8 +7,8 @@ against production.
 npm run db:start          # supabase start, through av-guard
 npm run db:status         # ports and keys
 npm run av:schema:pull    # production -> supabase/av-local-schema.sql (needs credentials; see below)
-npm run db:reset          # drop, re-apply the dump
-npm run av:schema:verify  # did the dump actually land? db reset will not tell you
+npm run db:reset          # drop, re-apply the dump, then av-grant-sync (T-AV19)
+npm run av:schema:verify  # did the dump land, do grants match it, are outbound triggers off
 npm run av:seed           # fake athletes, instructors, BullBox (Prueba), sessions
 npm run dev:av            # next dev on :3001 with .env.av.local
 npm run db:stop
@@ -34,6 +34,43 @@ stack's mailbox catches everything, so confirmation links work. OAuth and
 native push are Step 7's post-merge dark phase, not this.
 
 ---
+
+## Grants and outbound triggers (T-AV19)
+
+**Before T-AV19 the local grants were not production's** (T-AV20 recon, F1).
+The local image's default privileges gave `anon` and `authenticated` ALL on
+every table the dump created, and the dump's GRANT lines only add, so
+production's narrower grants never landed. Measured on 2026-09-26 against the
+dump: 195 client privileges wider than production, 0 narrower, including
+`anon` reading `users.email` and `authenticated` executing `finalize_payment`.
+
+`npm run db:reset` now ends with `scripts/av-grant-sync.mjs`, which in one
+transaction:
+
+1. REVOKEs ALL from `anon, authenticated` on every public table, sequence and
+   function, then replays exactly the dump's GRANT lines for those two roles,
+   column-level ones included;
+2. disables every trigger whose function calls `net.http_post`,
+   `net.http_get`, `http(` or contains `https://`, found by capability, plus
+   the named legacy push-queue trigger. On 2026-09-26 that was
+   `chat_message_webhook` (posts to the hardcoded production URL
+   `https://tribe-v3.vercel.app/api/webhook/chat-message/`, so a local chat row
+   would have called production) and `chat_message_notification_trigger`.
+
+It refuses any connection that is not localhost, 127.0.0.1 or [::1]
+(`scripts/avLocalDb.mjs`). None of it is a migration; production keeps its
+grants and triggers exactly as they are.
+
+`npm run av:schema:verify` then runs `scripts/av-grant-parity.mjs`, which
+compares raw ACLs (`aclexplode`) to the dump per object, role and column, and
+fails naming each difference in either direction. It also fails if any
+outbound trigger is enabled.
+
+**What parity does not cover: policy predicates.** On 2026-09-26 the
+`notifications` INSERT policy here differed from the dump, because migration
+195 from an unmerged branch had been applied to this shared stack by another
+session. Both checks passed over it. If a probe result surprises you, compare
+`pg_policies` for that table against the dump before believing it.
 
 ## Current state: loaded and seeded
 

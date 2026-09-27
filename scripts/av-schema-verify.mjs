@@ -36,9 +36,16 @@
  * not actionable and "3 missing: policy X on Y, ..." is.
  *
  * It is a completeness check over named objects. It does NOT verify column
- * types, policy predicates, function bodies or grants: an object present under
- * the right name with the wrong definition passes. Said out loud so nobody
- * reads a pass as "local matches production".
+ * types, policy predicates or function bodies: an object present under the
+ * right name with the wrong definition passes. Said out loud so nobody reads a
+ * pass as "local matches production".
+ *
+ * Grants and outbound triggers are checked by scripts/av-grant-parity.mjs,
+ * which `npm run av:schema:verify` runs next (T-AV19). Policy predicates are
+ * still NOT compared by anything: on 2026-09-26 the local notifications INSERT
+ * policy differed from the dump because an unmerged migration had been applied
+ * to this stack by another session, and this check and the parity check both
+ * passed over it.
  */
 import { spawnSync } from 'node:child_process';
 import { readFileSync, existsSync } from 'node:fs';
@@ -183,7 +190,8 @@ if (missingTotal > 0) {
 
 console.log(
   `\nav:schema:verify OK: every declared object is present.\n` +
-    `  NAMES ONLY. Column types, policy predicates, function bodies and grants\n` +
-    `  are not compared -- an object present under the right name with the wrong\n` +
-    `  definition passes this.\n`
+    `  NAMES ONLY. Column types, policy predicates and function bodies are not\n` +
+    `  compared -- an object present under the right name with the wrong\n` +
+    `  definition passes this. Grants and outbound triggers are checked next,\n` +
+    `  by av-grant-parity.\n`
 );

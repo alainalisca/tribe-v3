@@ -14,7 +14,7 @@
  * for the canonical text.
  */
 
-import { Resend } from 'resend';
+import { getResendClient } from '@/lib/email/resendClient';
 
 const ADMIN_EMAIL = 'tribe@aplusfitnessllc.com';
 const FROM = 'Tribe <tribe@aplusfitnessllc.com>';
@@ -37,12 +37,6 @@ interface ConfirmationParams {
 interface AdminNotificationParams extends ConfirmationParams {
   comments: string | null;
   createdAt: string;
-}
-
-function getResendClient(): Resend {
-  const key = process.env.RESEND_API_KEY;
-  if (!key) throw new Error('RESEND_API_KEY is not configured');
-  return new Resend(key);
 }
 
 function pricingLabel(pref: PricingPreference, language: 'en' | 'es'): string {
@@ -151,7 +145,7 @@ function renderConfirmationText(params: ConfirmationParams): string {
 
 /** Send the user-facing confirmation email. Throws on Resend error. */
 export async function sendTribeOsWaitlistConfirmation(params: ConfirmationParams): Promise<void> {
-  const resend = getResendClient();
+  const resend = getResendClient('tribeOsWaitlist');
   const subject = confirmationCopy[params.language].subject;
   await resend.emails.send({
     from: FROM,
@@ -164,7 +158,7 @@ export async function sendTribeOsWaitlistConfirmation(params: ConfirmationParams
 
 /** Send the admin notification to tribe@aplusfitnessllc.com. Throws on Resend error. */
 export async function sendTribeOsWaitlistAdminNotification(params: AdminNotificationParams): Promise<void> {
-  const resend = getResendClient();
+  const resend = getResendClient('tribeOsWaitlist');
   const sessions = params.sessionsPerWeek === null ? '(not specified)' : String(params.sessionsPerWeek);
   const pricingText = pricingLabel(params.pricingPreference, 'en');
   const comments = params.comments && params.comments.trim().length > 0 ? params.comments : '(none)';

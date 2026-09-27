@@ -46,7 +46,21 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { readEnvFile } from './envFile.mjs';
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const SELF = fileURLToPath(import.meta.url);
+const ROOT = path.resolve(path.dirname(SELF), '..');
+
+// T-AV19: rule 4 asks lib/notify/sendMode.ts, the module the app itself asks,
+// rather than re-implementing "is this log mode" in a script. It is a .ts
+// file, so re-exec once with type stripping, the same as av-migration-check.
+if (!process.features.typescript) {
+  const r = spawnSync(
+    process.execPath,
+    ['--experimental-strip-types', '--no-warnings', SELF, ...process.argv.slice(2)],
+    { stdio: 'inherit' }
+  );
+  process.exit(r.status ?? 1);
+}
+const { resolveSendMode } = await import(path.join(ROOT, 'lib', 'notify', 'sendMode.ts'));
 
 /** Branches this program is allowed to run on. `main` is never one of them. */
 const ALLOWED = [/^athlete\//, /^feat\/t-av/i, /^fix\/t-av/i];
@@ -151,6 +165,15 @@ if (DB_CONTEXT && db !== 'local') {
 }
 
 // ── 4. send modes ──────────────────────────────────────────────────────────
+// Two checks, and they answer different questions.
+//
+// 4a, the TEXT: the variable must literally be `log`. Unset fails here even
+//     though sendMode would call it log on a localhost URL, because absent is
+//     not log (see the header) and the env file is where the branch says so.
+// 4b, the RESOLVED MODE: the value the app will actually act on, computed by
+//     lib/notify/sendMode.ts from the same env the running command reads. If
+//     the module and this script ever disagree about what "log" means, 4b is
+//     the one that matches runtime, so it is the one that must not say live.
 const modes = {};
 for (const key of ['PUSH_MODE', 'EMAIL_MODE']) {
   const r = resolve(key);
@@ -163,10 +186,29 @@ for (const key of ['PUSH_MODE', 'EMAIL_MODE']) {
   }
 }
 
+const runtimeEnv = {
+  NEXT_PUBLIC_SUPABASE_URL: url.value,
+  EMAIL_MODE: modes.EMAIL_MODE.value,
+  PUSH_MODE: modes.PUSH_MODE.value,
+};
+const resolved = {
+  email: resolveSendMode('email', runtimeEnv),
+  push: resolveSendMode('push', runtimeEnv),
+};
+for (const channel of ['email', 'push']) {
+  if (resolved[channel].mode !== 'log') {
+    problems.push(
+      `${channel} resolves to "${resolved[channel].mode}" (${resolved[channel].reason}) through ` +
+        `lib/notify/sendMode.ts. Nothing on this branch may send for real.`
+    );
+  }
+}
+
 if (problems.length > 0) fail(problems);
 
 console.log(
-  `av-guard OK: branch=${branch} migrations=${migCount} db=${db} push=log email=log` +
+  `av-guard OK: branch=${branch} migrations=${migCount} db=${db} ` +
+    `push=${resolved.push.mode}(${resolved.push.reason}) email=${resolved.email.mode}(${resolved.email.reason})` +
     `  [url:${url.source} push:${modes.PUSH_MODE.source} email:${modes.EMAIL_MODE.source}` +
     `${DB_CONTEXT ? ' context:db' : ''}]`
 );

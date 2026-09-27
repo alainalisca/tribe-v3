@@ -1,14 +1,8 @@
-import { Resend } from 'resend';
+import { getResendClient } from '@/lib/email/resendClient';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { logError } from '@/lib/logger';
 import { checkRateLimit } from '@/lib/rate-limit';
-
-function getResendClient() {
-  const key = process.env.RESEND_API_KEY;
-  if (!key) throw new Error('RESEND_API_KEY is not configured');
-  return new Resend(key);
-}
 
 const ADMIN_EMAIL = 'tribe@aplusfitnessllc.com';
 
@@ -66,7 +60,7 @@ export async function POST(request: NextRequest) {
     const safeEmail = escapeHtml(String(userEmail));
     const safeMethod = escapeHtml(String(signupMethod));
 
-    const resend = getResendClient();
+    const resend = getResendClient('adminSignup');
     const timestamp = new Date().toLocaleString('en-US', {
       timeZone: 'America/Bogota',
       dateStyle: 'medium',

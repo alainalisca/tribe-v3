@@ -1,5 +1,21 @@
 import webpush from 'web-push';
 import { log, logError } from '@/lib/logger';
+import { pushMode } from '@/lib/notify/sendMode';
+
+/**
+ * T-AV19 Part B. Log mode for push: one structured line, the success shape the
+ * caller expects, and nothing leaves the process. Checked BEFORE any network
+ * call, including the FCM OAuth token exchange, which is itself outbound.
+ * Never logs the device token or the subscription endpoint, only their kind.
+ */
+function logModePush(channel: 'fcm' | 'webpush', title: string): { success: true } {
+  log('info', `[push:log] channel=${channel} title=${title}`, {
+    route: '/api/notifications/send',
+    action: 'push_log_mode',
+    channel,
+  });
+  return { success: true };
+}
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const jwt = require('jsonwebtoken');
@@ -59,6 +75,8 @@ export async function sendFcmNotification(
   body: string,
   data?: Record<string, string>
 ): Promise<{ success: boolean; error?: string }> {
+  if (pushMode() === 'log') return logModePush('fcm', title);
+
   const accessToken = await getFcmAccessToken();
   if (!accessToken) {
     return { success: false, error: 'Failed to obtain FCM access token' };
@@ -132,6 +150,8 @@ export async function sendWebPushNotification(
   body: string,
   url?: string
 ): Promise<{ success: boolean; error?: string }> {
+  if (pushMode() === 'log') return logModePush('webpush', title);
+
   try {
     ensureVapidInitialized();
     const payload = JSON.stringify({

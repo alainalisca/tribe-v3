@@ -18,10 +18,22 @@
  * `ATHLETE_VALUE_ENABLED=all npm run dev:av` works for a flag experiment
  * without editing anything.
  */
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
+
+// T-AV19: the send-mode check below asks lib/notify/sendMode.ts, the module
+// the server asks. It is .ts, so re-exec once with type stripping. The flag
+// applies to this launcher only; the `next dev` child is spawned as before.
+if (!process.features.typescript) {
+  const r = spawnSync(
+    process.execPath,
+    ['--experimental-strip-types', '--no-warnings', fileURLToPath(import.meta.url), ...process.argv.slice(2)],
+    { stdio: 'inherit' }
+  );
+  process.exit(r.status ?? 1);
+}
 import { readEnvFile } from './envFile.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -38,6 +50,21 @@ if (!existsSync(ENV_FILE)) {
 
 const fromFile = readEnvFile(ENV_FILE);
 const env = { ...fromFile, ...process.env };
+
+// T-AV19 Part B.3: refuse to start a server that would send for real. Checked
+// against `env`, the exact object handed to `next dev`, so a live value
+// exported in the shell (which wins over the file) is caught here too.
+const { resolveSendMode } = await import(path.join(ROOT, 'lib', 'notify', 'sendMode.ts'));
+for (const channel of ['email', 'push']) {
+  const r = resolveSendMode(channel, env);
+  if (r.mode !== 'log') {
+    console.error(
+      `dev:av FAILED: ${channel} resolves to "${r.mode}" (${r.reason}) for the server this would start.\n` +
+        `  Set EMAIL_MODE=log and PUSH_MODE=log in .env.av.local, and unset any live value in the shell.\n`
+    );
+    process.exit(1);
+  }
+}
 
 const port = process.env.PORT ?? '3001';
 console.log(

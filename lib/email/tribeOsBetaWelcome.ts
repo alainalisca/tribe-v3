@@ -14,7 +14,7 @@
  * Claude pre-vacation; replace and remove the marker on her return.
  */
 
-import { Resend } from 'resend';
+import { getResendClient } from '@/lib/email/resendClient';
 import { APP_STORE_URL, GOOGLE_PLAY_URL, INSTAGRAM_HANDLE } from './tribeOsWaitlist';
 
 const FROM = 'Tribe <tribe@aplusfitnessllc.com>';
@@ -32,12 +32,6 @@ interface BetaWelcomeParams {
    * rather than the individual instructor.
    */
   gymName?: string;
-}
-
-function getResendClient(): Resend {
-  const key = process.env.RESEND_API_KEY;
-  if (!key) throw new Error('RESEND_API_KEY is not configured');
-  return new Resend(key);
 }
 
 function escapeHtml(value: string): string {
@@ -237,7 +231,7 @@ function renderBetaWelcomeText(params: BetaWelcomeParams, siteUrl: string): stri
  * https://tribe-v3.vercel.app or the custom domain when it lands).
  */
 export async function sendTribeOsBetaWelcome(params: BetaWelcomeParams, siteUrl: string): Promise<void> {
-  const resend = getResendClient();
+  const resend = getResendClient('tribeOsBetaWelcome');
   await resend.emails.send({
     from: FROM,
     to: params.email,

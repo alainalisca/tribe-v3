@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { Resend } from 'resend';
 import { getServiceRoleClient } from '@/lib/supabase/admin';
+import { getResendClientOrNull } from '@/lib/email/resendClient';
 import { isValidCronAuth } from '@/lib/auth/cron';
 import { logError, log } from '@/lib/logger';
 import { shouldSendNotification } from '@/lib/dal/notificationPreferences';
@@ -333,14 +333,14 @@ async function runEmail(
     return 'failed';
   }
   const unsubUrl = unsub.data;
-  const key = process.env.RESEND_API_KEY;
-  if (!key) {
+  const resend = getResendClientOrNull('sportsNudge');
+  if (!resend) {
     await recordOneOffOutcome(supabase, campaign, person.id, 'email', 'failed', 'RESEND_API_KEY not configured');
     return 'failed';
   }
 
   try {
-    const { error } = await new Resend(key).emails.send({
+    const { error } = await resend.emails.send({
       from: FROM,
       to: person.email,
       subject: copy.emailSubject,

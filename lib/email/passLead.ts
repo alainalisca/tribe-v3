@@ -1,4 +1,4 @@
-import { Resend } from 'resend';
+import { getResendClient } from '@/lib/email/resendClient';
 import { waMeDigits } from '@/lib/pase/phone';
 
 /**
@@ -12,12 +12,6 @@ import { waMeDigits } from '@/lib/pase/phone';
 
 const FROM = 'Tribe <tribe@aplusfitnessllc.com>';
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://tribe-v3.vercel.app';
-
-function getResendClient(): Resend {
-  const key = process.env.RESEND_API_KEY;
-  if (!key) throw new Error('RESEND_API_KEY is not configured');
-  return new Resend(key);
-}
 
 function escapeHtml(value: string): string {
   return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -63,7 +57,7 @@ export function partnerSubject(name: string, choice1: string | null, choice2: st
  * Tribe inbox nobody is watching.
  */
 export async function sendPartnerLeadNotification(params: PartnerLeadEmailParams): Promise<void> {
-  const resend = getResendClient();
+  const resend = getResendClient('passLead');
   const wa = waMeDigits(params.whatsapp);
   const interes = [params.choice1, params.choice2].filter(Boolean).join(' · ') || 'sin especificar';
   const llego = [params.src, params.code].filter(Boolean).join(' · ') || 'sin datos de origen';
@@ -117,7 +111,7 @@ export interface LeadPassEmailParams {
 
 /** To the person: their code, where to use it, and what happens next. */
 export async function sendLeadPassEmail(params: LeadPassEmailParams): Promise<void> {
-  const resend = getResendClient();
+  const resend = getResendClient('passLead');
   const storefront = params.storefrontUrl ? `${SITE_URL}${params.storefrontUrl}` : null;
 
   const text = [
