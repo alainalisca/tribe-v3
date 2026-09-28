@@ -199,6 +199,191 @@ export function describeGrant(g: GrantEntry): string {
   return `${g.role} ${g.privilege} on ${g.kind} ${g.object}${g.column ? ` (column ${g.column})` : ''}`;
 }
 
+/**
+ * Production grant changes made AFTER supabase/av-local-schema.sql was pulled.
+ *
+ * The dump is a snapshot; production moves. When a change lands in production
+ * by hand and the dump has not been re-pulled, the local stack must follow
+ * production, not the snapshot, or every probe on that object answers for a
+ * database that no longer exists. Each entry is applied by the sync AFTER the
+ * dump's grants are replayed, and the parity check expects its result.
+ *
+ * NOT an edit to the dump. The dump stays byte-for-byte what `av:schema:pull`
+ * wrote, so it is still evidence of what production held on the day.
+ *
+ * Each entry names what it removes (and adds) from the dump's expected grants,
+ * the statements that make the local database match, its date and its source.
+ * staleOverrides() makes the parity check FAIL once a fresh dump already shows
+ * the change, so an entry cannot outlive the snapshot it corrects.
+ */
+/**
+ * A capability production is known to have after the change, checked with
+ * has_function_privilege. Needed because the ACL comparison above only sees
+ * EXPLICIT grants to anon and authenticated: a function with no REVOKE FROM
+ * PUBLIC is executable by anon through PUBLIC's default grant, which has no
+ * ACL row to compare. has_function_privilege answers the capability question,
+ * PUBLIC included (CLAUDE.md: prefer the capability question every time).
+ */
+export interface FunctionCapability {
+  /** regprocedure text, e.g. `public.admin_delete_user(uuid)` */
+  fn: string;
+  role: 'anon' | 'authenticated' | 'service_role';
+  canExecute: boolean;
+}
+
+export interface PostDumpChange {
+  id: string;
+  appliedToProductionOn: string;
+  source: string;
+  sql: string[];
+  removes: GrantEntry[];
+  adds: GrantEntry[];
+  /** What production verifiably allows after the change. Checked by the parity script. */
+  capabilities: FunctionCapability[];
+}
+
+/** One function's three verified capabilities, the shape Al measured in production. */
+function caps(fn: string, anon: boolean, authenticated: boolean, serviceRole: boolean): FunctionCapability[] {
+  return [
+    { fn, role: 'anon', canExecute: anon },
+    { fn, role: 'authenticated', canExecute: authenticated },
+    { fn, role: 'service_role', canExecute: serviceRole },
+  ];
+}
+
+const anonExecute = (object: string): GrantEntry => ({
+  kind: 'function',
+  object,
+  column: null,
+  role: 'anon',
+  privilege: 'EXECUTE',
+});
+
+/** The six functions migration 197 closed, as (identity signature, regprocedure, logged-in may run). */
+const MIGRATION_197_FUNCTIONS: ReadonlyArray<[string, string, boolean]> = [
+  [
+    'finalize_payment(p_gateway_payment_id text, p_expected_amount_cents bigint, p_gateway text, p_new_status text)',
+    'public.finalize_payment(text,bigint,text,text)',
+    false,
+  ],
+  ['set_session_partner(p_session_id uuid, p_partner_id uuid)', 'public.set_session_partner(uuid,uuid)', true],
+  ['review_venue_request(p_session_id uuid, p_decision text)', 'public.review_venue_request(uuid,text)', true],
+  [
+    'instructor_revenue_totals(p_user_id uuid, p_period_start_date date, p_period_end_date date, p_timezone text)',
+    'public.instructor_revenue_totals(uuid,date,date,text)',
+    true,
+  ],
+  [
+    'instructor_revenue_buckets(p_user_id uuid, p_period_start_date date, p_period_end_date date, p_group_by text, p_timezone text)',
+    'public.instructor_revenue_buckets(uuid,date,date,text,text)',
+    true,
+  ],
+  ['list_gym_coaches(p_gym_id uuid)', 'public.list_gym_coaches(uuid)', true],
+];
+
+export const POST_DUMP_PRODUCTION_CHANGES: readonly PostDumpChange[] = [
+  {
+    id: '196_admin_delete_user_revoke_anon',
+    appliedToProductionOn: '2026-09-27',
+    source:
+      'Hand-applied by Al in the production SQL editor as an emergency, verified there (anon_can_run=false, ' +
+      'logged_in_can_run=false, server_can_run=true). Recorded as migration 196 on fix/admin-delete-user-anon (a22791e1).',
+    sql: [
+      'revoke all on function public.admin_delete_user(uuid) from anon;',
+      'revoke all on function public.admin_delete_user(uuid) from public;',
+      'grant execute on function public.admin_delete_user(uuid) to service_role;',
+    ],
+    removes: [
+      {
+        kind: 'function',
+        object: 'admin_delete_user(p_target_user_id uuid)',
+        column: null,
+        role: 'anon',
+        privilege: 'EXECUTE',
+      },
+    ],
+    adds: [],
+    capabilities: caps('public.admin_delete_user(uuid)', false, false, true),
+  },
+  {
+    id: '197_revoke_anon_payment_venue_revenue_rpcs',
+    appliedToProductionOn: '2026-09-27',
+    source:
+      'Hand-applied by Al in the production SQL editor as a second emergency fix, verified there (anon_can_run=false ' +
+      'on all six; logged_in_can_run=false for finalize_payment, true for the other five; server_can_run=true on all ' +
+      'six). Recorded as migration 197 on fix/admin-delete-user-anon (fe57ad68).',
+    // The same loop as migration 197 section 1: every overload, by name.
+    sql: [
+      `DO $$
+DECLARE v_name text; v_fn regprocedure; v_seen int;
+BEGIN
+  FOREACH v_name IN ARRAY ARRAY['finalize_payment', 'set_session_partner', 'review_venue_request',
+                                'instructor_revenue_totals', 'instructor_revenue_buckets', 'list_gym_coaches']
+  LOOP
+    v_seen := 0;
+    FOR v_fn IN SELECT p.oid::regprocedure FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+                 WHERE n.nspname = 'public' AND p.proname = v_name
+    LOOP
+      v_seen := v_seen + 1;
+      EXECUTE format('REVOKE ALL ON FUNCTION %s FROM anon, public', v_fn);
+      EXECUTE format('GRANT EXECUTE ON FUNCTION %s TO service_role', v_fn);
+      IF v_name = 'finalize_payment' THEN
+        EXECUTE format('REVOKE ALL ON FUNCTION %s FROM authenticated', v_fn);
+      ELSE
+        EXECUTE format('GRANT EXECUTE ON FUNCTION %s TO authenticated', v_fn);
+      END IF;
+    END LOOP;
+    IF v_seen = 0 THEN RAISE EXCEPTION 'post-dump change 197: no function named public.%', v_name; END IF;
+  END LOOP;
+END $$;`,
+    ],
+    // The dump grants anon on all six. It already grants authenticated on the
+    // five and never did on finalize_payment, so nothing is added or removed
+    // for authenticated at the explicit-ACL level.
+    removes: MIGRATION_197_FUNCTIONS.map(([identity]) => anonExecute(identity)),
+    adds: [],
+    capabilities: MIGRATION_197_FUNCTIONS.flatMap(([, fn, loggedIn]) => caps(fn, false, loggedIn, true)),
+  },
+];
+
+/** SQL that returns one `fn<TAB>role<TAB>t|f` row per capability, for the parity check. */
+export function capabilityQuery(changes: readonly PostDumpChange[] = POST_DUMP_PRODUCTION_CHANGES): string {
+  const rows = changes.flatMap((c) => c.capabilities);
+  if (rows.length === 0) return 'select null where false;';
+  return rows
+    .map(
+      (c) =>
+        `select '${c.fn}', '${c.role}', has_function_privilege('${c.role}', '${c.fn}'::regprocedure, 'EXECUTE')::text`
+    )
+    .join('\nunion all\n')
+    .concat(';');
+}
+
+/** The dump's grants with every post-dump production change applied on top. */
+export function applyPostDumpChanges(
+  dumpEntries: GrantEntry[],
+  changes: readonly PostDumpChange[] = POST_DUMP_PRODUCTION_CHANGES
+): GrantEntry[] {
+  const removed = new Set(changes.flatMap((c) => c.removes.map(grantKey)));
+  const kept = dumpEntries.filter((g) => !removed.has(grantKey(g)));
+  return [...kept, ...changes.flatMap((c) => c.adds)];
+}
+
+/**
+ * Changes the dump already reflects: something it should remove is no longer
+ * in the dump, or something it should add already is. Non-empty means the
+ * dump was re-pulled after the change, and the entry should be deleted.
+ */
+export function staleOverrides(
+  dumpEntries: GrantEntry[],
+  changes: readonly PostDumpChange[] = POST_DUMP_PRODUCTION_CHANGES
+): string[] {
+  const have = new Set(dumpEntries.map(grantKey));
+  return changes
+    .filter((c) => c.removes.some((g) => !have.has(grantKey(g))) || c.adds.some((g) => have.has(grantKey(g))))
+    .map((c) => c.id);
+}
+
 /** A trigger whose function reaches outside the database. */
 export interface OutboundTrigger {
   schema: string;
@@ -246,7 +431,11 @@ export function parseOutboundRows(tsv: string): Array<OutboundTrigger & { enable
  * (PostgreSQL docs, REVOKE), so the three schema-wide REVOKEs clear everything
  * the replay then restores.
  */
-export function buildSyncSql(replay: string[], outbound: OutboundTrigger[]): string {
+export function buildSyncSql(
+  replay: string[],
+  outbound: OutboundTrigger[],
+  changes: readonly PostDumpChange[] = POST_DUMP_PRODUCTION_CHANGES
+): string {
   const q = (s: string) => `"${s.replace(/"/g, '""')}"`;
   return [
     'BEGIN;',
@@ -254,6 +443,8 @@ export function buildSyncSql(replay: string[], outbound: OutboundTrigger[]): str
     'REVOKE ALL ON ALL SEQUENCES IN SCHEMA public FROM anon, authenticated;',
     'REVOKE ALL ON ALL FUNCTIONS IN SCHEMA public FROM anon, authenticated;',
     ...replay,
+    // After the replay, so production's later state wins over the snapshot.
+    ...changes.flatMap((c) => [`-- post-dump production change: ${c.id} (${c.appliedToProductionOn})`, ...c.sql]),
     ...outbound.map((t) => `ALTER TABLE ${q(t.schema)}.${q(t.table)} DISABLE TRIGGER ${q(t.trigger)};`),
     'COMMIT;',
     '',

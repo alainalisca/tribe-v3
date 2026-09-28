@@ -43,6 +43,10 @@ const {
   diffGrants,
   describeGrant,
   parseOutboundRows,
+  applyPostDumpChanges,
+  staleOverrides,
+  capabilityQuery,
+  POST_DUMP_PRODUCTION_CHANGES,
   LOCAL_ACL_QUERY,
   OUTBOUND_QUERY,
   LEGACY_PUSH_QUEUE_TRIGGERS,
@@ -55,18 +59,55 @@ if (!existsSync(DUMP)) {
   process.exit(1);
 }
 
-const expected = parseDumpGrants(sqlWithoutComments(readFileSync(DUMP, 'utf8'))).entries;
+const dumpEntries = parseDumpGrants(sqlWithoutComments(readFileSync(DUMP, 'utf8'))).entries;
+// Production as it is NOW: the dump, plus changes made in production after it
+// was pulled (POST_DUMP_PRODUCTION_CHANGES in supabase/avGrantParity.ts).
+const expected = applyPostDumpChanges(dumpEntries);
 const actual = parseLocalAcl(runPsql(NAME, url, LOCAL_ACL_QUERY, { tuples: true }));
 
 const count = (list, kind) => list.filter((g) => g.kind === kind).length;
 console.log(`${NAME}  dump=${path.relative(ROOT, DUMP)}  db=${new URL(url).host}\n`);
 for (const kind of ['table', 'sequence', 'function']) {
   console.log(
-    `  ${kind.padEnd(9)} dump ${String(count(expected, kind)).padStart(5)}   local ${String(count(actual, kind)).padStart(5)}`
+    `  ${kind.padEnd(9)} expected ${String(count(expected, kind)).padStart(5)}   local ${String(count(actual, kind)).padStart(5)}`
   );
 }
+console.log(
+  `  post-dump production changes applied on top of the dump: ${POST_DUMP_PRODUCTION_CHANGES.length}` +
+    POST_DUMP_PRODUCTION_CHANGES.map((c) => `\n    ${c.id} (${c.appliedToProductionOn})`).join('')
+);
 
 const problems = [];
+
+// Capabilities production is VERIFIED to have after each post-dump change,
+// asked with has_function_privilege, which sees PUBLIC's default grant that the
+// ACL comparison above cannot (a function with no REVOKE FROM PUBLIC).
+const wanted = POST_DUMP_PRODUCTION_CHANGES.flatMap((c) => c.capabilities);
+const got = runPsql(NAME, url, capabilityQuery(), { tuples: true })
+  .split('\n')
+  .filter((l) => l.trim() !== '');
+console.log(`  capability checks from post-dump changes: ${got.length} of ${wanted.length} read`);
+if (got.length !== wanted.length) {
+  problems.push(`capability checks: read ${got.length} rows for ${wanted.length} checks; the query is wrong.`);
+}
+for (const line of got) {
+  const [fn, role, can] = line.split('\t');
+  const want = wanted.find((c) => c.fn === fn && c.role === role);
+  if (!want) {
+    problems.push(`capability check returned an unexpected row: ${line}`);
+  } else if ((can === 'true') !== want.canExecute) {
+    problems.push(
+      `${role} ${can === 'true' ? 'CAN' : 'CANNOT'} execute ${fn}; production ${want.canExecute ? 'can' : 'cannot'}.`
+    );
+  }
+}
+
+for (const id of staleOverrides(dumpEntries)) {
+  problems.push(
+    `post-dump change ${id} is already reflected in the dump. The dump was re-pulled after it; ` +
+      `delete the entry from POST_DUMP_PRODUCTION_CHANGES.`
+  );
+}
 
 if (expected.length === 0 || actual.length === 0) {
   problems.push(
@@ -121,5 +162,6 @@ if (problems.length > 0) {
 
 console.log(
   `\n${NAME} OK: every anon/authenticated privilege on public tables, columns, sequences and functions ` +
-    `matches the dump, and every outbound trigger is disabled locally.`
+    `matches production (the dump plus ${POST_DUMP_PRODUCTION_CHANGES.length} post-dump change(s)), ` +
+    `and every outbound trigger is disabled locally.`
 );

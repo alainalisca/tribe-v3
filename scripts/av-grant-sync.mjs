@@ -44,8 +44,14 @@ if (!process.features.typescript) {
 
 const { localDbUrlOrExit, runPsql } = await import(path.join(ROOT, 'scripts', 'avLocalDb.mjs'));
 const { sqlWithoutComments } = await import(path.join(ROOT, 'supabase', 'executableSql.ts'));
-const { parseDumpGrants, buildSyncSql, parseOutboundRows, OUTBOUND_QUERY, LEGACY_PUSH_QUEUE_TRIGGERS } =
-  await import(path.join(ROOT, 'supabase', 'avGrantParity.ts'));
+const {
+  parseDumpGrants,
+  buildSyncSql,
+  parseOutboundRows,
+  OUTBOUND_QUERY,
+  LEGACY_PUSH_QUEUE_TRIGGERS,
+  POST_DUMP_PRODUCTION_CHANGES,
+} = await import(path.join(ROOT, 'supabase', 'avGrantParity.ts'));
 
 // Refuse a non-local connection BEFORE reading anything else.
 const url = localDbUrlOrExit(NAME);
@@ -84,6 +90,9 @@ runPsql(NAME, url, buildSyncSql(replay, outbound));
 console.log(
   `${NAME} OK: revoked ALL from anon, authenticated on public tables, sequences, functions; ` +
     `replayed ${replay.length} GRANT line(s) (${entries.length} privilege entries) from the dump.\n` +
+    `  then applied ${POST_DUMP_PRODUCTION_CHANGES.length} production change(s) made after the dump was pulled:\n` +
+    POST_DUMP_PRODUCTION_CHANGES.map((c) => `    ${c.id} (${c.appliedToProductionOn})`).join('\n') +
+    `\n` +
     `  disabled ${outbound.length} trigger(s) locally:\n` +
     outbound.map((t) => `    ${t.schema}.${t.table}.${t.trigger}  (fn ${t.fn})`).join('\n') +
     `\n  Verify with \`npm run av:schema:verify\`.`

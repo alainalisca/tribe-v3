@@ -66,6 +66,29 @@ compares raw ACLs (`aclexplode`) to the dump per object, role and column, and
 fails naming each difference in either direction. It also fails if any
 outbound trigger is enabled.
 
+**When production changes after the dump was pulled.** The dump is a
+snapshot. A grant changed in production by hand is recorded in
+`POST_DUMP_PRODUCTION_CHANGES` in `supabase/avGrantParity.ts`, with its date,
+its source and its SQL. The sync applies it after replaying the dump and the
+parity check expects it, so the local stack follows production rather than
+the snapshot. The dump itself is never edited. Once a re-pulled dump already
+shows the change, parity fails until the entry is deleted, so the list cannot
+outlive the snapshot it corrects. Entries so far, both 2026-09-27: migration
+196 (`admin_delete_user` no longer executable by `anon`) and migration 197
+(`finalize_payment` server only; `set_session_partner`,
+`review_venue_request`, `instructor_revenue_totals`/`_buckets` and
+`list_gym_coaches` closed to `anon`, kept for signed-in users).
+
+Each entry also lists the capabilities production was verified to have
+afterwards, and parity checks them with `has_function_privilege`. That covers
+two things the ACL comparison cannot see: `service_role`, which it does not
+compare, and PUBLIC's default grant, which has no ACL row. Measured
+2026-09-27: the local image does NOT hold PUBLIC EXECUTE on functions whose
+dump has no `REVOKE ... FROM PUBLIC`, so locally PUBLIC is narrower than
+production. Today that hides nothing, because every such function also
+carries an explicit anon grant, but a probe that depends on PUBLIC will not
+reproduce here.
+
 **What parity does not cover: policy predicates.** On 2026-09-26 the
 `notifications` INSERT policy here differed from the dump, because migration
 195 from an unmerged branch had been applied to this shared stack by another

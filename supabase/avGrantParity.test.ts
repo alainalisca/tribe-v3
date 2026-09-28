@@ -13,7 +13,11 @@ import {
   buildSyncSql,
   normalizeFunctionSignature,
   parseOutboundRows,
+  applyPostDumpChanges,
+  staleOverrides,
+  capabilityQuery,
   LEGACY_PUSH_QUEUE_TRIGGERS,
+  POST_DUMP_PRODUCTION_CHANGES,
   type GrantEntry,
 } from './avGrantParity';
 import { sqlWithoutComments } from './executableSql';
@@ -139,6 +143,96 @@ describe('buildSyncSql', () => {
 
   it('disables each outbound trigger by quoted name', () => {
     expect(sql).toContain('ALTER TABLE "public"."chat_messages" DISABLE TRIGGER "chat_message_webhook";');
+  });
+});
+
+describe('post-dump production changes (the dump is a snapshot)', () => {
+  const ADMIN_DELETE_ANON: GrantEntry = {
+    kind: 'function',
+    object: 'admin_delete_user(p_target_user_id uuid)',
+    column: null,
+    role: 'anon',
+    privilege: 'EXECUTE',
+  };
+  const ONLY_196 = POST_DUMP_PRODUCTION_CHANGES.filter((c) => c.id.startsWith('196_'));
+  const SNAPSHOT: GrantEntry[] = [
+    ADMIN_DELETE_ANON,
+    { kind: 'table', object: 'pass_leads', column: null, role: 'anon', privilege: 'INSERT' },
+  ];
+
+  it('196 removes anon EXECUTE on admin_delete_user from what production is expected to hold', () => {
+    const now = keyed(applyPostDumpChanges(SNAPSHOT, ONLY_196));
+    expect(now).not.toContain('anon EXECUTE function:admin_delete_user(p_target_user_id uuid)');
+    expect(now).toContain('anon INSERT table:pass_leads');
+  });
+
+  it('the 196 entry matches the dump spelling of the grant it removes', () => {
+    // Parsed from the real dump line, so a typo in `removes` cannot silently remove nothing.
+    const line = 'GRANT ALL ON FUNCTION "public"."admin_delete_user"("p_target_user_id" "uuid") TO "anon";';
+    const parsed = parseDumpGrants(line).entries;
+    expect(staleOverrides(parsed, ONLY_196)).toEqual([]);
+    expect(applyPostDumpChanges(parsed, ONLY_196)).toEqual([]);
+  });
+
+  it('flags an entry as stale once a re-pulled dump no longer carries the grant', () => {
+    const repulled = SNAPSHOT.filter((g) => g !== ADMIN_DELETE_ANON);
+    expect(staleOverrides(repulled, ONLY_196)).toEqual(['196_admin_delete_user_revoke_anon']);
+  });
+
+  it('the sync applies the change AFTER replaying the dump, so production wins over the snapshot', () => {
+    const sql = buildSyncSql(
+      ['GRANT ALL ON FUNCTION "public"."admin_delete_user"("p_target_user_id" "uuid") TO "anon";'],
+      []
+    );
+    const replayAt = sql.indexOf('GRANT ALL ON FUNCTION');
+    const revokeAt = sql.indexOf('revoke all on function public.admin_delete_user(uuid) from anon;');
+    expect(replayAt).toBeGreaterThan(-1);
+    expect(revokeAt).toBeGreaterThan(replayAt);
+  });
+
+  it('every entry says when and where it came from, and what production verifiably allows', () => {
+    for (const c of POST_DUMP_PRODUCTION_CHANGES) {
+      expect(c.appliedToProductionOn).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      expect(c.source.length).toBeGreaterThan(40);
+      expect(c.sql.length).toBeGreaterThan(0);
+      expect(c.capabilities.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('the 197 entry removes exactly the six anon grants the dump has, spelled as the dump spells them', () => {
+    // Copied from supabase/av-local-schema.sql (production, 2026-09-26), lines 10301-10665.
+    const lines = [
+      'GRANT ALL ON FUNCTION "public"."finalize_payment"("p_gateway_payment_id" "text", "p_expected_amount_cents" bigint, "p_gateway" "text", "p_new_status" "text") TO "anon";',
+      'GRANT ALL ON FUNCTION "public"."instructor_revenue_buckets"("p_user_id" "uuid", "p_period_start_date" "date", "p_period_end_date" "date", "p_group_by" "text", "p_timezone" "text") TO "anon";',
+      'GRANT ALL ON FUNCTION "public"."instructor_revenue_totals"("p_user_id" "uuid", "p_period_start_date" "date", "p_period_end_date" "date", "p_timezone" "text") TO "anon";',
+      'GRANT ALL ON FUNCTION "public"."list_gym_coaches"("p_gym_id" "uuid") TO "anon";',
+      'GRANT ALL ON FUNCTION "public"."review_venue_request"("p_session_id" "uuid", "p_decision" "text") TO "anon";',
+      'GRANT ALL ON FUNCTION "public"."set_session_partner"("p_session_id" "uuid", "p_partner_id" "uuid") TO "anon";',
+    ];
+    const parsed = parseDumpGrants(lines.join('\n')).entries;
+    expect(parsed).toHaveLength(6);
+    const only197 = POST_DUMP_PRODUCTION_CHANGES.filter((c) => c.id.startsWith('197_'));
+    expect(staleOverrides(parsed, only197)).toEqual([]);
+    expect(applyPostDumpChanges(parsed, only197)).toEqual([]);
+  });
+
+  it('197 keeps finalize_payment server-only and the other five open to signed-in users', () => {
+    const c197 = POST_DUMP_PRODUCTION_CHANGES.find((c) => c.id.startsWith('197_'))!;
+    const can = (fn: string, role: string) => c197.capabilities.find((c) => c.fn === fn && c.role === role)?.canExecute;
+    expect(c197.capabilities).toHaveLength(18);
+    expect(can('public.finalize_payment(text,bigint,text,text)', 'authenticated')).toBe(false);
+    expect(can('public.list_gym_coaches(uuid)', 'authenticated')).toBe(true);
+    for (const c of c197.capabilities.filter((c) => c.role === 'anon')) expect(c.canExecute).toBe(false);
+    for (const c of c197.capabilities.filter((c) => c.role === 'service_role')) expect(c.canExecute).toBe(true);
+  });
+
+  it('the capability query asks one has_function_privilege per check', () => {
+    const sql = capabilityQuery();
+    const total = POST_DUMP_PRODUCTION_CHANGES.flatMap((c) => c.capabilities).length;
+    expect(sql.match(/has_function_privilege\(/g)).toHaveLength(total);
+    expect(sql).toContain(
+      "has_function_privilege('service_role', 'public.admin_delete_user(uuid)'::regprocedure, 'EXECUTE')"
+    );
   });
 });
 
