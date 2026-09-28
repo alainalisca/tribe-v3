@@ -2131,4 +2131,35 @@ select '197_revoke_anon_payment_venue_revenue_rpcs',
          else 'applied'
        end
 
+union all
+
+-- Five internal RPCs that only the server calls. Every overload is checked and
+-- each name must exist. has_function_privilege includes PUBLIC, which two of
+-- them held by default in production.
+select '198_service_role_only_internal_rpcs',
+       case
+         when (select count(distinct p.proname) from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+                where n.nspname = 'public'
+                  and p.proname in ('bump_longest_streak','recompute_all_total_sessions_hosted',
+                                    'recompute_user_total_sessions_hosted','cron_try_lock','cron_release_lock')) <> 5
+           then 'MISSING -- one of the five functions is gone; its cron or pipeline will fail'
+         when exists (select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+                       where n.nspname = 'public'
+                         and p.proname in ('bump_longest_streak','recompute_all_total_sessions_hosted',
+                                           'recompute_user_total_sessions_hosted','cron_try_lock','cron_release_lock')
+                         and (has_function_privilege('anon', p.oid, 'EXECUTE')
+                              or has_function_privilege('authenticated', p.oid, 'EXECUTE')))
+           then 'MISSING -- anon or authenticated can execute an internal RPC; cron locks, streaks or counters are writable by clients'
+         when exists (select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+                       where n.nspname = 'public'
+                         and p.proname in ('bump_longest_streak','recompute_all_total_sessions_hosted',
+                                           'recompute_user_total_sessions_hosted','cron_try_lock','cron_release_lock')
+                         and not has_function_privilege('service_role', p.oid, 'EXECUTE'))
+           then 'MISSING -- service_role cannot execute an internal RPC; a tribe-os cron or the intelligence pipeline will fail'
+         when not exists (select 1 from pg_proc
+                           where oid = to_regprocedure('public.trg_recompute_sessions_hosted()') and prosecdef)
+           then 'MISSING -- trg_recompute_sessions_hosted is not SECURITY DEFINER; session writes will fail'
+         else 'applied'
+       end
+
 order by migration;
