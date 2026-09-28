@@ -1725,7 +1725,10 @@ select 'GUARD_184_mirror_matches_applied_table',
     ('190_community_soft_delete'),
     ('191_close_open_community_comments_read'),
     ('192_community_banner_storage_scope'),
-    ('193_private_communities_visible_to_members')
+    ('193_private_communities_visible_to_members'),
+    ('196_admin_delete_user_revoke_anon'),
+    ('197_revoke_anon_payment_venue_revenue_rpcs'),
+    ('198_service_role_only_internal_rpcs')
     -- <<<END_MIRROR_LIST>>>
            ) as mirror(migration)
            where not exists (select 1 from public.migrations_applied a
@@ -1749,7 +1752,10 @@ select 'GUARD_184_mirror_matches_applied_table',
     ('190_community_soft_delete'),
     ('191_close_open_community_comments_read'),
     ('192_community_banner_storage_scope'),
-    ('193_private_communities_visible_to_members')
+    ('193_private_communities_visible_to_members'),
+    ('196_admin_delete_user_revoke_anon'),
+    ('197_revoke_anon_payment_venue_revenue_rpcs'),
+    ('198_service_role_only_internal_rpcs')
     -- <<<END_MIRROR_LIST>>>
            ))
            then 'MISSING -- this database has recorded a migration the JSON mirror omits; re-sync it'
