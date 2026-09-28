@@ -866,17 +866,36 @@ union all
 -- client by 066, 067, 113, 115 and 118. Anything NOT on it must be readable.
 -- Adding a column to public.users means either granting it or listing it here
 -- with the migration that restricts it -- never leaving it in neither.
+--
+-- ENUMERATE pg_attribute KEYED ON 'public.users'::regclass, AND CALL
+-- has_column_privilege WITH (oid, attnum), NOT (name, name). Fixed 2026-09-28.
+-- This guard first read information_schema.columns filtered by
+-- table_schema = 'public' AND table_name = 'users' and passed c.column_name to
+-- has_column_privilege('authenticated', 'public.users', c.column_name, ...).
+-- AND does not short-circuit: the planner may evaluate the privilege call
+-- before the schema filter, and auth.users is also named "users". Production's
+-- plan did, and the whole file died when it was run in production after #182:
+--   ERROR 42703: column "instance_id" of relation "users" does not exist
+-- (instance_id is an auth.users column). Local and CI never saw it: CI does not
+-- execute this file, and the local plan joins pg_namespace before scanning
+-- pg_attribute. Forcing a different local plan (enable_nestloop = off)
+-- reproduced the same 42703. CLAUDE.md records this exact shape from
+-- migration 168's rehearsal.
+-- Keyed on regclass, every row is a column of public.users by construction, and
+-- the (oid, attnum) form resolves no name, so no evaluation order can hand it a
+-- column that does not exist.
 -- ---------------------------------------------------------------------------
 select 'GUARD_users_columns_readable',
        coalesce(
          'MISSING -- not readable by authenticated: '
-           || string_agg(c.column_name, ', ' order by c.column_name),
+           || string_agg(a.attname::text, ', ' order by a.attname),
          'applied'
        )
-from information_schema.columns c
-where c.table_schema = 'public'
-  and c.table_name = 'users'
-  and c.column_name not in (
+from pg_attribute a
+where a.attrelid = 'public.users'::regclass
+  and a.attnum > 0
+  and not a.attisdropped
+  and a.attname not in (
     -- 066/067: Tribe.OS billing, push and device identity (service-role only)
     'tribe_os_stripe_customer_id', 'tribe_os_stripe_subscription_id',
     'tribe_os_granted_at', 'tribe_os_granted_by',
@@ -889,7 +908,7 @@ where c.table_schema = 'public'
     -- 118: email
     'email'
   )
-  and not has_column_privilege('authenticated', 'public.users', c.column_name, 'SELECT')
+  and not has_column_privilege('authenticated', a.attrelid, a.attnum, 'SELECT')
 union all
 
 -- The mirror of the guard above: a column the app believes is withheld must
@@ -965,6 +984,12 @@ union all
 -- partner_status and partner_reviewed_at are excluded on purpose: they are
 -- deliberately not writable, and GUARD_sessions_verdict_locked below asserts
 -- that they stay that way.
+--
+-- pg_attribute keyed on 'public.sessions'::regclass, (oid, attnum) privilege
+-- calls: the same fix, same date and same reason as GUARD_users_columns_readable
+-- above. auth.sessions exists too, and a forced local plan (enable_nestloop =
+-- off) made the name-based version of this guard fail with 42703 exactly as the
+-- users guard did in production.
 -- ---------------------------------------------------------------------------
 select 'GUARD_sessions_columns_writable',
        coalesce(
@@ -973,22 +998,24 @@ select 'GUARD_sessions_columns_writable',
          'applied'
        )
 from (
-  select column_name,
+  select a.attname::text as column_name,
          case
-           when not has_column_privilege('authenticated', 'public.sessions', column_name, 'UPDATE')
-            and not has_column_privilege('authenticated', 'public.sessions', column_name, 'INSERT')
+           when not has_column_privilege('authenticated', a.attrelid, a.attnum, 'UPDATE')
+            and not has_column_privilege('authenticated', a.attrelid, a.attnum, 'INSERT')
              then 'insert+update'
-           when not has_column_privilege('authenticated', 'public.sessions', column_name, 'UPDATE')
+           when not has_column_privilege('authenticated', a.attrelid, a.attnum, 'UPDATE')
              then 'update'
            else 'insert'
          end as missing
-  from information_schema.columns
-  where table_schema = 'public' and table_name = 'sessions'
+  from pg_attribute a
+  where a.attrelid = 'public.sessions'::regclass
+    and a.attnum > 0
+    and not a.attisdropped
     -- THREE, not two: partner_id is revoked by 162 because it is the only way
     -- the verdict gets computed. See GUARD_sessions_verdict_locked below.
-    and column_name not in ('partner_status', 'partner_reviewed_at', 'partner_id')
-    and (not has_column_privilege('authenticated', 'public.sessions', column_name, 'UPDATE')
-      or not has_column_privilege('authenticated', 'public.sessions', column_name, 'INSERT'))
+    and a.attname not in ('partner_status', 'partner_reviewed_at', 'partner_id')
+    and (not has_column_privilege('authenticated', a.attrelid, a.attnum, 'UPDATE')
+      or not has_column_privilege('authenticated', a.attrelid, a.attnum, 'INSERT'))
 ) c
 union all
 
