@@ -220,6 +220,57 @@ describe('upsertUserProfile', () => {
     expect(upsertPayload.avatar_url).toBe('https://google/picture.jpg');
   });
 
+  it('does NOT overwrite an existing edited display name on re-login', async () => {
+    // User edited their name in-app; a later Google login returns a different full_name.
+    mockMaybeSingle.mockResolvedValue({
+      data: { id: 'user-123', name: 'Edited Name', avatar_url: null, created_at: '2025-01-01' },
+      error: null,
+    });
+
+    const user = createMockUser({
+      created_at: new Date(Date.now() - 120_000).toISOString(),
+      user_metadata: { full_name: 'Google Name' },
+    });
+    await upsertUserProfile(user);
+
+    const upsertPayload = mockUpsert.mock.calls[0][0];
+    // name omitted (column untouched) or kept — never the provider value.
+    expect([undefined, 'Edited Name']).toContain(upsertPayload.name);
+    expect(upsertPayload.name).not.toBe('Google Name');
+  });
+
+  it('honors an explicit displayName even when a name already exists (Apple first sign-in)', async () => {
+    mockMaybeSingle.mockResolvedValue({
+      data: { id: 'user-123', name: 'Old Name', avatar_url: null, created_at: '2025-01-01' },
+      error: null,
+    });
+
+    const user = createMockUser({
+      created_at: new Date(Date.now() - 120_000).toISOString(),
+      user_metadata: {},
+    });
+    await upsertUserProfile(user, 'Real Apple Name');
+
+    const upsertPayload = mockUpsert.mock.calls[0][0];
+    expect(upsertPayload.name).toBe('Real Apple Name');
+  });
+
+  it('fills a blank existing name from the provider for an existing user', async () => {
+    mockMaybeSingle.mockResolvedValue({
+      data: { id: 'user-123', name: '   ', avatar_url: null, created_at: '2025-01-01' },
+      error: null,
+    });
+
+    const user = createMockUser({
+      created_at: new Date(Date.now() - 120_000).toISOString(),
+      user_metadata: { full_name: 'Test User' },
+    });
+    await upsertUserProfile(user);
+
+    const upsertPayload = mockUpsert.mock.calls[0][0];
+    expect(upsertPayload.name).toBe('Test User');
+  });
+
   it('handles upsert error gracefully', async () => {
     mockMaybeSingle.mockResolvedValue({ data: null, error: null });
     mockUpsert.mockResolvedValue({ error: { message: 'DB error' } });

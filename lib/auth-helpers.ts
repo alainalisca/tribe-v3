@@ -21,7 +21,7 @@ export async function upsertUserProfile(user: User, displayName?: string): Promi
   let isNewUser = false;
 
   try {
-    const profileResult = await fetchUserProfileMaybe(supabase, user.id, 'id, avatar_url, created_at');
+    const profileResult = await fetchUserProfileMaybe(supabase, user.id, 'id, name, avatar_url, created_at');
     const existingProfile = profileResult.success ? profileResult.data : null;
 
     // Upgraded at capture, so a new Google sign-up never stores the 96px
@@ -31,16 +31,26 @@ export async function upsertUserProfile(user: User, displayName?: string): Promi
       user.user_metadata?.avatar_url || user.user_metadata?.picture || null
     );
     const existingAvatar = existingProfile?.avatar_url || null;
-    const name =
+    const rawExistingName = existingProfile?.name;
+    const existingName = typeof rawExistingName === 'string' && rawExistingName.trim() ? rawExistingName.trim() : null;
+    const computedName =
       displayName || user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0] || 'User';
 
     // Build upsert payload — handle Apple's potential null email
     const upsertPayload: Record<string, string | null> = {
       id: user.id,
-      name,
     };
     if (user.email) {
       upsertPayload.email = user.email;
+    }
+
+    // Only set name for a new user, when the profile has no name yet, or when the
+    // provider explicitly supplies one (displayName is passed only on Apple's first
+    // sign-in). Never overwrite a name the user edited in their profile with the
+    // provider's value on a routine re-login. Omitting the column leaves it untouched
+    // on the upsert's UPDATE path, exactly like the avatar_url guard above.
+    if (displayName || !existingName) {
+      upsertPayload.name = computedName;
     }
 
     // Only set avatar_url when the user doesn't already have one. Never overwrite an
@@ -69,7 +79,7 @@ export async function upsertUserProfile(user: User, displayName?: string): Promi
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userName: name,
+          userName: computedName,
           userEmail: user.email || 'unknown',
           signupMethod,
         }),
