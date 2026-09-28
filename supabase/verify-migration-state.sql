@@ -2074,4 +2074,23 @@ select 'GUARD_193_private_communities_members_only',
          else 'applied'
        end
 
+union all
+
+-- admin_delete_user is SECURITY DEFINER with no caller check, so the grant IS
+-- the security control. has_function_privilege asks the capability (including
+-- via PUBLIC), not whether a GRANT row exists. Applied to production by hand
+-- 2026-09-27 before merge; see the migration header.
+select '196_admin_delete_user_revoke_anon',
+       case
+         when to_regprocedure('public.admin_delete_user(uuid)') is null
+           then 'MISSING -- admin_delete_user is gone; the admin delete route will fail'
+         when has_function_privilege('anon','public.admin_delete_user(uuid)','EXECUTE')
+           then 'MISSING -- anon can execute admin_delete_user; anyone with the anon key can delete any user'
+         when has_function_privilege('authenticated','public.admin_delete_user(uuid)','EXECUTE')
+           then 'MISSING -- authenticated can execute admin_delete_user; any signed-in user can delete any user'
+         when not has_function_privilege('service_role','public.admin_delete_user(uuid)','EXECUTE')
+           then 'MISSING -- service_role cannot execute admin_delete_user; the admin delete route will fail'
+         else 'applied'
+       end
+
 order by migration;
