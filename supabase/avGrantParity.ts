@@ -281,6 +281,15 @@ const MIGRATION_197_FUNCTIONS: ReadonlyArray<[string, string, boolean]> = [
   ['list_gym_coaches(p_gym_id uuid)', 'public.list_gym_coaches(uuid)', true],
 ];
 
+/** The five functions migration 198 made service_role only, as (identity signature, regprocedure). */
+const MIGRATION_198_FUNCTIONS: ReadonlyArray<[string, string]> = [
+  ['bump_longest_streak(p_client_id uuid, p_streak integer)', 'public.bump_longest_streak(uuid,integer)'],
+  ['recompute_all_total_sessions_hosted()', 'public.recompute_all_total_sessions_hosted()'],
+  ['recompute_user_total_sessions_hosted(p_user uuid)', 'public.recompute_user_total_sessions_hosted(uuid)'],
+  ['cron_try_lock(p_key text)', 'public.cron_try_lock(text)'],
+  ['cron_release_lock(p_key text)', 'public.cron_release_lock(text)'],
+];
+
 export const POST_DUMP_PRODUCTION_CHANGES: readonly PostDumpChange[] = [
   {
     id: '196_admin_delete_user_revoke_anon',
@@ -343,6 +352,40 @@ END $$;`,
     removes: MIGRATION_197_FUNCTIONS.map(([identity]) => anonExecute(identity)),
     adds: [],
     capabilities: MIGRATION_197_FUNCTIONS.flatMap(([, fn, loggedIn]) => caps(fn, false, loggedIn, true)),
+  },
+  {
+    id: '198_service_role_only_internal_rpcs',
+    appliedToProductionOn: '2026-09-28',
+    source:
+      'Normal process: merged to main in #181 (5ca3bad7), then pasted by Al; every verification column true, ' +
+      'including recorded_ok. Date is when Al reported the paste, not a timestamp read from production.',
+    // The same loop as migration 198 section 1: every overload, by name.
+    sql: [
+      `DO $$
+DECLARE v_name text; v_fn regprocedure; v_seen int;
+BEGIN
+  FOREACH v_name IN ARRAY ARRAY['bump_longest_streak', 'recompute_all_total_sessions_hosted',
+                                'recompute_user_total_sessions_hosted', 'cron_try_lock', 'cron_release_lock']
+  LOOP
+    v_seen := 0;
+    FOR v_fn IN SELECT p.oid::regprocedure FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+                 WHERE n.nspname = 'public' AND p.proname = v_name
+    LOOP
+      v_seen := v_seen + 1;
+      EXECUTE format('REVOKE ALL ON FUNCTION %s FROM anon, authenticated, public', v_fn);
+      EXECUTE format('GRANT EXECUTE ON FUNCTION %s TO service_role', v_fn);
+    END LOOP;
+    IF v_seen = 0 THEN RAISE EXCEPTION 'post-dump change 198: no function named public.%', v_name; END IF;
+  END LOOP;
+END $$;`,
+    ],
+    // The dump grants BOTH anon and authenticated explicitly on all five.
+    removes: MIGRATION_198_FUNCTIONS.flatMap(([identity]) => [
+      anonExecute(identity),
+      { ...anonExecute(identity), role: 'authenticated' as const },
+    ]),
+    adds: [],
+    capabilities: MIGRATION_198_FUNCTIONS.flatMap(([, fn]) => caps(fn, false, false, true)),
   },
 ];
 

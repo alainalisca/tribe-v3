@@ -216,6 +216,33 @@ describe('post-dump production changes (the dump is a snapshot)', () => {
     expect(applyPostDumpChanges(parsed, only197)).toEqual([]);
   });
 
+  it('the 198 entry removes exactly the ten anon and authenticated grants the dump has', () => {
+    // Copied verbatim from supabase/av-local-schema.sql (production, 2026-09-26).
+    const lines = [
+      'GRANT ALL ON FUNCTION "public"."bump_longest_streak"("p_client_id" "uuid", "p_streak" integer) TO "anon";',
+      'GRANT ALL ON FUNCTION "public"."bump_longest_streak"("p_client_id" "uuid", "p_streak" integer) TO "authenticated";',
+      'GRANT ALL ON FUNCTION "public"."cron_release_lock"("p_key" "text") TO "anon";',
+      'GRANT ALL ON FUNCTION "public"."cron_release_lock"("p_key" "text") TO "authenticated";',
+      'GRANT ALL ON FUNCTION "public"."cron_try_lock"("p_key" "text") TO "anon";',
+      'GRANT ALL ON FUNCTION "public"."cron_try_lock"("p_key" "text") TO "authenticated";',
+      'GRANT ALL ON FUNCTION "public"."recompute_all_total_sessions_hosted"() TO "anon";',
+      'GRANT ALL ON FUNCTION "public"."recompute_all_total_sessions_hosted"() TO "authenticated";',
+      'GRANT ALL ON FUNCTION "public"."recompute_user_total_sessions_hosted"("p_user" "uuid") TO "anon";',
+      'GRANT ALL ON FUNCTION "public"."recompute_user_total_sessions_hosted"("p_user" "uuid") TO "authenticated";',
+    ];
+    const parsed = parseDumpGrants(lines.join('\n')).entries;
+    expect(parsed).toHaveLength(10);
+    const only198 = POST_DUMP_PRODUCTION_CHANGES.filter((c) => c.id.startsWith('198_'));
+    expect(staleOverrides(parsed, only198)).toEqual([]);
+    expect(applyPostDumpChanges(parsed, only198)).toEqual([]);
+  });
+
+  it('198 leaves only service_role able to run its five functions', () => {
+    const c198 = POST_DUMP_PRODUCTION_CHANGES.find((c) => c.id.startsWith('198_'))!;
+    expect(c198.capabilities).toHaveLength(15);
+    for (const c of c198.capabilities) expect(c.canExecute).toBe(c.role === 'service_role');
+  });
+
   it('197 keeps finalize_payment server-only and the other five open to signed-in users', () => {
     const c197 = POST_DUMP_PRODUCTION_CHANGES.find((c) => c.id.startsWith('197_'))!;
     const can = (fn: string, role: string) => c197.capabilities.find((c) => c.fn === fn && c.role === role)?.canExecute;

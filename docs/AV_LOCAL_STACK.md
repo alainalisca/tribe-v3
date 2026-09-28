@@ -77,7 +77,10 @@ outlive the snapshot it corrects. Entries so far, both 2026-09-27: migration
 196 (`admin_delete_user` no longer executable by `anon`) and migration 197
 (`finalize_payment` server only; `set_session_partner`,
 `review_venue_request`, `instructor_revenue_totals`/`_buckets` and
-`list_gym_coaches` closed to `anon`, kept for signed-in users).
+`list_gym_coaches` closed to `anon`, kept for signed-in users), and, pasted
+after merge on 2026-09-28, migration 198 (`bump_longest_streak`, both
+`recompute_*_total_sessions_hosted` functions, `cron_try_lock` and
+`cron_release_lock` service role only).
 
 Each entry also lists the capabilities production was verified to have
 afterwards, and parity checks them with `has_function_privilege`. That covers
