@@ -768,11 +768,13 @@ union all
 select '142_flag_founder_test_accounts',
        -- Rewritten 2026-09-28 (T-DRIFT2). Was: "exactly 13 users flagged", which
        -- broke as soon as later accounts were flagged (production: 26). Strict on
-       -- what 142 did: all 13 accounts it names must still be flagged. Accounts
-       -- flagged later do not count against it. The ids are 142's own list.
+       -- what 142 did, with one decided exception: 12 of the 13 accounts 142
+       -- names must be flagged, and eaff348f-5df3-4df5-bd80-69ec233aad0e must NOT be.
+       -- eaff348f-5df3-4df5-bd80-69ec233aad0e: founder's real account, intentionally unflagged, decided 2026-09-28.
+       -- Accounts flagged later do not count against this. The 12 ids are 142's
+       -- own list minus that one.
        case when (select count(*) from public.users
-                   where id = any (array['eaff348f-5df3-4df5-bd80-69ec233aad0e',
-                   'd7cc0e7e-44db-4e57-80d3-a82f6e90bff4',
+                   where id = any (array['d7cc0e7e-44db-4e57-80d3-a82f6e90bff4',
                    'd92d4816-af5d-42ae-9d33-02f330e221bd',
                    '7ad0c072-6519-481d-ba8c-bab2526b3449',
                    '3af48aac-3f33-4055-ab6a-354791d5b1bb',
@@ -784,11 +786,10 @@ select '142_flag_founder_test_accounts',
                    'fd7dbf6a-6198-42fe-bb1c-347af3d111bd',
                    '8062bb54-d7bd-4946-bbe7-82b9330da69e',
                    '673834b4-d9be-4782-86c9-ff27376233a7']::uuid[])
-                     and is_test_account = true) = 13
-              then 'applied'
-            else 'MISSING -- ' ||
-                 (select count(*) from public.users where id = any (array['eaff348f-5df3-4df5-bd80-69ec233aad0e',
-                   'd7cc0e7e-44db-4e57-80d3-a82f6e90bff4',
+                     and is_test_account = true) <> 12
+              then 'MISSING -- ' ||
+                   (select count(*) from public.users
+                     where id = any (array['d7cc0e7e-44db-4e57-80d3-a82f6e90bff4',
                    'd92d4816-af5d-42ae-9d33-02f330e221bd',
                    '7ad0c072-6519-481d-ba8c-bab2526b3449',
                    '3af48aac-3f33-4055-ab6a-354791d5b1bb',
@@ -799,23 +800,14 @@ select '142_flag_founder_test_accounts',
                    'ddf4ea3c-3aab-411b-8960-9e57d9bcd526',
                    'fd7dbf6a-6198-42fe-bb1c-347af3d111bd',
                    '8062bb54-d7bd-4946-bbe7-82b9330da69e',
-                   '673834b4-d9be-4782-86c9-ff27376233a7']::uuid[]) and is_test_account = true)::text ||
-                 ' of the 13 accounts 142 flagged are still flagged (' ||
-                 (select count(*) from public.users where id = any (array['eaff348f-5df3-4df5-bd80-69ec233aad0e',
-                   'd7cc0e7e-44db-4e57-80d3-a82f6e90bff4',
-                   'd92d4816-af5d-42ae-9d33-02f330e221bd',
-                   '7ad0c072-6519-481d-ba8c-bab2526b3449',
-                   '3af48aac-3f33-4055-ab6a-354791d5b1bb',
-                   '00bbef64-123f-432f-bf13-0c7572137c9d',
-                   'd479736b-bfe1-4f92-9a0f-8d5871859400',
-                   'a59598c6-42a0-4b22-aa3d-e61ea778a841',
-                   'c5d7e023-bc9d-4c5d-904b-3f7844943672',
-                   'ddf4ea3c-3aab-411b-8960-9e57d9bcd526',
-                   'fd7dbf6a-6198-42fe-bb1c-347af3d111bd',
-                   '8062bb54-d7bd-4946-bbe7-82b9330da69e',
-                   '673834b4-d9be-4782-86c9-ff27376233a7']::uuid[]))::text ||
-                 ' of 13 still exist); see supabase/recon/142-unflagged-prod-readonly.sql'
-       end
+                   '673834b4-d9be-4782-86c9-ff27376233a7']::uuid[])
+                       and is_test_account = true)::text ||
+                   ' of the 12 test accounts 142 flagged are still flagged; all 12 must be'
+            when exists (select 1 from public.users
+                          where id = 'eaff348f-5df3-4df5-bd80-69ec233aad0e'::uuid
+                            and is_test_account = true)
+              then 'MISSING -- the founder''s real account eaff348f-5df3-4df5-bd80-69ec233aad0e is flagged as a test account; it must not be'
+            else 'applied' end
 union all
 select '143_d9_invite_expiry_session_anchored',
        -- Anchors invite expiry to the session: adds session_invite_expiry(uuid)
