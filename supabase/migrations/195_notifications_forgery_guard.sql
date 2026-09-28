@@ -145,4 +145,10 @@ CREATE POLICY "Authenticated users can create notifications"
 COMMENT ON POLICY "Authenticated users can create notifications" ON public.notifications IS
   'Migration 195 (recon finding S3). A signed-in caller may only write a bell they are the actor of, or an actor-less bell addressed to themselves; action_url must be a relative in-app path; type must be one a browser path actually sends. service_role bypasses RLS and is unaffected -- smart-match and admin/notify both set a third-party actor_id on purpose.';
 
+-- Record this migration as applied (house style since 184, as 196 to 198 do).
+-- Added 2026-09-28 before 195 was applied anywhere but the local stack.
+INSERT INTO public.migrations_applied (migration, note)
+VALUES ('195_notifications_forgery_guard', 'S3: notifications INSERT policy requires actor = caller (or self-addressed null actor), relative action_url, browser type allow-list')
+ON CONFLICT (migration) DO NOTHING;
+
 COMMIT;
