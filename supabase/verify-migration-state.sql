@@ -2093,4 +2093,42 @@ select '196_admin_delete_user_revoke_anon',
          else 'applied'
        end
 
+union all
+
+-- Six SECURITY DEFINER RPCs whose caller checks do nothing when auth.uid() is
+-- NULL, so the grant is the control. Every overload is checked, and each name
+-- must exist: a probe over an empty set would read 'applied' for nothing.
+-- Applied to production by hand 2026-09-27 before merge; see the migration.
+select '197_revoke_anon_payment_venue_revenue_rpcs',
+       case
+         when (select count(distinct p.proname) from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+                where n.nspname = 'public'
+                  and p.proname in ('finalize_payment','set_session_partner','review_venue_request',
+                                    'instructor_revenue_totals','instructor_revenue_buckets','list_gym_coaches')) <> 6
+           then 'MISSING -- one of the six functions is gone; its caller will fail'
+         when exists (select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+                       where n.nspname = 'public'
+                         and p.proname in ('finalize_payment','set_session_partner','review_venue_request',
+                                           'instructor_revenue_totals','instructor_revenue_buckets','list_gym_coaches')
+                         and has_function_privilege('anon', p.oid, 'EXECUTE'))
+           then 'MISSING -- anon can execute one of the six; payment approval, venue approval or revenue reads are open to anyone'
+         when exists (select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+                       where n.nspname = 'public' and p.proname = 'finalize_payment'
+                         and has_function_privilege('authenticated', p.oid, 'EXECUTE'))
+           then 'MISSING -- authenticated can execute finalize_payment; a signed-in user could approve their own payment'
+         when exists (select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+                       where n.nspname = 'public'
+                         and p.proname in ('set_session_partner','review_venue_request','instructor_revenue_totals',
+                                           'instructor_revenue_buckets','list_gym_coaches')
+                         and not has_function_privilege('authenticated', p.oid, 'EXECUTE'))
+           then 'MISSING -- authenticated lost EXECUTE on a venue, revenue or coach RPC; the signed-in screen will fail'
+         when exists (select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+                       where n.nspname = 'public'
+                         and p.proname in ('finalize_payment','set_session_partner','review_venue_request',
+                                           'instructor_revenue_totals','instructor_revenue_buckets','list_gym_coaches')
+                         and not has_function_privilege('service_role', p.oid, 'EXECUTE'))
+           then 'MISSING -- service_role cannot execute one of the six; the webhooks or server callers will fail'
+         else 'applied'
+       end
+
 order by migration;
