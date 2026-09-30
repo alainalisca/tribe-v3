@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import VoucherQr from './VoucherQr';
 
 /**
  * The pass form and, after a successful claim, the pass itself.
@@ -23,6 +24,8 @@ interface ClaimedPass {
   whatsappUrl: string | null;
   storefrontUrl: string | null;
   email: string;
+  /** T-AV23: present only when the athletes flag is on for this partner. */
+  qrSvg?: string;
 }
 
 type ErrorField = 'name' | 'whatsapp' | 'email' | 'consent';
@@ -237,12 +240,14 @@ export default function PaseForm({ slug, partnerName, options, consentText, cons
         pass_code: string;
         whatsapp_url: string | null;
         storefront_url: string | null;
+        qr_svg?: string;
       };
       const pass: ClaimedPass = {
         passCode: data.pass_code,
         whatsappUrl: data.whatsapp_url,
         storefrontUrl: data.storefront_url,
         email: email.trim(),
+        ...(data.qr_svg ? { qrSvg: data.qr_svg } : {}),
       };
       storePass(slug, pass);
       setClaimed(pass);
@@ -257,6 +262,7 @@ export default function PaseForm({ slug, partnerName, options, consentText, cons
     return (
       <section className="rounded-2xl bg-white p-6" aria-live="polite">
         <p className="text-sm font-medium text-stone-600">Tu pase</p>
+        {claimed.qrSvg ? <VoucherQr svg={claimed.qrSvg} /> : null}
         <p className="mt-1 text-4xl font-extrabold tracking-widest text-tribe-dark">{claimed.passCode}</p>
         <p className="mt-2 text-sm text-stone-600">Muéstralo en recepción o menciónalo por WhatsApp.</p>
 

@@ -12,6 +12,10 @@
  *  - Service-role client: partner_lead_routing is unreachable by anon (172) and
  *    pass_leads gives anon INSERT with no SELECT (173).
  *
+ * ATHLETE ATTRIBUTION (T-AV23): flag off changes nothing here, no query, no
+ * column, no response key (route.flagoff.test.ts). Flag on: see
+ * lib/pase/athleteAttribution.ts. The ledger, not this route, decides credit.
+ *
  * THE ROW IS THE PRODUCT. The insert happens first and the emails after, with
  * notified_at written only if the partner send resolved. A Resend outage must
  * never cost a lead.
@@ -24,7 +28,7 @@ import { getServiceRoleClient } from '@/lib/supabase/admin';
 import { fetchPassConfig, insertPassLead, markPassLeadNotified, type PassConfig } from '@/lib/dal/passLeads';
 import { normalizeWhatsApp, waMeDigits } from '@/lib/pase/phone';
 import { generatePassCode } from '@/lib/pase/passCode';
-import { consentTextFor } from '@/lib/pase/consent';
+import { resolveAthleteAttribution, consentForAttribution, renderVoucherQr } from '@/lib/pase/athleteAttribution';
 import { sendPartnerLeadNotification, sendLeadPassEmail } from '@/lib/email/passLead';
 
 const RATE_LIMIT_MAX = 5;
@@ -171,7 +175,15 @@ export async function POST(request: NextRequest) {
     const code = sanitizeTag(raw.code);
 
     const userAgent = (request.headers.get('user-agent') ?? '').slice(0, MAX_UA_LEN) || null;
-    const consentText = consentTextFor(config.partnerName);
+    const attribution = await resolveAthleteAttribution(admin, config.partnerId, src, code);
+    const { consentText, referredByAthleteId, overLimit } = consentForAttribution(config.partnerName, attribution);
+    if (overLimit) {
+      logError(new Error('attributed consent_text exceeds 500 characters; saved without attribution'), {
+        route: '/api/pase',
+        action: 'athlete_attribution',
+        slug: config.slug,
+      });
+    }
 
     // Retry on collision rather than checking first: a check-then-insert is a
     // race, and the unique index is the only authority on what is taken.
@@ -191,6 +203,7 @@ export async function POST(request: NextRequest) {
         pass_code: passCode,
         consent_text: consentText,
         user_agent: userAgent,
+        ...(referredByAthleteId ? { referred_by_athlete_id: referredByAthleteId } : {}),
       });
       if (result.ok) {
         inserted = { id: result.id, passCode: result.passCode };
@@ -261,8 +274,16 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // The voucher QR only when the predicate is true for this partner; with it
+    // off the body has exactly the three keys it always had.
+    const qrSvg = attribution.on ? await renderVoucherQr(new URL(request.url).origin, inserted.passCode) : null;
     return NextResponse.json(
-      { pass_code: inserted.passCode, whatsapp_url: whatsappUrl, storefront_url: storefrontUrl },
+      {
+        pass_code: inserted.passCode,
+        whatsapp_url: whatsappUrl,
+        storefront_url: storefrontUrl,
+        ...(qrSvg ? { qr_svg: qrSvg } : {}),
+      },
       { status: 200 }
     );
   } catch (error: unknown) {

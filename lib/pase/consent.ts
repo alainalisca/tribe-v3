@@ -30,3 +30,34 @@ export function consentTextFor(partnerName: string): string {
   if (!partnerName || partnerName === 'BullBox') return CONSENT_TEXT_V1;
   return CONSENT_TEXT_V1.replace('BullBox', partnerName);
 }
+
+/**
+ * T-AV23 (D12). The two lines a guest invited by a Tribe athlete also agrees
+ * to. Spanish only, because the pass page is Spanish only and the stored text
+ * is what the signer saw. First person, to match V1's voice, and "primer
+ * nombre" to match the approved EN ("Your first name and whether you attended
+ * will be shared with {firstName}, who invited you." / "{gym} and Tribe will
+ * record whether you attended your class."). Wording approved by Al,
+ * 2026-09-30. New constants, not edits, per the rule above.
+ */
+export const CONSENT_ATHLETE_ES = 'Mi primer nombre y si asistí se compartirán con {firstName}, quien me invitó.';
+export const CONSENT_ATTENDANCE_ES = '{gym} y Tribe registrarán si asistí a mi clase.';
+
+/** pass_leads_consent_text CHECK: 20 to 500 characters. */
+export const CONSENT_MAX_CHARS = 500;
+
+/**
+ * The sentence for an attributed lead: V1, then the athlete line, then the
+ * attendance line. Null when the result would not fit the 500-character
+ * CHECK (business_name has no length limit and appears twice): the caller
+ * then saves the lead WITHOUT attribution and with plain V1, because an
+ * insert refused by the CHECK would lose the lead.
+ */
+export function consentTextForAttributed(partnerName: string, firstName: string): string | null {
+  const text = [
+    consentTextFor(partnerName),
+    CONSENT_ATHLETE_ES.replace('{firstName}', firstName),
+    CONSENT_ATTENDANCE_ES.replace('{gym}', partnerName),
+  ].join(' ');
+  return text.length <= CONSENT_MAX_CHARS ? text : null;
+}
