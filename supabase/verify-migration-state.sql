@@ -2077,4 +2077,174 @@ select '8200_t_av21_pass_leads_showup',
          else 'applied'
        end
 
+union all
+
+-- T-AV22 (reserved block; renumbered at the merge gate). athlete_programs:
+-- RLS on, anon holds nothing, the bonus columns are not selectable by any
+-- client role, and is_active is guarded by the admin trigger.
+select '8201_t_av22_athlete_programs',
+       case
+         when to_regclass('public.athlete_programs') is null
+           then 'MISSING -- athlete_programs is absent'
+         when not (select relrowsecurity from pg_class where oid = to_regclass('public.athlete_programs'))
+           then 'MISSING -- RLS is off on athlete_programs'
+         when has_any_column_privilege('anon', 'public.athlete_programs', 'SELECT')
+           or has_any_column_privilege('anon', 'public.athlete_programs', 'INSERT')
+           or has_any_column_privilege('anon', 'public.athlete_programs', 'UPDATE')
+           then 'MISSING -- anon holds a privilege on athlete_programs'
+         when has_column_privilege('authenticated', 'public.athlete_programs', 'conversion_bonus_cop', 'SELECT')
+           or has_column_privilege('authenticated', 'public.athlete_programs', 'conversion_bonus_note_en', 'SELECT')
+           or has_column_privilege('authenticated', 'public.athlete_programs', 'conversion_bonus_note_es', 'SELECT')
+           then 'MISSING -- a coach can read the bonus straight from athlete_programs'
+         when not exists (select 1 from pg_trigger
+                           where tgrelid = to_regclass('public.athlete_programs')
+                             and tgname = 'athlete_programs_is_active_guard' and tgenabled <> 'D')
+           then 'MISSING -- is_active is no longer admin-only'
+         when to_regprocedure('public.av_my_partner_role(uuid)') is null
+           or has_function_privilege('anon', 'public.av_my_partner_role(uuid)', 'EXECUTE')
+           then 'MISSING -- av_my_partner_role is absent or anon can call it'
+         else 'applied'
+       end
+
+union all
+
+-- T-AV22. program_athletes: no client role writes it, and the contact columns
+-- are not selectable; athlete_programs has exactly two permissive SELECTs.
+select '8202_t_av22_program_athletes',
+       case
+         when to_regclass('public.program_athletes') is null
+           then 'MISSING -- program_athletes is absent'
+         when not (select relrowsecurity from pg_class where oid = to_regclass('public.program_athletes'))
+           then 'MISSING -- RLS is off on program_athletes'
+         when has_any_column_privilege('anon', 'public.program_athletes', 'SELECT')
+           or has_any_column_privilege('authenticated', 'public.program_athletes', 'INSERT')
+           or has_any_column_privilege('authenticated', 'public.program_athletes', 'UPDATE')
+           or has_table_privilege('authenticated', 'public.program_athletes', 'DELETE')
+           then 'MISSING -- a client role can read as anon or write program_athletes directly'
+         when has_column_privilege('authenticated', 'public.program_athletes', 'email_lower', 'SELECT')
+           or has_column_privilege('authenticated', 'public.program_athletes', 'whatsapp_e164', 'SELECT')
+           then 'MISSING -- an athlete contact column is selectable'
+         when (select count(*) from pg_policies
+                where schemaname = 'public' and tablename = 'athlete_programs'
+                  and cmd in ('SELECT', 'ALL') and permissive = 'PERMISSIVE') <> 2
+           then 'MISSING -- athlete_programs no longer has exactly two permissive SELECT policies'
+         else 'applied'
+       end
+
+union all
+
+-- T-AV22. The eight attribution and outcome columns exist and the claim
+-- policy refuses every one of them preset (F2), alongside T-AV21's three.
+select '8203_t_av22_pass_leads_attribution',
+       case
+         when (select count(*) from pg_attribute
+                where attrelid = 'public.pass_leads'::regclass and not attisdropped
+                  and attname in ('referred_by_athlete_id', 'outcome', 'outcome_at', 'outcome_marked_by',
+                                  'retained_at', 'bonus_eligible', 'bonus_settled_at', 'bonus_settled_by')) <> 8
+           then 'MISSING -- an attribution or outcome column is absent from pass_leads'
+         when exists (select 1 from unnest(array['attended_at', 'attended_marked_by', 'attended_method',
+                                                 'referred_by_athlete_id', 'outcome', 'outcome_at',
+                                                 'outcome_marked_by', 'retained_at', 'bonus_eligible',
+                                                 'bonus_settled_at', 'bonus_settled_by']) c(col)
+                       where not exists (select 1 from pg_policies
+                                          where schemaname = 'public' and tablename = 'pass_leads'
+                                            and policyname = 'Anyone can claim a pass'
+                                            and position(c.col || ' IS NULL' in with_check) > 0))
+           then 'MISSING -- the claim policy lost an IS NULL clause; anon can file a pre-credited lead'
+         when exists (select 1 from pg_policies
+                       where schemaname = 'public' and tablename = 'pass_leads' and cmd in ('INSERT', 'ALL')
+                         and permissive = 'PERMISSIVE'
+                         and policyname not in ('Anyone can claim a pass', 'Admins manage pass leads'))
+           then 'MISSING -- another permissive INSERT policy on pass_leads reopens the claim path'
+         else 'applied'
+       end
+
+union all
+
+-- T-AV22. The one ledger exists and no client role can call it.
+select '8204_t_av22_athletes_ledger',
+       case
+         when to_regprocedure('public.av_athletes_ledger(uuid)') is null
+           or to_regprocedure('public.av_athletes_ledger_totals(uuid)') is null
+           then 'MISSING -- a ledger function is absent'
+         when has_function_privilege('anon', 'public.av_athletes_ledger(uuid)', 'EXECUTE')
+           or has_function_privilege('authenticated', 'public.av_athletes_ledger(uuid)', 'EXECUTE')
+           or has_function_privilege('anon', 'public.av_athletes_ledger_totals(uuid)', 'EXECUTE')
+           or has_function_privilege('authenticated', 'public.av_athletes_ledger_totals(uuid)', 'EXECUTE')
+           then 'MISSING -- a client role can read every lead through the ledger'
+         else 'applied'
+       end
+
+union all
+
+-- T-AV22. Every athlete WRITE function exists, is a definer with a pinned
+-- search_path, and is callable by authenticated and not by anon.
+select '8205_t_av22_athletes_writes',
+       case
+         when exists (select 1 from unnest(array[
+                        'public.av_athletes_add(uuid,uuid,text)', 'public.av_athletes_set_status(uuid,text)',
+                        'public.av_athletes_set_level(uuid,text)', 'public.av_athletes_set_outcome(text,text)',
+                        'public.av_athletes_mark_retained(uuid)', 'public.av_athletes_mark_bonus_settled(uuid)']) f(sig)
+                       where to_regprocedure(f.sig) is null)
+           then 'MISSING -- an athlete write function is absent'
+         when exists (select 1 from pg_proc
+                       where pronamespace = 'public'::regnamespace
+                         and proname in ('av_athletes_add', 'av_athletes_set_status', 'av_athletes_set_level',
+                                         'av_athletes_set_outcome', 'av_athletes_mark_retained',
+                                         'av_athletes_mark_bonus_settled')
+                         and (not prosecdef or proconfig is null
+                              or has_function_privilege('anon', oid, 'EXECUTE')
+                              or not has_function_privilege('authenticated', oid, 'EXECUTE')))
+           then 'MISSING -- an athlete write function lost SECURITY DEFINER, its search_path, or its grants'
+         else 'applied'
+       end
+
+union all
+
+-- T-AV22. Every athlete READ function exists with the same properties, and
+-- av_door_pass is the widened version (it names athlete_first_name) while
+-- still reading the guest's first name only.
+select '8206_t_av22_athletes_reads',
+       case
+         when exists (select 1 from unnest(array[
+                        'public.av_athletes_my_summary()', 'public.av_athletes_partner_summary(uuid)',
+                        'public.av_door_list(uuid)', 'public.av_door_pass(text)']) f(sig)
+                       where to_regprocedure(f.sig) is null)
+           then 'MISSING -- an athlete read function is absent'
+         when exists (select 1 from pg_proc
+                       where pronamespace = 'public'::regnamespace
+                         and proname in ('av_athletes_my_summary', 'av_athletes_partner_summary',
+                                         'av_door_list', 'av_door_pass')
+                         and (not prosecdef or proconfig is null
+                              or has_function_privilege('anon', oid, 'EXECUTE')
+                              or not has_function_privilege('authenticated', oid, 'EXECUTE')))
+           then 'MISSING -- an athlete read function lost SECURITY DEFINER, its search_path, or its grants'
+         when position('athlete_first_name' in pg_get_functiondef('public.av_door_pass(text)'::regprocedure)) = 0
+           then 'MISSING -- av_door_pass is not the T-AV22 version'
+         else 'applied'
+       end
+
+union all
+
+-- T-AV22. The restrictive INSERT policy exists, binds every role (admin
+-- included, through its permissive policy), and names all eleven columns.
+select '8207_t_av22_program_columns_server_only',
+       case
+         when not exists (select 1 from pg_policies
+                           where schemaname = 'public' and tablename = 'pass_leads'
+                             and policyname = 'Program columns are server only'
+                             and permissive = 'RESTRICTIVE' and cmd = 'INSERT' and roles = '{public}')
+           then 'MISSING -- the restrictive INSERT policy is absent or no longer binds every role; an admin can insert attribution'
+         when exists (select 1 from unnest(array['attended_at', 'attended_marked_by', 'attended_method',
+                                                 'referred_by_athlete_id', 'outcome', 'outcome_at',
+                                                 'outcome_marked_by', 'retained_at', 'bonus_eligible',
+                                                 'bonus_settled_at', 'bonus_settled_by']) c(col)
+                       where not exists (select 1 from pg_policies
+                                          where schemaname = 'public' and tablename = 'pass_leads'
+                                            and policyname = 'Program columns are server only'
+                                            and position(c.col || ' IS NULL' in with_check) > 0))
+           then 'MISSING -- the restrictive policy lost an IS NULL clause'
+         else 'applied'
+       end
+
 order by migration;

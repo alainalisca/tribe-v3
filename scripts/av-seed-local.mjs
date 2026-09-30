@@ -41,6 +41,7 @@ import { createClient } from '@supabase/supabase-js';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { readEnvFile } from './envFile.mjs';
+import { seedAthletePrograms, describeSeed } from './av-seed-athletes.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -282,6 +283,7 @@ async function readRoleSplit() {
   return `${data.length} in db (${instructors} is_instructor, ${data.length - instructors} not)`;
 }
 const roleSplit = await readRoleSplit();
+const athleteSeed = await seedAthletePrograms(db).catch((e) => die('athlete programs (T-AV22)', e));
 
 // Print what was WRITTEN, not just that it finished. A seed that reports
 // "done" over zero rows is indistinguishable from one that worked.
@@ -291,7 +293,7 @@ console.log(
     `  profiles          ${profiles}  ->  ${roleSplit}\n` +
     `  partner           BullBox (Prueba)  pass_active=true  id=${partnerId ?? 'n/a'}\n` +
     `  sessions          ${sessions}  (3 past, the rest today .. +28 days)\n` +
-    `  joins             ${joins}\n` +
+    `  joins             ${joins}\n` + describeSeed(athleteSeed) +
     `  password for every test account: ${PASSWORD}\n` +
     `  mail for the local stack is caught by inbucket on http://127.0.0.1:54324\n`
 );

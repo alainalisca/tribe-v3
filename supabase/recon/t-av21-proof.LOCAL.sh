@@ -39,9 +39,14 @@ PB=5a5a5a5a-2100-4000-8000-000000000b0b
 ADMIN_EMAIL=tav21-admin@av.local
 C1=TV-A2B3; C2=TV-C4D5; C3=TV-E6F7; FAKE=ZZ-2345; CANON=TV-G8H9; CAUTH=TV-J2K3; CFORGE=TV-K4M5
 
+# Since T-AV22 the seed itself makes Elena (active) and Felipe (inactive)
+# coaches of partner A. This script reshapes those rows for its own tests, so
+# it records them first and puts them back on exit instead of deleting them.
+COACH_SNAP=$(q "select coalesce(string_agg(format('(%L::uuid,%L::uuid,%s)', partner_id, instructor_id, coalesce(is_active::text,'NULL')), ','), '') from partner_instructors where partner_id='$PA' and instructor_id in ('$ELENA','$FELIPE','$DIEGO')")
 cleanup() {
   q "delete from pass_leads where pass_code like 'TV-%';" >/dev/null
   q "delete from partner_instructors where (partner_id='$PA' and instructor_id in ('$ELENA','$FELIPE','$DIEGO')) or partner_id='$PB';" >/dev/null
+  [ -n "$COACH_SNAP" ] && q "insert into partner_instructors (partner_id, instructor_id, is_active) values $COACH_SNAP;" >/dev/null
   q "delete from featured_partners where id='$PB';" >/dev/null
   AID=$(q "select id from auth.users where email='$ADMIN_EMAIL'")
   if [ -n "$AID" ]; then
@@ -50,7 +55,9 @@ cleanup() {
   fi
 }
 trap cleanup EXIT
-cleanup
+q "delete from pass_leads where pass_code like 'TV-%';" >/dev/null
+q "delete from partner_instructors where (partner_id='$PA' and instructor_id in ('$ELENA','$FELIPE','$DIEGO')) or partner_id='$PB';" >/dev/null
+q "delete from featured_partners where id='$PB';" >/dev/null
 
 # ── fixtures ────────────────────────────────────────────────────────────────
 q "insert into featured_partners (id, business_name, slug, business_type, status, user_id) values ('$PB','T-AV21 Probe Gym','tav21-probe-gym','gym','active','$CARO');" >/dev/null
@@ -158,12 +165,15 @@ if want 7; then echo "== 7. second confirm"
   [ "$(attended $C1)" = "$before" ] && [[ "$r" == *'"already_confirmed": true'* ]] && ok "attended_at, method and marker unchanged; reported already_confirmed" || bad "second confirm changed the row: $before -> $(attended $C1) ($r)"
 fi
 
+# T-AV22 (8206) widened av_door_pass by athlete_first_name, outcome and the
+# welcome offer. The exact key set below is the new contract; the point of
+# the test is unchanged: the guest's first name only, never contact details.
 if want 10; then echo "== added: av_door_pass returns the first name only, for every authorized caller"
   for who in bullbox elena admin; do
     r=$(rpc "$(jwt $who)" av_door_pass "{\"p_pass_code\":\"$C3\"}")
     keys=$(echo "$r" | python3 -c "import sys,json;print(','.join(sorted(json.load(sys.stdin).keys())))")
     first=$(echo "$r" | python3 -c "import sys,json;print(json.load(sys.stdin).get('guest_first_name',''))")
-    [ "$keys" = "attended_at,claimed_at,guest_first_name,partner_name,success" ] && [ "$first" = "Laura" ] \
+    [ "$keys" = "athlete_first_name,attended_at,claimed_at,guest_first_name,outcome,partner_name,success,welcome_offer_en,welcome_offer_es" ] && [ "$first" = "Laura" ] \
       && [[ "$r" != *Martinez* && "$r" != *"@"* && "$r" != *3001112233* ]] \
       && ok "$who: keys exactly {$keys}, first name only, no email or WhatsApp" || bad "$who door read: $r"
   done

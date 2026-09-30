@@ -51,6 +51,17 @@
 
 BEGIN;
 
+-- ── 0. Pre-flight: refuse to run after T-AV22 (see the addendum) ────────────
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_attribute
+              WHERE attrelid = 'public.pass_leads'::regclass
+                AND attname = 'referred_by_athlete_id'
+                AND NOT attisdropped) THEN
+    RAISE EXCEPTION '8200 REFUSED: pass_leads.referred_by_athlete_id exists, so 8203 (T-AV22) has run. Re-running 8200 would recreate the claim policy without 8203''s eight IS NULL clauses and reopen F2. Nothing was changed.';
+  END IF;
+END $$;
+
 -- ── 1. Columns ──────────────────────────────────────────────────────────────
 ALTER TABLE public.pass_leads
   ADD COLUMN IF NOT EXISTS attended_at        timestamptz,
@@ -206,3 +217,21 @@ BEGIN
 END $$;
 
 COMMIT;
+
+-- ════════════════════════════════════════════════════════════════════════════
+-- ADDENDUM 2026-09-29 (T-AV22). Section 0, the pre-flight, was added after
+-- this file was committed on athlete/main (7461132b) and applied to the LOCAL
+-- stack only. It has never been applied to production. Nothing above it
+-- changed.
+--
+-- Why: 8203 drops and recreates "Anyone can claim a pass" with this file's
+-- text plus eight IS NULL clauses. This file drops and recreates the same
+-- policy with only its own three. Re-running it after 8203, which is the
+-- normal thing to do with a hand-applied file whose apply you are unsure of,
+-- would succeed quietly and reopen F2: anon could insert a lead already
+-- credited to an athlete, joined and bonus-eligible. Its end-state assert
+-- would not notice, because it checks for its own three clauses only.
+--
+-- The check runs before any write and the file is one transaction, so a
+-- refused re-run changes nothing. Absence of the column (a fresh rebuild,
+-- replaying in order) passes. Approved by Al on 2026-09-29, decision 5.
