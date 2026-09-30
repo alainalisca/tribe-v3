@@ -16,6 +16,8 @@ import {
   applyPostDumpChanges,
   staleOverrides,
   capabilityQuery,
+  parseDumpObjects,
+  partitionByDeclared,
   LEGACY_PUSH_QUEUE_TRIGGERS,
   POST_DUMP_PRODUCTION_CHANGES,
   type GrantEntry,
@@ -276,5 +278,41 @@ describe('outbound triggers', () => {
 
   it('every named legacy trigger carries a reason', () => {
     for (const t of LEGACY_PUSH_QUEUE_TRIGGERS) expect(t.reason.length).toBeGreaterThan(20);
+  });
+});
+
+describe('parseDumpObjects and partitionByDeclared (T-AV21)', () => {
+  const DUMP_OBJECTS = [
+    'CREATE TABLE IF NOT EXISTS "public"."pass_leads" (',
+    'CREATE OR REPLACE VIEW "public"."sessions_public" AS',
+    'CREATE OR REPLACE FUNCTION "public"."pass_is_active"("p_partner_id" "uuid", "p_slug" "text") RETURNS boolean',
+    'CREATE OR REPLACE FUNCTION "public"."f"("p_a" "uuid", "p_b" "text" DEFAULT NULL::"text") RETURNS "void"',
+  ].join('\n');
+  const declared = parseDumpObjects(DUMP_OBJECTS);
+
+  it('reads tables, views and function identities, DEFAULTs stripped', () => {
+    expect([...declared].sort()).toEqual(
+      [
+        'function|f(p_a uuid, p_b text)',
+        'function|pass_is_active(p_partner_id uuid, p_slug text)',
+        'table|pass_leads',
+        'table|sessions_public',
+      ].sort()
+    );
+  });
+
+  it('a branch-created function is set aside, not compared', () => {
+    const local = parseLocalAcl('function\tav_door_pass\tp_pass_code text\t\tauthenticated\tEXECUTE');
+    const { declared: d, notInDump } = partitionByDeclared(local, declared);
+    expect(d).toEqual([]);
+    expect(notInDump.map((g) => g.object)).toEqual(['av_door_pass(p_pass_code text)']);
+  });
+
+  it('a branch grant on an EXISTING production table is still compared, so it is still caught', () => {
+    const local = parseLocalAcl('table\tpass_leads\t\t\tanon\tUPDATE');
+    const { declared: d } = partitionByDeclared(local, declared);
+    expect(diffGrants([], d).extra.map((g) => `${g.role} ${g.privilege} ${g.object}`)).toEqual([
+      'anon UPDATE pass_leads',
+    ]);
   });
 });

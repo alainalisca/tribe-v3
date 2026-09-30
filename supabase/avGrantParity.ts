@@ -427,6 +427,47 @@ export function staleOverrides(
     .map((c) => c.id);
 }
 
+/**
+ * Every object the production dump DECLARES, keyed the way GrantEntry keys
+ * objects: `table|name` for relations, `function|name(identity args)` for
+ * functions.
+ *
+ * Parity is about objects production HAS. An object created by this branch's
+ * own 8000-block migration (T-AV21's av_door_pass, for example) does not exist
+ * in production, so its grants cannot be "wider than production"; they are
+ * guarded by that migration's end-state assertions and its verifier probe.
+ * The parity script therefore compares only declared objects and LISTS the
+ * rest by name, so a new object is visible rather than silently skipped.
+ * Anything a branch migration does to an EXISTING production object (a grant on
+ * pass_leads, say) is still compared.
+ *
+ * Function identity: pg_dump writes `"public"."f"("p_a" "uuid", "p_b" "text"
+ * DEFAULT NULL::"text")`; the identity signature omits DEFAULT clauses, so they
+ * are stripped before normalizing.
+ */
+export function parseDumpObjects(dumpSql: string): Set<string> {
+  const out = new Set<string>();
+  const rel = /^CREATE (?:OR REPLACE )?(?:TABLE|VIEW|MATERIALIZED VIEW)(?: IF NOT EXISTS)? "public"\."([^"]+)"/gm;
+  for (const m of dumpSql.matchAll(rel)) out.add(`table|${m[1]}`);
+  const fn = /^CREATE (?:OR REPLACE )?FUNCTION "public"\."([^"]+)"\((.*)\) RETURNS /gm;
+  for (const m of dumpSql.matchAll(fn)) {
+    const args = m[2].replace(/\s+DEFAULT\s+[^,]+/gi, '');
+    out.add(`function|${normalizeFunctionSignature(m[1], args)}`);
+  }
+  return out;
+}
+
+/** Split local entries into those on declared (production) objects and the rest. */
+export function partitionByDeclared(
+  entries: GrantEntry[],
+  declared: Set<string>
+): { declared: GrantEntry[]; notInDump: GrantEntry[] } {
+  const d: GrantEntry[] = [];
+  const n: GrantEntry[] = [];
+  for (const g of entries) (declared.has(`${g.kind}|${g.object}`) ? d : n).push(g);
+  return { declared: d, notInDump: n };
+}
+
 /** A trigger whose function reaches outside the database. */
 export interface OutboundTrigger {
   schema: string;

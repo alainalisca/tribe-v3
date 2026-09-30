@@ -44,6 +44,8 @@ const {
   describeGrant,
   parseOutboundRows,
   applyPostDumpChanges,
+  parseDumpObjects,
+  partitionByDeclared,
   staleOverrides,
   capabilityQuery,
   POST_DUMP_PRODUCTION_CHANGES,
@@ -63,7 +65,14 @@ const dumpEntries = parseDumpGrants(sqlWithoutComments(readFileSync(DUMP, 'utf8'
 // Production as it is NOW: the dump, plus changes made in production after it
 // was pulled (POST_DUMP_PRODUCTION_CHANGES in supabase/avGrantParity.ts).
 const expected = applyPostDumpChanges(dumpEntries);
-const actual = parseLocalAcl(runPsql(NAME, url, LOCAL_ACL_QUERY, { tuples: true }));
+// Compare only objects the production dump declares. Objects created by this
+// branch's own 8000-block migrations do not exist in production; they are
+// listed below, never silently dropped (see parseDumpObjects).
+const declaredObjects = parseDumpObjects(sqlWithoutComments(readFileSync(DUMP, 'utf8')));
+const { declared: actual, notInDump } = partitionByDeclared(
+  parseLocalAcl(runPsql(NAME, url, LOCAL_ACL_QUERY, { tuples: true })),
+  declaredObjects
+);
 
 const count = (list, kind) => list.filter((g) => g.kind === kind).length;
 console.log(`${NAME}  dump=${path.relative(ROOT, DUMP)}  db=${new URL(url).host}\n`);
@@ -77,7 +86,17 @@ console.log(
     POST_DUMP_PRODUCTION_CHANGES.map((c) => `\n    ${c.id} (${c.appliedToProductionOn})`).join('')
 );
 
+const notInDumpObjects = [...new Set(notInDump.map((g) => `${g.kind} ${g.object}`))].sort();
+console.log(
+  `  objects the dump declares: ${declaredObjects.size}; local objects NOT in the dump (branch-created, not compared): ${notInDumpObjects.length}` +
+    notInDumpObjects.map((o) => `\n    ${o}`).join('')
+);
+
 const problems = [];
+
+if (declaredObjects.size === 0) {
+  problems.push('read 0 declared objects from the dump; an extraction failure would exclude everything from comparison.');
+}
 
 // Capabilities production is VERIFIED to have after each post-dump change,
 // asked with has_function_privilege, which sees PUBLIC's default grant that the

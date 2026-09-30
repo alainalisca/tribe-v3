@@ -19,6 +19,13 @@
  * what watches, and it has to carry the probe requirement itself because the
  * coverage test will never ask.
  *
+ * CORRECTION, 2026-09-29 (T-AV21). "Matches none of them" is true of the
+ * regexes and was read as "none of them notices". That was never run, and it
+ * is false for migrationImmutability.test.ts: a file whose number does not
+ * parse is counted as UNFROZEN, so the first 8xxx migration failed it. That
+ * guard now parses `^(\d+)_`, which puts the block above the frozen line. The
+ * other two still do not see 8xxx files, as stated above.
+ *
  * It is a TRIPWIRE, NOT A PROOF (T-AV0 Step 3 says so in those words). It
  * reads text. It cannot tell you a migration is safe; it can tell you a
  * migration is obviously unsafe, and it is cheap enough to run on every push.

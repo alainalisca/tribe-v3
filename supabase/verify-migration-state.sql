@@ -2041,4 +2041,40 @@ select 'GUARD_192_banner_writes_scoped',
          else 'applied'
        end
 
+union all
+
+-- T-AV21 (athlete-value branch, reserved block; renumbered at the merge gate).
+-- The show-up columns exist, the claim policy refuses a pre-attended row (F2),
+-- no other permissive INSERT policy reopens it, and only authenticated can
+-- reach the door. Columns are read from pg_attribute keyed on regclass.
+select '8200_t_av21_pass_leads_showup',
+       case
+         when (select count(*) from pg_attribute
+                where attrelid = 'public.pass_leads'::regclass and not attisdropped
+                  and attname in ('attended_at', 'attended_marked_by', 'attended_method')) <> 3
+           then 'MISSING -- a show-up column is absent from pass_leads'
+         when not exists (select 1 from pg_policies
+                           where schemaname = 'public' and tablename = 'pass_leads'
+                             and policyname = 'Anyone can claim a pass'
+                             and position('attended_at IS NULL' in with_check) > 0
+                             and position('attended_marked_by IS NULL' in with_check) > 0
+                             and position('attended_method IS NULL' in with_check) > 0)
+           then 'MISSING -- the claim policy lost an IS NULL clause; anon can file a pre-attended lead'
+         when exists (select 1 from pg_policies
+                       where schemaname = 'public' and tablename = 'pass_leads' and cmd in ('INSERT', 'ALL')
+                         and permissive = 'PERMISSIVE'
+                         and policyname not in ('Anyone can claim a pass', 'Admins manage pass leads'))
+           then 'MISSING -- another permissive INSERT policy on pass_leads reopens the claim path'
+         when to_regprocedure('public.av_door_pass(text)') is null
+           or to_regprocedure('public.av_confirm_pass_attendance(text,text)') is null
+           then 'MISSING -- a door function is absent'
+         when has_function_privilege('anon', 'public.av_door_pass(text)', 'EXECUTE')
+           or has_function_privilege('anon', 'public.av_confirm_pass_attendance(text,text)', 'EXECUTE')
+           or has_function_privilege('authenticated', 'public.av_can_work_door(uuid)', 'EXECUTE')
+           then 'MISSING -- a client role can execute a door function it must not'
+         when has_any_column_privilege('authenticated', 'public.pass_leads', 'UPDATE')
+           then 'MISSING -- authenticated holds UPDATE on pass_leads; the door write is no longer the only path'
+         else 'applied'
+       end
+
 order by migration;
