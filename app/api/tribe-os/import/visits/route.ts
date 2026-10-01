@@ -44,6 +44,7 @@ type VisitRow = z.infer<typeof VisitRowSchema>;
 interface ErrorRow {
   index: number;
   reason: string;
+  code?: string;
   row: VisitRow;
 }
 
@@ -52,6 +53,7 @@ interface ErrorRow {
 // ---------------------------------------------------------------------------
 
 const TZ = 'America/Bogota';
+const INSERT_CHUNK = 500;
 
 // ---------------------------------------------------------------------------
 // POST
@@ -118,65 +120,88 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     const importId = importRecord.id;
 
-    // --- Process rows ------------------------------------------------------
+    // --- Resolve all client ids in bulk ------------------------------------
+    // Collect unique identifiers across all rows
+    const extIds = new Set<string>();
+    const emails = new Set<string>();
+    const phones = new Set<string>();
+    for (const row of rows) {
+      if (row.external_id) extIds.add(row.external_id);
+      if (row.email) emails.add(row.email);
+      if (row.phone) phones.add(row.phone);
+    }
+
+    // Fetch matching clients in bulk
+    const clientByExtId = new Map<string, string>();
+    const clientByEmail = new Map<string, string>();
+    const clientByPhone = new Map<string, string>();
+
+    if (extIds.size > 0) {
+      const { data } = await supabase
+        .from('clients')
+        .select('id, external_id')
+        .eq('gym_id', gymId)
+        .in('external_id', [...extIds]);
+      for (const c of data ?? []) {
+        if (c.external_id) clientByExtId.set(c.external_id, c.id);
+      }
+    }
+
+    if (emails.size > 0) {
+      const { data } = await supabase
+        .from('clients')
+        .select('id, email')
+        .eq('gym_id', gymId)
+        .in('email', [...emails]);
+      for (const c of data ?? []) {
+        if (c.email) clientByEmail.set(c.email, c.id);
+      }
+    }
+
+    if (phones.size > 0) {
+      const { data } = await supabase
+        .from('clients')
+        .select('id, phone')
+        .eq('gym_id', gymId)
+        .in('phone', [...phones]);
+      for (const c of data ?? []) {
+        if (c.phone) clientByPhone.set(c.phone, c.id);
+      }
+    }
+
+    // --- Parse and validate all rows, build insert payloads ----------------
     const errorRows: ErrorRow[] = [];
-    let inserted = 0;
-    let updated = 0;
+    const validPayloads: Array<{
+      index: number;
+      row: VisitRow;
+      payload: Record<string, unknown>;
+    }> = [];
 
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
 
-      // --- Resolve client --------------------------------------------------
-      let clientId: string | null = null;
-
-      // 1) Match by external_id
-      if (!clientId && row.external_id) {
-        const { data } = await supabase
-          .from('clients')
-          .select('id')
-          .eq('gym_id', gymId)
-          .eq('external_id', row.external_id)
-          .maybeSingle();
-        if (data) clientId = data.id;
-      }
-
-      // 2) Match by email
-      if (!clientId && row.email) {
-        const { data } = await supabase
-          .from('clients')
-          .select('id')
-          .eq('gym_id', gymId)
-          .eq('email', row.email)
-          .maybeSingle();
-        if (data) clientId = data.id;
-      }
-
-      // 3) Match by phone
-      if (!clientId && row.phone) {
-        const { data } = await supabase
-          .from('clients')
-          .select('id')
-          .eq('gym_id', gymId)
-          .eq('phone', row.phone)
-          .maybeSingle();
-        if (data) clientId = data.id;
-      }
+      // Resolve client: external_id → email → phone
+      let clientId: string | undefined;
+      if (row.external_id) clientId = clientByExtId.get(row.external_id);
+      if (!clientId && row.email) clientId = clientByEmail.get(row.email);
+      if (!clientId && row.phone) clientId = clientByPhone.get(row.phone);
 
       if (!clientId) {
         errorRows.push({ index: i, reason: 'unresolved_member', row });
         continue;
       }
 
-      // --- Parse visit datetime --------------------------------------------
+      // Parse visit datetime
       const dtResult = parseImportDateTime(row.visit_date, row.visit_time, TZ, visitDateFormat);
       if (dtResult.error) {
         errorRows.push({ index: i, reason: `visit_date_${dtResult.error}`, row });
         continue;
       }
 
-      // --- Upsert visit ----------------------------------------------------
-      const { error: upsertErr, status } = await supabase.from('client_visits').upsert(
-        {
+      validPayloads.push({
+        index: i,
+        row,
+        payload: {
           gym_id: gymId,
           client_id: clientId,
           visited_at: dtResult.datetime,
@@ -186,29 +211,66 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           external_id: row.external_id ?? null,
           import_id: importId,
         },
-        { onConflict: 'gym_id,client_id,visited_at' }
-      );
+      });
+    }
 
-      if (upsertErr) {
-        errorRows.push({ index: i, reason: `db_error: ${upsertErr.message}`, row });
+    // --- Insert in chunks with ON CONFLICT DO NOTHING ---------------------
+    // Visits are immutable — duplicates are skipped, not updated.
+    let inserted = 0;
+    let skippedDuplicates = 0;
+
+    for (let c = 0; c < validPayloads.length; c += INSERT_CHUNK) {
+      const chunk = validPayloads.slice(c, c + INSERT_CHUNK);
+      const payloads = chunk.map((v) => v.payload);
+
+      const {
+        data: insertedData,
+        error: insertErr,
+        status,
+      } = await supabase
+        .from('client_visits')
+        .upsert(payloads, { onConflict: 'gym_id,client_id,visited_at', ignoreDuplicates: true })
+        .select('id');
+
+      if (insertErr) {
+        // Log raw error (no PII — only error metadata and gym_id)
+        console.error('[visits-import] chunk insert failed:', {
+          code: insertErr.code,
+          message: insertErr.message,
+          details: insertErr.details,
+          hint: insertErr.hint,
+          gymId,
+          importId,
+          chunkStart: c,
+          chunkSize: chunk.length,
+        });
+
+        // Mark all rows in this chunk as errors
+        for (const v of chunk) {
+          errorRows.push({
+            index: v.index,
+            reason: `db_error: ${insertErr.message}`,
+            code: insertErr.code,
+            row: v.row,
+          });
+        }
         continue;
       }
 
-      // HTTP 201 = inserted, 200 = updated (Supabase convention)
-      if (status === 201) {
-        inserted++;
-      } else {
-        updated++;
-      }
+      const insertedCount = insertedData?.length ?? 0;
+      inserted += insertedCount;
+      skippedDuplicates += chunk.length - insertedCount;
     }
+
+    const totalSkipped = errorRows.length + skippedDuplicates;
 
     // --- Update the import record with final counts ------------------------
     await supabase
       .from('client_imports')
       .update({
         inserted,
-        updated,
-        skipped: errorRows.length,
+        updated: 0,
+        skipped: totalSkipped,
         errors: errorRows,
       })
       .eq('id', importId);
@@ -220,7 +282,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       action: 'import.visits',
       targetType: 'client_imports',
       targetId: importId,
-      payload: { inserted, updated, skipped: errorRows.length },
+      payload: { inserted, skipped: totalSkipped, skippedDuplicates },
     });
 
     return NextResponse.json({
@@ -228,8 +290,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       data: {
         import_id: importId,
         inserted,
-        updated,
-        skipped: errorRows.length,
+        updated: 0,
+        skipped: totalSkipped,
         errors: errorRows,
       },
     });

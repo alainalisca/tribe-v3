@@ -45,6 +45,7 @@ type MemberRow = z.infer<typeof MemberRowSchema>;
 interface ErrorRow {
   index: number;
   reason: string;
+  code?: string;
   row: MemberRow;
 }
 
@@ -225,7 +226,14 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         // UPDATE
         const { error } = await supabase.from('clients').update(payload).eq('id', existingId);
         if (error) {
-          errorRows.push({ index: i, reason: `db_error: ${error.message}`, row });
+          console.error('[members-import] update failed:', {
+            code: error.code,
+            message: error.message,
+            details: error.details,
+            gymId,
+            row: i,
+          });
+          errorRows.push({ index: i, reason: `db_error: ${error.message}`, code: error.code, row });
           continue;
         }
         updated++;
@@ -239,7 +247,14 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           .from('clients')
           .insert({ gym_id: gymId, instructor_user_id: ownerUserId, ...payload });
         if (error) {
-          errorRows.push({ index: i, reason: `db_error: ${error.message}`, row });
+          console.error('[members-import] insert failed:', {
+            code: error.code,
+            message: error.message,
+            details: error.details,
+            gymId,
+            row: i,
+          });
+          errorRows.push({ index: i, reason: `db_error: ${error.message}`, code: error.code, row });
           continue;
         }
         inserted++;
