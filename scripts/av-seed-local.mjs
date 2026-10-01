@@ -41,7 +41,7 @@ import { createClient } from '@supabase/supabase-js';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { readEnvFile } from './envFile.mjs';
-import { seedAthletePrograms, describeSeed } from './av-seed-athletes.mjs';
+import { seedAthletePrograms, describeSeed, clearSeedPartnerLeads, PARTNER_A_ID } from './av-seed-athletes.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -189,6 +189,7 @@ async function seedProfiles() {
 
 async function seedPartner() {
   const row = {
+    id: PARTNER_A_ID,
     user_id: ID(7),
     business_name: 'BullBox (Prueba)',
     business_type: 'gym',
@@ -259,6 +260,9 @@ async function seedJoins(sessionCount) {
   return rows.length;
 }
 
+// Before seedAuthUsers: deleting the owners cascades to their partners and
+// orphans the leads (see clearSeedPartnerLeads). Without this a second run fails.
+await clearSeedPartnerLeads(db).catch((e) => die('clear seed partner leads', e));
 const authUsers = await seedAuthUsers();
 const profiles = await seedProfiles();
 const partnerId = await seedPartner();

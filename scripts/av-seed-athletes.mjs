@@ -39,6 +39,15 @@ const ELENA = ID(5);
 const FELIPE = ID(6);
 const GABI = ID(10);
 
+/**
+ * Stable ids for the two seed partners (2026-10-01), so a reseed keeps every
+ * URL that names one, such as the door list /atletas/gym/{id}/puerta/.
+ * Stable ids alone did NOT make the seed re-runnable; see clearSeedPartnerLeads.
+ */
+export const PARTNER_A_ID = ID(7000);
+export const PARTNER_B_ID = ID(7001);
+const SEED_PARTNER_SLUGS = ['bullbox-prueba', 'otro-gym-prueba'];
+
 /** People T-AV0's seed does not create. */
 export const EXTRA_PEOPLE = [
   { id: ID(8), name: 'Admin Prueba', email: 'admin@av.local', isAdmin: true, instructor: false },
@@ -154,6 +163,35 @@ async function seedExtraPeople(db) {
   if (error) fail('public.users (extra people)', error);
 }
 
+/**
+ * Clear both seed partners' pass leads. `npm run av:seed` calls this BEFORE it
+ * deletes any seed account (2026-10-01).
+ *
+ * Why it has to run first: deleting a seed owner's auth user cascades to
+ * public.users and then to featured_partners, while pass_leads.partner_id is
+ * ON DELETE SET NULL. So by the time the partner is re-created, its old leads
+ * have partner_id NULL, the delete-by-partner_id further down misses them, and
+ * the re-insert fails on pass_leads_pass_code_key. That is exactly how a second
+ * `npm run av:seed` on one database failed.
+ *
+ * The second delete catches leads a run before this fix already orphaned:
+ * partner_id NULL, slug still one of the two seed slugs. Local stack only.
+ *
+ * Proven 2026-10-01: with the call removed, the second of two runs fails on
+ * pass_leads_pass_code_key again; restored, the next run clears those orphans.
+ */
+export async function clearSeedPartnerLeads(db) {
+  const owned = await db.from('featured_partners').select('id').in('user_id', [OWNER_A, OWNER_B]);
+  if (owned.error) fail('featured_partners (find seed partners)', owned.error);
+  const ids = owned.data.map((row) => row.id);
+  if (ids.length > 0) {
+    const r = await db.from('pass_leads').delete().in('partner_id', ids);
+    if (r.error) fail('pass_leads (clear seed partners)', r.error);
+  }
+  const orphans = await db.from('pass_leads').delete().is('partner_id', null).in('slug', SEED_PARTNER_SLUGS);
+  if (orphans.error) fail('pass_leads (clear orphaned seed leads)', orphans.error);
+}
+
 async function partnerOf(db, ownerId, what) {
   const { data, error } = await db.from('featured_partners').select('id, slug').eq('user_id', ownerId).maybeSingle();
   if (error) fail(what, error);
@@ -168,7 +206,7 @@ export async function seedAthletePrograms(db, { withPeople = true } = {}) {
   const a = await partnerOf(db, OWNER_A, 'BullBox (Prueba)');
   if (withPeople) {
     const { error } = await db.from('featured_partners').upsert(
-      { user_id: OWNER_B, business_name: 'Otro Gym (Prueba)', business_type: 'gym', status: 'active',
+      { id: PARTNER_B_ID, user_id: OWNER_B, business_name: 'Otro Gym (Prueba)', business_type: 'gym', status: 'active',
         address: 'Carrera Falsa 456, Medellín', pass_active: true },
       { onConflict: 'user_id' }
     );
