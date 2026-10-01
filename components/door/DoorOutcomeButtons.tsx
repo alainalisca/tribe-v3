@@ -17,6 +17,8 @@ import { DOOR_OUTCOMES, setPassOutcome, type DoorOutcome } from '@/lib/dal/passD
 interface DoorOutcomeButtonsProps {
   passCode: string;
   initialOutcome: DoorOutcome | null;
+  /** T-AV26: the gym dashboard re-reads its summary after a saved outcome. */
+  onSaved?: () => void;
 }
 
 type T = ReturnType<typeof useTranslations>;
@@ -34,7 +36,7 @@ function label(outcome: DoorOutcome, t: T): string {
   }
 }
 
-export default function DoorOutcomeButtons({ passCode, initialOutcome }: DoorOutcomeButtonsProps) {
+export default function DoorOutcomeButtons({ passCode, initialOutcome, onSaved }: DoorOutcomeButtonsProps) {
   const t = useTranslations('door');
   const [outcome, setOutcome] = useState<DoorOutcome | null>(initialOutcome);
   const [saving, setSaving] = useState(false);
@@ -49,6 +51,7 @@ export default function DoorOutcomeButtons({ passCode, initialOutcome }: DoorOut
     if (result.success) {
       setOutcome(next);
       setMessage({ kind: 'saved', text: t('outcomeSaved') });
+      onSaved?.();
       return;
     }
     setMessage({ kind: 'error', text: result.error === 'not_attended' ? t('confirmFirst') : t('error') });

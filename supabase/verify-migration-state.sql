@@ -2221,6 +2221,10 @@ select '8206_t_av22_athletes_reads',
            then 'MISSING -- an athlete read function lost SECURITY DEFINER, its search_path, or its grants'
          when position('athlete_first_name' in pg_get_functiondef('public.av_door_pass(text)'::regprocedure)) = 0
            then 'MISSING -- av_door_pass is not the T-AV22 version'
+         -- T-AV26 widened partner_summary in place (8206 header, 2026-10-01).
+         when position('retain_from' in pg_get_functiondef('public.av_athletes_partner_summary(uuid)'::regprocedure)) = 0
+           or position('to_close' in pg_get_functiondef('public.av_athletes_partner_summary(uuid)'::regprocedure)) = 0
+           then 'MISSING -- av_athletes_partner_summary is not the T-AV26 version (no to_close or retain_from)'
          else 'applied'
        end
 
@@ -2244,6 +2248,26 @@ select '8207_t_av22_program_columns_server_only',
                                             and policyname = 'Program columns are server only'
                                             and position(c.col || ' IS NULL' in with_check) > 0))
            then 'MISSING -- the restrictive policy lost an IS NULL clause'
+         else 'applied'
+       end
+
+union all
+
+-- T-AV26. The Add-athlete search exists, is a definer with a pinned
+-- search_path, is callable by authenticated and not by anon, and still reads
+-- users_discoverable (deleted, banned and test accounts never appear).
+select '8208_t_av26_athletes_search',
+       case
+         when to_regprocedure('public.av_athletes_search_candidates(uuid,text)') is null
+           then 'MISSING -- av_athletes_search_candidates is absent'
+         when exists (select 1 from pg_proc
+                       where oid = to_regprocedure('public.av_athletes_search_candidates(uuid,text)')
+                         and (not prosecdef or proconfig is null
+                              or has_function_privilege('anon', oid, 'EXECUTE')
+                              or not has_function_privilege('authenticated', oid, 'EXECUTE')))
+           then 'MISSING -- av_athletes_search_candidates lost SECURITY DEFINER, its search_path, or its grants'
+         when position('users_discoverable' in pg_get_functiondef('public.av_athletes_search_candidates(uuid,text)'::regprocedure)) = 0
+           then 'MISSING -- av_athletes_search_candidates no longer reads users_discoverable'
          else 'applied'
        end
 

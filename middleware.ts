@@ -320,11 +320,16 @@ export async function middleware(request: NextRequest) {
 
   let userId: string | null = null;
   if (gated) {
-    const allowed = await athletesGateAllows(async () => {
-      const { data } = await supabase.auth.getUser();
-      userId = data.user?.id ?? null;
-      return userId;
-    }, supabase);
+    const allowed = await athletesGateAllows(
+      async () => {
+        const { data } = await supabase.auth.getUser();
+        userId = data.user?.id ?? null;
+        return userId;
+      },
+      supabase,
+      undefined,
+      pathname
+    );
     // A gated path answers exactly as an UNKNOWN path would for this caller
     // (measured 2026-09-30): signed in, an unknown URL is a real 404; signed
     // out, an unknown non-public URL is the redirect to /auth below (decision

@@ -14,6 +14,7 @@ import { useVenueRequests } from '@/hooks/useVenueRequests';
 import PartnerLeadsSection from '@/components/partner/PartnerLeadsSection';
 import { usePartnerLeads } from '@/hooks/usePartnerLeads';
 import { useTranslations } from '@/lib/i18n/useTranslations';
+import GymAthletesEntryCard from '@/components/atletas/GymAthletesEntryCard';
 
 export default function PartnerDashboardPage() {
   const router = useRouter();
@@ -111,6 +112,9 @@ export default function PartnerDashboardPage() {
             {partner.tier}
           </span>
         </div>
+
+        {/* T-AV26: Tribe Athletes, flag-gated and only with a program. */}
+        <GymAthletesEntryCard partnerId={partner.id} />
 
         {/* Venue requests sit above the metrics: an instructor waiting on a
             decision is more urgent than last week's impressions. */}

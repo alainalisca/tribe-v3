@@ -115,15 +115,17 @@ if want 5; then echo "== 5. the other partner's coach is refused on all three pa
   page gabi /pase/verificar/AV-CARA/ > /dev/null
   grep -qE 'This pass is not for your gym|Este pase no es de tu gimnasio' "$TMP/p.html" && ! grep -q 'data-invited-by' "$TMP/p.html" \
     && ok "verify page: the one refusal sentence, nothing of the pass" || bad "Gabi verify page"
-  # Under the root loading boundary a page-level notFound() streams as status
-  # 200 carrying Next's not-found signal, and the 404 UI renders on hydration
-  # (decision 4). What must hold: no rows, and the SAME answer a partner that
-  # does not exist gets, so the list cannot reveal who works where.
-  c=$(page gabi "/atletas/gym/$PA/puerta/"); gabi_sig=$(grep -c 'NEXT_HTTP_ERROR_FALLBACK;404' "$TMP/p.html"); gabi_rows=$(grep -c 'data-door-row' "$TMP/p.html")
-  c2=$(page elena "/atletas/gym/00000000-0000-4000-8000-0000000000ff/puerta/"); none_sig=$(grep -c 'NEXT_HTTP_ERROR_FALLBACK;404' "$TMP/p.html")
-  [ "$gabi_rows" = 0 ] && [ "$gabi_sig" -ge 1 ] && [ "$c" = "$c2" ] && [ "$none_sig" -ge 1 ] \
-    && ok "door list of partner A: not found (http $c, Next's not-found signal, no rows), the same answer as a partner that does not exist" \
-    || bad "Gabi list: http $c sig=$gabi_sig rows=$gabi_rows | unknown partner: http $c2 sig=$none_sig"
+  # T-AV26 (Al's decision 2, 2026-10-01): middleware now asks av_my_partner_role
+  # for /atletas/gym/{id}/**, so another gym's coach gets a REAL 404 before any
+  # rendering. Before T-AV26 this was a page-level notFound(), streamed as 200
+  # with Next's not-found signal (decision 4). What must hold either way: no
+  # rows, and the SAME answer a partner that does not exist gets, so the list
+  # cannot reveal who works where.
+  c=$(page gabi "/atletas/gym/$PA/puerta/"); gabi_rows=$(grep -c 'data-door-row' "$TMP/p.html"); cp "$TMP/p.html" "$TMP/gabi.html"
+  c2=$(page elena "/atletas/gym/00000000-0000-4000-8000-0000000000ff/puerta/")
+  [ "$gabi_rows" = 0 ] && [ "$c" = 404 ] && [ "$c2" = 404 ] \
+    && ok "door list of partner A: a real 404 with no rows, the same answer as a partner that does not exist" \
+    || bad "Gabi list: http $c rows=$gabi_rows | unknown partner: http $c2"
   real=$(rpc gabi av_door_pass '{"p_pass_code":"AV-CARA"}'); fake=$(rpc gabi av_door_pass '{"p_pass_code":"ZZ-2345"}')
   [ "$real" = "$NOTFOUND" ] && [ "$fake" = "$real" ] && ok "code field lookup: a real code and a made-up one answer byte for byte the same" || bad "Gabi lookup: real=$real fake=$fake"
   r=$(rpc gabi av_athletes_set_outcome '{"p_pass_code":"AV-CARB","p_outcome":"not_now"}')

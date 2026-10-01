@@ -33,6 +33,16 @@
 -- RISK: HIGH because it replaces T-AV21's av_door_pass. Same signature, same
 -- authorization, same single refusal; three fields added, none of them the
 -- guest's contact details.
+--
+-- T-AV26 (2026-10-01, Al's decision 1): partner_summary widened IN PLACE,
+-- before this file was ever applied outside the local stack, so the gym
+-- dashboard reads every number from here and recomputes nothing:
+--   totals.to_close       credited show-ups with no outcome yet ("Por cerrar")
+--   guests.contacted_at   owner and admin only ("Oferta enviada")
+--   guests.retain_from    owner and admin only: outcome_at + retention_days,
+--                         the same instant av_athletes_mark_retained (8205)
+--                         refuses before, so the button and the rule agree
+-- Coaches still get no bonus field and no sales note at any depth.
 
 BEGIN;
 
@@ -180,17 +190,23 @@ BEGIN
              'credited', l.credited, 'no_credit_reason', l.no_credit_reason)
            || CASE WHEN v_full THEN jsonb_build_object(
              'bonus_eligible', l.bonus_eligible, 'bonus_owed', l.bonus_owed,
-             'bonus_settled_at', l.bonus_settled_at) ELSE '{}'::jsonb END
+             'bonus_settled_at', l.bonus_settled_at, 'contacted_at', pl.contacted_at,
+             'retain_from', CASE WHEN l.outcome = 'joined' AND l.outcome_at IS NOT NULL
+                                 THEN l.outcome_at + make_interval(days => v_prog.retention_days) END)
+             ELSE '{}'::jsonb END
            ORDER BY l.claimed_at DESC), '[]'::jsonb)
     INTO v_guests
     FROM public.av_athletes_ledger(p_partner_id) l
+    JOIN public.pass_leads pl ON pl.id = l.lead_id
     JOIN public.program_athletes pa ON pa.id = l.program_athlete_id
     JOIN public.users u ON u.id = pa.user_id;
 
   SELECT jsonb_build_object(
            'invited', coalesce(sum(t.invited), 0), 'not_credited', coalesce(sum(t.not_credited), 0),
            'showed_up', coalesce(sum(t.showed_up), 0), 'joined', coalesce(sum(t.joined), 0),
-           'retained', coalesce(sum(t.retained), 0))
+           'retained', coalesce(sum(t.retained), 0),
+           'to_close', (SELECT count(*) FROM public.av_athletes_ledger(p_partner_id) c
+                         WHERE c.showed_up AND c.outcome IS NULL))
          || CASE WHEN v_full THEN jsonb_build_object(
            'bonus_owed', coalesce(sum(t.bonus_owed), 0),
            'bonus_settled', coalesce(sum(t.bonus_settled), 0)) ELSE '{}'::jsonb END
