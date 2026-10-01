@@ -35,7 +35,7 @@ reload() { q "NOTIFY pgrst, 'reload schema';" > /dev/null; sleep 1; }
 TMP=$(mktemp -d)
 
 # ── captures ───────────────────────────────────────────────────────────────
-CLAIM="public.av_athletes_claim_notification(text,text)"; CAP="public.av_push_allowed(uuid)"
+CLAIM="public.av_athletes_claim_notification(text,text)"; CAP="public.av_push_allowed(uuid,text)"
 fn_capture() { { q "select pg_get_functiondef('$1'::regprocedure)"; echo ';'; } > "$2"; }
 md5fn() { q "select md5(pg_get_functiondef('$1'::regprocedure))"; }
 fn_capture "$CLAIM" "$TMP/claim.orig.sql"; CLAIM_ORIG=$(md5fn "$CLAIM")

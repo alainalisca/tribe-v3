@@ -2291,6 +2291,12 @@ select '8209_t_av27b_notifications',
            or not has_function_privilege('authenticated', 'public.av_athletes_claim_notification(text,text)', 'EXECUTE')
            or has_function_privilege('authenticated', 'public.av_athletes_claim_lead_notification(uuid)', 'EXECUTE')
            then 'MISSING -- a claim function has the wrong grants'
+         -- T-AV27c: the cap takes the event, so "joined" can skip the daily limit.
+         when to_regprocedure('public.av_push_allowed(uuid,text)') is null
+           or to_regprocedure('public.av_push_allowed(uuid)') is not null
+           or has_function_privilege('authenticated', 'public.av_push_allowed(uuid,text)', 'EXECUTE')
+           or position('joined' in pg_get_functiondef('public.av_push_allowed(uuid,text)'::regprocedure)) = 0
+           then 'MISSING -- av_push_allowed is not the T-AV27c version (event-aware, joined skips the daily cap)'
          when not exists (select 1 from pg_indexes where schemaname = 'public'
                            and indexname = 'av_notification_log_once_per_lead')
            then 'MISSING -- the once-per-lead-and-event index is gone; an event can notify twice'

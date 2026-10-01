@@ -93,8 +93,8 @@ echo "== A7. Abiertos admits closed guests"
 replace_once "$VIEW" "    case 'open':
       return g.outcome === null;" "    case 'open':
       return true;" || exit 1
-landed "$VIEW" A7; unit lib/atletas/gymView.test.ts RED "Abiertos\": came with no outcome first"; restore "$VIEW" A7
-unit lib/atletas/gymView.test.ts GREEN
+landed "$VIEW" A7; unit lib/atletas/gymView.guests.test.ts RED "Abiertos\": came with no outcome first"; restore "$VIEW" A7
+unit lib/atletas/gymView.guests.test.ts GREEN
 
 echo
 [ "$all_ok" = 0 ] && echo "ALL ARMS BEHAVED; every edit and restore landed" || echo "SOME ARM DID NOT BEHAVE AS EXPECTED"

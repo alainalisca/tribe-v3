@@ -31,7 +31,10 @@
 --     or an existing member tells the athlete nothing
 --   * once per lead and event (the unique index), and "ready" once per athlete
 --   * the parent spec's cap, max 1 T-AV push per athlete per day and 3 per
---     week: over it, the in-app row is still written and only the push is off
+--     week: over it, the in-app row is still written and only the push is off.
+--     T-AV27c (Al, 2026-10-01): a "joined" push SKIPS the daily limit, so a
+--     show-up and a join on the same day both reach the athlete, but it still
+--     COUNTS toward the weekly 3 and is refused once those are spent
 -- The route then renders the copy and sends; it chooses none of the above.
 --
 -- The log is server-only: RLS on, no grant to anon or authenticated.
@@ -62,19 +65,24 @@ REVOKE ALL ON TABLE public.av_notification_log FROM public, anon, authenticated;
 GRANT ALL ON TABLE public.av_notification_log TO service_role;
 
 -- ── The cap: max 1 T-AV push per athlete per day, max 3 per week ───────────
-CREATE OR REPLACE FUNCTION public.av_push_allowed(p_recipient uuid)
+-- A "joined" push skips the daily limit and still counts toward the weekly 3
+-- (T-AV27c). The one-argument version existed only in local stacks during
+-- T-AV27b; the DROP removes it there and is a no-op everywhere else.
+DROP FUNCTION IF EXISTS public.av_push_allowed(uuid);
+CREATE OR REPLACE FUNCTION public.av_push_allowed(p_recipient uuid, p_event text)
 RETURNS boolean
 LANGUAGE sql
 STABLE
 SECURITY DEFINER
 SET search_path = public
 AS $fn$
-  SELECT (SELECT count(*) FROM public.av_notification_log
-           WHERE recipient_id = p_recipient AND push AND created_at > now() - interval '1 day') < 1
+  SELECT (p_event = 'joined'
+          OR (SELECT count(*) FROM public.av_notification_log
+               WHERE recipient_id = p_recipient AND push AND created_at > now() - interval '1 day') < 1)
      AND (SELECT count(*) FROM public.av_notification_log
            WHERE recipient_id = p_recipient AND push AND created_at > now() - interval '7 days') < 3;
 $fn$;
-REVOKE ALL ON FUNCTION public.av_push_allowed(uuid) FROM public, anon, authenticated;
+REVOKE ALL ON FUNCTION public.av_push_allowed(uuid, text) FROM public, anon, authenticated;
 
 -- ── arrived / joined (and the ready that an arrival can cause) ─────────────
 CREATE OR REPLACE FUNCTION public.av_athletes_claim_notification(p_pass_code text, p_event text)
@@ -130,7 +138,7 @@ BEGIN
   -- One recipient at a time, so two confirms in the same second cannot both
   -- read "no push today" and both push.
   PERFORM pg_advisory_xact_lock(hashtext('av_push:' || v_pa.user_id::text));
-  v_push := public.av_push_allowed(v_pa.user_id);
+  v_push := public.av_push_allowed(v_pa.user_id, p_event);
   INSERT INTO public.av_notification_log (event, lead_id, program_athlete_id, recipient_id, push)
   VALUES (p_event, v_lead.id, v_pa.id, v_pa.user_id, v_push)
   ON CONFLICT DO NOTHING
@@ -230,7 +238,7 @@ BEGIN
   IF has_function_privilege('anon', 'public.av_athletes_claim_notification(text,text)', 'EXECUTE')
      OR NOT has_function_privilege('authenticated', 'public.av_athletes_claim_notification(text,text)', 'EXECUTE')
      OR has_function_privilege('authenticated', 'public.av_athletes_claim_lead_notification(uuid)', 'EXECUTE')
-     OR has_function_privilege('authenticated', 'public.av_push_allowed(uuid)', 'EXECUTE') THEN
+     OR has_function_privilege('authenticated', 'public.av_push_allowed(uuid,text)', 'EXECUTE') THEN
     RAISE EXCEPTION '8209 ABORTED: a notification function has the wrong grants.';
   END IF;
   RAISE NOTICE '8209: notification log and claim functions installed.';

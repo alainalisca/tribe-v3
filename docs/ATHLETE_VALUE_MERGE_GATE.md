@@ -144,6 +144,16 @@ Checks specific to the Tribe Athletes tickets (T-AV19 to T-AV27) that cannot
 be automated and were deferred to the gate on purpose.
 
 - [ ] Physical phone scan of a voucher QR on the LAN, coach confirms, athlete home updates
+- [ ] **Send modes in Vercel production.** `EMAIL_MODE` and `PUSH_MODE` are unset (or exactly `live`) in the production project. Only the exact value `log` means log, so a stray value would silently stop every email and push on `main`.
+- [ ] **Renumber 8200 to 8209 against `origin/main`** at the moment of merging (CLAUDE.md, "A migration number is claimed by whoever merges first"). Rename, state in each header what it was and why it moved, and update every probe id in `supabase/verify-migration-state.sql` and every `migrations_applied` reference.
+- [ ] **Apply 8200 to 8209 in order, each as one complete paste, AFTER the merge commit is on `main`** (CLAUDE.md, "the branch merges before the paste"), and record the commit each paste corresponds to.
+- [ ] **D2 answered.** A Colombian lawyer has reviewed gym-to-athlete referral payments and Al has recorded the answer in the spec's decisions log. Blocking for turning the program on for a real gym.
+- [ ] **The real BullBox program row is created by hand** through `/admin/atletas/` (or the admin route), never by a seed. `scripts/seed-bullbox.sql` is not touched.
+- [ ] **One real push to a device.** An athlete with a real FCM or web-push subscription receives "{guest} arrived at class" once, after a real confirm. Log mode proved the path (`t-av27b-proof`); only a device proves delivery.
+- [ ] **The owner's lead email in a real inbox (Gmail).** An attributed claim shows "Invitación de {athlete}" and a working "Confirmar en la puerta" link, and a plain claim's email is unchanged.
+- [ ] **`npm run test:e2e:av` green on the merge-day tree**, both projects (flag on: the full loop; flag off: the real 404s).
+- [ ] **Every T-AV proof and mutation driver re-run** on the merge-day tree: `supabase/recon/t-av21` to `t-av27c` `-proof.LOCAL.sh` and `-mutations.LOCAL.sh`. A mutation proof expires when the code around it moves (CLAUDE.md).
+- [ ] **Read `docs/T-AV20_RELEASE.md` section 6** (the Spanish-only pass page, admins with the flag off, the pre-existing email-test environment dependency) and decide each item is acceptable for `main`.
 
 ## Already measured, re-run from scratch 2026-09-25 (evidence, not a tick)
 

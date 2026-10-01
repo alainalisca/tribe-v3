@@ -16,6 +16,8 @@ describe('notifyAthlete', () => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ passCode: 'AV-CARB', event: 'joined' }),
+      // T-AV27c: survives the coach leaving the page right after the tap.
+      keepalive: true,
     });
   });
 

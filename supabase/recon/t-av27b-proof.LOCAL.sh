@@ -122,23 +122,25 @@ if want 4; then echo "== 4. another gym's coach can name the pass and still tell
   [ "$c" = 200 ] && [ "$(inapp "$(ID 3)" av_arrived)" = 0 ] && ok "Gabi: http $c (the same quiet answer), no notification" || bad "Gabi notified: http $c rows $(inapp "$(ID 3)" av_arrived)"
 fi
 
-if want 5; then echo "== 5. the cap: max 1 T-AV push per athlete per day; over it, in-app only"
+if want 5; then echo "== 5. the cap: max 1 T-AV show-up push per athlete per day; over it, in-app only"
+  # T-AV27c changed "joined" to skip the daily limit, so the daily cap is now
+  # shown with two ARRIVALS on one day (AV-CARB is Caro's seeded, credited,
+  # attended guest). joined's own rule is t-av27c-proof.LOCAL.sh test 1.
   fresh
   p0=$(pushes)
   rpc elena av_confirm_pass_attendance '{"p_pass_code":"AV-CARA","p_method":"toggle"}' > /dev/null
   notify elena AV-CARA arrived > /dev/null; settle
-  rpc elena av_athletes_set_outcome '{"p_pass_code":"AV-CARA","p_outcome":"joined"}' > /dev/null
-  notify elena AV-CARA joined > /dev/null; settle
-  [ "$(inapp_msg "$(ID 3)" av_joined)" = "Lucia joined BullBox (Prueba)" ] && [ "$(( $(pushes) - p0 ))" = 1 ] \
-    && [ "$(q "select push from av_notification_log where event='joined'")" = f ] \
-    && ok "same day: \"Lucia joined BullBox (Prueba)\" in-app, push off, one push total" || bad "daily cap: pushes $(( $(pushes) - p0 )), in-app '$(inapp_msg "$(ID 3)" av_joined)'"
+  notify elena AV-CARB arrived > /dev/null; settle
+  [ "$(inapp "$(ID 3)" av_arrived)" = 2 ] && [ "$(( $(pushes) - p0 ))" = 1 ] \
+    && [ "$(q "select string_agg(push::text, ',' order by created_at) from av_notification_log where event='arrived'")" = "true,false" ] \
+    && ok "two show-ups the same day: both in-app, only the first pushed" || bad "daily cap: pushes $(( $(pushes) - p0 )), rows $(inapp "$(ID 3)" av_arrived)"
   q "update av_notification_log set created_at = now() - interval '2 days'" > /dev/null
   q "insert into av_notification_log (event, lead_id, program_athlete_id, recipient_id, push, created_at)
-     select 'arrived', id, '$(ID 2003)'::uuid, '$(ID 3)'::uuid, true, now() - interval '3 days' from pass_leads where pass_code='AV-CARB'
-     union all select 'arrived', id, '$(ID 2003)'::uuid, '$(ID 3)'::uuid, true, now() - interval '4 days' from pass_leads where pass_code='AV-CARC'" > /dev/null
-  [ "$(q "select public.av_push_allowed('$(ID 3)')")" = f ] && ok "three pushes this week, none today: the weekly cap says no" || bad "weekly cap allowed a fourth"
+     select 'arrived', id, '$(ID 2003)'::uuid, '$(ID 3)'::uuid, true, now() - interval '3 days' from pass_leads where pass_code='AV-CARC'
+     union all select 'arrived', id, '$(ID 2003)'::uuid, '$(ID 3)'::uuid, true, now() - interval '4 days' from pass_leads where pass_code='AV-CARD'" > /dev/null
+  [ "$(q "select public.av_push_allowed('$(ID 3)', 'arrived')")" = f ] && ok "three pushes this week, none today: the weekly cap says no" || bad "weekly cap allowed a fourth"
   q "delete from av_notification_log where created_at < now() - interval '2 days 12 hours'" > /dev/null
-  [ "$(q "select public.av_push_allowed('$(ID 3)')")" = t ] && ok "one push two days ago: allowed again (so the no above was the cap)" || bad "cap stuck closed"
+  [ "$(q "select public.av_push_allowed('$(ID 3)', 'arrived')")" = t ] && ok "one push two days ago: allowed again (so the no above was the cap)" || bad "cap stuck closed"
 fi
 
 if want 6; then echo "== 6. a claim through an athlete's link tells the athlete in-app, with no push"
