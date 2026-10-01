@@ -84,7 +84,7 @@ svg=json.load(open('$TMP/r.json')).get('qr_svg') or ''
 shape=re.compile(r'^<svg xmlns=\"http://www\.w3\.org/2000/svg\" viewBox=\"0 0 \d+ \d+\" role=\"img\" aria-label=\"[^\"<>]*\" shape-rendering=\"crispEdges\"><rect width=\"\d+\" height=\"\d+\" fill=\"#ffffff\"/><path d=\"[Mhvz0-9 -]*\" fill=\"#000000\"/></svg>$')
 sys.exit(0 if shape.match(svg) and ('pase '+sys.argv[1]) in svg else 1)" "$1"; }
 V1_A='Autorizo a Tribe a compartir mi nombre, WhatsApp y correo con BullBox (Prueba) para que me contacte sobre mi clase gratis.'
-ATTR_ANA="$V1_A Mi primer nombre y si asistí se compartirán con Ana, quien me invitó. BullBox (Prueba) y Tribe registrarán si asistí a mi clase."
+ATTR_ANA="$V1_A Mi primer nombre, si asistí a mi clase y si me inscribí se compartirán con Ana, quien me invitó. BullBox (Prueba) y Tribe registrarán si asistí."
 
 # ════ flag OFF ═══════════════════════════════════════════════════════════════
 if want 1 || want 2; then
@@ -123,7 +123,7 @@ if want 3; then echo "== 3. flag on, a valid code at the home gym"
   [ "$(consent_of "$pc")" = "$ATTR_ANA" ] && ok "consent_text is V1 plus both lines ($(consent_of "$pc" | python3 -c 'import sys; print(len(sys.stdin.read().rstrip(chr(10))))') characters)" || bad "consent: $(consent_of "$pc")"
   qr_ok "$pc" && ok "qr_svg present, exactly the renderer's shape, labelled with pass $pc" || bad "qr_svg missing or malformed"
   html=$(curl -s "$APP/pase/$SLUG_A/?src=atleta&code=ANA-7KQ")
-  [[ "$html" == *"Te invita"*"Ana"* && "$html" == *"Mi primer nombre y si asistí se compartirán con Ana, quien me invitó."* ]] \
+  [[ "$html" == *"Te invita"*"Ana"* && "$html" == *"Mi primer nombre, si asistí a mi clase y si me inscribí se compartirán con Ana, quien me invitó."* ]] \
     && ok "page: \"Te invita Ana\" chip and the athlete consent line" || bad "page chip or consent line missing"
   html=$(curl -s "$APP/pase/$SLUG_A/")
   [[ "$html" != *"Te invita"* ]] && ok "page without a link: no chip" || bad "chip shown without a link"

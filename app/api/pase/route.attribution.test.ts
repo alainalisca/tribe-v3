@@ -58,7 +58,7 @@ const V1 =
   'Autorizo a Tribe a compartir mi nombre, WhatsApp y correo con CrossFit BullBox para que me contacte sobre mi clase gratis.';
 const ATTRIBUTED =
   V1 +
-  ' Mi primer nombre y si asistí se compartirán con Ana, quien me invitó. CrossFit BullBox y Tribe registrarán si asistí a mi clase.';
+  ' Mi primer nombre, si asistí a mi clase y si me inscribí se compartirán con Ana, quien me invitó. CrossFit BullBox y Tribe registrarán si asistí.';
 
 function post(src: string | null, code: string | null, origin = 'https://tribe-v3.vercel.app') {
   return POST(

@@ -76,7 +76,7 @@ export default function GymAddAthlete({ partnerId, maxAthletes }: GymAddAthleteP
   }
 
   const addError = (code: string): string => {
-    if (code === 'program_full') return t('addCap', { n: maxAthletes });
+    if (code === 'program_full') return t('addCap', { max: maxAthletes });
     if (code === 'already_added') return t('addAlready');
     if (code === 'invalid_whatsapp') return t('addWhatsappInvalid');
     return td('error');

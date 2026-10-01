@@ -8,19 +8,31 @@ import { createClient } from '@/lib/supabase/client';
 import { formatShortDate } from '@/lib/atletas/locale';
 import { setPassLeadContacted } from '@/lib/dal/leadContact';
 import { markLeadBonusSettled, markLeadRetained } from '@/lib/dal/athleteGymWrites';
-import { matchesGuestFilter, type GuestFilter, type GymGuestRow, type GymView } from '@/lib/atletas/gymView';
+import {
+  DEFAULT_GUEST_FILTER,
+  GUESTS_PAGE_SIZE,
+  guestsForFilter,
+  type GuestFilter,
+  type GymGuestRow,
+  type GymView,
+} from '@/lib/atletas/gymView';
 import DoorOutcomeButtons from '@/components/door/DoorOutcomeButtons';
 import { useGymWrite } from './useGymWrite';
 
 /**
- * T-AV26 "Invitados": the program's attributed guests from the summary, newest
- * first, with filter chips (all, expected, came, members). The chips select
- * rows by the summary's own fields and carry no counts, so nothing is counted
- * here (matchesGuestFilter).
+ * T-AV26 "Invitados": the program's attributed guests from the summary, with
+ * filter chips. The chips select rows by the summary's own fields and carry no
+ * counts, so nothing is counted here (guestsForFilter).
+ *
+ * T-AV27a (Al, 2026-10-01): the list opens on "Abiertos" (guests who came with
+ * no outcome first, then those not yet arrived), shows 20 rows and a "Ver
+ * más" for the next 20, and keeps each row short: the four outcome buttons sit
+ * behind "Registrar resultado", one guest open at a time.
  *
  * Owner and admin, per row:
  *   outcomes             DoorOutcomeButtons (av_athletes_set_outcome), shared
- *                        with the door, once the guest came
+ *                        with the door, once the guest came, behind
+ *                        "Registrar resultado"
  *   "Oferta enviada"     set_pass_lead_contacted through setPassLeadContacted,
  *                        the existing writer (D13); a checkbox, so it can be
  *                        cleared again
@@ -33,8 +45,9 @@ interface GymGuestsProps {
   view: GymView;
 }
 
-const FILTERS: readonly GuestFilter[] = ['all', 'expected', 'came', 'members'];
+const FILTERS: readonly GuestFilter[] = ['open', 'expected', 'came', 'members', 'all'];
 const FILTER_KEY = {
+  open: 'filterOpen',
   all: 'filterAll',
   expected: 'filterExpected',
   came: 'filterCame',
@@ -68,7 +81,14 @@ function statusText(g: GymGuestRow, t: TH, th: TH, td: TH): string {
   return g.attendedAt ? th('statusArrived') : th('statusClaimed');
 }
 
-function GuestRow({ g, canManage }: { g: GymGuestRow; canManage: boolean }) {
+interface GuestRowProps {
+  g: GymGuestRow;
+  canManage: boolean;
+  outcomesOpen: boolean;
+  onToggleOutcomes: () => void;
+}
+
+function GuestRow({ g, canManage, outcomesOpen, onToggleOutcomes }: GuestRowProps) {
   const { language } = useLanguage();
   const router = useRouter();
   const t = useTranslations('gym');
@@ -103,6 +123,17 @@ function GuestRow({ g, canManage }: { g: GymGuestRow; canManage: boolean }) {
       {canManage ? (
         <div className="mt-3 space-y-3">
           {g.attendedAt ? (
+            <button
+              type="button"
+              aria-expanded={outcomesOpen}
+              data-action="record-outcome"
+              onClick={onToggleOutcomes}
+              className={small}
+            >
+              {t('recordOutcome')}
+            </button>
+          ) : null}
+          {g.attendedAt && outcomesOpen ? (
             <DoorOutcomeButtons passCode={g.passCode} initialOutcome={g.outcome} onSaved={() => router.refresh()} />
           ) : null}
 
@@ -169,8 +200,17 @@ function GuestRow({ g, canManage }: { g: GymGuestRow; canManage: boolean }) {
 export default function GymGuests({ view }: GymGuestsProps) {
   const t = useTranslations('gym');
   const th = useTranslations('athleteHome');
-  const [filter, setFilter] = useState<GuestFilter>('all');
-  const rows = view.guests.filter((g) => matchesGuestFilter(g, filter));
+  const [filter, setFilter] = useState<GuestFilter>(DEFAULT_GUEST_FILTER);
+  const [shown, setShown] = useState(GUESTS_PAGE_SIZE);
+  const [openLead, setOpenLead] = useState<string | null>(null);
+  const rows = guestsForFilter(view.guests, filter);
+  const visible = rows.slice(0, shown);
+
+  function choose(f: GuestFilter) {
+    setFilter(f);
+    setShown(GUESTS_PAGE_SIZE);
+    setOpenLead(null);
+  }
 
   return (
     <section className="space-y-3" data-gym-guests>
@@ -181,7 +221,7 @@ export default function GymGuests({ view }: GymGuestsProps) {
             type="button"
             aria-pressed={filter === f}
             data-filter={f}
-            onClick={() => setFilter(f)}
+            onClick={() => choose(f)}
             className={
               filter === f
                 ? 'rounded-full bg-tribe-dark px-4 py-2 text-sm font-semibold text-white'
@@ -196,11 +236,27 @@ export default function GymGuests({ view }: GymGuestsProps) {
         <p className="rounded-2xl bg-theme-card p-4 text-sm text-theme-secondary">{th('guestsEmpty')}</p>
       ) : (
         <ul className="space-y-3">
-          {rows.map((g) => (
-            <GuestRow key={g.leadId} g={g} canManage={view.canManage} />
+          {visible.map((g) => (
+            <GuestRow
+              key={g.leadId}
+              g={g}
+              canManage={view.canManage}
+              outcomesOpen={openLead === g.leadId}
+              onToggleOutcomes={() => setOpenLead((cur) => (cur === g.leadId ? null : g.leadId))}
+            />
           ))}
         </ul>
       )}
+      {rows.length > visible.length ? (
+        <button
+          type="button"
+          data-action="show-more"
+          onClick={() => setShown((n) => n + GUESTS_PAGE_SIZE)}
+          className="w-full rounded-xl border border-stone-300 bg-white px-4 py-3 text-sm font-semibold text-tribe-dark"
+        >
+          {t('showMore')}
+        </button>
+      ) : null}
     </section>
   );
 }

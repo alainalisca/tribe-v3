@@ -157,9 +157,10 @@ describe('GymDashboard: Atletas', () => {
     expect(container.querySelector('[data-action]')).toBeNull();
     expect(container.querySelector('[data-add-athlete]')).toBeNull();
     tab('Invitados');
-    expect(container.querySelectorAll('[data-guest-row]').length).toBeGreaterThan(0);
-    expect(container.querySelector('[data-action]')).toBeNull();
-    // The outcome buttons (DoorOutcomeButtons renders [data-outcomes]).
+    fireEvent.click(screen.getByText('Todos'));
+    expect(container.querySelectorAll('[data-guest-row]')).toHaveLength(5);
+    // No "Registrar resultado", no checkbox, no button on any row (GymGuests.test.tsx has the owner half).
+    expect(container.querySelector('[data-guest-row] [data-action]')).toBeNull();
     expect(container.querySelector('[data-outcomes]')).toBeNull();
   });
 });
@@ -222,65 +223,5 @@ describe('GymDashboard: Agregar atleta', () => {
     await waitFor(() =>
       expect(container.querySelector('[data-add-error]')?.textContent).toBe('Esta persona ya está en tu programa.')
     );
-  });
-});
-
-describe('GymDashboard: Invitados', () => {
-  it('filters select rows without counting them', () => {
-    const { container } = render(<GymDashboard view={owner()} />);
-    tab('Invitados');
-    const codes = () =>
-      [...container.querySelectorAll('[data-guest-row]')].map((r) => r.getAttribute('data-guest-row'));
-    expect(codes()).toEqual(['AV-CARA', 'AV-CARB', 'AV-CARC', 'AV-CARD', 'AV-CARE']);
-    fireEvent.click(screen.getByText('Por llegar'));
-    expect(codes()).toEqual(['AV-CARA']);
-    fireEvent.click(screen.getByText('Miembros'));
-    expect(codes()).toEqual(['AV-CARC', 'AV-CARD']);
-    fireEvent.click(screen.getByText('Llegaron'));
-    expect(codes()).toEqual(['AV-CARB', 'AV-CARC', 'AV-CARD', 'AV-CARE']);
-  });
-
-  it('a self-referral shows the gym-facing reason', () => {
-    const { container } = render(<GymDashboard view={owner()} />);
-    tab('Invitados');
-    const row = container.querySelector('[data-guest-row="AV-CARE"]') as HTMLElement;
-    expect(row.querySelector('[data-guest-status]')?.textContent).toBe('Usó el correo del atleta');
-  });
-
-  it('"Oferta enviada" goes through set_pass_lead_contacted, the existing writer', async () => {
-    const { container } = render(<GymDashboard view={owner()} />);
-    tab('Invitados');
-    const row = container.querySelector('[data-guest-row="AV-CARB"]') as HTMLElement;
-    // The owner half of "coach: no action anywhere": the same row HAS outcomes here.
-    expect(row.querySelector('[data-outcomes]')).toBeTruthy();
-    fireEvent.click(row.querySelector('[data-action="offer-sent"]') as HTMLElement);
-    await waitFor(() =>
-      expect(h.contacted).toHaveBeenCalledWith(expect.anything(), '00000000-0000-4000-8000-000000003001', true)
-    );
-    expect(h.refresh).toHaveBeenCalled();
-  });
-
-  it('"Marcar como sigue" only once retain_from has passed; before that, the date', async () => {
-    const { container } = render(<GymDashboard view={owner()} />);
-    tab('Invitados');
-    const early = container.querySelector('[data-guest-row="AV-CARC"]') as HTMLElement;
-    expect(early.querySelector('[data-action="retained"]')).toBeNull();
-    expect(early.querySelector('[data-retain-from]')?.textContent).toMatch(/^Disponible desde el /);
-    const ready = container.querySelector('[data-guest-row="AV-CARD"]') as HTMLElement;
-    fireEvent.click(ready.querySelector('[data-action="retained"]') as HTMLElement);
-    await waitFor(() => expect(h.retained).toHaveBeenCalledWith(expect.anything(), 'g-ready'));
-  });
-
-  it('"Bono pagado" for a join that owes a bonus; a settled one shows its date instead', async () => {
-    const { container } = render(<GymDashboard view={owner()} />);
-    tab('Invitados');
-    const owes = container.querySelector('[data-guest-row="AV-CARC"]') as HTMLElement;
-    fireEvent.click(owes.querySelector('[data-action="bonus-paid"]') as HTMLElement);
-    await waitFor(() => expect(h.bonus).toHaveBeenCalledWith(expect.anything(), 'g-joined'));
-    const settled = container.querySelector('[data-guest-row="AV-CARD"]') as HTMLElement;
-    expect(settled.querySelector('[data-action="bonus-paid"]')).toBeNull();
-    expect(settled.querySelector('[data-bonus-settled]')?.textContent).toMatch(/^Bono pagado · /);
-    const none = container.querySelector('[data-guest-row="AV-CARB"]') as HTMLElement;
-    expect(none.querySelector('[data-action="bonus-paid"]')).toBeNull();
   });
 });

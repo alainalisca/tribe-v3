@@ -278,13 +278,31 @@ function accentCandidates(word: string): string[] {
  * word missing an accent, and it removes a class of fragment noise.
  */
 function wordsIn(value: string): string[] {
-  return (
-    decodeEscapes(value)
-      .replace(/\{\{[^}]*\}\}/g, ' ')
-      .replace(/\$\{[^}]*\}/g, ' ')
-      .replace(/&[a-z]+;|&#\d+;/gi, ' ')
-      .match(/[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]{3,}/g) ?? []
-  );
+  return withoutPlaceholders(value).match(/[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]{3,}/g) ?? [];
+}
+
+/** RULE_CANNOT_DECIDE words present in a string, placeholders excluded. */
+function listViolations(value: string): string[] {
+  const text = withoutPlaceholders(value);
+  return Object.keys(RULE_CANNOT_DECIDE).filter((bad) => accentWordPattern(bad).test(text));
+}
+
+/**
+ * The text a reader sees, with every interpolation slot removed: `{{x}}`,
+ * `${x}`, and (T-AV27a, 2026-10-01) the `{name}` placeholders useTranslations
+ * fills. `{max}` in "Ya tienes {max} atletas activos" is a variable name, not
+ * a Spanish word, and was flagged as "max should be máx" until this stripped
+ * it. `{{x}}` is removed FIRST, so its inner braces cannot be half-eaten by
+ * the single-brace rule. Every check that reads copy goes through here: the
+ * rule (via wordsIn), the both-ways arm (via wordsIn) and the
+ * RULE_CANNOT_DECIDE list, which reads the whole value.
+ */
+function withoutPlaceholders(value: string): string {
+  return decodeEscapes(value)
+    .replace(/\{\{[^}]*\}\}/g, ' ')
+    .replace(/\$\{[^}]*\}/g, ' ')
+    .replace(/\{[A-Za-z_][A-Za-z0-9_]*\}/g, ' ')
+    .replace(/&[a-z]+;|&#\d+;/gi, ' ');
 }
 
 /** Turns \uXXXX and \xXX back into the characters a user actually sees. */
@@ -326,6 +344,31 @@ describe('the dictionary itself', () => {
     for (const w of ['mas', 'mi', 'anos', 'este', 'solo', 'tu', 'veras']) {
       expect(spell.correct(w), `${w} is a real Spanish word`).toBe(true);
     }
+  });
+});
+
+describe('interpolation placeholders are not words (T-AV27a)', () => {
+  /**
+   * `{max}` in gym.addCap was flagged as "max should be máx" on 2026-10-01 and
+   * the copy was bent to `{n}` to get past it. These pin both halves: a slot
+   * name is never read as Spanish, and a real word NEXT TO a slot still is.
+   * Mutation proof: delete the `{name}` replace in withoutPlaceholders and
+   * the first case goes red; strip all braces AND their neighbours and the
+   * second does.
+   */
+  it('drops {name}, {{name}} and ${name} slots, and nothing else', () => {
+    expect(wordsIn('Ya tienes {max} atletas activos.')).toEqual(['tienes', 'atletas', 'activos']);
+    expect(wordsIn('Hola {{nombre}} y ${usuario} {gym_name}')).toEqual(['Hola']);
+    expect(wordsIn('{gym} busqueda')).toEqual(['busqueda']);
+  });
+
+  it('a real unaccented word beside a placeholder is still caught, by the rule and by the list', () => {
+    // Two-letter words are dropped by design, so this reads ['busqueda'].
+    expect(wordsIn('Tu {gym} busqueda')).toEqual(['busqueda']);
+    const word = 'busqueda';
+    expect(spell.correct(word)).toBe(false);
+    expect(listViolations('{n} anos de experiencia')).toEqual(['anos']);
+    expect(listViolations('Hace {anos} meses')).toEqual([]);
   });
 });
 
@@ -386,10 +429,8 @@ describe('Spanish accents', () => {
 
       // THE LIST: words the rule declines, because the bare form is also a real
       // word. The decision is ours, per the comments in spanishAccents.ts.
-      for (const [bad, good] of Object.entries(RULE_CANNOT_DECIDE)) {
-        if (accentWordPattern(bad).test(value)) {
-          offenders.push(`${where}\n      "${value}"\n      -> "${bad}" should be "${good}"`);
-        }
+      for (const bad of listViolations(value)) {
+        offenders.push(`${where}\n      "${value}"\n      -> "${bad}" should be "${RULE_CANNOT_DECIDE[bad]}"`);
       }
     }
 

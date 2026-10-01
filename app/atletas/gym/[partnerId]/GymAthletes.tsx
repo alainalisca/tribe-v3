@@ -147,7 +147,7 @@ function AthleteRow({ a, canManage, maxAthletes }: { a: GymAthleteRow; canManage
           </div>
           {error ? (
             <p role="alert" className="mt-2 text-sm text-red-700">
-              {error.code === 'program_full' ? t('addCap', { n: maxAthletes }) : td('error')}
+              {error.code === 'program_full' ? t('addCap', { max: maxAthletes }) : td('error')}
             </p>
           ) : null}
         </>

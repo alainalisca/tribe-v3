@@ -595,7 +595,10 @@
     "addSearch": "Search by name or email",
     "addWhatsapp": "Athlete's WhatsApp",
     "addWhatsappInvalid": "Enter the WhatsApp number with its country code, for example +57 300 123 4567.",
-    "addCap": "You already have {n} active athletes. Pause or end one to add another.",
-    "addAlready": "This person is already in your program."
+    "addCap": "You already have {max} active athletes. Pause or end one to add another.",
+    "addAlready": "This person is already in your program.",
+    "filterOpen": "Open",
+    "showMore": "Show more",
+    "recordOutcome": "Record outcome"
   }
 }

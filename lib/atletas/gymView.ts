@@ -52,7 +52,11 @@ export interface GymAthleteRow {
   bonusPaid?: number;
 }
 
-export type GuestFilter = 'all' | 'expected' | 'came' | 'members';
+export type GuestFilter = 'open' | 'expected' | 'came' | 'members' | 'all';
+
+/** T-AV27a: the Invitados list opens on this filter, 20 rows at a time. */
+export const DEFAULT_GUEST_FILTER: GuestFilter = 'open';
+export const GUESTS_PAGE_SIZE = 20;
 
 export interface GymGuestRow {
   leadId: string;
@@ -160,6 +164,8 @@ export function toGymView(partnerId: string, s: PartnerSummary, now: number = Da
 /** Which guests a filter chip shows. Reads the summary's own fields; counts nothing. */
 export function matchesGuestFilter(g: GymGuestRow, filter: GuestFilter): boolean {
   switch (filter) {
+    case 'open':
+      return g.outcome === null;
     case 'expected':
       return g.attendedAt === null;
     case 'came':
@@ -169,4 +175,18 @@ export function matchesGuestFilter(g: GymGuestRow, filter: GuestFilter): boolean
     default:
       return true;
   }
+}
+
+/**
+ * T-AV27a (Al, 2026-10-01). The rows a filter shows, in display order.
+ *
+ * "Abiertos" (the default) puts the guests who CAME and have no outcome yet
+ * first, because those are the ones the gym can still close, then the guests
+ * not yet arrived. Each group keeps the summary's own order, newest claim
+ * first. Every other filter keeps that order unchanged. Nothing is counted.
+ */
+export function guestsForFilter(guests: readonly GymGuestRow[], filter: GuestFilter): GymGuestRow[] {
+  const rows = guests.filter((g) => matchesGuestFilter(g, filter));
+  if (filter !== 'open') return rows;
+  return [...rows.filter((g) => g.attendedAt !== null), ...rows.filter((g) => g.attendedAt === null)];
 }

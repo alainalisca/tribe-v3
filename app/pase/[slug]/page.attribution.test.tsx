@@ -78,13 +78,13 @@ describe('the pass page with an athlete link', () => {
     expect(serverClient.createClient).not.toHaveBeenCalled();
   });
 
-  it('flag on, a code that resolves here: "Te invita Ana" and the two extra consent lines', async () => {
+  it('flag on, a code that resolves here: "Te invita Ana" and the attributed consent line', async () => {
     vi.stubEnv('ATHLETE_VALUE_ENABLED', 'all');
     render(await page({ src: 'atleta', code: 'ANA-7KQ' }));
     expect(screen.getByText('Te invita Ana')).toBeTruthy();
     expect(screen.getByTestId('consent').textContent).toBe(
       V1 +
-        ' Mi primer nombre y si asistí se compartirán con Ana, quien me invitó. BullBox (Prueba) y Tribe registrarán si asistí a mi clase.'
+        ' Mi primer nombre, si asistí a mi clase y si me inscribí se compartirán con Ana, quien me invitó. BullBox (Prueba) y Tribe registrarán si asistí.'
     );
   });
 
