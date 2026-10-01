@@ -30,6 +30,8 @@ import { normalizeWhatsApp, waMeDigits } from '@/lib/pase/phone';
 import { generatePassCode } from '@/lib/pase/passCode';
 import { resolveAthleteAttribution, consentForAttribution, renderVoucherQr } from '@/lib/pase/athleteAttribution';
 import { sendPartnerLeadNotification, sendLeadPassEmail } from '@/lib/email/passLead';
+import { claimLeadNotification } from '@/lib/dal/athleteNotify';
+import { deliverNotifications } from '@/lib/atletas/athleteNotifications';
 
 const RATE_LIMIT_MAX = 5;
 const RATE_LIMIT_WINDOW_MS = 600_000;
@@ -176,7 +178,10 @@ export async function POST(request: NextRequest) {
 
     const userAgent = (request.headers.get('user-agent') ?? '').slice(0, MAX_UA_LEN) || null;
     const attribution = await resolveAthleteAttribution(admin, config.partnerId, src, code);
-    const { consentText, referredByAthleteId, overLimit } = consentForAttribution(config.partnerName, attribution);
+    const { consentText, referredByAthleteId, invitedByFirstName, overLimit } = consentForAttribution(
+      config.partnerName,
+      attribution
+    );
     if (overLimit) {
       logError(new Error('attributed consent_text exceeds 500 characters; saved without attribution'), {
         route: '/api/pase',
@@ -240,6 +245,13 @@ export async function POST(request: NextRequest) {
         src,
         code,
         createdAt: new Date(),
+        // T-AV27b: only for an attributed lead, so a plain lead's email is unchanged.
+        ...(referredByAthleteId && invitedByFirstName
+          ? {
+              invitedBy: invitedByFirstName,
+              doorUrl: `${new URL(request.url).origin}/pase/verificar/${inserted.passCode}/`,
+            }
+          : {}),
       }),
       sendLeadPassEmail({
         to: email,
@@ -272,6 +284,20 @@ export async function POST(request: NextRequest) {
         action: 'send_lead_pass',
         passLeadId: inserted.id,
       });
+    }
+
+    // T-AV27b: "{guest} claimed a pass with your link", in-app only, to the
+    // athlete. Only for an attributed lead (flag on), and 8209 decides the
+    // rest (credited, once). Best effort: the lead is saved whatever happens.
+    if (referredByAthleteId) {
+      try {
+        const claimed = await claimLeadNotification(admin, inserted.id);
+        if (claimed.success) {
+          await deliverNotifications(admin, claimed.data ?? [], { actorId: null, origin: new URL(request.url).origin });
+        }
+      } catch (error) {
+        logError(error, { route: '/api/pase', action: 'av_notify_claimed', passLeadId: inserted.id });
+      }
     }
 
     // The voucher QR only when the predicate is true for this partner; with it

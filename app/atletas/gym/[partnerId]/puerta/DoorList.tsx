@@ -6,6 +6,7 @@ import { useTranslations } from '@/lib/i18n/useTranslations';
 import { intlLocale } from '@/lib/atletas/locale';
 import { createClient } from '@/lib/supabase/client';
 import { confirmPassAttendance, type DoorListEntry } from '@/lib/dal/passDoor';
+import { notifyAthlete } from '@/lib/atletas/notifyAthlete';
 import DoorOutcomeButtons from '@/components/door/DoorOutcomeButtons';
 import DoorCodeEntry from './DoorCodeEntry';
 
@@ -39,6 +40,7 @@ function DoorRow({ entry }: { entry: DoorListEntry }) {
       return;
     }
     setAttendedAt(result.data.attendedAt);
+    notifyAthlete(entry.passCode, 'arrived');
   }
 
   return (

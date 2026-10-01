@@ -600,5 +600,23 @@
     "filterOpen": "Open",
     "showMore": "Show more",
     "recordOutcome": "Record outcome"
+  },
+  "notify": {
+    "arrived": "{guest} arrived at class",
+    "joined": "{guest} joined {gym}",
+    "claimed": "{guest} claimed a pass with your link",
+    "ready": "{athlete} can move up a level"
+  },
+  "email": {
+    "invitedBy": "Invited by {athlete}",
+    "doorLink": "Confirm at the door"
+  },
+  "admin": {
+    "title": "Tribe Athletes programs",
+    "create": "Create program",
+    "partner": "Partner",
+    "active": "Program active",
+    "setSponsored": "Set as sponsored (admin only)",
+    "empty": "No programs yet."
   }
 }

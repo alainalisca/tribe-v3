@@ -18,6 +18,7 @@ const h = vi.hoisted(() => ({
   fetchDoorPass: vi.fn(),
   confirmPassAttendance: vi.fn(),
   setPassOutcome: vi.fn(),
+  notifyAthlete: vi.fn(),
   language: 'en' as 'en' | 'es',
 }));
 
@@ -39,6 +40,7 @@ vi.mock('@/lib/dal/passDoor', async (importOriginal) => ({
   setPassOutcome: h.setPassOutcome,
 }));
 vi.mock('@/lib/LanguageContext', () => ({ useLanguage: () => ({ language: h.language, t: (k: string) => k }) }));
+vi.mock('@/lib/atletas/notifyAthlete', () => ({ notifyAthlete: h.notifyAthlete }));
 
 import VerifyPassPage from './page';
 import DoorPassView from './DoorPassView';
@@ -138,6 +140,8 @@ describe('DoorPassView', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Confirm attendance' }));
     await waitFor(() => expect(screen.getByText('Attendance confirmed')).toBeTruthy());
     expect(h.confirmPassAttendance).toHaveBeenCalledWith(expect.anything(), 'BU-4F7K', 'scan');
+    // T-AV27b: the confirm tells the referring athlete (8209 decides whether anyone is told).
+    expect(h.notifyAthlete).toHaveBeenCalledWith('BU-4F7K', 'arrived');
     expect(container.querySelector('[data-welcome-offer]')?.textContent).toBe(
       'Next: your close' + 'First month at 20% off if you join this week.'
     );
@@ -164,7 +168,17 @@ describe('DoorPassView', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Joined' }));
     await waitFor(() => expect(screen.getByText('Saved')).toBeTruthy());
     expect(h.setPassOutcome).toHaveBeenCalledWith(expect.anything(), 'BU-4F7K', 'joined');
+    // T-AV27b: a saved join tells the athlete; nothing was said on the way in.
+    expect(h.notifyAthlete).toHaveBeenCalledExactlyOnceWith('BU-4F7K', 'joined');
     expect(screen.getByRole('button', { name: 'Joined' }).getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('T-AV27b: a saved follow-up tells nobody (only a join notifies)', async () => {
+    h.setPassOutcome.mockResolvedValue({ success: true, data: { outcome: 'follow_up' } });
+    render(<DoorPassView passCode="BU-4F7K" pass={{ ...PASS, attendedAt: '2026-09-28T15:00:00Z' }} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Follow up' }));
+    await waitFor(() => expect(screen.getByText('Saved')).toBeTruthy());
+    expect(h.notifyAthlete).not.toHaveBeenCalled();
   });
 
   it('the database refusing joined before a show-up is worded, not swallowed', async () => {
@@ -172,6 +186,8 @@ describe('DoorPassView', () => {
     render(<DoorPassView passCode="BU-4F7K" pass={{ ...PASS, attendedAt: '2026-09-28T15:00:00Z' }} />);
     fireEvent.click(screen.getByRole('button', { name: 'Joined' }));
     await waitFor(() => expect(screen.getByRole('alert').textContent).toBe('Confirm attendance first.'));
+    // T-AV27b: a refused join tells nobody.
+    expect(h.notifyAthlete).not.toHaveBeenCalled();
   });
 
   it('shows "Invitation from" the athlete when the pass is attributed', () => {
@@ -186,6 +202,8 @@ describe('DoorPassView', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Confirm attendance' }));
     await waitFor(() => expect(screen.getByRole('alert').textContent).toBe('We could not save that. Try again.'));
     expect(screen.getByRole('button', { name: 'Confirm attendance' })).toBeTruthy();
+    // T-AV27b: a failed confirm tells nobody.
+    expect(h.notifyAthlete).not.toHaveBeenCalled();
   });
 
   it('renders the approved ES copy, including the Spanish welcome offer after confirm', () => {

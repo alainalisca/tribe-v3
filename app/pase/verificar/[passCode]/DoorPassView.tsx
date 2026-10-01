@@ -6,6 +6,7 @@ import { useTranslations } from '@/lib/i18n/useTranslations';
 import { intlLocale } from '@/lib/atletas/locale';
 import { createClient } from '@/lib/supabase/client';
 import { confirmPassAttendance, type ConfirmMethod, type DoorPass } from '@/lib/dal/passDoor';
+import { notifyAthlete } from '@/lib/atletas/notifyAthlete';
 import DoorOutcomeButtons from '@/components/door/DoorOutcomeButtons';
 
 /**
@@ -60,6 +61,8 @@ export default function DoorPassView({ passCode, pass, method = 'scan', readFail
     }
     setAttendedAt(result.data.attendedAt);
     setJustConfirmed(!result.data.alreadyConfirmed);
+    // T-AV27b: tell the referring athlete. 8209 decides whether anyone is told.
+    notifyAthlete(passCode, 'arrived');
   }
 
   const offer = pass ? pass[OFFER_FOR[language] ?? 'welcomeOfferEs'] : null;

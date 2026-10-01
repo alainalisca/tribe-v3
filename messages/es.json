@@ -600,5 +600,23 @@
     "filterOpen": "Abiertos",
     "showMore": "Ver más",
     "recordOutcome": "Registrar resultado"
+  },
+  "notify": {
+    "arrived": "{guest} llegó a su clase",
+    "joined": "{guest} se inscribió en {gym}",
+    "claimed": "{guest} reclamó un pase con tu link",
+    "ready": "{athlete} ya puede subir de nivel"
+  },
+  "email": {
+    "invitedBy": "Invitación de {athlete}",
+    "doorLink": "Confirmar en la puerta"
+  },
+  "admin": {
+    "title": "Programas de Atletas Tribe",
+    "create": "Crear programa",
+    "partner": "Aliado",
+    "active": "Programa activo",
+    "setSponsored": "Marcar como patrocinado (solo admin)",
+    "empty": "Todavía no hay programas."
   }
 }

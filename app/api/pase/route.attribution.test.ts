@@ -30,8 +30,12 @@ vi.mock('@/lib/dal/athleteReferral', () => ({
   findActiveAthleteByRefCode: vi.fn(),
 }));
 vi.mock('@/lib/qr/renderQrSvg', () => ({ renderQrSvg: vi.fn(() => '<svg>qr</svg>') }));
+vi.mock('@/lib/dal/athleteNotify', () => ({ claimLeadNotification: vi.fn() }));
+vi.mock('@/lib/atletas/athleteNotifications', () => ({ deliverNotifications: vi.fn() }));
 
 import { POST } from './route';
+import { claimLeadNotification } from '@/lib/dal/athleteNotify';
+import { deliverNotifications } from '@/lib/atletas/athleteNotifications';
 import { logError } from '@/lib/logger';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { fetchPassConfig, insertPassLead, markPassLeadNotified } from '@/lib/dal/passLeads';
@@ -121,7 +125,7 @@ describe('POST /api/pase, athletes flag on', () => {
     expect(renderQrSvg).toHaveBeenLastCalledWith('http://localhost:3001/pase/verificar/BB-4F7K/', expect.any(String));
   });
 
-  it('the emails are unchanged by attribution (the lead email QR is T-AV27)', async () => {
+  it('T-AV27b: an attributed lead adds "Invitación de" and the door link to the partner email, and nothing else', async () => {
     await post('atleta', 'ANA-7KQ');
     const partner = vi.mocked(sendPartnerLeadNotification).mock.calls[0][0] as unknown as Record<string, unknown>;
     const guest = vi.mocked(sendLeadPassEmail).mock.calls[0][0] as unknown as Record<string, unknown>;
@@ -131,7 +135,9 @@ describe('POST /api/pase, athletes flag on', () => {
       'choice2',
       'code',
       'createdAt',
+      'doorUrl',
       'email',
+      'invitedBy',
       'name',
       'partnerName',
       'passCode',
@@ -139,6 +145,8 @@ describe('POST /api/pase, athletes flag on', () => {
       'to',
       'whatsapp',
     ]);
+    expect(partner.invitedBy).toBe('Ana');
+    expect(partner.doorUrl).toBe('https://tribe-v3.vercel.app/pase/verificar/BB-4F7K/');
     expect(Object.keys(guest).sort()).toEqual([
       'address',
       'name',
@@ -148,6 +156,24 @@ describe('POST /api/pase, athletes flag on', () => {
       'to',
       'whatsappUrl',
     ]);
+  });
+
+  it('T-AV27b: an attributed lead tells the athlete (in-app), through 8209, with the service role', async () => {
+    vi.mocked(claimLeadNotification).mockResolvedValue({ success: true, data: [] });
+    await post('atleta', 'ANA-7KQ');
+    expect(claimLeadNotification).toHaveBeenCalledWith(expect.anything(), 'lead-1');
+    expect(deliverNotifications).toHaveBeenCalledWith(expect.anything(), [], {
+      actorId: null,
+      origin: 'https://tribe-v3.vercel.app',
+    });
+  });
+
+  it('T-AV27b: an unattributed lead keeps the partner email exactly as before and tells nobody', async () => {
+    await post('print', 'BULLBOX-01');
+    const partner = vi.mocked(sendPartnerLeadNotification).mock.calls[0][0] as unknown as Record<string, unknown>;
+    expect(partner).not.toHaveProperty('invitedBy');
+    expect(partner).not.toHaveProperty('doorUrl');
+    expect(claimLeadNotification).not.toHaveBeenCalled();
   });
 
   it('no athlete link: the QR still shows (the program is on), nothing is attributed', async () => {

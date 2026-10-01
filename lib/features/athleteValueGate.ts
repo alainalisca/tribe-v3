@@ -24,7 +24,7 @@ import { isAthleteValueEnabled, type AdminRpcClient } from './athleteValue';
 import { ATHLETES_FEATURE } from './athletesAttribution';
 
 /** The program's flag-gated pages. Nothing else, and never /pase/{slug}. */
-export const ATHLETES_GATED_PREFIXES = ['/atletas', '/pase/verificar'] as const;
+export const ATHLETES_GATED_PREFIXES = ['/atletas', '/pase/verificar', '/admin/atletas'] as const;
 
 /**
  * An internal path no route matches, so a rewrite to it renders the app's
@@ -74,6 +74,21 @@ export function gymPathRequirement(
   return { partnerId, roles: isSettings ? OWNER_OR_ADMIN : STAFF };
 }
 
+/**
+ * T-AV27b. /admin/atletas/ is for app admins only, and a non-admin gets a REAL
+ * 404 here rather than the redirect the other admin pages do, so the
+ * unreleased screen cannot be discovered by its status.
+ */
+export function isAdminAthletesPath(pathname: string): boolean {
+  return pathname === '/admin/atletas' || pathname.startsWith('/admin/atletas/');
+}
+
+/** is_app_admin(), strictly true. Any error is a no. */
+async function callerIsAdmin(supabase: AdminRpcClient): Promise<boolean> {
+  const { data, error } = await supabase.rpc('is_app_admin');
+  return !error && data === true;
+}
+
 /** Does the caller hold one of `roles` for this partner. Any error is a no. */
 async function callerHasPartnerRole(
   supabase: PartnerRoleRpcClient,
@@ -101,6 +116,7 @@ export async function athletesGateAllows(
     const userId = await getUserId();
     const flagOn = await isAthleteValueEnabled(userId, supabase, { feature: ATHLETES_FEATURE, env });
     if (!flagOn) return false;
+    if (pathname !== undefined && isAdminAthletesPath(pathname)) return !!userId && (await callerIsAdmin(supabase));
     const need = pathname === undefined ? null : gymPathRequirement(pathname);
     if (need === null) return true;
     if (need === 'not_found' || !userId) return false;

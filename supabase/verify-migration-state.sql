@@ -2271,4 +2271,30 @@ select '8208_t_av26_athletes_search',
          else 'applied'
        end
 
+union all
+
+-- T-AV27b. The notification log is server-only, and the two claim functions
+-- carry the grants their callers need and no more: the door's to
+-- authenticated, /api/pase's to the service role only.
+select '8209_t_av27b_notifications',
+       case
+         when to_regclass('public.av_notification_log') is null
+           or to_regprocedure('public.av_athletes_claim_notification(text,text)') is null
+           or to_regprocedure('public.av_athletes_claim_lead_notification(uuid)') is null
+           then 'MISSING -- the notification log or a claim function is absent'
+         when not (select relrowsecurity from pg_class where oid = 'public.av_notification_log'::regclass)
+           or has_any_column_privilege('anon', 'public.av_notification_log', 'SELECT')
+           or has_any_column_privilege('authenticated', 'public.av_notification_log', 'SELECT')
+           or has_any_column_privilege('authenticated', 'public.av_notification_log', 'INSERT')
+           then 'MISSING -- av_notification_log lost RLS or a client role can read or write it'
+         when has_function_privilege('anon', 'public.av_athletes_claim_notification(text,text)', 'EXECUTE')
+           or not has_function_privilege('authenticated', 'public.av_athletes_claim_notification(text,text)', 'EXECUTE')
+           or has_function_privilege('authenticated', 'public.av_athletes_claim_lead_notification(uuid)', 'EXECUTE')
+           then 'MISSING -- a claim function has the wrong grants'
+         when not exists (select 1 from pg_indexes where schemaname = 'public'
+                           and indexname = 'av_notification_log_once_per_lead')
+           then 'MISSING -- the once-per-lead-and-event index is gone; an event can notify twice'
+         else 'applied'
+       end
+
 order by migration;

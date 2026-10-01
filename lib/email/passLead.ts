@@ -1,5 +1,6 @@
 import { getResendClient } from '@/lib/email/resendClient';
 import { waMeDigits } from '@/lib/pase/phone';
+import { translate } from '@/lib/i18n/translate';
 
 /**
  * The two emails a claimed pass sends: one to the partner with the lead, one
@@ -39,6 +40,27 @@ export interface PartnerLeadEmailParams {
   src: string | null;
   code: string | null;
   createdAt: Date;
+  /**
+   * T-AV27b. Set ONLY for a lead a Tribe athlete invited (flag on, attributed):
+   * the athlete's first name and the door link for this pass. Absent, the email
+   * is byte for byte what it was before the program (hard line 8).
+   */
+  invitedBy?: string;
+  doorUrl?: string;
+}
+
+/** The two lines an attributed lead adds, in the email's language (Spanish). */
+function invitationLines(params: PartnerLeadEmailParams): { text: string[]; html: string[] } {
+  if (!params.invitedBy || !params.doorUrl) return { text: [], html: [] };
+  const invited = translate('es', 'email', 'invitedBy', { athlete: params.invitedBy });
+  const door = translate('es', 'email', 'doorLink');
+  return {
+    text: [invited, `${door}: ${params.doorUrl}`],
+    html: [
+      `<li>${escapeHtml(invited)}</li>`,
+      `<li><a href="${escapeHtml(params.doorUrl)}">${escapeHtml(door)}</a></li>`,
+    ],
+  };
 }
 
 /**
@@ -61,6 +83,7 @@ export async function sendPartnerLeadNotification(params: PartnerLeadEmailParams
   const wa = waMeDigits(params.whatsapp);
   const interes = [params.choice1, params.choice2].filter(Boolean).join(' · ') || 'sin especificar';
   const llego = [params.src, params.code].filter(Boolean).join(' · ') || 'sin datos de origen';
+  const invitation = invitationLines(params);
 
   const text = [
     `${params.name} reclamó su pase de clase gratis en ${params.partnerName}.`,
@@ -69,6 +92,7 @@ export async function sendPartnerLeadNotification(params: PartnerLeadEmailParams
     `Email: ${params.email}`,
     `Interés: ${interes}`,
     `Pase: ${params.passCode}`,
+    ...invitation.text,
     `Llegó por: ${llego}`,
     `Fecha: ${bogotaTimestamp(params.createdAt)}`,
     '',
@@ -82,6 +106,7 @@ export async function sendPartnerLeadNotification(params: PartnerLeadEmailParams
     `<li>Email: <a href="mailto:${escapeHtml(params.email)}">${escapeHtml(params.email)}</a></li>`,
     `<li>Interés: ${escapeHtml(interes)}</li>`,
     `<li>Pase: <strong>${escapeHtml(params.passCode)}</strong></li>`,
+    ...invitation.html,
     `<li>Llegó por: ${escapeHtml(llego)}</li>`,
     `<li>Fecha: ${escapeHtml(bogotaTimestamp(params.createdAt))}</li>`,
     '</ul>',

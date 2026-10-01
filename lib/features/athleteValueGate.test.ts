@@ -4,7 +4,7 @@
  * mutation arms; this file pins the two decisions the gate makes.
  */
 import { describe, it, expect, vi } from 'vitest';
-import { athletesGateAllows, gymPathRequirement, isAthletesGatedPath } from './athleteValueGate';
+import { athletesGateAllows, gymPathRequirement, isAdminAthletesPath, isAthletesGatedPath } from './athleteValueGate';
 
 describe('isAthletesGatedPath: exact prefixes only', () => {
   it.each([
@@ -170,5 +170,36 @@ describe('T-AV26: athletesGateAllows on a gym path asks av_my_partner_role', () 
     const c = client(null);
     expect(await athletesGateAllows(async () => 'u-1', c, ON, '/atletas/')).toBe(true);
     expect(c.rpc).not.toHaveBeenCalledWith('av_my_partner_role', expect.anything());
+  });
+});
+
+describe('T-AV27b: /admin/atletas is admin only, a real 404 otherwise', () => {
+  const ON = { ATHLETE_VALUE_ENABLED: 'all' };
+  const client = (admin: unknown, adminError: unknown = null) => ({
+    rpc: vi.fn(async (fn: string) =>
+      fn === 'is_app_admin' ? { data: admin, error: adminError } : { data: null, error: null }
+    ),
+  });
+
+  it('is gated by the athletes flag like the other program pages', () => {
+    expect(isAthletesGatedPath('/admin/atletas/')).toBe(true);
+    expect(isAthletesGatedPath('/admin/atletasx/')).toBe(false);
+    expect(isAthletesGatedPath('/admin/')).toBe(false);
+  });
+
+  it('an app admin: allowed; anyone else, signed out, a non-boolean or an error: refused', async () => {
+    expect(await athletesGateAllows(async () => 'admin', client(true), ON, '/admin/atletas/')).toBe(true);
+    expect(await athletesGateAllows(async () => 'owner', client(false), ON, '/admin/atletas/')).toBe(false);
+    expect(await athletesGateAllows(async () => null, client(true), ON, '/admin/atletas/')).toBe(false);
+    expect(await athletesGateAllows(async () => 'u', client('true'), ON, '/admin/atletas/')).toBe(false);
+    expect(await athletesGateAllows(async () => 'u', client(true, { message: 'x' }), ON, '/admin/atletas/')).toBe(
+      false
+    );
+  });
+
+  it('other admin pages are untouched by this gate', () => {
+    expect(isAdminAthletesPath('/admin/')).toBe(false);
+    expect(isAdminAthletesPath('/admin/partners/')).toBe(false);
+    expect(isAdminAthletesPath('/admin/atletas')).toBe(true);
   });
 });

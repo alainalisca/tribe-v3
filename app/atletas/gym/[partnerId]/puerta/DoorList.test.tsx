@@ -7,9 +7,16 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import type { DoorListEntry } from '@/lib/dal/passDoor';
 
-const h = vi.hoisted(() => ({ confirm: vi.fn(), setOutcome: vi.fn(), fetchPass: vi.fn(), push: vi.fn() }));
+const h = vi.hoisted(() => ({
+  confirm: vi.fn(),
+  setOutcome: vi.fn(),
+  fetchPass: vi.fn(),
+  push: vi.fn(),
+  notify: vi.fn(),
+}));
 vi.mock('@/lib/LanguageContext', () => ({ useLanguage: () => ({ language: 'es' }) }));
 vi.mock('@/lib/supabase/client', () => ({ createClient: () => ({}) }));
+vi.mock('@/lib/atletas/notifyAthlete', () => ({ notifyAthlete: h.notify }));
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: h.push }) }));
 vi.mock('@/lib/dal/passDoor', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/lib/dal/passDoor')>()),
@@ -49,6 +56,8 @@ describe('DoorList rows', () => {
     await waitFor(() => expect(container.querySelectorAll('[data-outcome]')).toHaveLength(4));
     expect(h.confirm).toHaveBeenCalledWith(expect.anything(), 'BU-4F7K', 'toggle');
     expect(screen.queryByRole('button', { name: 'Llegó' })).toBeNull();
+    // T-AV27b: "Llegó" tells the referring athlete; 8209 decides whether anyone is told.
+    expect(h.notify).toHaveBeenCalledExactlyOnceWith('BU-4F7K', 'arrived');
   });
 
   it('a confirmed pass shows its outcome selected and no "Llegó"', () => {
@@ -71,6 +80,7 @@ describe('DoorList rows', () => {
       expect(screen.getByRole('alert').textContent).toBe('No pudimos guardar eso. Intenta de nuevo.')
     );
     expect(screen.getByRole('button', { name: 'Llegó' })).toBeTruthy();
+    expect(h.notify).not.toHaveBeenCalled();
   });
 });
 

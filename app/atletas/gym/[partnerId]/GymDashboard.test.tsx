@@ -47,6 +47,7 @@ vi.mock('@/lib/dal/athleteGymWrites', () => ({
 vi.mock('@/lib/dal/leadContact', () => ({ setPassLeadContacted: h.contacted }));
 
 import GymDashboard from './GymDashboard';
+import GymAthletes from './GymAthletes';
 
 const NOW = Date.parse('2026-10-01T12:00:00Z');
 const owner = () => toGymView(GYM_PARTNER_ID, gymSummary(), NOW);
@@ -162,6 +163,28 @@ describe('GymDashboard: Atletas', () => {
     // No "Registrar resultado", no checkbox, no button on any row (GymGuests.test.tsx has the owner half).
     expect(container.querySelector('[data-guest-row] [data-action]')).toBeNull();
     expect(container.querySelector('[data-outcomes]')).toBeNull();
+  });
+});
+
+describe('T-AV27b: "Marcar como patrocinado" is the admin screen only', () => {
+  it('absent on the gym dashboard, owner included', () => {
+    const { container } = render(<GymDashboard view={owner()} />);
+    tab('Atletas');
+    expect(container.querySelector('[data-action="sponsor"]')).toBeNull();
+  });
+
+  it('with canSponsor (the admin screen): on every non-sponsored row, setting level sponsored', async () => {
+    const { container } = render(<GymAthletes view={owner()} canSponsor />);
+    expect(container.querySelectorAll('[data-action="sponsor"]')).toHaveLength(3);
+    fireEvent.click(
+      container.querySelector(
+        '[data-athlete-row="00000000-0000-4000-8000-000000002003"] [data-action="sponsor"]'
+      ) as HTMLElement
+    );
+    await waitFor(() =>
+      expect(h.level).toHaveBeenCalledWith(expect.anything(), '00000000-0000-4000-8000-000000002003', 'sponsored')
+    );
+    expect(screen.getAllByText('Marcar como patrocinado (solo admin)')).toHaveLength(3);
   });
 });
 

@@ -27,14 +27,24 @@ import { useGymWrite } from './useGymWrite';
  */
 interface GymAthletesProps {
   view: GymView;
+  /** T-AV27b: the admin screen only. "Marcar como patrocinado"; av_athletes_set_level refuses it for anyone else. */
+  canSponsor?: boolean;
 }
 
 const STATUS_KEY = { active: 'statusActive', paused: 'statusPaused', ended: 'statusEnded' } as const;
 
-function AthleteRow({ a, canManage, maxAthletes }: { a: GymAthleteRow; canManage: boolean; maxAthletes: number }) {
+interface AthleteRowProps {
+  a: GymAthleteRow;
+  canManage: boolean;
+  maxAthletes: number;
+  canSponsor: boolean;
+}
+
+function AthleteRow({ a, canManage, maxAthletes, canSponsor }: AthleteRowProps) {
   const t = useTranslations('gym');
   const th = useTranslations('athleteHome');
   const td = useTranslations('door');
+  const ta = useTranslations('admin');
   const { busy, error, run } = useGymWrite();
 
   const status = (next: AthleteStatus) =>
@@ -101,6 +111,17 @@ function AthleteRow({ a, canManage, maxAthletes }: { a: GymAthleteRow; canManage
                 {t('promote')}
               </button>
             ) : null}
+            {canSponsor && a.level !== 'sponsored' ? (
+              <button
+                type="button"
+                data-action="sponsor"
+                disabled={busy !== null}
+                onClick={() => run('sponsor', () => setProgramAthleteLevel(createClient(), a.id, 'sponsored'))}
+                className={button}
+              >
+                {ta('setSponsored')}
+              </button>
+            ) : null}
             {a.level === 'athlete' ? (
               <button
                 type="button"
@@ -156,13 +177,19 @@ function AthleteRow({ a, canManage, maxAthletes }: { a: GymAthleteRow; canManage
   );
 }
 
-export default function GymAthletes({ view }: GymAthletesProps) {
+export default function GymAthletes({ view, canSponsor = false }: GymAthletesProps) {
   return (
     <section className="space-y-3" data-gym-athletes>
       {view.canManage ? <GymAddAthlete partnerId={view.partnerId} maxAthletes={view.maxAthletes} /> : null}
       <ul className="space-y-3">
         {view.athletes.map((a) => (
-          <AthleteRow key={a.id} a={a} canManage={view.canManage} maxAthletes={view.maxAthletes} />
+          <AthleteRow
+            key={a.id}
+            a={a}
+            canManage={view.canManage}
+            maxAthletes={view.maxAthletes}
+            canSponsor={canSponsor}
+          />
         ))}
       </ul>
     </section>

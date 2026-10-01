@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useTranslations } from '@/lib/i18n/useTranslations';
 import { createClient } from '@/lib/supabase/client';
 import { DOOR_OUTCOMES, setPassOutcome, type DoorOutcome } from '@/lib/dal/passDoor';
+import { notifyAthlete } from '@/lib/atletas/notifyAthlete';
 
 /**
  * T-AV25. "What happened after class?": the four outcomes, through
@@ -50,6 +51,8 @@ export default function DoorOutcomeButtons({ passCode, initialOutcome, onSaved }
     setSaving(false);
     if (result.success) {
       setOutcome(next);
+      // T-AV27b: a join tells the athlete; 8209 decides whether anyone is told.
+      if (next === 'joined') notifyAthlete(passCode, 'joined');
       setMessage({ kind: 'saved', text: t('outcomeSaved') });
       onSaved?.();
       return;
