@@ -88,7 +88,11 @@ export async function sendPartnerLeadNotification(params: PartnerLeadEmailParams
     '<p>Reservó en Tribe: todavía no.</p>',
   ].join('');
 
-  await resend.emails.send({
+  // T-AV27b. Resend reports a refused send in the return value and does not
+  // throw, so the error has to be read and turned into a rejection here:
+  // /api/pase stamps notified_at only when this promise fulfils. The message
+  // names the Resend error and nothing about the lead or the partner.
+  const { error } = await resend.emails.send({
     from: FROM,
     to: params.to,
     cc: params.cc.length > 0 ? params.cc : undefined,
@@ -97,6 +101,7 @@ export async function sendPartnerLeadNotification(params: PartnerLeadEmailParams
     text,
     html,
   });
+  if (error) throw new Error(`Resend refused the partner lead email: ${error.name}`);
 }
 
 export interface LeadPassEmailParams {
