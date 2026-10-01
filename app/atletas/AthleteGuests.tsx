@@ -27,7 +27,7 @@ function statusLabel(status: AthleteGuestView['status'], t: T): string {
   }
 }
 
-/** Reason copy: recon 5.3, plus the two Al approved on 2026-09-30. */
+/** Reason copy: recon 5.3, plus Al's 2026-09-30 strings (self-referral split by channel). */
 export function reasonLabel(reason: string, gym: string, t: T): string | null {
   switch (reason) {
     case 'already_member':
@@ -37,8 +37,9 @@ export function reasonLabel(reason: string, gym: string, t: T): string | null {
     case 'duplicate':
       return t('reasonDuplicate');
     case 'self_email':
+      return t('reasonSelfEmail');
     case 'self_whatsapp':
-      return t('reasonSelf');
+      return t('reasonSelfWhatsapp');
     default:
       return null;
   }

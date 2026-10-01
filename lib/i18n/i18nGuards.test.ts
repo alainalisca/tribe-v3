@@ -490,6 +490,13 @@ const HOMOGRAPHS: Record<string, string> = {
   // reclamo su pase") or the noun wrongly accented. Neither occurs today; a
   // new one would be ordinary proofreading for Ana, not covered by this entry.
   reclamo: 'reclamó', // "presentar un reclamo" (a complaint) vs "Reclamó" (they claimed)
+
+  // Surfaced by the T-AV24 polish (2026-09-30): the self-referral reasons
+  // "Usó tu correo" / "Usó tu WhatsApp" (they used) joined the data policy's
+  // noun "uso" ("Datos de uso", "el uso que haga"). Same noun-versus-preterite
+  // shape. COST: a preterite written bare ("el invitado uso tu link") now reads
+  // as clean; none occurs today.
+  uso: 'usó', // "datos de uso" (use, noun) vs "Usó tu correo" (they used)
 };
 
 /**

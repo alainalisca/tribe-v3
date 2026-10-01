@@ -88,10 +88,16 @@ function Hero({ view }: { view: AthleteMemberView }) {
 }
 
 export default function AthleteHome({ view }: AthleteHomeProps) {
+  const t = useTranslations('athleteHome');
   if (view.state === 'none') return <NotInProgram />;
   return (
     <Shell state="member">
       <Hero view={view} />
+      {/* Al, 2026-09-30: the emotional line for athletes in a program too. Small
+          and secondary, not green: green fails AA as small text on a light page. */}
+      <p data-emotional className="px-2 text-center text-xs text-theme-secondary">
+        {t('emotional')}
+      </p>
       <AthleteLinkCard view={view} />
       <AthleteNumbers view={view} />
       <AthletePath view={view} />

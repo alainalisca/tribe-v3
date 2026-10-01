@@ -70,8 +70,33 @@ describe('AthleteHome', () => {
   it('a guest who does not count shows "No cuenta" and the reason', () => {
     render(<AthleteHome view={view()} />);
     expect(screen.getByText('No cuenta')).toBeTruthy();
-    expect(screen.getByText('Tu propio link no cuenta')).toBeTruthy();
+    expect(screen.getByText('Usó tu correo')).toBeTruthy();
     expect(screen.getByText('Llegó')).toBeTruthy();
+  });
+
+  it('self-referral is labelled by the channel it matched on', () => {
+    const v = view({
+      guests: [
+        { first_name: 'Caro', claimed_at: '2026-09-25T12:00:00Z', status: 'showed_up', no_credit_reason: 'self_email' },
+        {
+          first_name: 'Tomas',
+          claimed_at: '2026-09-25T12:00:00Z',
+          status: 'showed_up',
+          no_credit_reason: 'self_whatsapp',
+        },
+      ],
+    });
+    render(<AthleteHome view={v} />);
+    expect(screen.getByText('Usó tu correo')).toBeTruthy();
+    expect(screen.getByText('Usó tu WhatsApp')).toBeTruthy();
+    expect(screen.queryByText('Tu propio link no cuenta')).toBeNull();
+  });
+
+  it('an athlete in a program sees the emotional line too, under the hero', () => {
+    const { container } = render(<AthleteHome view={view()} />);
+    expect(container.querySelector('[data-emotional]')?.textContent).toBe(
+      'Si alguna vez quisiste ser atleta profesional, todavía estás a tiempo.'
+    );
   });
 
   it("never injects a QR string that is not exactly the renderer's shape", () => {
