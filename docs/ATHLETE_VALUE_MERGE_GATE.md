@@ -138,6 +138,13 @@ refused by objects the catalog does not show.
 
 ---
 
+## 8. Tribe Athletes (T-AV20 sub-program)
+
+Checks specific to the Tribe Athletes tickets (T-AV19 to T-AV27) that cannot
+be automated and were deferred to the gate on purpose.
+
+- [ ] Physical phone scan of a voucher QR on the LAN, coach confirms, athlete home updates
+
 ## Already measured, re-run from scratch 2026-09-25 (evidence, not a tick)
 
 These were run during T-AV0 and are recorded so the gate starts from facts

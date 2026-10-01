@@ -511,5 +511,31 @@
     "rule2": "Un nuevo miembro cuenta solo si antes vino a clase.",
     "rule3": "Solo cuentan personas nuevas. Quien ya entrenó en {gym} no cuenta.",
     "rule4": "Usar tu propio link no cuenta."
+  },
+  "door": {
+    "title": "Confirmar asistencia",
+    "confirm": "Confirmar asistencia",
+    "gym": "Gimnasio",
+    "guest": "Invitado",
+    "claimedOn": "Reclamado el {date}",
+    "invitedBy": "Invitación de {athlete}",
+    "confirmed": "Asistencia confirmada",
+    "alreadyConfirmed": "Ya se confirmó el {date}",
+    "notYourGym": "Este pase no es de tu gimnasio.",
+    "nextClose": "Ahora: tu cierre",
+    "outcomeTitle": "¿Qué pasó después de la clase?",
+    "outcomeJoined": "Se inscribió",
+    "outcomeFollowUp": "Seguimiento",
+    "outcomeNotNow": "No por ahora",
+    "outcomeMember": "Ya era miembro",
+    "outcomeSaved": "Guardado",
+    "confirmFirst": "Primero confirma la asistencia.",
+    "error": "No pudimos guardar eso. Intenta de nuevo.",
+    "listTitle": "Invitados por llegar",
+    "listHelp": "Personas que reclamaron su pase en los últimos 14 días.",
+    "listArrived": "Llegó",
+    "listEmpty": "Nadie pendiente por ahora.",
+    "codeLabel": "Código del pase",
+    "codeNotFound": "No encontramos ese pase. Revisa el código."
   }
 }

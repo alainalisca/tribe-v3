@@ -511,5 +511,31 @@
     "rule2": "A new member counts only after coming to a class.",
     "rule3": "Only new people count. Someone who already trained at {gym} does not.",
     "rule4": "Using your own link does not count."
+  },
+  "door": {
+    "title": "Confirm attendance",
+    "confirm": "Confirm attendance",
+    "gym": "Gym",
+    "guest": "Guest",
+    "claimedOn": "Claimed on {date}",
+    "invitedBy": "Invited by {athlete}",
+    "confirmed": "Attendance confirmed",
+    "alreadyConfirmed": "Already confirmed on {date}",
+    "notYourGym": "This pass is not for your gym.",
+    "nextClose": "Next: your close",
+    "outcomeTitle": "What happened after class?",
+    "outcomeJoined": "Joined",
+    "outcomeFollowUp": "Follow up",
+    "outcomeNotNow": "Not now",
+    "outcomeMember": "Already a member",
+    "outcomeSaved": "Saved",
+    "confirmFirst": "Confirm attendance first.",
+    "error": "We could not save that. Try again.",
+    "listTitle": "Expected guests",
+    "listHelp": "People who claimed a pass in the last 14 days.",
+    "listArrived": "Arrived",
+    "listEmpty": "Nobody expected right now.",
+    "codeLabel": "Pass code",
+    "codeNotFound": "We could not find that pass. Check the code."
   }
 }
