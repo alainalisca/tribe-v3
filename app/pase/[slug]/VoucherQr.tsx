@@ -9,11 +9,11 @@
  * change to the renderer that forgot this check) renders nothing rather than
  * whatever the string contains.
  */
-const VOUCHER_SVG_SHAPE =
-  /^<svg xmlns="http:\/\/www\.w3\.org\/2000\/svg" viewBox="0 0 \d+ \d+" role="img" aria-label="[^"<>]*" shape-rendering="crispEdges"><rect width="\d+" height="\d+" fill="#ffffff"\/><path d="[Mhvz0-9 -]*" fill="#000000"\/><\/svg>$/;
+import { isRenderedQrSvg } from '@/lib/svg/qrSvgShape';
 
+/** The shared rule (lib/svg/qrSvgShape.ts), under the name T-AV23's tests use. */
 export function isVoucherSvg(svg: string): boolean {
-  return VOUCHER_SVG_SHAPE.test(svg);
+  return isRenderedQrSvg(svg);
 }
 
 interface VoucherQrProps {

@@ -26,6 +26,10 @@ is_local "$PGURL" || { echo "REFUSED: Postgres is not local"; exit 2; }
 
 q() { psql -X -v ON_ERROR_STOP=1 -At -d "$PGURL" -c "$1" < /dev/null; }
 want() { [ -z "${ONLY:-}" ] || [[ " $ONLY " == *" $1 "* ]]; }
+# Test 11 runs the app itself (the real HTTP status); the rest is PostgREST.
+# APP and the proof port come from devServer.LOCAL.sh (3101).
+TMP=$(mktemp -d)
+. "$ROOT/supabase/recon/devServer.LOCAL.sh"
 
 OWNER=00000000-0000-4000-8000-000000000007   # BullBox (Prueba), owns partner A
 ANA=00000000-0000-4000-8000-000000000001     # the guest: a lead carries her email
@@ -44,6 +48,8 @@ C1=TV-A2B3; C2=TV-C4D5; C3=TV-E6F7; FAKE=ZZ-2345; CANON=TV-G8H9; CAUTH=TV-J2K3; 
 # it records them first and puts them back on exit instead of deleting them.
 COACH_SNAP=$(q "select coalesce(string_agg(format('(%L::uuid,%L::uuid,%s)', partner_id, instructor_id, coalesce(is_active::text,'NULL')), ','), '') from partner_instructors where partner_id='$PA' and instructor_id in ('$ELENA','$FELIPE','$DIEGO')")
 cleanup() {
+  if want 11; then stop_server; fi
+  rm -rf "$TMP"
   q "delete from pass_leads where pass_code like 'TV-%';" >/dev/null
   q "delete from partner_instructors where (partner_id='$PA' and instructor_id in ('$ELENA','$FELIPE','$DIEGO')) or partner_id='$PB';" >/dev/null
   [ -n "$COACH_SNAP" ] && q "insert into partner_instructors (partner_id, instructor_id, is_active) values $COACH_SNAP;" >/dev/null
@@ -177,6 +183,28 @@ if want 10; then echo "== added: av_door_pass returns the first name only, for e
       && [[ "$r" != *Martinez* && "$r" != *"@"* && "$r" != *3001112233* ]] \
       && ok "$who: keys exactly {$keys}, first name only, no email or WhatsApp" || bad "$who door read: $r"
   done
+fi
+
+# T-AV24 (2026-09-30): the root app/loading.tsx streams a 200 before a page
+# runs, so this page's own notFound() could only render the 404 UI. The flag
+# is now enforced in middleware with a real 404; this checks the STATUS, which
+# the unit test (asserting notFound() was called) could never see.
+if want 11; then echo "== 11. flag off: /pase/verificar/{code}/ is a REAL 404, like an unknown URL"
+  if port_busy; then echo "  REFUSED: something else is on $AV_PROOF_PORT"; exit 2; fi
+  COOKIE=$(node scripts/avSessionCookie.mjs bullbox@av.local) || { echo "FATAL: no owner session"; exit 1; }
+  start_server off
+  code=$(curl -s -o "$TMP/v.html" -w '%{http_code}' -H "Cookie: $COOKIE" "$APP/pase/verificar/$C3/")
+  # The baseline is fetched as the SAME signed-in caller: signed out, an
+  # unknown private URL is the redirect to /auth, not a 404.
+  unk=$(curl -s -o "$TMP/u.html" -w '%{http_code}' -H "Cookie: $COOKIE" "$APP/__no-such-route-tav21__/")
+  [ "$code" = 404 ] && [ "$unk" = 404 ] && grep -qE 'Page not found|Página no encontrada' "$TMP/v.html" \
+    && ! grep -q 'Laura' "$TMP/v.html" \
+    && ok "owner signed in, flag off: http $code with the ordinary not-found page (an unknown URL: http $unk), no lead data" \
+    || bad "flag-off verify page: http $code (unknown URL: http $unk)"
+  start_server all
+  code=$(curl -s -o "$TMP/v.html" -w '%{http_code}' -H "Cookie: $COOKIE" "$APP/pase/verificar/$C3/")
+  [ "$code" = 200 ] && grep -q 'Laura' "$TMP/v.html" && ok "flag on: the owner gets the door page (http $code), so the 404 above is the flag" || bad "flag-on verify page: http $code"
+  stop_server
 fi
 
 echo

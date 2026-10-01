@@ -480,6 +480,16 @@ const HOMOGRAPHS: Record<string, string> = {
   // pile as ordinary proofreading rather than covered by this entry.
   acepto: 'aceptó', // "Entiendo y acepto" (I accept) vs "que el titular aceptó" (they accepted)
   perdida: 'pérdida', // "Conexión perdida" (lost, adj.) vs "adulteración, pérdida" (loss, noun)
+
+  // Surfaced by T-AV24 (2026-09-30), when the athlete home's guest status chip
+  // "Reclamó" (the guest claimed the pass) joined the data policy's noun
+  // "reclamo" (a formal complaint under Ley 1581). Same noun-versus-preterite
+  // shape as pago/pagó above.
+  //
+  // COST: the arm can no longer see a preterite written bare ("el invitado
+  // reclamo su pase") or the noun wrongly accented. Neither occurs today; a
+  // new one would be ordinary proofreading for Ana, not covered by this entry.
+  reclamo: 'reclamó', // "presentar un reclamo" (a complaint) vs "Reclamó" (they claimed)
 };
 
 /**

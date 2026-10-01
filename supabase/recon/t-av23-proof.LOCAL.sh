@@ -1,7 +1,7 @@
 #!/bin/bash
 # T-AV23 acceptance proof: /api/pase and /pase/[slug] end to end, against the
 # LOCAL stack (8200 to 8207 applied, `npm run av:seed`), through `dev:av` on
-# port 3001, started by this script with the flag OFF and then ON.
+# the proof port (devServer.LOCAL.sh, 3101), started by this script with the flag OFF and then ON.
 #
 #   bash supabase/recon/t-av23-proof.LOCAL.sh             # every test
 #   ONLY="4 6" bash supabase/recon/t-av23-proof.LOCAL.sh   # a subset (the mutation driver uses this)
@@ -15,13 +15,13 @@
 # with psql, never inferred from the HTTP body.
 #
 # LOCAL ONLY. Refuses unless the API and Postgres are on this machine, and
-# refuses to start if something it did not start is already on port 3001.
+# refuses to start if something it did not start is already on the proof port.
 set -u
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$ROOT"
 set -a; . ./.env.av.local; set +a
 PGURL="${AV_DB_URL:-postgresql://postgres:postgres@127.0.0.1:54322/postgres}"
-APP="http://localhost:3001"
+# APP and the proof port come from supabase/recon/devServer.LOCAL.sh.
 is_local() { python3 -c "import sys,urllib.parse as u; h=u.urlparse(sys.argv[1]).hostname or ''; sys.exit(0 if h in ('localhost','127.0.0.1','::1') else 1)" "$1"; }
 is_local "$NEXT_PUBLIC_SUPABASE_URL" || { echo "REFUSED: API is not local"; exit 2; }
 is_local "$PGURL" || { echo "REFUSED: Postgres is not local"; exit 2; }
@@ -32,23 +32,8 @@ TMP=$(mktemp -d)
 ID() { printf '00000000-0000-4000-8000-%012d' "$1"; }
 ANA_PA=$(ID 2001); BETO_PA=$(ID 2002); CARO_PA=$(ID 2003)
 
-# ── the dev server, owned by this script ───────────────────────────────────
-port_busy() { lsof -nP -iTCP:3001 -sTCP:LISTEN >/dev/null 2>&1; }
-stop_server() {
-  [ -f "$TMP/dev.pid" ] && kill "$(cat "$TMP/dev.pid")" 2>/dev/null
-  pkill -f "next dev -p 3001" 2>/dev/null
-  for _ in $(seq 1 30); do port_busy || return 0; sleep 1; done
-  echo "FATAL: port 3001 did not free up"; exit 1
-}
-start_server() { # start_server <ATHLETE_VALUE_ENABLED>
-  stop_server
-  (env -u ATHLETE_VALUE_FEATURES ATHLETE_VALUE_ENABLED="$1" PORT=3001 node scripts/av-dev.mjs > "$TMP/dev.log" 2>&1 & echo $! > "$TMP/dev.pid")
-  for _ in $(seq 1 180); do
-    [ "$(curl -s -o /dev/null -w '%{http_code}' "$APP/pase/bullbox-prueba/")" = 200 ] && { FLAG="$1"; return 0; }
-    sleep 1
-  done
-  echo "FATAL: dev server with flag=$1 did not serve /pase/bullbox-prueba/ in 180s"; tail -20 "$TMP/dev.log"; exit 1
-}
+# ── the dev server, owned by this script (shared helper) ────────────────
+. "$ROOT/supabase/recon/devServer.LOCAL.sh"
 reset() { node scripts/av-seed-athletes.mjs < /dev/null > "$TMP/reset.out" 2>&1 || { echo "FATAL: seed reset failed"; cat "$TMP/reset.out"; exit 1; }; }
 PB=$(q "select id from featured_partners where user_id='$(ID 9)'")
 cleanup() {
@@ -58,7 +43,7 @@ cleanup() {
   rm -rf "$TMP"
 }
 
-if port_busy; then echo "REFUSED: something is already listening on 3001; stop it first (this script starts its own dev:av)"; exit 2; fi
+if port_busy; then echo "REFUSED: something is already listening on $AV_PROOF_PORT; stop it first (this script starts its own dev:av)"; exit 2; fi
 trap cleanup EXIT
 reset
 PA=$(q "select id from featured_partners where user_id='$(ID 7)'")

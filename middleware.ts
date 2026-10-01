@@ -1,6 +1,7 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { athletesGateAllows, isAthletesGatedPath, GATED_NOT_FOUND_PATH } from '@/lib/features/athleteValueGate';
 
 /**
  * Tribe middleware does three things, in order:
@@ -285,8 +286,14 @@ export async function middleware(request: NextRequest) {
     return applySecurityHeaders(NextResponse.next());
   }
 
+  // T-AV24: /atletas and /pase/verificar are gated on the athletes flag HERE,
+  // before the public-path short-circuit (/pase is public), because a page's
+  // notFound() cannot set a 404 once the root loading boundary has started
+  // streaming. Exact prefixes only; see lib/features/athleteValueGate.ts.
+  const gated = isAthletesGatedPath(pathname);
+
   // Public routes don't need auth but still need security headers.
-  if (isPublicPath(pathname)) {
+  if (isPublicPath(pathname) && !gated) {
     return applySecurityHeaders(NextResponse.next());
   }
 
@@ -311,11 +318,35 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  let userId: string | null = null;
+  if (gated) {
+    const allowed = await athletesGateAllows(async () => {
+      const { data } = await supabase.auth.getUser();
+      userId = data.user?.id ?? null;
+      return userId;
+    }, supabase);
+    // A gated path answers exactly as an UNKNOWN path would for this caller
+    // (measured 2026-09-30): signed in, an unknown URL is a real 404; signed
+    // out, an unknown non-public URL is the redirect to /auth below (decision
+    // 4), and an unknown path under the public /pase is a 404. So a signed-out
+    // visitor to /atletas falls through to that redirect rather than getting a
+    // 404 no other path gives them.
+    const signedOutOnPrivatePath = !userId && !isPublicPath(pathname);
+    if (!allowed && !signedOutOnPrivatePath) {
+      // A real 404, with the body an unknown URL gets: the rewrite target
+      // matches no route, so Next renders app/not-found.tsx.
+      return applySecurityHeaders(NextResponse.rewrite(new URL(GATED_NOT_FOUND_PATH, request.url), { status: 404 }));
+    }
+    // /pase/verificar is public: past the flag, its page handles the session.
+    if (allowed && isPublicPath(pathname)) return applySecurityHeaders(response);
+  } else {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    userId = user?.id ?? null;
+  }
 
-  if (!user) {
+  if (!userId) {
     const returnTo = encodeURIComponent(request.nextUrl.pathname + request.nextUrl.search);
     const redirectUrl = new URL(`/auth?returnTo=${returnTo}`, request.url);
     return applySecurityHeaders(NextResponse.redirect(redirectUrl));
