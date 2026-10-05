@@ -9,6 +9,7 @@ import { useLanguage } from '@/lib/LanguageContext';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import BottomNav from '@/components/BottomNav';
 import StorefrontEditor from '@/components/dashboard/StorefrontEditor';
+import CoachContactSettings from '@/components/coachContact/CoachContactSettings';
 import SessionManager from '@/components/dashboard/SessionManager';
 import SportDemandSummary from '@/components/instructor/SportDemandSummary';
 import TribeOSEntryCard from '@/components/tribe-os/TribeOSEntryCard';
@@ -287,6 +288,11 @@ export default function InstructorDashboardPage() {
                 initialBannerUrl={profile.cover_image_url || ''}
                 initialVideoUrl={profile.storefront_video_url ?? null}
               />
+
+              {/* T-AV29 (P1-2), behind the athlete_value feature "contact". */}
+              <div className="mt-4">
+                <CoachContactSettings coachId={profile.id} language={language as 'en' | 'es'} />
+              </div>
             </>
           )}
 

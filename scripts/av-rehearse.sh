@@ -3,6 +3,12 @@
 # transaction that ends in ROLLBACK. Applies nothing.
 #
 #   scripts/av-rehearse.sh 8000_t_av2_canonical_attendance
+#   scripts/av-rehearse.sh <rehearsal> <migration> [<migration> ...]
+#
+# With one argument the rehearsal and the migration share a name. With more,
+# the first names the rehearsal and the rest are the migrations it needs, in
+# order (a stacked ticket that reads an earlier ticket's tables), joined into
+# one body.
 #
 # T-AV migrations carry their own BEGIN and COMMIT. Included inside a
 # rehearsal's outer transaction, that COMMIT would persist everything before it
@@ -12,15 +18,20 @@
 # id did not change across the body (its arm T0).
 set -eu
 name="$1"
+shift
+[ "$#" -gt 0 ] || set -- "$name"
 root="$(cd "$(dirname "$0")/.." && pwd)"
-mig="$root/supabase/migrations/$name.sql"
 reh="$root/supabase/rehearsals/${name}_REHEARSAL.sql"
 container="${AV_DB_CONTAINER:-supabase_db_tribe-v3-athlete}"
-[ -f "$mig" ] || { echo "no migration $mig" >&2; exit 1; }
 [ -f "$reh" ] || { echo "no rehearsal $reh" >&2; exit 1; }
 
 tmp="$(mktemp -d)"
-grep -v -x -e 'BEGIN;' -e 'COMMIT;' "$mig" > "$tmp/body.sql"
+: > "$tmp/body.sql"
+for m in "$@"; do
+  mig="$root/supabase/migrations/$m.sql"
+  [ -f "$mig" ] || { echo "no migration $mig" >&2; exit 1; }
+  grep -v -x -e 'BEGIN;' -e 'COMMIT;' "$mig" >> "$tmp/body.sql"
+done
 if grep -q -i -x -e 'COMMIT;' -e 'ROLLBACK;' "$tmp/body.sql"; then
   echo "REFUSED: $name still has a top-level COMMIT or ROLLBACK after stripping" >&2
   exit 1

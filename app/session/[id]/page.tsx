@@ -10,6 +10,7 @@ import { getSessionShareUrl } from '@/lib/share';
 import BottomNav from '@/components/BottomNav';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import AttendanceTracker from '@/components/AttendanceTracker';
+import CoachContactButtons from '@/components/coachContact/CoachContactButtons';
 import SessionAttendanceSection from '@/components/tribe-os/SessionAttendanceSection';
 import StoryUpload from '@/components/StoryUpload';
 import StoryViewer from '@/components/StoryViewer';
@@ -232,6 +233,18 @@ export default function SessionDetailPage() {
           paymentInstructions={d.paymentInstructions}
           onOpenLightbox={d.openLightbox}
         />
+
+        {/* T-AV29 (P1-2): never for the host; nothing unless the coach opted in. */}
+        {d.user && d.creator?.id && !isCreator && (
+          <CoachContactButtons
+            coachId={d.creator.id}
+            coachName={d.creator.name ?? null}
+            viewerId={d.user.id}
+            source="session"
+            sessionId={d.session.id}
+            language={language}
+          />
+        )}
 
         {/* Share button — BUG-022: previously bg-theme-surface blended into
             the page background. Tribe-green pill gives clear contrast in

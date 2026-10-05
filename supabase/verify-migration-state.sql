@@ -2338,4 +2338,37 @@ select '8000_t_av2_canonical_attendance',
          else 'applied'
        end
 
+union all
+
+-- T-AV P1-2. Coach contact settings and the tap log: both tables under RLS,
+-- no client write grant and no anon read on either, and the three definer
+-- functions with their grants. to_regprocedure throughout (see 8000's note).
+select '8001_t_av_p1_2_coach_contact',
+       case
+         when to_regclass('public.coach_contact_settings') is null or to_regclass('public.coach_contact_log') is null
+           then 'MISSING -- a coach contact table is absent'
+         when exists (select 1 from pg_class
+                       where oid in (to_regclass('public.coach_contact_settings'), to_regclass('public.coach_contact_log'))
+                         and (not relrowsecurity
+                              or has_any_column_privilege('authenticated', oid, 'INSERT')
+                              or has_any_column_privilege('authenticated', oid, 'UPDATE')
+                              or has_table_privilege('authenticated', oid, 'DELETE')
+                              or has_any_column_privilege('anon', oid, 'SELECT')))
+           then 'MISSING -- a coach contact table lost RLS, gained a client write grant, or is readable by anon'
+         when exists (select 1 from unnest(array['public.av_set_whatsapp_contact(boolean,text)',
+                                                 'public.av_coach_contact_options(uuid)',
+                                                 'public.av_coach_contact_tap(uuid,text,text,uuid)']) f(sig)
+                       where to_regprocedure(f.sig) is null)
+           then 'MISSING -- a coach contact function is absent'
+         when exists (select 1 from pg_proc
+                       where oid in (to_regprocedure('public.av_set_whatsapp_contact(boolean,text)'),
+                                     to_regprocedure('public.av_coach_contact_options(uuid)'),
+                                     to_regprocedure('public.av_coach_contact_tap(uuid,text,text,uuid)'))
+                         and (not prosecdef or proconfig is null
+                              or has_function_privilege('anon', oid, 'EXECUTE')
+                              or not has_function_privilege('authenticated', oid, 'EXECUTE')))
+           then 'MISSING -- a coach contact function lost SECURITY DEFINER, its search_path, or its grants'
+         else 'applied'
+       end
+
 order by migration;

@@ -18,6 +18,7 @@ import BlockReportControls from '@/components/BlockReportControls';
 import { useStorefrontData } from './useStorefrontData';
 import GymStorefrontHeader from '@/components/storefront/GymStorefrontHeader';
 import PassEntryButton from '@/components/storefront/PassEntryButton';
+import CoachContactButtons from '@/components/coachContact/CoachContactButtons';
 
 export default function StorefrontPage() {
   const params = useParams();
@@ -229,6 +230,19 @@ export default function StorefrontPage() {
           <div className="px-4 md:px-6 mt-4 max-w-xl mx-auto lg:max-w-none">
             <PassEntryButton partner={d.partnerData} partnerName={d.partnerData.business_name} isOwner={isOwn} />
           </div>
+        )}
+
+        {/* T-AV29 (P1-2): independent instructors only; renders nothing unless the
+            coach opted in and saved a number, and never for the owner. */}
+        {!isOrganization && (
+          <CoachContactButtons
+            coachId={instructorId}
+            coachName={instructor.name}
+            viewerId={d.currentUserId ?? null}
+            source="storefront"
+            language={lang}
+            className="px-4 md:px-6 mt-4 max-w-xl mx-auto lg:max-w-none"
+          />
         )}
 
         {!hasContent ? (
