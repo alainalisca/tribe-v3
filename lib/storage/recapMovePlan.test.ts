@@ -70,4 +70,38 @@ describe('planRecapMoves', () => {
     expect(plan.skipped).toEqual([{ rowId: 'r9', reason: expect.stringContaining('no session_id') }]);
     expect(plan.orphans).toEqual([]);
   });
+
+  it('an old copy of a row ALREADY moved is a leftover, never an orphan (the 2026-10-05 production run)', () => {
+    const plan = planRecapMoves(
+      URL_BASE,
+      [
+        {
+          id: 'r1',
+          session_id: S,
+          user_id: U,
+          photo_url: `${URL_BASE}/storage/v1/object/public/session-recap-photos/${S}/${U}/1-recap-0.jpg`,
+        },
+      ],
+      [`${U}/1-recap-0.jpg`, `${U}/2-recap-1.jpg`]
+    );
+    expect(plan.moves).toEqual([]);
+    expect(plan.leftovers).toEqual([{ legacyPath: `${U}/1-recap-0.jpg`, privatePath: `${S}/${U}/1-recap-0.jpg` }]);
+    expect(plan.orphans).toEqual([`${U}/2-recap-1.jpg`]);
+  });
+
+  it('a moved row whose old copy is already gone leaves no leftover', () => {
+    const plan = planRecapMoves(
+      URL_BASE,
+      [
+        {
+          id: 'r1',
+          session_id: S,
+          user_id: U,
+          photo_url: `${URL_BASE}/storage/v1/object/public/session-recap-photos/${S}/${U}/1-recap-0.jpg`,
+        },
+      ],
+      []
+    );
+    expect(plan.leftovers).toEqual([]);
+  });
 });
