@@ -2416,4 +2416,28 @@ select '8003_t_av_p1_4_coach_card',
          else 'applied'
        end
 
+union all
+
+-- T-AV32 (P1-5). First-timer text column with its length check, the setter,
+-- and the read-only block function.
+select '8004_t_av_p1_5_first_timer',
+       case
+         when not exists (select 1 from pg_attribute where attrelid = to_regclass('public.coach_contact_settings')
+                           and attname = 'first_timer_text' and not attisdropped)
+           then 'MISSING -- coach_contact_settings.first_timer_text is absent'
+         when to_regprocedure('public.av_set_first_timer_text(text)') is null
+           or to_regprocedure('public.av_first_timer_block(uuid)') is null
+           then 'MISSING -- a first-timer function is absent'
+         when exists (select 1 from pg_proc
+                       where oid in (to_regprocedure('public.av_set_first_timer_text(text)'),
+                                     to_regprocedure('public.av_first_timer_block(uuid)'))
+                         and (not prosecdef or proconfig is null
+                              or has_function_privilege('anon', oid, 'EXECUTE')
+                              or not has_function_privilege('authenticated', oid, 'EXECUTE')))
+           then 'MISSING -- a first-timer function lost SECURITY DEFINER, its search_path, or its grants'
+         when (select provolatile from pg_proc where oid = to_regprocedure('public.av_first_timer_block(uuid)')) <> 's'
+           then 'MISSING -- av_first_timer_block is no longer read only'
+         else 'applied'
+       end
+
 order by migration;

@@ -66,4 +66,18 @@ describe('CoachContactButtons call sites', () => {
   it('the instructor dashboard mounts the "what Tribe brought you" card', () => {
     expect(elementProps(read('app/dashboard/instructor/page.tsx'), 'TribeBroughtCard')).toHaveLength(1);
   });
+
+  it('session detail mounts the first-timer block once, never for the host', () => {
+    const src = read('app/session/[id]/page.tsx');
+    const els = elementProps(src, 'FirstTimerBlock');
+    expect(els).toHaveLength(1);
+    expect(els[0]).toMatch(/sessionId=\{d\.session\.id\}/);
+    expect(guardBefore(src, 'FirstTimerBlock')).toMatch(/!isCreator\s*&&\s*$/);
+  });
+
+  it('the instructor dashboard mounts the first-timer settings for the signed-in instructor', () => {
+    const els = elementProps(read('app/dashboard/instructor/page.tsx'), 'FirstTimerSettings');
+    expect(els).toHaveLength(1);
+    expect(els[0]).toMatch(/coachId=\{profile\.id\}/);
+  });
 });

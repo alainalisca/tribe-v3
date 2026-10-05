@@ -10,6 +10,7 @@ import LoadingSpinner from '@/components/LoadingSpinner';
 import BottomNav from '@/components/BottomNav';
 import StorefrontEditor from '@/components/dashboard/StorefrontEditor';
 import CoachContactSettings from '@/components/coachContact/CoachContactSettings';
+import FirstTimerSettings from '@/components/coachContact/FirstTimerSettings';
 import TribeBroughtCard from '@/components/coachContact/TribeBroughtCard';
 import SessionManager from '@/components/dashboard/SessionManager';
 import SportDemandSummary from '@/components/instructor/SportDemandSummary';
@@ -298,8 +299,13 @@ export default function InstructorDashboardPage() {
               />
 
               {/* T-AV29 (P1-2), behind the athlete_value feature "contact". */}
-              <div className="mt-4">
+              <div className="mt-4 empty:hidden">
                 <CoachContactSettings coachId={profile.id} language={language as 'en' | 'es'} />
+              </div>
+
+              {/* T-AV32 (P1-5), behind the athlete_value feature "first_timer". */}
+              <div className="mt-4 empty:hidden">
+                <FirstTimerSettings coachId={profile.id} language={language as 'en' | 'es'} />
               </div>
             </>
           )}

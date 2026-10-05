@@ -11,6 +11,7 @@ import BottomNav from '@/components/BottomNav';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import AttendanceTracker from '@/components/AttendanceTracker';
 import CoachContactButtons from '@/components/coachContact/CoachContactButtons';
+import FirstTimerBlock from '@/components/coachContact/FirstTimerBlock';
 import SessionAttendanceSection from '@/components/tribe-os/SessionAttendanceSection';
 import StoryUpload from '@/components/StoryUpload';
 import StoryViewer from '@/components/StoryViewer';
@@ -233,6 +234,10 @@ export default function SessionDetailPage() {
           paymentInstructions={d.paymentInstructions}
           onOpenLightbox={d.openLightbox}
         />
+
+        {/* T-AV32 (P1-5): only for someone who has never trained with this coach;
+            av_first_timer_block decides, and never names anyone else. */}
+        {d.user && !isCreator && <FirstTimerBlock sessionId={d.session.id} language={language} />}
 
         {/* T-AV29 (P1-2): never for the host; nothing unless the coach opted in. */}
         {d.user && d.creator?.id && !isCreator && (
