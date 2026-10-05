@@ -41,7 +41,13 @@ import { createClient } from '@supabase/supabase-js';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { readEnvFile } from './envFile.mjs';
-import { seedAthletePrograms, describeSeed, clearSeedPartnerLeads, PARTNER_A_ID } from './av-seed-athletes.mjs';
+import {
+  seedAthletePrograms,
+  describeSeed,
+  clearSeedPartnerLeads,
+  parseSeedLanguage,
+  PARTNER_A_ID,
+} from './av-seed-athletes.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -99,6 +105,16 @@ if (!SERVICE_KEY) {
 }
 
 const db = createClient(RAW_URL, SERVICE_KEY, { auth: { persistSession: false } });
+
+// T-AV28: `npm run av:seed -- --lang es`. Read before anything is written, so
+// a typo refuses the whole run instead of seeding half of it.
+let LANGUAGE;
+try {
+  LANGUAGE = parseSeedLanguage(process.argv.slice(2));
+} catch (e) {
+  console.error(`av-seed-local REFUSED: ${e.message}`);
+  process.exit(1);
+}
 
 /** Stable ids, so re-running the seed updates rather than duplicating. */
 const ID = (n) => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
@@ -287,7 +303,9 @@ async function readRoleSplit() {
   return `${data.length} in db (${instructors} is_instructor, ${data.length - instructors} not)`;
 }
 const roleSplit = await readRoleSplit();
-const athleteSeed = await seedAthletePrograms(db).catch((e) => die('athlete programs (T-AV22)', e));
+const athleteSeed = await seedAthletePrograms(db, { language: LANGUAGE }).catch((e) =>
+  die('athlete programs (T-AV22)', e)
+);
 
 // Print what was WRITTEN, not just that it finished. A seed that reports
 // "done" over zero rows is indistinguishable from one that worked.

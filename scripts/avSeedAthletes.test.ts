@@ -13,7 +13,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { ATHLETES, EXTRA_PEOPLE, LEADS } from './av-seed-athletes.mjs';
+import { ATHLETES, EXTRA_PEOPLE, LEADS, SEED_USER_IDS, parseSeedLanguage } from './av-seed-athletes.mjs';
 
 type Lead = (typeof LEADS)[number];
 const lead = (key: string): Lead => {
@@ -124,5 +124,26 @@ describe('the production seed is out of reach', () => {
     const src = readFileSync('scripts/av-seed-athletes.mjs', 'utf8');
     const mentions = src.split('\n').filter((line) => line.includes('seed-bullbox.sql'));
     expect(mentions).toEqual([' * NEVER scripts/seed-bullbox.sql. That file seeds the real BullBox in']);
+  });
+});
+
+describe('T-AV28: the seed language', () => {
+  it('defaults to en, and takes --lang es or --lang=es', () => {
+    expect(parseSeedLanguage([])).toBe('en');
+    expect(parseSeedLanguage(['--lang', 'es'])).toBe('es');
+    expect(parseSeedLanguage(['--lang=es'])).toBe('es');
+    expect(parseSeedLanguage(['--lang', 'en'])).toBe('en');
+  });
+
+  it('refuses anything else, including a missing value', () => {
+    expect(() => parseSeedLanguage(['--lang', 'fr'])).toThrow('--lang must be one of en, es, got "fr"');
+    expect(() => parseSeedLanguage(['--lang'])).toThrow('got ""');
+    expect(() => parseSeedLanguage(['--lang=ES'])).toThrow();
+  });
+
+  it('covers all ten seed accounts, the T-AV0 seven and the T-AV22 three', () => {
+    expect(SEED_USER_IDS).toHaveLength(10);
+    for (const p of EXTRA_PEOPLE) expect(SEED_USER_IDS).toContain(p.id);
+    expect(new Set(SEED_USER_IDS).size).toBe(10);
   });
 });

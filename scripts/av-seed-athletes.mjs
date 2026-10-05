@@ -48,6 +48,41 @@ export const PARTNER_A_ID = ID(7000);
 export const PARTNER_B_ID = ID(7001);
 const SEED_PARTNER_SLUGS = ['bullbox-prueba', 'otro-gym-prueba'];
 
+/**
+ * The language every seed account is left in (T-AV28, 2026-10-01). Written on
+ * EVERY seed, the full one and the proofs' standalone reset, so a run starts
+ * from a known language. Before this the seed never wrote preferred_language:
+ * setting the accounts to Spanish for a browser test survived every reseed,
+ * and three proofs that assert English notification copy went red.
+ *
+ * 'en' is the default because the proofs assert English. `--lang es` is for a
+ * person testing in a browser: `npm run av:seed -- --lang es`.
+ */
+export const SEED_LANGUAGES = ['en', 'es'];
+export const SEED_USER_IDS = Array.from({ length: 10 }, (_, i) => ID(i + 1));
+
+/** `--lang es` or `--lang=es`; absent is 'en'; anything else throws before any write. */
+export function parseSeedLanguage(argv) {
+  const eq = argv.find((a) => a.startsWith('--lang='));
+  const i = argv.indexOf('--lang');
+  if (!eq && i === -1) return 'en';
+  const value = eq ? eq.slice('--lang='.length) : argv[i + 1];
+  if (!SEED_LANGUAGES.includes(value)) {
+    throw new Error(`--lang must be one of ${SEED_LANGUAGES.join(', ')}, got "${value ?? ''}"`);
+  }
+  return value;
+}
+
+/** Set every seed account's language, and read it back: all ten, or fail. */
+export async function setSeedLanguage(db, language) {
+  if (!SEED_LANGUAGES.includes(language)) fail('preferred_language', `unknown language "${language}"`);
+  const r = await db.from('users').update({ preferred_language: language }).in('id', SEED_USER_IDS).select('id');
+  if (r.error) fail('preferred_language', r.error);
+  if ((r.data ?? []).length !== SEED_USER_IDS.length) {
+    fail('preferred_language', `set on ${(r.data ?? []).length} of ${SEED_USER_IDS.length} seed accounts`);
+  }
+}
+
 /** People T-AV0's seed does not create. */
 export const EXTRA_PEOPLE = [
   { id: ID(8), name: 'Admin Prueba', email: 'admin@av.local', isAdmin: true, instructor: false },
@@ -200,8 +235,9 @@ async function partnerOf(db, ownerId, what) {
 }
 
 /** Programs, athletes, coaches, routing and leads for both seed partners. */
-export async function seedAthletePrograms(db, { withPeople = true } = {}) {
+export async function seedAthletePrograms(db, { withPeople = true, language = 'en' } = {}) {
   if (withPeople) await seedExtraPeople(db);
+  await setSeedLanguage(db, language);
 
   const a = await partnerOf(db, OWNER_A, 'BullBox (Prueba)');
   if (withPeople) {
@@ -296,6 +332,7 @@ export async function seedAthletePrograms(db, { withPeople = true } = {}) {
     programs: await count('athlete_programs', 'partner_id', [a.id, b.id]),
     athletes: await count('program_athletes', 'partner_id', [a.id, b.id]),
     leads: await count('pass_leads', 'partner_id', [a.id, b.id]),
+    language,
   };
 }
 
@@ -303,7 +340,8 @@ export function describeSeed(s) {
   return (
     `  athlete programs  ${s.programs}  (BullBox (Prueba) active, Otro Gym (Prueba) inactive)\n` +
     `  program athletes  ${s.athletes}  (Ana captain, Beto captain, Caro athlete)\n` +
-    `  pass leads        ${s.leads}  (expected ${LEADS.length})\n`
+    `  pass leads        ${s.leads}  (expected ${LEADS.length})\n` +
+    `  language          ${s.language}  (every seed account; npm run av:seed -- --lang es for a Spanish browser test)\n`
   );
 }
 
@@ -324,7 +362,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   }
   const db = createClient(url, key, { auth: { persistSession: false } });
   try {
-    const s = await seedAthletePrograms(db, { withPeople: false });
+    const s = await seedAthletePrograms(db, { withPeople: false, language: parseSeedLanguage(process.argv.slice(2)) });
     console.log(`av-seed-athletes OK against ${url}\n${describeSeed(s)}`);
   } catch (e) {
     console.error(e.message);

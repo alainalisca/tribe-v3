@@ -531,12 +531,14 @@
     "outcomeSaved": "Saved",
     "confirmFirst": "Confirm attendance first.",
     "error": "We could not save that. Try again.",
-    "listTitle": "Expected guests",
+    "listTitle": "Door list",
     "listHelp": "People who claimed a pass in the last 14 days.",
     "listArrived": "Arrived",
     "listEmpty": "Nobody expected right now.",
     "codeLabel": "Pass code",
-    "codeNotFound": "We could not find that pass. Check the code."
+    "codeNotFound": "We could not find that pass. Check the code.",
+    "listNotHere": "Not here yet",
+    "listHere": "Already here"
   },
   "gym": {
     "title": "Tribe Athletes",
@@ -616,7 +618,7 @@
     "create": "Create program",
     "partner": "Partner",
     "active": "Program active",
-    "setSponsored": "Set as sponsored (admin only)",
+    "setSponsored": "Set as sponsored",
     "empty": "No programs yet."
   }
 }

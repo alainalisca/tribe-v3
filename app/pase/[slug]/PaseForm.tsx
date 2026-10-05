@@ -264,7 +264,12 @@ export default function PaseForm({ slug, partnerName, options, consentText, cons
         <p className="text-sm font-medium text-stone-600">Tu pase</p>
         {claimed.qrSvg ? <VoucherQr svg={claimed.qrSvg} /> : null}
         <p className="mt-1 text-4xl font-extrabold tracking-widest text-tribe-dark">{claimed.passCode}</p>
-        <p className="mt-2 text-sm text-stone-600">Muéstralo en recepción o menciónalo por WhatsApp.</p>
+        {/* T-AV28: with a voucher QR, its own line ("Muéstralo en la entrada...")
+            is the instruction; two different ones confused Al's test. Without a
+            QR (flag off, as on main) this line is unchanged. */}
+        {claimed.qrSvg ? null : (
+          <p className="mt-2 text-sm text-stone-600">Muéstralo en recepción o menciónalo por WhatsApp.</p>
+        )}
 
         {claimed.whatsappUrl ? (
           <a

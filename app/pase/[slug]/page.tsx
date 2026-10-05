@@ -8,6 +8,7 @@ import { CONSENT_POLICY_PATH } from '@/lib/pase/consent';
 import { consentForPassPage } from '@/lib/pase/athleteAttribution';
 import PaseForm from './PaseForm';
 import AthleteInviteChip from './AthleteInviteChip';
+import { initialsOf } from '@/lib/text/initials';
 
 /**
  * /pase/[slug] -- the digital pass.
@@ -124,11 +125,8 @@ const HERO_CARD_PAD_PX = 14;
 const HERO_MAX_ASPECT = 2.5;
 
 function PartnerHero({ config }: { config: PassConfig }) {
-  const initials = config.partnerName
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((w) => w[0]?.toUpperCase() ?? '')
-    .join('');
+  // T-AV28: letters only ("BullBox (Prueba)" is "BP", not "B(").
+  const initials = initialsOf(config.partnerName);
 
   // Squares for organizations, circles for people. Read off the row, never off
   // the slug or the name.

@@ -44,16 +44,22 @@ function typeCode(code: string) {
 }
 
 describe('DoorList rows', () => {
-  it('a pass not yet confirmed shows "Llegó"; tapping it confirms with method toggle, then the outcomes appear', async () => {
+  it('a pass not yet confirmed shows "Llegó"; tapping it confirms with method toggle, moves the guest to "Ya llegaron", and the outcomes open behind "Registrar resultado"', async () => {
     h.confirm.mockResolvedValue({
       success: true,
       data: { attendedAt: '2026-09-30T15:00:00Z', alreadyConfirmed: false },
     });
     const { container } = render(<DoorList entries={[ROW]} />);
     expect(screen.getByText('Invitación de Ana')).toBeTruthy();
+    expect(container.querySelector('[data-door-section="not-here"] [data-door-row="BU-4F7K"]')).toBeTruthy();
     expect(container.querySelector('[data-outcome]')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Llegó' }));
-    await waitFor(() => expect(container.querySelectorAll('[data-outcome]')).toHaveLength(4));
+    await waitFor(() =>
+      expect(container.querySelector('[data-door-section="here"] [data-door-row="BU-4F7K"]')).toBeTruthy()
+    );
+    expect(container.querySelector('[data-outcome]')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Registrar resultado' }));
+    expect(container.querySelectorAll('[data-outcome]')).toHaveLength(4);
     expect(h.confirm).toHaveBeenCalledWith(expect.anything(), 'BU-4F7K', 'toggle');
     expect(screen.queryByRole('button', { name: 'Llegó' })).toBeNull();
     // T-AV27b: "Llegó" tells the referring athlete; 8209 decides whether anyone is told.
@@ -63,6 +69,7 @@ describe('DoorList rows', () => {
   it('a confirmed pass shows its outcome selected and no "Llegó"', () => {
     render(<DoorList entries={[{ ...ROW, attendedAt: 'x', outcome: 'not_now' }]} />);
     expect(screen.queryByRole('button', { name: 'Llegó' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Registrar resultado' }));
     expect(screen.getByRole('button', { name: 'No por ahora' }).getAttribute('aria-pressed')).toBe('true');
   });
 
@@ -127,10 +134,52 @@ describe('the code field', () => {
   });
 });
 
+describe('T-AV28: "Lista de la puerta", in two sections', () => {
+  it('the title matches the dashboard button, and guests split into Por llegar and Ya llegaron', () => {
+    const { container } = render(
+      <DoorList
+        entries={[
+          ROW,
+          { ...ROW, passCode: 'BU-2222', guestFirstName: 'Marta', attendedAt: '2026-09-29T15:00:00Z' },
+          { ...ROW, passCode: 'BU-3333', guestFirstName: 'Nico', attendedAt: '2026-09-29T16:00:00Z' },
+        ]}
+      />
+    );
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Lista de la puerta');
+    const codes = (section: string) =>
+      [...container.querySelectorAll(`[data-door-section="${section}"] [data-door-row]`)].map((r) =>
+        r.getAttribute('data-door-row')
+      );
+    expect(screen.getByRole('heading', { name: 'Por llegar' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Ya llegaron' })).toBeTruthy();
+    expect(codes('not-here')).toEqual(['BU-4F7K']);
+    expect(codes('here')).toEqual(['BU-2222', 'BU-3333']);
+  });
+
+  it('one guest open at a time, and a section with nobody in it is not shown', () => {
+    const { container } = render(
+      <DoorList
+        entries={[
+          { ...ROW, attendedAt: 'x' },
+          { ...ROW, passCode: 'BU-2222', guestFirstName: 'Marta', attendedAt: 'x' },
+        ]}
+      />
+    );
+    expect(screen.queryByRole('heading', { name: 'Por llegar' })).toBeNull();
+    const [first, second] = screen.getAllByRole('button', { name: 'Registrar resultado' });
+    fireEvent.click(first);
+    expect(container.querySelectorAll('[data-outcomes]')).toHaveLength(1);
+    fireEvent.click(second);
+    expect(container.querySelectorAll('[data-outcomes]')).toHaveLength(1);
+    expect(container.querySelector('[data-door-row="BU-2222"] [data-outcomes]')).toBeTruthy();
+  });
+});
+
 describe('outcome refusals', () => {
   it('locked (a retained or settled join) is the general error, not silence', async () => {
     h.setOutcome.mockResolvedValue({ success: false, error: 'locked' });
     render(<DoorList entries={[{ ...ROW, attendedAt: 'x', outcome: 'joined' }]} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Registrar resultado' }));
     fireEvent.click(screen.getByRole('button', { name: 'No por ahora' }));
     await waitFor(() =>
       expect(screen.getByRole('alert').textContent).toBe('No pudimos guardar eso. Intenta de nuevo.')

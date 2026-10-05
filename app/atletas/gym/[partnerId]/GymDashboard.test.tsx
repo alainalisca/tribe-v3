@@ -184,7 +184,7 @@ describe('T-AV27b: "Marcar como patrocinado" is the admin screen only', () => {
     await waitFor(() =>
       expect(h.level).toHaveBeenCalledWith(expect.anything(), '00000000-0000-4000-8000-000000002003', 'sponsored')
     );
-    expect(screen.getAllByText('Marcar como patrocinado (solo admin)')).toHaveLength(3);
+    expect(screen.getAllByText('Marcar como patrocinado')).toHaveLength(3);
   });
 });
 

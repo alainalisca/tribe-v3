@@ -10,6 +10,7 @@ npm run av:schema:pull    # production -> supabase/av-local-schema.sql (needs cr
 npm run db:reset          # drop, re-apply the dump, then av-grant-sync (T-AV19)
 npm run av:schema:verify  # did the dump land, do grants match it, are outbound triggers off
 npm run av:seed           # fake athletes, instructors, BullBox (Prueba), sessions
+npm run av:seed -- --lang es   # the same, with every seed account in Spanish (browser tests)
 npm run dev:av            # next dev on :3001 with .env.av.local
 npm run db:stop
 ```
@@ -117,6 +118,7 @@ for f in supabase/migrations/82[0-9][0-9]_*.sql; do
 done
 psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -X -c "NOTIFY pgrst, 'reload schema';"
 npm run av:seed            # T-AV0 people and sessions, then the T-AV22 programs, athletes and 33 leads
+# or, for a person testing in a browser:  npm run av:seed -- --lang es
 npm run av:guard
 npm run av:schema:verify   # dump landed, verify-migration-state, grant parity
 ```
@@ -466,3 +468,26 @@ The PAT at `~/.supabase/access-token` lacks `projects_read`, so
 
 It is read-only: `db dump` reads, and T-AV0's hard line permits read-only recon
 before the merge and nothing else.
+
+## Seed language (T-AV28)
+
+Every seed writes `users.preferred_language` for all ten seed accounts
+(`*@av.local`), and reads it back: all ten, or the seed fails.
+
+```bash
+npm run av:seed                  # English: what the proofs and the e2e suite assert
+npm run av:seed -- --lang es     # Spanish: for clicking through in a browser
+npm run av:seed -- --lang=es     # the same
+```
+
+Anything other than `en` or `es` is refused before any write. The proofs'
+own reset (`node scripts/av-seed-athletes.mjs`, which every `t-av2*-proof`
+runs) also writes the language, English unless given `--lang`, so a proof
+always starts from a known language.
+
+Why it exists: before this the seed never wrote `preferred_language`. Setting
+the accounts to Spanish for a browser test on 2026-10-01 survived every
+reseed, and three proofs that assert English notification copy went red. The
+copy was right; the accounts were in a language nobody had reset. After a
+Spanish browser session, a plain `npm run av:seed` (or any proof) puts them
+back.

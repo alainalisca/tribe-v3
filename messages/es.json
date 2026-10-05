@@ -531,12 +531,14 @@
     "outcomeSaved": "Guardado",
     "confirmFirst": "Primero confirma la asistencia.",
     "error": "No pudimos guardar eso. Intenta de nuevo.",
-    "listTitle": "Invitados por llegar",
+    "listTitle": "Lista de la puerta",
     "listHelp": "Personas que reclamaron su pase en los últimos 14 días.",
     "listArrived": "Llegó",
     "listEmpty": "Nadie pendiente por ahora.",
     "codeLabel": "Código del pase",
-    "codeNotFound": "No encontramos ese pase. Revisa el código."
+    "codeNotFound": "No encontramos ese pase. Revisa el código.",
+    "listNotHere": "Por llegar",
+    "listHere": "Ya llegaron"
   },
   "gym": {
     "title": "Atletas Tribe",
@@ -616,7 +618,7 @@
     "create": "Crear programa",
     "partner": "Aliado",
     "active": "Programa activo",
-    "setSponsored": "Marcar como patrocinado (solo admin)",
+    "setSponsored": "Marcar como patrocinado",
     "empty": "Todavía no hay programas."
   }
 }
