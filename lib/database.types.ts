@@ -860,32 +860,41 @@ export type Database = {
       session_attendance: {
         Row: {
           attended: boolean | null
+          checked_in_at: string | null
           created_at: string | null
           id: string
           marked_at: string | null
           marked_by: string | null
+          method: string | null
           notes: string | null
           session_id: string | null
+          status: string | null
           user_id: string | null
         }
         Insert: {
           attended?: boolean | null
+          checked_in_at?: string | null
           created_at?: string | null
           id?: string
           marked_at?: string | null
           marked_by?: string | null
+          method?: string | null
           notes?: string | null
           session_id?: string | null
+          status?: string | null
           user_id?: string | null
         }
         Update: {
           attended?: boolean | null
+          checked_in_at?: string | null
           created_at?: string | null
           id?: string
           marked_at?: string | null
           marked_by?: string | null
+          method?: string | null
           notes?: string | null
           session_id?: string | null
+          status?: string | null
           user_id?: string | null
         }
         Relationships: [

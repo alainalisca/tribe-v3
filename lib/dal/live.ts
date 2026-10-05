@@ -1,11 +1,10 @@
-/** DAL: live_status + session_attendance tables */
+/** DAL: live_status + session_attendance reads. Writes go through av_mark_attendance (lib/dal/attendanceMarks.ts, T-AV2). */
 import { SupabaseClient } from '@supabase/supabase-js';
 import { logError } from '@/lib/logger';
 import type { DalResult, LiveUserWithDetails } from './types';
 import type { Database } from '@/lib/database.types';
 
 type LiveStatusRow = Database['public']['Tables']['live_status']['Row'];
-type AttendanceInsert = Database['public']['Tables']['session_attendance']['Insert'];
 
 export async function upsertLiveStatus(
   supabase: SupabaseClient,
@@ -33,17 +32,6 @@ export async function deleteLiveStatus(
   } catch (error) {
     logError(error, { action: 'deleteLiveStatus' });
     return { success: false, error: 'Failed to delete live status' };
-  }
-}
-
-export async function insertAttendance(supabase: SupabaseClient, data: AttendanceInsert): Promise<DalResult<null>> {
-  try {
-    const { error } = await supabase.from('session_attendance').insert(data);
-    if (error) return { success: false, error: error.message };
-    return { success: true };
-  } catch (error) {
-    logError(error, { action: 'insertAttendance' });
-    return { success: false, error: 'Failed to insert attendance' };
   }
 }
 
@@ -134,39 +122,6 @@ export async function fetchAttendanceForSession(
     return { success: true, data: (data || []) as Array<{ user_id: string; attended: boolean }> };
   } catch (error) {
     logError(error, { action: 'fetchAttendanceForSession' });
-    return { success: false, error: 'Failed' };
-  }
-}
-
-export async function upsertAttendance(
-  supabase: SupabaseClient,
-  sessionId: string,
-  userId: string,
-  attended: boolean
-): Promise<DalResult<null>> {
-  try {
-    const { data: existing } = await supabase
-      .from('session_attendance')
-      .select('id')
-      .eq('session_id', sessionId)
-      .eq('user_id', userId)
-      .maybeSingle();
-    if (existing) {
-      const { error } = await supabase
-        .from('session_attendance')
-        .update({ attended })
-        .eq('session_id', sessionId)
-        .eq('user_id', userId);
-      if (error) return { success: false, error: error.message };
-    } else {
-      const { error } = await supabase
-        .from('session_attendance')
-        .insert({ session_id: sessionId, user_id: userId, attended });
-      if (error) return { success: false, error: error.message };
-    }
-    return { success: true };
-  } catch (error) {
-    logError(error, { action: 'upsertAttendance' });
     return { success: false, error: 'Failed' };
   }
 }
