@@ -3101,4 +3101,43 @@ select '223_t_mom1_moments',
          else 'applied'
        end
 
+union all
+
+-- T-AV2 (migration 224; written on the athlete branch under a placeholder number).
+-- session_attendance is canonical: status, method and checked_in_at
+-- exist, attended is held equal to (status = 'attended'), and the only writer
+-- is av_mark_attendance. No client role may write the table directly.
+select '224_t_av2_canonical_attendance',
+       case
+         when (select count(*) from pg_attribute
+                where attrelid = to_regclass('public.session_attendance') and attnum > 0 and not attisdropped
+                  and attname in ('status', 'method', 'checked_in_at')) <> 3
+           then 'MISSING -- status, method or checked_in_at is absent from session_attendance'
+         when (select count(*) from pg_constraint
+                where conrelid = to_regclass('public.session_attendance')
+                  and conname in ('session_attendance_status_check', 'session_attendance_method_check',
+                                  'session_attendance_attended_matches_status', 'session_attendance_keys_present')) <> 4
+           then 'MISSING -- a T-AV2 check constraint is gone; attended can drift from status'
+         when to_regprocedure('public.av_mark_attendance(uuid,uuid,text)') is null
+           then 'MISSING -- av_mark_attendance is absent; hosts cannot mark attendance'
+         -- to_regprocedure, never a '...'::regprocedure literal: the literal is
+         -- resolved at plan time, so on a database without 224 the whole
+         -- verifier errors instead of this row reading MISSING.
+         when exists (select 1 from pg_proc
+                       where oid = to_regprocedure('public.av_mark_attendance(uuid,uuid,text)')
+                         and (not prosecdef or proconfig is null
+                              or has_function_privilege('anon', oid, 'EXECUTE')
+                              or not has_function_privilege('authenticated', oid, 'EXECUTE')))
+           then 'MISSING -- av_mark_attendance lost SECURITY DEFINER, its search_path, or its grants'
+         when has_any_column_privilege('authenticated', to_regclass('public.session_attendance'), 'INSERT')
+           or has_any_column_privilege('authenticated', to_regclass('public.session_attendance'), 'UPDATE')
+           or has_any_column_privilege('anon', to_regclass('public.session_attendance'), 'INSERT')
+           or has_any_column_privilege('anon', to_regclass('public.session_attendance'), 'UPDATE')
+           then 'MISSING -- a client role can write session_attendance directly again'
+         when not exists (select 1 from public.migrations_applied
+                           where migration = '224_t_av2_canonical_attendance')
+           then 'MISSING -- 224 is not recorded in migrations_applied'
+         else 'applied'
+       end
+
 order by migration;

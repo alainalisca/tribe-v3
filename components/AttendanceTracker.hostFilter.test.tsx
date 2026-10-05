@@ -17,13 +17,15 @@ import AttendanceTracker from './AttendanceTracker';
  */
 
 const fetchConfirmedParticipantsWithUsers = vi.fn();
-const fetchAttendanceForSession = vi.fn();
+const fetchAttendanceMarks = vi.fn();
 
 vi.mock('@/lib/dal', () => ({
   fetchConfirmedParticipantsWithUsers: (...args: unknown[]) => fetchConfirmedParticipantsWithUsers(...args),
-  fetchAttendanceForSession: (...args: unknown[]) => fetchAttendanceForSession(...args),
-  upsertAttendance: vi.fn(),
+  fetchAttendanceMarks: (...args: unknown[]) => fetchAttendanceMarks(...args),
+  markAttendance: vi.fn(),
 }));
+// Flag off: the card main shows, which is what this test was written against.
+vi.mock('@/lib/features/useAthleteValueFeature', () => ({ useAthleteValueFeature: () => false }));
 
 vi.mock('@/lib/supabase/client', () => ({ createClient: () => ({}) }));
 vi.mock('@/lib/LanguageContext', () => ({
@@ -51,7 +53,7 @@ function renderTracker() {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  fetchAttendanceForSession.mockResolvedValue({ success: true, data: [] });
+  fetchAttendanceMarks.mockResolvedValue({ success: true, data: [] });
 });
 
 describe('AttendanceTracker host filter', () => {
@@ -83,11 +85,11 @@ describe('AttendanceTracker host filter', () => {
 
     renderTracker();
 
-    // The user-id list drives fetchAttendanceForSession, so a host left in the
+    // The user-id list drives fetchAttendanceMarks, so a host left in the
     // roster would also pull a host attendance row into the totals -- not just
     // render an extra checkbox.
-    await waitFor(() => expect(fetchAttendanceForSession).toHaveBeenCalled());
-    const userIds = fetchAttendanceForSession.mock.calls[0][2];
+    await waitFor(() => expect(fetchAttendanceMarks).toHaveBeenCalled());
+    const userIds = fetchAttendanceMarks.mock.calls[0][2];
     expect(userIds).toEqual(['athlete-1']);
   });
 
