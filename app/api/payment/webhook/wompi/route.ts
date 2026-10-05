@@ -116,6 +116,23 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ received: true, message: 'Already processed' });
     }
 
+    // Web Checkout back-fill: the transaction id does not exist until the
+    // customer pays, so the create flow could not store it. finalize_payment
+    // matches on gateway_payment_id, so set it now on the row identified by
+    // `reference` (= our payments/tips row id). Only one of these matches the
+    // reference; the other affects 0 rows. The `is null` guard keeps it a
+    // one-time write so a Wompi retry never overwrites it.
+    await supabase
+      .from('payments')
+      .update({ gateway_payment_id: transactionId })
+      .eq('id', paymentId)
+      .is('gateway_payment_id', null);
+    await supabase
+      .from('tips')
+      .update({ gateway_payment_id: transactionId })
+      .eq('id', paymentId)
+      .is('gateway_payment_id', null);
+
     // LOGIC-04: hand off atomic work (status update + participant upsert +
     // product fulfillment) to finalize_payment RPC. On any RPC error we
     // return 500 so Wompi retries.

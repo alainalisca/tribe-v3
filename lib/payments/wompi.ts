@@ -11,6 +11,10 @@ import crypto from 'crypto';
 const SANDBOX_BASE_URL = 'https://sandbox.wompi.co/v1';
 const PRODUCTION_BASE_URL = 'https://production.wompi.co/v1';
 
+// Wompi Web Checkout (hosted payment page). Same host for sandbox and prod —
+// the public key (pub_test_ vs pub_prod_) selects the environment.
+const CHECKOUT_BASE_URL = 'https://checkout.wompi.co/p/';
+
 interface WompiCreateTransactionParams {
   amountCents: number;
   currency: 'COP';
@@ -69,68 +73,66 @@ function getCredentials() {
 }
 
 /**
- * Create a Wompi transaction
- * Returns transaction ID and redirect URL for payment widget
+ * Build a Wompi Web Checkout redirect URL.
+ *
+ * Wompi has no server-side "create a hosted transaction" endpoint. The
+ * /transactions API requires a tokenized payment source and never returns a
+ * redirect URL, so it cannot drive a hosted checkout. The hosted payment page
+ * is Web Checkout: we redirect the customer to checkout.wompi.co with the
+ * amount, reference, redirect-url and an integrity signature. Wompi creates
+ * the transaction when the customer pays, then redirects back (with ?id=) and
+ * fires the events webhook — which carries the transaction id and our
+ * reference, and is where the payment is finalized.
+ *
+ * Integrity signature = sha256hex(reference + amount_in_cents + currency + integrity_secret).
+ * Requires WOMPI_PUBLIC_KEY and WOMPI_INTEGRITY_SECRET (Wompi dashboard →
+ * Developers; the integrity secret is distinct from the events secret). The
+ * public key (pub_test_ vs pub_prod_) selects sandbox vs production.
+ *
+ * No transaction id exists yet at this point — it is assigned when the
+ * customer pays. The webhook matches the row by `reference` and back-fills
+ * gateway_payment_id before finalizing.
  */
 export async function createWompiTransaction(
   params: WompiCreateTransactionParams
-): Promise<{ transaction_id: string; redirect_url: string } | null> {
+): Promise<{ redirect_url: string } | null> {
   try {
-    const { privateKey } = getCredentials();
-    const baseUrl = getBaseUrl();
+    const publicKey = process.env.WOMPI_PUBLIC_KEY;
+    const integritySecret = process.env.WOMPI_INTEGRITY_SECRET;
 
-    const payload = {
-      amount_in_cents: params.amountCents,
-      currency: params.currency,
-      customer_email: params.customerEmail,
-      reference: params.reference,
-      redirect_url: params.redirectUrl,
-    };
-
-    const response = await fetch(`${baseUrl}/transactions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${privateKey}`,
-      },
-      body: JSON.stringify(payload),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text().catch(() => '');
-      let errorData: Record<string, unknown> = {};
-      try {
-        errorData = JSON.parse(errorText) as Record<string, unknown>;
-      } catch {
-        errorData = { raw: errorText };
-      }
-      logError(new Error(`Wompi API error: HTTP ${response.status} — ${JSON.stringify(errorData)}`), {
+    if (!publicKey || !integritySecret) {
+      logError(new Error('Missing Wompi Web Checkout config'), {
         action: 'createWompiTransaction',
-        status: response.status,
-        statusText: response.statusText,
-        error: errorData,
-        isSandbox: process.env.WOMPI_SANDBOX === 'true',
-        baseUrl,
+        hasPublicKey: !!publicKey,
+        hasIntegritySecret: !!integritySecret,
       });
       return null;
     }
 
-    const data = (await response.json()) as { data?: WompiTransaction };
+    const amountInCents = Math.round(params.amountCents);
+    const signature = crypto
+      .createHash('sha256')
+      .update(`${params.reference}${amountInCents}${params.currency}${integritySecret}`)
+      .digest('hex');
 
-    if (!data.data) {
-      logError(new Error('Invalid Wompi response: missing data field'), {
-        action: 'createWompiTransaction',
-        response: data,
-      });
-      return null;
-    }
+    // Build the query manually: the `signature:integrity` key must keep its
+    // literal colon (URLSearchParams would percent-encode it and Wompi would
+    // not recognize it). Values are individually encoded.
+    const query = [
+      ['public-key', publicKey],
+      ['currency', params.currency],
+      ['amount-in-cents', String(amountInCents)],
+      ['reference', params.reference],
+      ['signature:integrity', signature],
+      ['redirect-url', params.redirectUrl],
+      ['customer-email', params.customerEmail],
+    ]
+      .map(([key, value]) => `${key}=${encodeURIComponent(value)}`)
+      .join('&');
 
-    return {
-      transaction_id: data.data.id,
-      redirect_url: data.data.redirect_url,
-    };
+    return { redirect_url: `${CHECKOUT_BASE_URL}?${query}` };
   } catch (error) {
-    logError(error, { action: 'createWompiTransaction', params });
+    logError(error, { action: 'createWompiTransaction', reference: params.reference });
     return null;
   }
 }
