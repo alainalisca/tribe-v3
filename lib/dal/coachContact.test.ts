@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { fetchCoachContactOptions, logCoachContactTap, saveWhatsAppContact } from './coachContact';
+import { fetchCoachContactOptions, logCoachContactTap, saveWhatsAppContact, saveCallLink } from './coachContact';
 import { logError } from '@/lib/logger';
 
 vi.mock('@/lib/logger', () => ({ logError: vi.fn() }));
@@ -17,12 +17,22 @@ describe('fetchCoachContactOptions', () => {
     const m = rpcClient({ data: { whatsapp: '+573001112233' }, error: null });
     const res = await fetchCoachContactOptions(m.client, 'c1');
     expect(m.rpc).toHaveBeenCalledWith('av_coach_contact_options', { p_coach_id: 'c1' });
-    expect(res.data).toEqual({ whatsapp: '+573001112233' });
+    expect(res.data).toEqual({ whatsapp: '+573001112233', callLink: null });
   });
 
   it('no number means no button', async () => {
     const m = rpcClient({ data: { whatsapp: null }, error: null });
-    expect((await fetchCoachContactOptions(m.client, 'c1')).data).toEqual({ whatsapp: null });
+    expect((await fetchCoachContactOptions(m.client, 'c1')).data).toEqual({ whatsapp: null, callLink: null });
+  });
+
+  it('returns an https call link', async () => {
+    const m = rpcClient({ data: { whatsapp: null, call_link: 'https://calendly.com/salomon' }, error: null });
+    expect((await fetchCoachContactOptions(m.client, 'c1')).data?.callLink).toBe('https://calendly.com/salomon');
+  });
+
+  it('never trusts a non-https link as an href, whatever the database returned', async () => {
+    const m = rpcClient({ data: { whatsapp: null, call_link: 'javascript:alert(1)' }, error: null });
+    expect((await fetchCoachContactOptions(m.client, 'c1')).data?.callLink).toBeNull();
   });
 
   it('recognises a failed read: logs it and reports failure', async () => {
@@ -73,5 +83,15 @@ describe('saveWhatsAppContact', () => {
     const m = rpcClient({ data: { success: true }, error: null });
     expect((await saveWhatsAppContact(m.client, true, '+573001112233')).success).toBe(true);
     expect(m.rpc).toHaveBeenCalledWith('av_set_whatsapp_contact', { p_opt_in: true, p_whatsapp: '+573001112233' });
+  });
+});
+
+describe('saveCallLink', () => {
+  it('sends the link to av_set_call_link, and null to remove it', async () => {
+    const m = rpcClient({ data: { success: true }, error: null });
+    await saveCallLink(m.client, 'https://calendly.com/salomon');
+    expect(m.rpc).toHaveBeenCalledWith('av_set_call_link', { p_url: 'https://calendly.com/salomon' });
+    await saveCallLink(m.client, null);
+    expect(m.rpc).toHaveBeenCalledWith('av_set_call_link', { p_url: null });
   });
 });

@@ -75,4 +75,30 @@ describe('CoachContactButtons', () => {
     await new Promise((r) => setTimeout(r, 0));
     expect(container.innerHTML).toBe('');
   });
+
+  it('shows "Agenda una llamada gratis" on the storefront and logs it as call_link', async () => {
+    fetchCoachContactOptions.mockResolvedValue({
+      success: true,
+      data: { whatsapp: null, callLink: 'https://calendly.com/salomon' },
+    });
+    render(<CoachContactButtons {...base} source="storefront" />);
+    const link = await screen.findByRole('link', { name: /Agenda una llamada gratis/ });
+    expect(link.getAttribute('href')).toBe('https://calendly.com/salomon');
+    expect(link.getAttribute('rel')).toContain('noopener');
+    fireEvent.click(link);
+    expect(logCoachContactTap).toHaveBeenCalledWith(
+      {},
+      { coachId: 'coach-1', channel: 'call_link', source: 'storefront' }
+    );
+  });
+
+  it('never shows the call link on session detail', async () => {
+    fetchCoachContactOptions.mockResolvedValue({
+      success: true,
+      data: { whatsapp: '+573001112233', callLink: 'https://calendly.com/salomon' },
+    });
+    render(<CoachContactButtons {...base} source="session" sessionId="s-1" />);
+    await screen.findByRole('link', { name: /WhatsApp/ });
+    expect(screen.queryByRole('link', { name: /llamada/ })).toBeNull();
+  });
 });

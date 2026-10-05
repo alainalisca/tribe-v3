@@ -1,20 +1,21 @@
 'use client';
 
 /**
- * T-AV29 (P1-2). The coach's own switch for the WhatsApp contact button, on the
+ * T-AV29 (P1-2) and T-AV30 (P1-3). The coach's own contact settings, on the
  * instructor dashboard. Behind the athlete_value feature "contact".
  *
- * The number is normalized with lib/pase/phone (the same rules the Pass form
- * uses) and stored in E.164. Opting in needs a number; opting out keeps the
- * number saved so switching back on is one tap.
+ *   WhatsApp   normalized with lib/pase/phone (the Pass form's rules), stored
+ *              in E.164. Opting in needs a number; opting out keeps it saved.
+ *   Call link  https only (lib/coachContact/callLink). Empty removes it.
  */
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
 import { showError, showSuccess } from '@/lib/toast';
 import { normalizeWhatsApp } from '@/lib/pase/phone';
+import { normalizeCallLink } from '@/lib/coachContact/callLink';
 import { useAthleteValueFeature } from '@/lib/features/useAthleteValueFeature';
-import { fetchMyContactSettings, saveWhatsAppContact } from '@/lib/dal/coachContact';
+import { fetchMyContactSettings, saveCallLink, saveWhatsAppContact } from '@/lib/dal/coachContact';
 import { CONTACT_FEATURE } from './CoachContactButtons';
 
 interface Props {
@@ -22,10 +23,14 @@ interface Props {
   language: 'en' | 'es';
 }
 
+const FIELD =
+  'w-full px-3 py-3 rounded-lg border border-stone-300 dark:border-tribe-mid bg-white dark:bg-tribe-mid text-base';
+
 export default function CoachContactSettings({ coachId, language }: Props) {
   const enabled = useAthleteValueFeature(CONTACT_FEATURE);
   const [optIn, setOptIn] = useState(false);
   const [number, setNumber] = useState('');
+  const [callLink, setCallLink] = useState('');
   const [loaded, setLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
   const es = language === 'es';
@@ -36,6 +41,7 @@ export default function CoachContactSettings({ coachId, language }: Props) {
       if (r.success && r.data) {
         setOptIn(r.data.whatsapp_opt_in);
         setNumber(r.data.whatsapp_e164 ?? '');
+        setCallLink(r.data.call_link_url ?? '');
       }
       setLoaded(true);
     });
@@ -55,21 +61,32 @@ export default function CoachContactSettings({ coachId, language }: Props) {
       );
       return;
     }
+    const link = normalizeCallLink(callLink);
+    if (link === 'invalid') {
+      showError(
+        es
+          ? 'El enlace debe ser una dirección web que empiece por https://'
+          : 'The link must be a web address starting with https://'
+      );
+      return;
+    }
     setSaving(true);
-    const r = await saveWhatsAppContact(createClient(), optIn, e164);
+    const supabase = createClient();
+    const [w, l] = await Promise.all([saveWhatsAppContact(supabase, optIn, e164), saveCallLink(supabase, link)]);
     setSaving(false);
-    if (!r.success) {
+    if (!w.success || !l.success) {
       showError(es ? 'No se pudo guardar. Intenta de nuevo.' : 'Could not save. Please try again.');
       return;
     }
     if (e164) setNumber(e164);
+    setCallLink(link ?? '');
     showSuccess(es ? 'Guardado' : 'Saved');
   }
 
   return (
     <Card className="dark:bg-tribe-card">
       <CardContent className="p-4 space-y-3">
-        <h3 className="font-bold text-theme-primary">{es ? 'Contacto por WhatsApp' : 'WhatsApp contact'}</h3>
+        <h3 className="font-bold text-theme-primary">{es ? 'Cómo te contactan' : 'How people reach you'}</h3>
         <label className="flex items-center gap-3">
           <input type="checkbox" checked={optIn} onChange={(e) => setOptIn(e.target.checked)} className="w-5 h-5" />
           <span className="text-sm text-theme-primary">
@@ -85,7 +102,19 @@ export default function CoachContactSettings({ coachId, language }: Props) {
           onChange={(e) => setNumber(e.target.value)}
           placeholder="+57 300 111 2233"
           aria-label={es ? 'Tu número de WhatsApp' : 'Your WhatsApp number'}
-          className="w-full px-3 py-3 rounded-lg border border-stone-300 dark:border-tribe-mid bg-white dark:bg-tribe-mid text-base"
+          className={FIELD}
+        />
+        <label className="block text-sm text-theme-primary" htmlFor="coach-call-link">
+          {es ? 'Enlace para agendar una llamada gratis (opcional)' : 'Link to book a free call (optional)'}
+        </label>
+        <input
+          id="coach-call-link"
+          type="url"
+          inputMode="url"
+          value={callLink}
+          onChange={(e) => setCallLink(e.target.value)}
+          placeholder="https://calendly.com/..."
+          className={FIELD}
         />
         <button
           type="button"

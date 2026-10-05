@@ -2371,4 +2371,33 @@ select '8001_t_av_p1_2_coach_contact',
          else 'applied'
        end
 
+union all
+
+-- T-AV30 (P1-3). The call link: an https-only column, a log that accepts the
+-- call_link channel, and the setter with its grants.
+select '8002_t_av_p1_3_call_link',
+       case
+         when not exists (select 1 from pg_attribute
+                           where attrelid = to_regclass('public.coach_contact_settings')
+                             and attname = 'call_link_url' and not attisdropped)
+           then 'MISSING -- coach_contact_settings.call_link_url is absent'
+         when not exists (select 1 from pg_constraint
+                           where conrelid = to_regclass('public.coach_contact_settings')
+                             and conname = 'coach_contact_settings_call_link_https')
+           then 'MISSING -- the https-only check on call_link_url is gone; a javascript: link could be stored'
+         when not exists (select 1 from pg_constraint
+                           where conrelid = to_regclass('public.coach_contact_log')
+                             and conname = 'coach_contact_log_channel_check'
+                             and pg_get_constraintdef(oid) like '%call_link%')
+           then 'MISSING -- the contact log does not accept call_link taps'
+         when to_regprocedure('public.av_set_call_link(text)') is null
+           then 'MISSING -- av_set_call_link is absent'
+         when exists (select 1 from pg_proc where oid = to_regprocedure('public.av_set_call_link(text)')
+                        and (not prosecdef or proconfig is null
+                             or has_function_privilege('anon', oid, 'EXECUTE')
+                             or not has_function_privilege('authenticated', oid, 'EXECUTE')))
+           then 'MISSING -- av_set_call_link lost SECURITY DEFINER, its search_path, or its grants'
+         else 'applied'
+       end
+
 order by migration;

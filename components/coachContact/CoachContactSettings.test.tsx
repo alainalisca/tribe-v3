@@ -4,6 +4,7 @@ import CoachContactSettings from './CoachContactSettings';
 
 const fetchMyContactSettings = vi.fn();
 const saveWhatsAppContact = vi.fn();
+const saveCallLink = vi.fn();
 const showError = vi.fn();
 
 vi.mock('@/lib/features/useAthleteValueFeature', () => ({ useAthleteValueFeature: () => true }));
@@ -12,19 +13,26 @@ vi.mock('@/lib/toast', () => ({ showError: (...a: unknown[]) => showError(...a),
 vi.mock('@/lib/dal/coachContact', () => ({
   fetchMyContactSettings: (...a: unknown[]) => fetchMyContactSettings(...a),
   saveWhatsAppContact: (...a: unknown[]) => saveWhatsAppContact(...a),
+  saveCallLink: (...a: unknown[]) => saveCallLink(...a),
 }));
 
 beforeEach(() => {
   vi.clearAllMocks();
   fetchMyContactSettings.mockResolvedValue({ success: true, data: null });
   saveWhatsAppContact.mockResolvedValue({ success: true });
+  saveCallLink.mockResolvedValue({ success: true });
 });
 
 async function setup() {
   render(<CoachContactSettings coachId="coach-1" language="es" />);
   const box = await screen.findByRole('checkbox');
   const field = screen.getByLabelText('Tu número de WhatsApp');
-  return { box, field, save: screen.getByRole('button', { name: 'Guardar' }) };
+  return {
+    box,
+    field,
+    link: screen.getByLabelText(/Enlace para agendar/),
+    save: screen.getByRole('button', { name: 'Guardar' }),
+  };
 }
 
 describe('CoachContactSettings', () => {
@@ -60,5 +68,27 @@ describe('CoachContactSettings', () => {
     const { box, field } = await setup();
     expect((box as HTMLInputElement).checked).toBe(true);
     expect((field as HTMLInputElement).value).toBe('+573001112233');
+  });
+
+  it('saves a call link typed without https://, as https', async () => {
+    const { link, save } = await setup();
+    fireEvent.change(link, { target: { value: 'calendly.com/salomon' } });
+    fireEvent.click(save);
+    await waitFor(() => expect(saveCallLink).toHaveBeenCalledWith({}, 'https://calendly.com/salomon'));
+  });
+
+  it('refuses an http link, and saves nothing', async () => {
+    const { link, save } = await setup();
+    fireEvent.change(link, { target: { value: 'http://calendly.com/salomon' } });
+    fireEvent.click(save);
+    await waitFor(() => expect(showError).toHaveBeenCalledWith(expect.stringContaining('https://')));
+    expect(saveCallLink).not.toHaveBeenCalled();
+    expect(saveWhatsAppContact).not.toHaveBeenCalled();
+  });
+
+  it('an empty link field removes the link', async () => {
+    const { save } = await setup();
+    fireEvent.click(save);
+    await waitFor(() => expect(saveCallLink).toHaveBeenCalledWith({}, null));
   });
 });
