@@ -51,14 +51,21 @@ export async function deleteRecapPhoto(supabase: SupabaseClient, photoId: string
   }
 }
 
+/**
+ * Flags a recap photo for admin review through report_recap_photo (migration
+ * 200), which writes only reported, reported_by (the caller, decided by the
+ * database) and reported_reason. Clients hold no UPDATE path on the table.
+ */
 export async function updateRecapPhotoReport(
   supabase: SupabaseClient,
   photoId: string,
-  data: { reported: boolean; reported_by: string; reported_reason: string }
+  reason: string
 ): Promise<DalResult<null>> {
   try {
-    const { error } = await supabase.from('session_recap_photos').update(data).eq('id', photoId);
+    const { data, error } = await supabase.rpc('report_recap_photo', { p_photo_id: photoId, p_reason: reason });
     if (error) return { success: false, error: error.message };
+    const body = (data ?? {}) as { success?: unknown; error?: unknown };
+    if (body.success !== true) return { success: false, error: String(body.error ?? 'unknown') };
     return { success: true };
   } catch (error) {
     logError(error, { action: 'updateRecapPhotoReport' });

@@ -7,6 +7,7 @@
  *   npx tsx scripts/moveRecapPhotosToPrivateBucket.ts                  # dry run: prints the plan, writes nothing
  *   npx tsx scripts/moveRecapPhotosToPrivateBucket.ts --apply          # copy files, repoint rows
  *   npx tsx scripts/moveRecapPhotosToPrivateBucket.ts --apply --remove-old      # also delete the old public copies
+ *   npx tsx scripts/moveRecapPhotosToPrivateBucket.ts --remove-old     # later: old copies of rows an earlier run moved
  *   npx tsx scripts/moveRecapPhotosToPrivateBucket.ts --delete-orphans # delete recap files no row references
  *
  * Reads NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY from the
@@ -64,14 +65,13 @@ async function main(): Promise<void> {
   const apply = args.has('--apply');
   const removeOld = args.has('--remove-old');
   const deleteOrphans = args.has('--delete-orphans');
-  if (removeOld && !apply) throw new Error('--remove-old only makes sense with --apply');
 
   const url = env('NEXT_PUBLIC_SUPABASE_URL');
   const supabase = createClient(url, env('SUPABASE_SERVICE_ROLE_KEY'), { auth: { persistSession: false } });
 
   // A dry run may preview before 199 is applied; anything that writes may not.
   const { data: bucket } = await supabase.storage.getBucket(RECAP_PHOTOS_BUCKET);
-  if ((apply || deleteOrphans) && (!bucket || bucket.public)) {
+  if ((apply || deleteOrphans || removeOld) && (!bucket || bucket.public)) {
     throw new Error(`${RECAP_PHOTOS_BUCKET} is missing or public. Apply migration 199 first.`);
   }
 
@@ -83,11 +83,12 @@ async function main(): Promise<void> {
   const plan = planRecapMoves(url, (rows ?? []) as RecapRowForMove[], legacy);
 
   console.log(
-    `plan: ${plan.moves.length} to move, ${plan.orphans.length} orphaned recap file(s), ${plan.skipped.length} skipped`
+    `plan: ${plan.moves.length} to move, ${plan.leftovers.length} old copy(ies) of moved rows, ` +
+      `${plan.orphans.length} orphaned recap file(s), ${plan.skipped.length} skipped`
   );
   for (const s of plan.skipped) console.log(`  skip row ${s.rowId}: ${s.reason}`);
 
-  if (!apply && !deleteOrphans) {
+  if (!apply && !deleteOrphans && !removeOld) {
     console.log('dry run: nothing written. Add --apply to move.');
     return;
   }
@@ -130,6 +131,24 @@ async function main(): Promise<void> {
       moved++;
     }
     console.log(`moved ${moved} of ${plan.moves.length}${removeOld ? ', old copies removed' : ', old copies kept'}`);
+  }
+
+  // Old public copies of rows moved by an EARLIER run. Each is removed only
+  // when its private copy reads back at the same size.
+  if (removeOld && plan.leftovers.length > 0) {
+    let removed = 0;
+    for (const l of plan.leftovers) {
+      const { data: priv } = await supabase.storage.from(RECAP_PHOTOS_BUCKET).download(l.privatePath);
+      const { data: pub } = await supabase.storage.from(LEGACY_BUCKET).download(l.legacyPath);
+      if (!priv || !pub || priv.size !== pub.size) {
+        console.log(`  kept ${l.legacyPath}: its private copy does not read back at the same size`);
+        continue;
+      }
+      const { error: rmErr } = await supabase.storage.from(LEGACY_BUCKET).remove([l.legacyPath]);
+      if (rmErr) throw new Error(`removing ${l.legacyPath} failed: ${rmErr.message}`);
+      removed++;
+    }
+    console.log(`removed ${removed} of ${plan.leftovers.length} old copies of moved rows`);
   }
 
   if (deleteOrphans && plan.orphans.length > 0) {

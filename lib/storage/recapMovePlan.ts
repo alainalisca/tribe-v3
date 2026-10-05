@@ -28,7 +28,14 @@ export interface RecapMove {
 
 export interface RecapMovePlan {
   moves: RecapMove[];
-  /** Recap-named files in session-photos that no row references. */
+  /**
+   * Public copies left behind by rows ALREADY moved (a run with --apply but
+   * without --remove-old). Not orphans: a row still owns their content, in the
+   * private bucket. Found 2026-10-05: the first production run moved 5 rows and
+   * kept the old copies, and the next run classed those 5 as orphans.
+   */
+  leftovers: Array<{ legacyPath: string; privatePath: string }>;
+  /** Recap-named files in session-photos that no row references, moved or not. */
   orphans: string[];
   /** Rows that point into session-photos but cannot be moved, with the reason. */
   skipped: Array<{ rowId: string; reason: string }>;
@@ -48,10 +55,23 @@ export function planRecapMoves(
   const moves: RecapMove[] = [];
   const skipped: RecapMovePlan['skipped'] = [];
   const referenced = new Set<string>();
+  const leftovers: RecapMovePlan['leftovers'] = [];
+  const legacy = new Set(legacyObjectPaths);
 
   for (const row of rows) {
+    const movedPath = storagePathFromUrl(row.photo_url, RECAP_PHOTOS_BUCKET);
+    if (movedPath) {
+      // <session>/<uploader>/<file> was <uploader>/<file> in the legacy bucket.
+      const [, uploader, file] = movedPath.split('/');
+      const legacyPath = `${uploader}/${file}`;
+      if (uploader && file && legacy.has(legacyPath)) {
+        referenced.add(legacyPath);
+        leftovers.push({ legacyPath, privatePath: movedPath });
+      }
+      continue;
+    }
     const fromPath = storagePathFromUrl(row.photo_url, LEGACY_BUCKET);
-    if (!fromPath) continue; // already moved, or never in the legacy bucket
+    if (!fromPath) continue; // never in the legacy bucket
     referenced.add(fromPath);
     if (!row.session_id || !row.user_id) {
       skipped.push({ rowId: row.id, reason: 'row has no session_id or user_id, so it has no private folder' });
@@ -69,5 +89,5 @@ export function planRecapMoves(
   }
 
   const orphans = legacyObjectPaths.filter((p) => isRecapFileName(p) && !referenced.has(p)).sort();
-  return { moves, orphans, skipped };
+  return { moves, leftovers, orphans, skipped };
 }

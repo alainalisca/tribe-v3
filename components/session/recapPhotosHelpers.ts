@@ -159,11 +159,8 @@ export async function reportRecapPhoto(
     const { createClient } = await import('@/lib/supabase/client');
     const supabase = createClient();
 
-    const result = await updateRecapPhotoReport(supabase, photoId, {
-      reported: true,
-      reported_by: user.id,
-      reported_reason: reason || 'No reason provided',
-    });
+    // The reporter is the signed-in caller, decided by the database (migration 200).
+    const result = await updateRecapPhotoReport(supabase, photoId, reason || 'No reason provided');
     if (!result.success) throw new Error(result.error);
 
     showSuccess(language === 'es' ? 'Foto reportada. Un admin la revisara.' : 'Photo reported. Admin will review.');
