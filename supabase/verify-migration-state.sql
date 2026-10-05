@@ -2340,4 +2340,41 @@ select '198_service_role_only_internal_rpcs',
          else 'applied'
        end
 
+union all
+
+-- Recap photos and stories, rows and files: host, confirmed participants,
+-- uploader and admin only. session-photos stays public (listing photos) but
+-- cannot be listed by anyone but the owner.
+select '199_session_media_participants_only',
+       case
+         when to_regprocedure('public.can_view_session_media(text)') is null
+           or to_regprocedure('public.can_moderate_session_media(text)') is null
+           then 'MISSING -- the session media helpers do not exist'
+         when exists (select 1 from storage.buckets where id = 'session-stories' and public)
+           then 'MISSING -- session-stories is public; any story file can be downloaded by URL'
+         when not exists (select 1 from storage.buckets where id = 'session-recap-photos' and not public)
+           then 'MISSING -- the private session-recap-photos bucket does not exist; recap uploads will fail'
+         when not exists (select 1 from storage.buckets where id = 'session-photos' and public)
+           then 'MISSING -- session-photos is not public; every session listing photo stops loading'
+         when exists (select 1 from pg_policies
+                       where schemaname = 'public' and tablename in ('session_recap_photos', 'session_stories')
+                         and cmd in ('SELECT', 'ALL')
+                         and position('can_view_session_media' in coalesce(qual, '')) = 0
+                         and coalesce(qual, '') <> 'is_app_admin()')
+           then 'MISSING -- a SELECT policy on recap photos or stories does not check can_view_session_media'
+         when exists (select 1 from pg_policies
+                       where schemaname = 'storage' and tablename = 'objects' and cmd in ('SELECT', 'ALL')
+                         and coalesce(qual, '') ~ 'session-(stories|recap-photos)'
+                         and position('can_view_session_media' in coalesce(qual, '')) = 0)
+           then 'MISSING -- a storage SELECT policy exposes story or recap files beyond the session'
+         when exists (select 1 from pg_policies
+                       where schemaname = 'storage' and tablename = 'objects' and cmd in ('SELECT', 'ALL')
+                         and coalesce(qual, '') ~ 'session-photos'
+                         and position('auth.uid()' in coalesce(qual, '')) = 0)
+           then 'MISSING -- the session-photos bucket can be listed by anyone'
+         when has_function_privilege('anon', 'public.can_view_session_media(text)', 'EXECUTE')
+           then 'MISSING -- anon can execute can_view_session_media'
+         else 'applied'
+       end
+
 order by migration;

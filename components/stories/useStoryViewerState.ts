@@ -6,6 +6,7 @@ import { showSuccess, showError } from '@/lib/toast';
 import { useLanguage } from '@/lib/LanguageContext';
 import { logError } from '@/lib/logger';
 import { deleteSessionStory } from '@/lib/dal';
+import { storagePathFromUrl, STORIES_BUCKET } from '@/lib/storage/privateMedia';
 import type { StoryGroup } from './storyTypes';
 
 const DURATION = 5000; // 5s for images
@@ -171,18 +172,15 @@ export function useStoryViewerState({
     setDeleting(true);
 
     try {
-      const urlPath = new URL(story.media_url).pathname;
-      const bucketPrefix = '/storage/v1/object/public/session-stories/';
-      const storagePath = urlPath.startsWith(bucketPrefix) ? urlPath.slice(bucketPrefix.length) : null;
+      // The viewer holds SIGNED URLs since migration 199 (/object/sign/...),
+      // so the path is read from any Storage URL form, not only /public/.
+      const storagePath = storagePathFromUrl(story.media_url, STORIES_BUCKET);
 
       if (storagePath) {
-        await supabase.storage.from('session-stories').remove([decodeURIComponent(storagePath)]);
-        if (story.thumbnail_url) {
-          const thumbPath = new URL(story.thumbnail_url).pathname;
-          const thumbStoragePath = thumbPath.startsWith(bucketPrefix) ? thumbPath.slice(bucketPrefix.length) : null;
-          if (thumbStoragePath) {
-            await supabase.storage.from('session-stories').remove([decodeURIComponent(thumbStoragePath)]);
-          }
+        await supabase.storage.from(STORIES_BUCKET).remove([storagePath]);
+        const thumbStoragePath = storagePathFromUrl(story.thumbnail_url, STORIES_BUCKET);
+        if (thumbStoragePath) {
+          await supabase.storage.from(STORIES_BUCKET).remove([thumbStoragePath]);
         }
       }
 
