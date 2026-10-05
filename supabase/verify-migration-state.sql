@@ -2377,4 +2377,23 @@ select '199_session_media_participants_only',
          else 'applied'
        end
 
+union all
+
+-- Recap photo reports go through report_recap_photo only: no UPDATE policy on
+-- session_recap_photos admits anyone but an app admin.
+select '200_recap_photo_report_function',
+       case
+         when to_regprocedure('public.report_recap_photo(uuid,text)') is null
+           then 'MISSING -- report_recap_photo is absent; the report button fails'
+         when exists (select 1 from pg_policies where schemaname = 'public' and tablename = 'session_recap_photos'
+                       and cmd in ('UPDATE', 'ALL') and coalesce(qual, '') <> 'is_app_admin()')
+           then 'MISSING -- an UPDATE policy lets a non-admin rewrite recap photo rows'
+         when exists (select 1 from pg_proc where oid = to_regprocedure('public.report_recap_photo(uuid,text)')
+                        and (not prosecdef or proconfig is null
+                             or has_function_privilege('anon', oid, 'EXECUTE')
+                             or not has_function_privilege('authenticated', oid, 'EXECUTE')))
+           then 'MISSING -- report_recap_photo lost SECURITY DEFINER, its search_path, or its grants'
+         else 'applied'
+       end
+
 order by migration;
