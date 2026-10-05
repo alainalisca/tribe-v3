@@ -2043,6 +2043,16 @@ select 'GUARD_192_banner_writes_scoped',
 
 union all
 
+-- T-AV probes (8000+) run against databases that do not yet have their
+-- migrations, so they never cast a string literal to regprocedure or regclass.
+-- A cast like 'public.f(text)'::regprocedure is resolved while the statement
+-- is parsed, before any CASE arm runs: on a database without f the WHOLE
+-- verifier fails (42883 / 42P01) instead of this row reading MISSING. Measured
+-- on the local stack 2026-10-04. to_regprocedure / to_regclass resolve at run
+-- time and return NULL, which the existence arms turn into MISSING; the oid is
+-- passed onward, and coalesce keeps a NULL body from falling through to
+-- 'applied'. verify-migration-state.test.ts enforces this.
+
 -- T-AV21 (athlete-value branch, reserved block; renumbered at the merge gate).
 -- The show-up columns exist, the claim policy refuses a pre-attended row (F2),
 -- no other permissive INSERT policy reopens it, and only authenticated can
@@ -2050,7 +2060,7 @@ union all
 select '8200_t_av21_pass_leads_showup',
        case
          when (select count(*) from pg_attribute
-                where attrelid = 'public.pass_leads'::regclass and not attisdropped
+                where attrelid = to_regclass('public.pass_leads') and not attisdropped
                   and attname in ('attended_at', 'attended_marked_by', 'attended_method')) <> 3
            then 'MISSING -- a show-up column is absent from pass_leads'
          when not exists (select 1 from pg_policies
@@ -2138,7 +2148,7 @@ union all
 select '8203_t_av22_pass_leads_attribution',
        case
          when (select count(*) from pg_attribute
-                where attrelid = 'public.pass_leads'::regclass and not attisdropped
+                where attrelid = to_regclass('public.pass_leads') and not attisdropped
                   and attname in ('referred_by_athlete_id', 'outcome', 'outcome_at', 'outcome_marked_by',
                                   'retained_at', 'bonus_eligible', 'bonus_settled_at', 'bonus_settled_by')) <> 8
            then 'MISSING -- an attribution or outcome column is absent from pass_leads'
@@ -2219,11 +2229,11 @@ select '8206_t_av22_athletes_reads',
                               or has_function_privilege('anon', oid, 'EXECUTE')
                               or not has_function_privilege('authenticated', oid, 'EXECUTE')))
            then 'MISSING -- an athlete read function lost SECURITY DEFINER, its search_path, or its grants'
-         when position('athlete_first_name' in pg_get_functiondef('public.av_door_pass(text)'::regprocedure)) = 0
+         when coalesce(position('athlete_first_name' in pg_get_functiondef(to_regprocedure('public.av_door_pass(text)'))), 0) = 0
            then 'MISSING -- av_door_pass is not the T-AV22 version'
          -- T-AV26 widened partner_summary in place (8206 header, 2026-10-01).
-         when position('retain_from' in pg_get_functiondef('public.av_athletes_partner_summary(uuid)'::regprocedure)) = 0
-           or position('to_close' in pg_get_functiondef('public.av_athletes_partner_summary(uuid)'::regprocedure)) = 0
+         when coalesce(position('retain_from' in pg_get_functiondef(to_regprocedure('public.av_athletes_partner_summary(uuid)'))), 0) = 0
+           or coalesce(position('to_close' in pg_get_functiondef(to_regprocedure('public.av_athletes_partner_summary(uuid)'))), 0) = 0
            then 'MISSING -- av_athletes_partner_summary is not the T-AV26 version (no to_close or retain_from)'
          else 'applied'
        end
@@ -2266,7 +2276,7 @@ select '8208_t_av26_athletes_search',
                               or has_function_privilege('anon', oid, 'EXECUTE')
                               or not has_function_privilege('authenticated', oid, 'EXECUTE')))
            then 'MISSING -- av_athletes_search_candidates lost SECURITY DEFINER, its search_path, or its grants'
-         when position('users_discoverable' in pg_get_functiondef('public.av_athletes_search_candidates(uuid,text)'::regprocedure)) = 0
+         when coalesce(position('users_discoverable' in pg_get_functiondef(to_regprocedure('public.av_athletes_search_candidates(uuid,text)'))), 0) = 0
            then 'MISSING -- av_athletes_search_candidates no longer reads users_discoverable'
          else 'applied'
        end
@@ -2282,20 +2292,20 @@ select '8209_t_av27b_notifications',
            or to_regprocedure('public.av_athletes_claim_notification(text,text)') is null
            or to_regprocedure('public.av_athletes_claim_lead_notification(uuid)') is null
            then 'MISSING -- the notification log or a claim function is absent'
-         when not (select relrowsecurity from pg_class where oid = 'public.av_notification_log'::regclass)
+         when not coalesce((select relrowsecurity from pg_class where oid = to_regclass('public.av_notification_log')), false)
            or has_any_column_privilege('anon', 'public.av_notification_log', 'SELECT')
            or has_any_column_privilege('authenticated', 'public.av_notification_log', 'SELECT')
            or has_any_column_privilege('authenticated', 'public.av_notification_log', 'INSERT')
            then 'MISSING -- av_notification_log lost RLS or a client role can read or write it'
-         when has_function_privilege('anon', 'public.av_athletes_claim_notification(text,text)', 'EXECUTE')
-           or not has_function_privilege('authenticated', 'public.av_athletes_claim_notification(text,text)', 'EXECUTE')
-           or has_function_privilege('authenticated', 'public.av_athletes_claim_lead_notification(uuid)', 'EXECUTE')
+         when has_function_privilege('anon', to_regprocedure('public.av_athletes_claim_notification(text,text)'), 'EXECUTE')
+           or not has_function_privilege('authenticated', to_regprocedure('public.av_athletes_claim_notification(text,text)'), 'EXECUTE')
+           or has_function_privilege('authenticated', to_regprocedure('public.av_athletes_claim_lead_notification(uuid)'), 'EXECUTE')
            then 'MISSING -- a claim function has the wrong grants'
          -- T-AV27c: the cap takes the event, so "joined" can skip the daily limit.
          when to_regprocedure('public.av_push_allowed(uuid,text)') is null
            or to_regprocedure('public.av_push_allowed(uuid)') is not null
-           or has_function_privilege('authenticated', 'public.av_push_allowed(uuid,text)', 'EXECUTE')
-           or position('joined' in pg_get_functiondef('public.av_push_allowed(uuid,text)'::regprocedure)) = 0
+           or has_function_privilege('authenticated', to_regprocedure('public.av_push_allowed(uuid,text)'), 'EXECUTE')
+           or coalesce(position('joined' in pg_get_functiondef(to_regprocedure('public.av_push_allowed(uuid,text)'))), 0) = 0
            then 'MISSING -- av_push_allowed is not the T-AV27c version (event-aware, joined skips the daily cap)'
          when not exists (select 1 from pg_indexes where schemaname = 'public'
                            and indexname = 'av_notification_log_once_per_lead')

@@ -498,3 +498,53 @@ describe('verify-migration-state.sql is a single well-formed UNION', () => {
     expect(unions.length).toBe(branches.length - 1);
   });
 });
+
+/**
+ * T-AV PROBES RESOLVE OBJECTS AT RUN TIME, NEVER AT PARSE TIME.
+ *
+ * A string literal cast to regprocedure or regclass is resolved while the
+ * statement is parsed, before any CASE arm is evaluated. On a database without
+ * the object, the WHOLE verifier errors (42883 for a function, 42P01 for a
+ * relation) instead of the branch reading MISSING -- even when an earlier arm
+ * of that same CASE would have returned. Measured 2026-10-04 on the local
+ * stack: 8206, 8208 and 8209 each errored with their migration's artifacts
+ * dropped, and read MISSING once rewritten with to_regprocedure/to_regclass.
+ *
+ * The 8000+ block is exactly where this bites: those probes exist to be run
+ * against databases that do not have the migration yet (production before the
+ * merge gate). Main's older probes use the literal form only for objects that
+ * are already in production, which is why this is scoped to 8000+.
+ *
+ * Every spelling of a parse-time cast is checked, not just `::`. The comment-
+ * stripped text is scanned, so prose explaining the rule cannot trip it.
+ */
+describe('T-AV probes (8000+) resolve objects at run time', () => {
+  const branches = sqlWithoutComments(fs.readFileSync(VERIFIER_PATH, 'utf-8'))
+    .split(/^union all\s*$/m)
+    .map((chunk) => ({ id: /^select '(\d{4,}_[a-z0-9_]+)'/m.exec(chunk)?.[1], chunk }))
+    .filter((b): b is { id: string; chunk: string } => b.id !== undefined && parseInt(b.id, 10) >= 8000);
+
+  const PARSE_TIME_CASTS = [
+    /'[^']*'\s*::\s*reg(?:procedure|proc|class)\b/gi,
+    /\bcast\s*\(\s*'[^']*'\s+as\s+reg(?:procedure|proc|class)\b/gi,
+    /\breg(?:procedure|proc|class)\s+'[^']*'/gi,
+  ];
+
+  it('finds the T-AV branches', () => {
+    expect(branches.length).toBeGreaterThanOrEqual(10);
+  });
+
+  it('no T-AV branch casts a literal to regprocedure, regproc or regclass', () => {
+    const offenders = branches.flatMap(({ id, chunk }) =>
+      PARSE_TIME_CASTS.flatMap((re) => [...chunk.matchAll(re)].map((m) => `${id}: ${m[0]}`))
+    );
+    expect(
+      offenders,
+      `Parse-time casts in T-AV probes:\n  ${offenders.join('\n  ')}\n\n` +
+        `On a database without the object this errors the whole verifier instead of ` +
+        `reading MISSING. Use to_regprocedure('...') / to_regclass('...') and pass the ` +
+        `oid onward; wrap a pg_get_functiondef read in coalesce so a NULL cannot fall ` +
+        `through to 'applied'.\n`
+    ).toEqual([]);
+  });
+});
