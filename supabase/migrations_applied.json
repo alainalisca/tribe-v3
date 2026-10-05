@@ -20,6 +20,7 @@
     "193_private_communities_visible_to_members",
     "196_admin_delete_user_revoke_anon",
     "197_revoke_anon_payment_venue_revenue_rpcs",
-    "198_service_role_only_internal_rpcs"
+    "198_service_role_only_internal_rpcs",
+    "199_session_media_participants_only"
   ]
 }
