@@ -32,6 +32,7 @@ import { resolveAthleteAttribution, consentForAttribution, renderVoucherQr } fro
 import { sendPartnerLeadNotification, sendLeadPassEmail } from '@/lib/email/passLead';
 import { claimLeadNotification } from '@/lib/dal/athleteNotify';
 import { deliverNotifications } from '@/lib/atletas/athleteNotifications';
+import { welcomePassClaimant } from '@/lib/coachContact/welcomeDelivery';
 
 const RATE_LIMIT_MAX = 5;
 const RATE_LIMIT_WINDOW_MS = 600_000;
@@ -299,6 +300,11 @@ export async function POST(request: NextRequest) {
         logError(error, { route: '/api/pase', action: 'av_notify_claimed', passLeadId: inserted.id });
       }
     }
+
+    // T-AV33 (P1-6): the coach's welcome note for a SIGNED-IN claimant, resolved
+    // from their own session (never from the form). Signed out or feature off:
+    // nothing. Best effort, like the notices above.
+    await welcomePassClaimant(admin, inserted.id, new URL(request.url).origin);
 
     // The voucher QR only when the predicate is true for this partner; with it
     // off the body has exactly the three keys it always had.

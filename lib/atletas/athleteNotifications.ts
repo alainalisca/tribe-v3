@@ -75,31 +75,42 @@ export async function deliverNotifications(
     });
     if (!inApp.success) logError(inApp.error, { action: 'av_notify_in_app', type: r.type });
     if (!r.push) continue;
-
-    const secret = process.env.CRON_SECRET;
-    if (!secret) {
-      log('warn', 'av notify: CRON_SECRET unset, push not dispatched', { action: 'av_notify_push', type: r.type });
-      continue;
-    }
-    try {
-      const res = await fetch(`${options.origin}/api/notifications/send/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${secret}` },
-        body: JSON.stringify({
-          userId: r.recipientId,
-          title: r.title,
-          body: r.body,
-          url: r.url,
-          type: r.type,
-          data: { type: r.type },
-        }),
-      });
-      if (res.ok) pushed += 1;
-      else if (res.status !== 404)
-        logError(new Error(`av push ${res.status}`), { action: 'av_notify_push', type: r.type });
-    } catch (error) {
-      logError(error, { action: 'av_notify_push', type: r.type });
-    }
+    if (await dispatchPush(options.origin, r)) pushed += 1;
   }
   return pushed;
+}
+
+/**
+ * One push through the consolidated path, /api/notifications/send (never a DB
+ * trigger). Shared by the T-AV27 events and the T-AV33 welcome note so there
+ * is one way a T-AV push leaves the app. Returns whether it was accepted.
+ */
+export async function dispatchPush(
+  origin: string,
+  r: Pick<RenderedNotification, 'recipientId' | 'title' | 'body' | 'url' | 'type'>
+): Promise<boolean> {
+  const secret = process.env.CRON_SECRET;
+  if (!secret) {
+    log('warn', 'av notify: CRON_SECRET unset, push not dispatched', { action: 'av_notify_push', type: r.type });
+    return false;
+  }
+  try {
+    const res = await fetch(`${origin}/api/notifications/send/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${secret}` },
+      body: JSON.stringify({
+        userId: r.recipientId,
+        title: r.title,
+        body: r.body,
+        url: r.url,
+        type: r.type,
+        data: { type: r.type },
+      }),
+    });
+    if (res.ok) return true;
+    if (res.status !== 404) logError(new Error(`av push ${res.status}`), { action: 'av_notify_push', type: r.type });
+  } catch (error) {
+    logError(error, { action: 'av_notify_push', type: r.type });
+  }
+  return false;
 }

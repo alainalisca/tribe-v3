@@ -80,4 +80,16 @@ describe('CoachContactButtons call sites', () => {
     expect(els).toHaveLength(1);
     expect(els[0]).toMatch(/coachId=\{profile\.id\}/);
   });
+
+  it('the instructor dashboard mounts the welcome note settings for the signed-in instructor', () => {
+    const els = elementProps(read('app/dashboard/instructor/page.tsx'), 'WelcomeNoteSettings');
+    expect(els).toHaveLength(1);
+    expect(els[0]).toMatch(/coachId=\{profile\.id\}/);
+  });
+
+  it('the public Pass route calls the welcome hook after the lead is saved', () => {
+    const src = read('app/api/pase/route.ts');
+    const call = src.indexOf('welcomePassClaimant(admin, inserted.id');
+    expect(call).toBeGreaterThan(src.indexOf('insertPassLead('));
+  });
 });

@@ -155,6 +155,17 @@ export async function joinSession({
       }),
     }).catch((err) => logError(err, { action: 'notify_host', sessionId }));
 
+    // T-AV33 (P1-6): the coach's welcome note, on a CONFIRMED join only (a
+    // pending request is not a join yet). Fire-and-forget; the route decides
+    // whether anyone is welcomed, and answers 404 with the feature off.
+    if (status === 'confirmed') {
+      fetch('/api/coach-welcome/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId }),
+      }).catch((err) => logError(err, { action: 'coach_welcome', sessionId }));
+    }
+
     return { success: true, status };
   } catch (error) {
     logError(error, { action: 'joinSession', userId, sessionId });

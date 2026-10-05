@@ -2440,4 +2440,37 @@ select '8004_t_av_p1_5_first_timer',
          else 'applied'
        end
 
+union all
+
+-- T-AV33 (P1-6). The welcome note: its column, the shared cap ledger accepting
+-- 'welcome' once per coach and person, the two entry points with their grants,
+-- and the internal pieces unreachable from any client.
+select '8005_t_av_p1_6_welcome_note',
+       case
+         when not exists (select 1 from pg_attribute where attrelid = to_regclass('public.coach_contact_settings')
+                           and attname = 'welcome_note' and not attisdropped)
+           then 'MISSING -- coach_contact_settings.welcome_note is absent'
+         when not exists (select 1 from pg_constraint where conrelid = to_regclass('public.av_notification_log')
+                           and conname = 'av_notification_log_event_check' and pg_get_constraintdef(oid) like '%welcome%')
+           or not exists (select 1 from pg_indexes where schemaname = 'public' and indexname = 'av_notification_log_welcome_once')
+           then 'MISSING -- the cap ledger does not take welcome rows once per coach and person'
+         when exists (select 1 from unnest(array['public.av_set_welcome_note(text)', 'public.av_welcome_record(uuid,uuid,uuid)',
+                                                 'public.av_welcome_known(uuid,uuid,uuid,uuid)', 'public.av_claim_welcome_for_join(uuid)',
+                                                 'public.av_claim_welcome_for_pass(uuid,uuid)']) f(sig)
+                       where to_regprocedure(f.sig) is null)
+           then 'MISSING -- a welcome function is absent'
+         when exists (select 1 from pg_proc
+                       where oid in (to_regprocedure('public.av_welcome_record(uuid,uuid,uuid)'),
+                                     to_regprocedure('public.av_welcome_known(uuid,uuid,uuid,uuid)'),
+                                     to_regprocedure('public.av_claim_welcome_for_pass(uuid,uuid)'))
+                         and (has_function_privilege('authenticated', oid, 'EXECUTE') or has_function_privilege('anon', oid, 'EXECUTE')))
+           then 'MISSING -- a client can reach an internal welcome function or the Pass entry point'
+         when exists (select 1 from pg_proc
+                       where oid in (to_regprocedure('public.av_set_welcome_note(text)'), to_regprocedure('public.av_claim_welcome_for_join(uuid)'))
+                         and (not prosecdef or proconfig is null or has_function_privilege('anon', oid, 'EXECUTE')
+                              or not has_function_privilege('authenticated', oid, 'EXECUTE')))
+           then 'MISSING -- the setter or the join entry point lost SECURITY DEFINER, its search_path, or its grants'
+         else 'applied'
+       end
+
 order by migration;
