@@ -2400,4 +2400,20 @@ select '8002_t_av_p1_3_call_link',
          else 'applied'
        end
 
+union all
+
+-- T-AV31 (P1-4). The coach card's one read: present, STABLE (it may not
+-- write), SECURITY DEFINER with a pinned search_path, never runnable by anon.
+select '8003_t_av_p1_4_coach_card',
+       case
+         when to_regprocedure('public.av_coach_tribe_brought(date)') is null
+           then 'MISSING -- av_coach_tribe_brought is absent; the coach card cannot load'
+         when exists (select 1 from pg_proc where oid = to_regprocedure('public.av_coach_tribe_brought(date)')
+                        and (provolatile <> 's' or not prosecdef or proconfig is null
+                             or has_function_privilege('anon', oid, 'EXECUTE')
+                             or not has_function_privilege('authenticated', oid, 'EXECUTE')))
+           then 'MISSING -- av_coach_tribe_brought is no longer a read-only pinned definer, or its grants changed'
+         else 'applied'
+       end
+
 order by migration;

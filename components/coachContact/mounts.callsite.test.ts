@@ -62,4 +62,8 @@ describe('CoachContactButtons call sites', () => {
     expect(els).toHaveLength(1);
     expect(els[0]).toMatch(/coachId=\{profile\.id\}/);
   });
+
+  it('the instructor dashboard mounts the "what Tribe brought you" card', () => {
+    expect(elementProps(read('app/dashboard/instructor/page.tsx'), 'TribeBroughtCard')).toHaveLength(1);
+  });
 });

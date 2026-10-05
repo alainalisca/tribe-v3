@@ -10,6 +10,7 @@ import LoadingSpinner from '@/components/LoadingSpinner';
 import BottomNav from '@/components/BottomNav';
 import StorefrontEditor from '@/components/dashboard/StorefrontEditor';
 import CoachContactSettings from '@/components/coachContact/CoachContactSettings';
+import TribeBroughtCard from '@/components/coachContact/TribeBroughtCard';
 import SessionManager from '@/components/dashboard/SessionManager';
 import SportDemandSummary from '@/components/instructor/SportDemandSummary';
 import TribeOSEntryCard from '@/components/tribe-os/TribeOSEntryCard';
@@ -216,6 +217,13 @@ export default function InstructorDashboardPage() {
       </div>
 
       <div className="pt-header max-w-2xl md:max-w-4xl mx-auto px-4">
+        {/* T-AV31 (P1-4): what Tribe brought this coach this month. First on the
+            page because it is the reason coaches stay (evaluation Revision 1).
+            Renders nothing with the athlete_value feature "brought" off. */}
+        <div className="mt-4 empty:hidden">
+          <TribeBroughtCard language={language as 'en' | 'es'} />
+        </div>
+
         {/* Tribe.OS entry — instructors on this dashboard are the
             target audience for Tribe.OS. Premium users see "Open
             dashboard"; non-premium see "Try Tribe.OS". The card
