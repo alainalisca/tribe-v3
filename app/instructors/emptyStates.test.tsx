@@ -75,6 +75,7 @@ function mount(over: Record<string, unknown> = {}) {
       instructorsFailed={false}
       gyms={[]}
       gymsFailed={false}
+      initialTab="instructors"
       {...(over as object)}
     />
   );

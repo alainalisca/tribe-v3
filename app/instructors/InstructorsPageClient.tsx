@@ -15,8 +15,13 @@ import { calculateDistance, formatDistance } from '@/lib/distance';
 import { type InstructorProfile } from '@/lib/dal/instructors';
 import { sportTranslations } from '@/lib/translations';
 import { SPORTS_LIST } from '@/lib/sports';
-import GymsAndStudiosSection from '@/components/instructors/GymsAndStudiosSection';
+import DiscoverTabs from '@/components/instructors/DiscoverTabs';
+import GymsTabPanel from '@/components/instructors/GymsTabPanel';
 import type { GymDirectoryEntry } from '@/lib/dal/gymDirectory';
+import { discoverTabQuery, type DiscoverTab } from '@/lib/discover/discoverTab';
+import { trackEvent } from '@/lib/analytics';
+import { getTranslations } from './copy';
+import { useTranslations } from '@/lib/i18n/useTranslations';
 
 /**
  * Client-side interactivity for /instructors.
@@ -49,41 +54,6 @@ type ViewMode = 'list' | 'map';
  */
 const FILTER_SPORTS = SPORTS_LIST.filter((sport) => sport !== 'Other');
 
-const getTranslations = (language: 'en' | 'es') => ({
-  title: language === 'es' ? 'Descubre Instructores' : 'Discover Instructors',
-  search: language === 'es' ? 'Buscar por nombre o especialidades...' : 'Search by name or specialties...',
-  sortMostSessions: language === 'es' ? 'Más Sesiones' : 'Most Sessions',
-  sortHighestRated: language === 'es' ? 'Mejor Calificados' : 'Highest Rated',
-  sortNewest: language === 'es' ? 'Más Nuevo' : 'Newest',
-  sortNearest: language === 'es' ? 'Más Cerca' : 'Nearest',
-  sort: language === 'es' ? 'Ordenar' : 'Sort',
-  // Three states, three messages. They used to share one, and the shared one
-  // said the viewer's search was the problem.
-  loadFailed: language === 'es' ? 'No pudimos cargar los instructores' : "We couldn't load instructors",
-  loadFailedDesc:
-    language === 'es'
-      ? 'Es un problema de nuestro lado, no de tu búsqueda.'
-      : 'This is a problem on our side, not with your search.',
-  retry: language === 'es' ? 'Intentar de nuevo' : 'Try again',
-  retrying: language === 'es' ? 'Intentando...' : 'Trying...',
-  noneYet: language === 'es' ? 'Aún no hay instructores' : 'No instructors yet',
-  noneYetDesc:
-    language === 'es'
-      ? 'Los instructores aparecen aquí cuando completan su perfil.'
-      : 'Instructors appear here once they complete their profile.',
-  noInstructorsFound: language === 'es' ? 'No se encontraron instructores' : 'No instructors found',
-  noInstructorsDesc:
-    language === 'es'
-      ? 'Intenta ajustar tu búsqueda o vuelve más tarde'
-      : 'Try adjusting your search or check back later',
-  mapView: language === 'es' ? 'Mapa' : 'Map',
-  listView: language === 'es' ? 'Lista' : 'List',
-  nearMe: language === 'es' ? 'Cerca de mí' : 'Near Me',
-  gettingLocation: language === 'es' ? 'Obteniendo ubicación...' : 'Getting location...',
-  clearSearch: language === 'es' ? 'Limpiar Búsqueda' : 'Clear Search',
-  all: language === 'es' ? 'Todos' : 'All',
-});
-
 interface InstructorsPageClientProps {
   initialInstructors: InstructorProfile[];
   /**
@@ -94,6 +64,8 @@ interface InstructorsPageClientProps {
   instructorsFailed: boolean;
   gyms: GymDirectoryEntry[];
   gymsFailed: boolean;
+  /** From the `ver` query param, parsed on the server so the first paint is the right tab. */
+  initialTab: DiscoverTab;
 }
 
 export default function InstructorsPageClient({
@@ -101,10 +73,12 @@ export default function InstructorsPageClient({
   instructorsFailed,
   gyms,
   gymsFailed,
+  initialTab,
 }: InstructorsPageClientProps) {
   const router = useRouter();
   const { language } = useLanguage();
   const t = getTranslations(language);
+  const td = useTranslations('discover');
 
   // Seeded from server payload — no loading spinner on first render, and
   // no client-side fetch on mount.
@@ -119,6 +93,16 @@ export default function InstructorsPageClient({
   const [gettingLocation, setGettingLocation] = useState(false);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [retrying, setRetrying] = useState(false);
+  const [tab, setTab] = useState<DiscoverTab>(initialTab);
+
+  // replace, not push: flipping the switch is not a navigation, so it should
+  // not add a back-button stop. The URL still records it, so a shared link or
+  // a reload lands on the same tab.
+  function changeTab(next: DiscoverTab) {
+    setTab(next);
+    router.replace(`/instructors/${discoverTabQuery(next)}`, { scroll: false });
+    trackEvent('discover_tab_changed', { tab: next });
+  }
 
   /**
    * The route is dynamic (see the header comment in page.tsx), so refreshing it
@@ -287,171 +271,174 @@ export default function InstructorsPageClient({
     <div className="min-h-screen bg-theme-page pb-nav">
       <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-theme-card border-b border-theme">
         <div className="max-w-2xl md:max-w-4xl mx-auto h-14 flex items-center px-4">
-          <h1 className="text-xl font-bold text-theme-primary">{t.title}</h1>
+          <h1 className="text-xl font-bold text-theme-primary">{tab === 'gyms' ? td('titleGyms') : t.title}</h1>
         </div>
       </div>
 
       <div className="pt-header max-w-2xl md:max-w-4xl mx-auto p-4 md:p-6 space-y-4">
-        {/* Search */}
-        <div className="relative">
-          <Search className="absolute left-3 top-3 w-5 h-5 text-stone-400" />
-          <Input
-            type="text"
-            placeholder={t.search}
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 py-2 rounded-lg bg-white dark:bg-tribe-surface border-stone-200 dark:border-tribe-mid"
-          />
-        </div>
+        <DiscoverTabs tab={tab} onChange={changeTab} instructorCount={instructors.length} gymCount={gyms.length} />
 
-        {/* Sport Filter Pills */}
-        <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4 scrollbar-hide md:justify-center md:overflow-visible md:flex-wrap md:mx-0 md:px-0">
-          <button
-            onClick={() => setSelectedSport(null)}
-            className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition shrink-0 ${
-              !selectedSport
-                ? 'bg-tribe-green text-slate-900 font-semibold'
-                : 'bg-stone-100 dark:bg-tribe-surface text-stone-700 dark:text-stone-300 hover:bg-stone-200 dark:hover:bg-tribe-mid'
-            }`}
-          >
-            {t.all}
-          </button>
-          {FILTER_SPORTS.map((sport) => (
-            <button
-              key={sport}
-              onClick={() => setSelectedSport(selectedSport === sport ? null : sport)}
-              className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition shrink-0 ${
-                selectedSport === sport
-                  ? 'bg-tribe-green text-slate-900 font-semibold'
-                  : 'bg-stone-100 dark:bg-tribe-surface text-stone-700 dark:text-stone-300 hover:bg-stone-200 dark:hover:bg-tribe-mid'
-              }`}
-            >
-              {sportTranslations[sport]?.[language] || sport}
-            </button>
-          ))}
-        </div>
+        {tab === 'gyms' ? (
+          <GymsTabPanel gyms={gyms} failed={gymsFailed} retrying={retrying} onRetry={retry} />
+        ) : (
+          <>
+            {/* Search */}
+            <div className="relative">
+              <Search className="absolute left-3 top-3 w-5 h-5 text-stone-400" />
+              <Input
+                type="text"
+                placeholder={t.search}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 py-2 rounded-lg bg-white dark:bg-tribe-surface border-stone-200 dark:border-tribe-mid"
+              />
+            </div>
 
-        {/* View Toggle + Near Me + Sort */}
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex bg-stone-100 dark:bg-tribe-surface rounded-lg p-0.5 shrink-0">
-            <button
-              onClick={() => setViewMode('list')}
-              className={`flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-medium transition ${viewMode === 'list' ? 'bg-white dark:bg-tribe-mid text-theme-primary shadow-sm' : 'text-stone-500'}`}
-            >
-              <List className="w-3.5 h-3.5" />
-              {t.listView}
-            </button>
-            <button
-              onClick={() => {
-                setViewMode('map');
-                setMapLoaded(false);
-              }}
-              className={`flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-medium transition ${viewMode === 'map' ? 'bg-white dark:bg-tribe-mid text-theme-primary shadow-sm' : 'text-stone-500'}`}
-            >
-              <MapPin className="w-3.5 h-3.5" />
-              {t.mapView}
-            </button>
-          </div>
-          <button
-            onClick={handleNearMe}
-            disabled={gettingLocation}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition shrink-0 ${
-              sortBy === 'nearest'
-                ? 'bg-tribe-green text-slate-900'
-                : 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/50'
-            }`}
-          >
-            {gettingLocation ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            ) : (
-              <Navigation className="w-3.5 h-3.5" />
-            )}
-            {gettingLocation ? t.gettingLocation : t.nearMe}
-          </button>
-
-          {/* Sort Pills */}
-          <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
-            <span className="text-xs font-semibold text-stone-600 dark:text-stone-400 whitespace-nowrap">
-              {t.sort}:
-            </span>
-            {sortOpts.map((opt) => (
+            {/* Sport Filter Pills */}
+            <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4 scrollbar-hide md:justify-center md:overflow-visible md:flex-wrap md:mx-0 md:px-0">
               <button
-                key={opt}
-                onClick={() => setSortBy(opt)}
+                onClick={() => setSelectedSport(null)}
                 className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition shrink-0 ${
-                  sortBy === opt
+                  !selectedSport
                     ? 'bg-tribe-green text-slate-900 font-semibold'
                     : 'bg-stone-100 dark:bg-tribe-surface text-stone-700 dark:text-stone-300 hover:bg-stone-200 dark:hover:bg-tribe-mid'
                 }`}
               >
-                {sortLabel[opt]}
+                {t.all}
               </button>
-            ))}
-          </div>
-        </div>
+              {FILTER_SPORTS.map((sport) => (
+                <button
+                  key={sport}
+                  onClick={() => setSelectedSport(selectedSport === sport ? null : sport)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition shrink-0 ${
+                    selectedSport === sport
+                      ? 'bg-tribe-green text-slate-900 font-semibold'
+                      : 'bg-stone-100 dark:bg-tribe-surface text-stone-700 dark:text-stone-300 hover:bg-stone-200 dark:hover:bg-tribe-mid'
+                  }`}
+                >
+                  {sportTranslations[sport]?.[language] || sport}
+                </button>
+              ))}
+            </div>
 
-        {/* Featured Carousel */}
-        <FeaturedInstructorCarousel language={language} />
+            {/* View Toggle + Near Me + Sort */}
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex bg-stone-100 dark:bg-tribe-surface rounded-lg p-0.5 shrink-0">
+                <button
+                  onClick={() => setViewMode('list')}
+                  className={`flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-medium transition ${viewMode === 'list' ? 'bg-white dark:bg-tribe-mid text-theme-primary shadow-sm' : 'text-stone-500'}`}
+                >
+                  <List className="w-3.5 h-3.5" />
+                  {t.listView}
+                </button>
+                <button
+                  onClick={() => {
+                    setViewMode('map');
+                    setMapLoaded(false);
+                  }}
+                  className={`flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-medium transition ${viewMode === 'map' ? 'bg-white dark:bg-tribe-mid text-theme-primary shadow-sm' : 'text-stone-500'}`}
+                >
+                  <MapPin className="w-3.5 h-3.5" />
+                  {t.mapView}
+                </button>
+              </div>
+              <button
+                onClick={handleNearMe}
+                disabled={gettingLocation}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition shrink-0 ${
+                  sortBy === 'nearest'
+                    ? 'bg-tribe-green text-slate-900'
+                    : 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/50'
+                }`}
+              >
+                {gettingLocation ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Navigation className="w-3.5 h-3.5" />
+                )}
+                {gettingLocation ? t.gettingLocation : t.nearMe}
+              </button>
 
-        {/* Map */}
-        {viewMode === 'map' && (
-          <div className="rounded-xl overflow-hidden border border-theme">
-            <div id="instructor-map" className="w-full h-[400px] bg-stone-200 dark:bg-tribe-surface" />
-          </div>
-        )}
+              {/* Sort Pills */}
+              <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
+                <span className="text-xs font-semibold text-stone-600 dark:text-stone-400 whitespace-nowrap">
+                  {t.sort}:
+                </span>
+                {sortOpts.map((opt) => (
+                  <button
+                    key={opt}
+                    onClick={() => setSortBy(opt)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition shrink-0 ${
+                      sortBy === opt
+                        ? 'bg-tribe-green text-slate-900 font-semibold'
+                        : 'bg-stone-100 dark:bg-tribe-surface text-stone-700 dark:text-stone-300 hover:bg-stone-200 dark:hover:bg-tribe-mid'
+                    }`}
+                  >
+                    {sortLabel[opt]}
+                  </button>
+                ))}
+              </div>
+            </div>
 
-        {/* Results. Data is hydrated from the server, so there is no loading
+            {/* Featured Carousel */}
+            <FeaturedInstructorCarousel language={language} />
+
+            {/* Map */}
+            {viewMode === 'map' && (
+              <div className="rounded-xl overflow-hidden border border-theme">
+                <div id="instructor-map" className="w-full h-[400px] bg-stone-200 dark:bg-tribe-surface" />
+              </div>
+            )}
+
+            {/* Results. Data is hydrated from the server, so there is no loading
             skeleton -- but "nothing to show" has THREE causes and they need
             three different screens. Offering Clear Search when the fetch failed
             tells the user the failure is theirs, and clearing their filters
             cannot fix it. Ordered most-specific first: a failure is a failure
             whatever the filters say. */}
-        {instructorsFailed ? (
-          <div className="flex flex-col items-center justify-center min-h-[50vh] text-center p-6">
-            <div className="text-5xl mb-4">⚠️</div>
-            <h2 className="text-xl font-semibold text-theme-primary mb-2">{t.loadFailed}</h2>
-            <p className="text-sm text-theme-secondary mb-6">{t.loadFailedDesc}</p>
-            <Button
-              onClick={retry}
-              disabled={retrying}
-              className="px-6 py-2 bg-tribe-green text-slate-900 font-semibold hover:bg-tribe-green"
-            >
-              {retrying ? t.retrying : t.retry}
-            </Button>
-          </div>
-        ) : instructors.length === 0 ? (
-          <div className="flex flex-col items-center justify-center min-h-[50vh] text-center p-6">
-            <div className="text-5xl mb-4">🌱</div>
-            <h2 className="text-xl font-semibold text-theme-primary mb-2">{t.noneYet}</h2>
-            <p className="text-sm text-theme-secondary">{t.noneYetDesc}</p>
-          </div>
-        ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center min-h-[50vh] text-center p-6">
-            <div className="text-5xl mb-4">🔍</div>
-            <h2 className="text-xl font-semibold text-theme-primary mb-2">{t.noInstructorsFound}</h2>
-            <p className="text-sm text-theme-secondary mb-6">{t.noInstructorsDesc}</p>
-            <Button
-              onClick={() => {
-                setSearchQuery('');
-                setSelectedSport(null);
-              }}
-              className="px-6 py-2 bg-tribe-green text-slate-900 font-semibold hover:bg-tribe-green"
-            >
-              {t.clearSearch}
-            </Button>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filtered.map((inst) => (
-              <InstructorCard key={inst.id} instructor={inst} language={language} />
-            ))}
-          </div>
+            {instructorsFailed ? (
+              <div className="flex flex-col items-center justify-center min-h-[50vh] text-center p-6">
+                <div className="text-5xl mb-4">⚠️</div>
+                <h2 className="text-xl font-semibold text-theme-primary mb-2">{t.loadFailed}</h2>
+                <p className="text-sm text-theme-secondary mb-6">{t.loadFailedDesc}</p>
+                <Button
+                  onClick={retry}
+                  disabled={retrying}
+                  className="px-6 py-2 bg-tribe-green text-slate-900 font-semibold hover:bg-tribe-green"
+                >
+                  {retrying ? t.retrying : t.retry}
+                </Button>
+              </div>
+            ) : instructors.length === 0 ? (
+              <div className="flex flex-col items-center justify-center min-h-[50vh] text-center p-6">
+                <div className="text-5xl mb-4">🌱</div>
+                <h2 className="text-xl font-semibold text-theme-primary mb-2">{t.noneYet}</h2>
+                <p className="text-sm text-theme-secondary">{t.noneYetDesc}</p>
+              </div>
+            ) : filtered.length === 0 ? (
+              <div className="flex flex-col items-center justify-center min-h-[50vh] text-center p-6">
+                <div className="text-5xl mb-4">🔍</div>
+                <h2 className="text-xl font-semibold text-theme-primary mb-2">{t.noInstructorsFound}</h2>
+                <p className="text-sm text-theme-secondary mb-6">{t.noInstructorsDesc}</p>
+                <Button
+                  onClick={() => {
+                    setSearchQuery('');
+                    setSelectedSport(null);
+                  }}
+                  className="px-6 py-2 bg-tribe-green text-slate-900 font-semibold hover:bg-tribe-green"
+                >
+                  {t.clearSearch}
+                </Button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filtered.map((inst) => (
+                  <InstructorCard key={inst.id} instructor={inst} language={language} />
+                ))}
+              </div>
+            )}
+          </>
         )}
-
-        {/* Below the instructor grid: gyms are a different kind of thing, and
-            mixing organizations into a list of people is the confusion T-GYM1
-            set out to remove. Hides itself when there are none. */}
-        <GymsAndStudiosSection gyms={gyms} />
       </div>
       <BottomNav />
     </div>
