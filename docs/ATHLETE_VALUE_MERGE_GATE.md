@@ -133,8 +133,26 @@ refused by objects the catalog does not show.
       the two named test accounts and nobody else.
 - [ ] Dark phase of **at least 7 days** in the real iOS and Android apps with
       the allowlist accounts.
+- [ ] During the dark phase: scan one real voucher QR with an iPhone camera
+      on production and confirm it opens `/pase/verificar/` on the production
+      domain, then the login return (signed out, sign in, back on the same
+      pass). T-AV29 proved this on the local stack only.
 - [ ] Al flips each feature, one at a time, in writing
       (`ATHLETE_VALUE_FEATURES`).
+
+### Post-merge cleanup (not blocking the merge)
+
+Found while testing the athlete branch, owned by `main`, deliberately not
+fixed there:
+
+- [ ] **PostHog "initialized without a token" console error.**
+      `lib/posthog.ts` (`initPostHog`, called from
+      `components/PostHogProvider.tsx`) calls `posthog.init()` without checking
+      that `NEXT_PUBLIC_POSTHOG_KEY` is set, so any environment without the key
+      logs "[PostHog.js] PostHog was initialized without a token" on every page
+      and the Next.js dev "Issues" badge counts it. Guard the init on the key.
+      Seen on the local stack since T-AV28 removed the placeholder PostHog values
+      from `.env.av.example`.
 
 ---
 
@@ -143,8 +161,34 @@ refused by objects the catalog does not show.
 Checks specific to the Tribe Athletes tickets (T-AV19 to T-AV27) that cannot
 be automated and were deferred to the gate on purpose.
 
-- [ ] Physical phone scan of a voucher QR on the LAN, coach confirms, athlete home updates
+- [x] Physical phone scan of a voucher QR on the LAN, coach confirms, athlete home updates.
+      **PASSED 2026-10-06 on a real iPhone** (Al). Elena opened
+      `/pase/verificar/BU-335T/` on the LAN at `192.168.8.230:3003`, tapped
+      "Confirmar asistencia", then "Se inscribió", and saw "Guardado". On the
+      Mac, Ana's home then read Invitados 10, Llegaron 10, Se inscribieron 1,
+      and the guest (Denzel) showed the "Se inscribió" badge.
+      Found during this test and fixed in T-AV29: the voucher QR encoded
+      `http://localhost:3003/...`, which a phone cannot reach, so the scan
+      never reached the pass and the URL had to be typed.
+- [x] **T-AV29 closed 2026-10-06** (voucher QR and door link use the public
+      origin; login returns to the pass). The LAN phone retest was skipped
+      because the phone could not reach the Mac that day (network, not the
+      app); Al accepted this evidence instead: - **BU-3BCA** (Claude's run, guest "Origen Prueba"): claimed through
+      `http://localhost:3003/api/pase/` with Host `localhost:3003`; its QR
+      decoded to `http://192.168.8.230:3003/pase/verificar/BU-3BCA/`. The row
+      was wiped by the Spanish reseed that followed. - **BU-62HD** (Al's Cowork run, guest "Prueba Claude",
+      `prueba.claude@av.local`): POST to `http://192.168.8.230:3003/api/pase/`
+      with Host `localhost:3003`, slug `bullbox-prueba`, code `ANA-7KQ`;
+      returned 200 and its QR decoded (OpenCV) to
+      `http://192.168.8.230:3003/pase/verificar/BU-62HD/`. Verified in the
+      local DB by Claude: the `pass_leads` row exists, created 11:36 UTC,
+      with `referred_by_athlete_id` = program athlete `...2001`, which is Ana
+      Prueba (`ana@av.local`, ref code `ANA-7KQ`, BullBox). - `t-av29-proof.LOCAL.sh` 2 of 2, the `scanLogin` e2e test (QR decoded
+      module for module, login returns to the exact pass with `?via=code`
+      kept, an off-site `returnTo` lands on this site), and mutation arms
+      M1, M2, M3 and U1 all behaving (`t-av29-mutations.LOCAL.sh`).
 - [ ] **Send modes in Vercel production.** `EMAIL_MODE` and `PUSH_MODE` are unset (or exactly `live`) in the production project. Only the exact value `log` means log, so a stray value would silently stop every email and push on `main`.
+- [ ] **`NEXT_PUBLIC_SITE_URL` in Vercel Production is the real production domain** (Al). Since T-AV29 the voucher QR and the door link are built from it first, so a wrong or preview value there would print a QR that sends coaches to the wrong site.
 - [ ] **Renumber 8200 to 8209 against `origin/main`** at the moment of merging (CLAUDE.md, "A migration number is claimed by whoever merges first"). Rename, state in each header what it was and why it moved, and update every probe id in `supabase/verify-migration-state.sql` and every `migrations_applied` reference.
 - [ ] **Apply 8200 to 8209 in order, each as one complete paste, AFTER the merge commit is on `main`** (CLAUDE.md, "the branch merges before the paste"), and record the commit each paste corresponds to.
 - [ ] **D2 answered.** A Colombian lawyer has reviewed gym-to-athlete referral payments and Al has recorded the answer in the spec's decisions log. Blocking for turning the program on for a real gym.
@@ -152,7 +196,7 @@ be automated and were deferred to the gate on purpose.
 - [ ] **One real push to a device.** An athlete with a real FCM or web-push subscription receives "{guest} arrived at class" once, after a real confirm. Log mode proved the path (`t-av27b-proof`); only a device proves delivery.
 - [ ] **The owner's lead email in a real inbox (Gmail).** An attributed claim shows "Invitación de {athlete}" and a working "Confirmar en la puerta" link, and a plain claim's email is unchanged.
 - [ ] **`npm run test:e2e:av` green on the merge-day tree**, both projects (flag on: the full loop; flag off: the real 404s).
-- [ ] **Every T-AV proof and mutation driver re-run** on the merge-day tree: `supabase/recon/t-av21` to `t-av27c` `-proof.LOCAL.sh` and `-mutations.LOCAL.sh`. A mutation proof expires when the code around it moves (CLAUDE.md).
+- [ ] **Every T-AV proof and mutation driver re-run** on the merge-day tree: `supabase/recon/t-av21` to `t-av29` `-proof.LOCAL.sh` and `-mutations.LOCAL.sh`. A mutation proof expires when the code around it moves (CLAUDE.md).
 - [ ] **Read `docs/T-AV20_RELEASE.md` section 6** (the Spanish-only pass page, admins with the flag off, the pre-existing email-test environment dependency) and decide each item is acceptable for `main`.
 
 ## Already measured, re-run from scratch 2026-09-25 (evidence, not a tick)

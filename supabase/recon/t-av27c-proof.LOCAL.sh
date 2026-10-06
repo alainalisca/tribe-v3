@@ -8,8 +8,8 @@
 #      pushed (Al, 2026-10-01)
 #   2  joined still counts toward the weekly 3: with three pushes this week
 #      already, a join is in-app only
-#   3  the Playwright suite, `npm run test:e2e:av`: the full loop with the flag
-#      on, and the real 404s with it off
+#   3  the Playwright suite, `npm run test:e2e:av`: the full loop and (T-AV29)
+#      the scan-and-login return with the flag on, and the real 404s with it off
 #
 # Pushes are observed as in t-av27b-proof.LOCAL.sh: a throwaway CRON_SECRET
 # and fake FCM tokens for this run only, and each "[push:log]" line the real
@@ -89,7 +89,8 @@ if want 3; then echo "== 3. the Playwright suite (npm run test:e2e:av)"
   npm run test:e2e:av > "$TMP/e2e.out" 2>&1; rc=$?
   passed=$(grep -oE '[0-9]+ passed' "$TMP/e2e.out" | awk '{s+=$1} END {print s+0}')
   failed=$(grep -oE '[0-9]+ failed' "$TMP/e2e.out" | awk '{s+=$1} END {print s+0}')
-  [ "$rc" = 0 ] && [ "$passed" = 6 ] && [ "$failed" = 0 ] && ok "6 of 6: setup and the full loop (flag on), four real-404 checks (flag off)" \
+  # 7 since T-AV29 added e2e/av/scanLogin.spec.ts (the QR scan and login return).
+  [ "$rc" = 0 ] && [ "$passed" = 7 ] && [ "$failed" = 0 ] && ok "7 of 7: setup, the full loop and the scan-and-login return (flag on), four real-404 checks (flag off)" \
     || bad "e2e: rc $rc, $passed passed, $failed failed; first: $(grep -m1 -E '✘' "$TMP/e2e.out" | cut -c1-120)"
   cp "$TMP/e2e.out" "${AV_E2E_LOG:-/dev/null}" 2>/dev/null || true
 fi

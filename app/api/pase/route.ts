@@ -31,6 +31,7 @@ import { generatePassCode } from '@/lib/pase/passCode';
 import { resolveAthleteAttribution, consentForAttribution, renderVoucherQr } from '@/lib/pase/athleteAttribution';
 import { sendPartnerLeadNotification, sendLeadPassEmail } from '@/lib/email/passLead';
 import { claimLeadNotification } from '@/lib/dal/athleteNotify';
+import { publicOrigin } from '@/lib/http/publicOrigin';
 import { deliverNotifications } from '@/lib/atletas/athleteNotifications';
 
 const RATE_LIMIT_MAX = 5;
@@ -249,7 +250,7 @@ export async function POST(request: NextRequest) {
         ...(referredByAthleteId && invitedByFirstName
           ? {
               invitedBy: invitedByFirstName,
-              doorUrl: `${new URL(request.url).origin}/pase/verificar/${inserted.passCode}/`,
+              doorUrl: `${publicOrigin(request)}/pase/verificar/${inserted.passCode}/`,
             }
           : {}),
       }),
@@ -302,7 +303,9 @@ export async function POST(request: NextRequest) {
 
     // The voucher QR only when the predicate is true for this partner; with it
     // off the body has exactly the three keys it always had.
-    const qrSvg = attribution.on ? await renderVoucherQr(new URL(request.url).origin, inserted.passCode) : null;
+    // T-AV29: the origin a phone can reach (publicOrigin), not request.url's,
+    // which in dev is the server's own localhost.
+    const qrSvg = attribution.on ? await renderVoucherQr(publicOrigin(request), inserted.passCode) : null;
     return NextResponse.json(
       {
         pass_code: inserted.passCode,

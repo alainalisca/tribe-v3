@@ -39,7 +39,11 @@ stop_server() {
 
 start_server() { # start_server <ATHLETE_VALUE_ENABLED>
   stop_server
-  (env -u ATHLETE_VALUE_FEATURES ATHLETE_VALUE_ENABLED="$1" PORT="$AV_PROOF_PORT" node scripts/av-dev.mjs > "$TMP/dev.log" 2>&1 & echo $! > "$TMP/dev.pid")
+  # T-AV29: the app's public origin is the proof server itself, so a voucher
+  # QR or a door link built in a proof points here and not at the stale
+  # NEXT_PUBLIC_SITE_URL in .env.av.local. A proof that must tell the public
+  # origin apart from request.url sets AV_SITE_URL to a different address.
+  (env -u ATHLETE_VALUE_FEATURES ATHLETE_VALUE_ENABLED="$1" PORT="$AV_PROOF_PORT" NEXT_PUBLIC_SITE_URL="${AV_SITE_URL:-$APP}" node scripts/av-dev.mjs > "$TMP/dev.log" 2>&1 & echo $! > "$TMP/dev.pid")
   for _ in $(seq 1 180); do
     [ "$(curl -s -o /dev/null -w '%{http_code}' "$APP/pase/bullbox-prueba/")" = 200 ] && { FLAG="$1"; return 0; }
     sleep 1

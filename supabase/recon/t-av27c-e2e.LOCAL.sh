@@ -4,6 +4,7 @@
 #
 #   npm run test:e2e:av                     # both projects
 #   AV_E2E_ONLY=flag-on npm run test:e2e:av # one project (the mutation driver uses this)
+#   AV_E2E_GREP='scans the voucher QR' ...   # only the matching tests (T-AV29)
 #
 # For each project it resets the seed, starts its own dev:av on the proof port
 # (3101) with the athletes flag on or off, runs playwright.av.config.ts with
@@ -36,7 +37,8 @@ run_project() { # run_project <project> <flag>
   reset
   start_server "$2"
   echo "== playwright project $1 (flag=$2) against $APP"
-  AV_E2E_BASE_URL="$APP" npx playwright test -c playwright.av.config.ts --project "$1" || rc=1
+  # AV_E2E_GREP (T-AV29): run only the matching tests, for a proof that needs one spec.
+  AV_E2E_BASE_URL="$APP" npx playwright test -c playwright.av.config.ts --project "$1" ${AV_E2E_GREP:+--grep "$AV_E2E_GREP"} || rc=1
 }
 case "${AV_E2E_ONLY:-both}" in
   flag-on) run_project flag-on all ;;
