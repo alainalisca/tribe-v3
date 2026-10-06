@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { getServiceRoleClient } from '@/lib/supabase/admin';
 import { fetchPassConfig, isOrganizationPartner, type PassConfig } from '@/lib/dal/passLeads';
 import { consentTextFor, CONSENT_POLICY_PATH } from '@/lib/pase/consent';
+import { passShareCard, passShareDescription } from '@/lib/pase/shareCard';
 import PaseForm from './PaseForm';
 
 /**
@@ -46,9 +47,18 @@ interface PageProps {
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
   const config = await getConfig(slug);
+
+  // Inactive pass: no partner card, and the root layout's Tribe card is the
+  // honest fallback because the page itself shows only the Tribe wordmark.
+  if (!config) {
+    return { title: 'Pase | Tribe', robots: { index: false, follow: false } };
+  }
+
   return {
-    title: config ? `${config.headline ?? 'Tu pase'} | Tribe` : 'Pase | Tribe',
+    title: `${config.headline ?? 'Tu pase'} | ${config.partnerName}`,
+    description: passShareDescription(config),
     robots: { index: false, follow: false },
+    ...passShareCard(config),
   };
 }
 
