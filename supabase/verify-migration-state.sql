@@ -2379,6 +2379,17 @@ select '199_session_media_participants_only',
 
 union all
 
+-- T-AV30. Every lookup of a T-AV object in the probes below goes through
+-- to_regprocedure / to_regclass and the OID forms of has_*_privilege, so a
+-- database without these migrations reads MISSING instead of erroring. A
+-- literal 'public.x(...)'::regprocedure is resolved when the statement is
+-- PARSED, before any CASE branch runs, so no earlier "is absent" branch can
+-- protect it: one such cast on av_door_pass took the whole verifier down in
+-- the 2026-10-06 merge rehearsal. Each probe still tests existence in its
+-- first branch, because a NULL from a missing object would otherwise fall
+-- through to 'applied'. t-av30-proof.LOCAL.sh runs this against a database
+-- with and without the T-AV migrations.
+--
 -- T-AV21 (athlete-value branch, reserved block; renumbered at the merge gate).
 -- The show-up columns exist, the claim policy refuses a pre-attended row (F2),
 -- no other permissive INSERT policy reopens it, and only authenticated can
@@ -2403,10 +2414,11 @@ select '8200_t_av21_pass_leads_showup',
            then 'MISSING -- another permissive INSERT policy on pass_leads reopens the claim path'
          when to_regprocedure('public.av_door_pass(text)') is null
            or to_regprocedure('public.av_confirm_pass_attendance(text,text)') is null
+           or to_regprocedure('public.av_can_work_door(uuid)') is null
            then 'MISSING -- a door function is absent'
-         when has_function_privilege('anon', 'public.av_door_pass(text)', 'EXECUTE')
-           or has_function_privilege('anon', 'public.av_confirm_pass_attendance(text,text)', 'EXECUTE')
-           or has_function_privilege('authenticated', 'public.av_can_work_door(uuid)', 'EXECUTE')
+         when has_function_privilege('anon', to_regprocedure('public.av_door_pass(text)'), 'EXECUTE')
+           or has_function_privilege('anon', to_regprocedure('public.av_confirm_pass_attendance(text,text)'), 'EXECUTE')
+           or has_function_privilege('authenticated', to_regprocedure('public.av_can_work_door(uuid)'), 'EXECUTE')
            then 'MISSING -- a client role can execute a door function it must not'
          when has_any_column_privilege('authenticated', 'public.pass_leads', 'UPDATE')
            then 'MISSING -- authenticated holds UPDATE on pass_leads; the door write is no longer the only path'
@@ -2424,20 +2436,20 @@ select '8201_t_av22_athlete_programs',
            then 'MISSING -- athlete_programs is absent'
          when not (select relrowsecurity from pg_class where oid = to_regclass('public.athlete_programs'))
            then 'MISSING -- RLS is off on athlete_programs'
-         when has_any_column_privilege('anon', 'public.athlete_programs', 'SELECT')
-           or has_any_column_privilege('anon', 'public.athlete_programs', 'INSERT')
-           or has_any_column_privilege('anon', 'public.athlete_programs', 'UPDATE')
+         when has_any_column_privilege('anon', to_regclass('public.athlete_programs'), 'SELECT')
+           or has_any_column_privilege('anon', to_regclass('public.athlete_programs'), 'INSERT')
+           or has_any_column_privilege('anon', to_regclass('public.athlete_programs'), 'UPDATE')
            then 'MISSING -- anon holds a privilege on athlete_programs'
-         when has_column_privilege('authenticated', 'public.athlete_programs', 'conversion_bonus_cop', 'SELECT')
-           or has_column_privilege('authenticated', 'public.athlete_programs', 'conversion_bonus_note_en', 'SELECT')
-           or has_column_privilege('authenticated', 'public.athlete_programs', 'conversion_bonus_note_es', 'SELECT')
+         when has_column_privilege('authenticated', to_regclass('public.athlete_programs'), 'conversion_bonus_cop', 'SELECT')
+           or has_column_privilege('authenticated', to_regclass('public.athlete_programs'), 'conversion_bonus_note_en', 'SELECT')
+           or has_column_privilege('authenticated', to_regclass('public.athlete_programs'), 'conversion_bonus_note_es', 'SELECT')
            then 'MISSING -- a coach can read the bonus straight from athlete_programs'
          when not exists (select 1 from pg_trigger
                            where tgrelid = to_regclass('public.athlete_programs')
                              and tgname = 'athlete_programs_is_active_guard' and tgenabled <> 'D')
            then 'MISSING -- is_active is no longer admin-only'
          when to_regprocedure('public.av_my_partner_role(uuid)') is null
-           or has_function_privilege('anon', 'public.av_my_partner_role(uuid)', 'EXECUTE')
+           or has_function_privilege('anon', to_regprocedure('public.av_my_partner_role(uuid)'), 'EXECUTE')
            then 'MISSING -- av_my_partner_role is absent or anon can call it'
          else 'applied'
        end
@@ -2452,13 +2464,13 @@ select '8202_t_av22_program_athletes',
            then 'MISSING -- program_athletes is absent'
          when not (select relrowsecurity from pg_class where oid = to_regclass('public.program_athletes'))
            then 'MISSING -- RLS is off on program_athletes'
-         when has_any_column_privilege('anon', 'public.program_athletes', 'SELECT')
-           or has_any_column_privilege('authenticated', 'public.program_athletes', 'INSERT')
-           or has_any_column_privilege('authenticated', 'public.program_athletes', 'UPDATE')
-           or has_table_privilege('authenticated', 'public.program_athletes', 'DELETE')
+         when has_any_column_privilege('anon', to_regclass('public.program_athletes'), 'SELECT')
+           or has_any_column_privilege('authenticated', to_regclass('public.program_athletes'), 'INSERT')
+           or has_any_column_privilege('authenticated', to_regclass('public.program_athletes'), 'UPDATE')
+           or has_table_privilege('authenticated', to_regclass('public.program_athletes'), 'DELETE')
            then 'MISSING -- a client role can read as anon or write program_athletes directly'
-         when has_column_privilege('authenticated', 'public.program_athletes', 'email_lower', 'SELECT')
-           or has_column_privilege('authenticated', 'public.program_athletes', 'whatsapp_e164', 'SELECT')
+         when has_column_privilege('authenticated', to_regclass('public.program_athletes'), 'email_lower', 'SELECT')
+           or has_column_privilege('authenticated', to_regclass('public.program_athletes'), 'whatsapp_e164', 'SELECT')
            then 'MISSING -- an athlete contact column is selectable'
          when (select count(*) from pg_policies
                 where schemaname = 'public' and tablename = 'athlete_programs'
@@ -2503,10 +2515,10 @@ select '8204_t_av22_athletes_ledger',
          when to_regprocedure('public.av_athletes_ledger(uuid)') is null
            or to_regprocedure('public.av_athletes_ledger_totals(uuid)') is null
            then 'MISSING -- a ledger function is absent'
-         when has_function_privilege('anon', 'public.av_athletes_ledger(uuid)', 'EXECUTE')
-           or has_function_privilege('authenticated', 'public.av_athletes_ledger(uuid)', 'EXECUTE')
-           or has_function_privilege('anon', 'public.av_athletes_ledger_totals(uuid)', 'EXECUTE')
-           or has_function_privilege('authenticated', 'public.av_athletes_ledger_totals(uuid)', 'EXECUTE')
+         when has_function_privilege('anon', to_regprocedure('public.av_athletes_ledger(uuid)'), 'EXECUTE')
+           or has_function_privilege('authenticated', to_regprocedure('public.av_athletes_ledger(uuid)'), 'EXECUTE')
+           or has_function_privilege('anon', to_regprocedure('public.av_athletes_ledger_totals(uuid)'), 'EXECUTE')
+           or has_function_privilege('authenticated', to_regprocedure('public.av_athletes_ledger_totals(uuid)'), 'EXECUTE')
            then 'MISSING -- a client role can read every lead through the ledger'
          else 'applied'
        end
@@ -2555,11 +2567,11 @@ select '8206_t_av22_athletes_reads',
                               or has_function_privilege('anon', oid, 'EXECUTE')
                               or not has_function_privilege('authenticated', oid, 'EXECUTE')))
            then 'MISSING -- an athlete read function lost SECURITY DEFINER, its search_path, or its grants'
-         when position('athlete_first_name' in pg_get_functiondef('public.av_door_pass(text)'::regprocedure)) = 0
+         when position('athlete_first_name' in pg_get_functiondef(to_regprocedure('public.av_door_pass(text)'))) = 0
            then 'MISSING -- av_door_pass is not the T-AV22 version'
          -- T-AV26 widened partner_summary in place (8206 header, 2026-10-01).
-         when position('retain_from' in pg_get_functiondef('public.av_athletes_partner_summary(uuid)'::regprocedure)) = 0
-           or position('to_close' in pg_get_functiondef('public.av_athletes_partner_summary(uuid)'::regprocedure)) = 0
+         when position('retain_from' in pg_get_functiondef(to_regprocedure('public.av_athletes_partner_summary(uuid)'))) = 0
+           or position('to_close' in pg_get_functiondef(to_regprocedure('public.av_athletes_partner_summary(uuid)'))) = 0
            then 'MISSING -- av_athletes_partner_summary is not the T-AV26 version (no to_close or retain_from)'
          else 'applied'
        end
@@ -2602,7 +2614,7 @@ select '8208_t_av26_athletes_search',
                               or has_function_privilege('anon', oid, 'EXECUTE')
                               or not has_function_privilege('authenticated', oid, 'EXECUTE')))
            then 'MISSING -- av_athletes_search_candidates lost SECURITY DEFINER, its search_path, or its grants'
-         when position('users_discoverable' in pg_get_functiondef('public.av_athletes_search_candidates(uuid,text)'::regprocedure)) = 0
+         when position('users_discoverable' in pg_get_functiondef(to_regprocedure('public.av_athletes_search_candidates(uuid,text)'))) = 0
            then 'MISSING -- av_athletes_search_candidates no longer reads users_discoverable'
          else 'applied'
        end
@@ -2618,20 +2630,20 @@ select '8209_t_av27b_notifications',
            or to_regprocedure('public.av_athletes_claim_notification(text,text)') is null
            or to_regprocedure('public.av_athletes_claim_lead_notification(uuid)') is null
            then 'MISSING -- the notification log or a claim function is absent'
-         when not (select relrowsecurity from pg_class where oid = 'public.av_notification_log'::regclass)
-           or has_any_column_privilege('anon', 'public.av_notification_log', 'SELECT')
-           or has_any_column_privilege('authenticated', 'public.av_notification_log', 'SELECT')
-           or has_any_column_privilege('authenticated', 'public.av_notification_log', 'INSERT')
+         when not (select relrowsecurity from pg_class where oid = to_regclass('public.av_notification_log'))
+           or has_any_column_privilege('anon', to_regclass('public.av_notification_log'), 'SELECT')
+           or has_any_column_privilege('authenticated', to_regclass('public.av_notification_log'), 'SELECT')
+           or has_any_column_privilege('authenticated', to_regclass('public.av_notification_log'), 'INSERT')
            then 'MISSING -- av_notification_log lost RLS or a client role can read or write it'
-         when has_function_privilege('anon', 'public.av_athletes_claim_notification(text,text)', 'EXECUTE')
-           or not has_function_privilege('authenticated', 'public.av_athletes_claim_notification(text,text)', 'EXECUTE')
-           or has_function_privilege('authenticated', 'public.av_athletes_claim_lead_notification(uuid)', 'EXECUTE')
+         when has_function_privilege('anon', to_regprocedure('public.av_athletes_claim_notification(text,text)'), 'EXECUTE')
+           or not has_function_privilege('authenticated', to_regprocedure('public.av_athletes_claim_notification(text,text)'), 'EXECUTE')
+           or has_function_privilege('authenticated', to_regprocedure('public.av_athletes_claim_lead_notification(uuid)'), 'EXECUTE')
            then 'MISSING -- a claim function has the wrong grants'
          -- T-AV27c: the cap takes the event, so "joined" can skip the daily limit.
          when to_regprocedure('public.av_push_allowed(uuid,text)') is null
            or to_regprocedure('public.av_push_allowed(uuid)') is not null
-           or has_function_privilege('authenticated', 'public.av_push_allowed(uuid,text)', 'EXECUTE')
-           or position('joined' in pg_get_functiondef('public.av_push_allowed(uuid,text)'::regprocedure)) = 0
+           or has_function_privilege('authenticated', to_regprocedure('public.av_push_allowed(uuid,text)'), 'EXECUTE')
+           or position('joined' in pg_get_functiondef(to_regprocedure('public.av_push_allowed(uuid,text)'))) = 0
            then 'MISSING -- av_push_allowed is not the T-AV27c version (event-aware, joined skips the daily cap)'
          when not exists (select 1 from pg_indexes where schemaname = 'public'
                            and indexname = 'av_notification_log_once_per_lead')
