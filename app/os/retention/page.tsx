@@ -36,6 +36,7 @@ const copy = {
     cameBackAgo: (d: number) =>
       d === 0 ? 'Came back today' : d === 1 ? 'Came back 1 day ago' : `Came back ${d} days ago`,
     undo: 'Undo',
+    pending: 'Pending',
     channelWhatsapp: 'WhatsApp',
     channelCall: 'Call',
     channelInPerson: 'In person',
@@ -69,6 +70,7 @@ const copy = {
     cameBack: 'Volvió',
     cameBackAgo: (d: number) => (d === 0 ? 'Volvió hoy' : d === 1 ? 'Volvió hace 1 día' : `Volvió hace ${d} días`),
     undo: 'Deshacer',
+    pending: 'Pendiente',
     channelWhatsapp: 'WhatsApp',
     channelCall: 'Llamada',
     channelInPerson: 'En persona',
@@ -131,6 +133,42 @@ function deduplicateReasons(reasons: string[]): string[] {
 function daysSinceJoined(joinedOn: string | null): number | null {
   if (!joinedOn) return null;
   return Math.floor((Date.now() - new Date(joinedOn).getTime()) / 86_400_000);
+}
+
+const GYM_TZ = 'America/Bogota';
+
+function daysAgoInTz(isoString: string, tz: string, now?: Date): number {
+  const ref = now ?? new Date();
+  const fmt = new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' });
+  const toMs = (d: Date) => {
+    const p = fmt.formatToParts(d);
+    return Date.UTC(
+      Number(p.find((x) => x.type === 'year')!.value),
+      Number(p.find((x) => x.type === 'month')!.value) - 1,
+      Number(p.find((x) => x.type === 'day')!.value)
+    );
+  };
+  return Math.round((toMs(ref) - toMs(new Date(isoString))) / 86_400_000);
+}
+
+function getNextStep(reasons: string[], language: 'en' | 'es'): string | null {
+  const hasExpired = reasons.some((r) => r.includes('plan venció') || r.includes('Plan expired'));
+  if (hasExpired) {
+    return language === 'es' ? 'Plan vencido: ofrécele renovar hoy' : 'Plan expired: offer to renew today';
+  }
+  const hasExpiring = reasons.some(
+    (r) => (r.includes('plan vence') || r.includes('Plan expires')) && !r.includes('venció')
+  );
+  if (hasExpiring) {
+    return language === 'es' ? 'Su plan vence pronto: confirma la renovación' : 'Plan expiring soon: confirm renewal';
+  }
+  const hasTrend = reasons.some((r) => r.includes('menos que su promedio') || r.includes('less than average'));
+  if (hasTrend) {
+    return language === 'es'
+      ? 'Aún viene menos que antes: invítale a la próxima clase'
+      : 'Still visiting less: invite them to the next class';
+  }
+  return null;
 }
 
 export default function RetentionPage() {
@@ -553,29 +591,50 @@ function ContactedCard({
 }) {
   const badge = levelBadge[m.level ?? 'insufficient_data'] ?? levelBadge.insufficient_data;
 
-  const touchDaysAgo = m.last_touch
-    ? Math.floor((Date.now() - new Date(m.last_touch.created_at).getTime()) / 86_400_000)
-    : 0;
-
-  const visitDaysAgo =
-    cameBack && m.last_activity_at
-      ? Math.floor((Date.now() - new Date(m.last_activity_at).getTime()) / 86_400_000)
-      : null;
-
+  const touchDaysAgo = m.last_touch ? daysAgoInTz(m.last_touch.created_at, GYM_TZ) : 0;
+  const visitDaysAgo = cameBack && m.last_activity_at ? daysAgoInTz(m.last_activity_at, GYM_TZ) : null;
   const channelLabel = m.last_touch ? s.viaChannel(m.last_touch.channel) : '';
+
+  const nextStep = cameBack && (m.level === 'high' || m.level === 'medium') ? getNextStep(m.reasons, language) : null;
+
+  let subtitle: string;
+  if (cameBack && visitDaysAgo !== null) {
+    const cameBackPart = s.cameBackAgo(visitDaysAgo);
+    const agoLabel =
+      language === 'es'
+        ? touchDaysAgo === 0
+          ? 'hoy'
+          : touchDaysAgo === 1
+            ? 'hace 1 día'
+            : `hace ${touchDaysAgo} días`
+        : touchDaysAgo === 0
+          ? 'today'
+          : touchDaysAgo === 1
+            ? '1 day ago'
+            : `${touchDaysAgo} days ago`;
+    const contactedPart =
+      language === 'es' ? `contactado ${channelLabel} ${agoLabel}` : `contacted ${channelLabel} ${agoLabel}`;
+    subtitle = `${cameBackPart} · ${contactedPart}`;
+  } else {
+    subtitle = `${s.contactedAgo(touchDaysAgo)}${channelLabel ? ` ${channelLabel}` : ''}`;
+  }
 
   return (
     <div className="bg-white rounded-tribe shadow-tribe px-4 py-3 flex items-center gap-3">
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="font-semibold text-tribe-dark truncate">{m.name ?? 'Sin nombre'}</span>
-          <Badge variant={badge.variant}>{language === 'es' ? badge.es : badge.en}</Badge>
-          {cameBack && <Badge variant="success">{s.cameBack}</Badge>}
+          {cameBack ? (
+            <>
+              <Badge variant="success">{s.cameBack}</Badge>
+              {nextStep && <Badge variant="warning">{s.pending}</Badge>}
+            </>
+          ) : (
+            <Badge variant={badge.variant}>{language === 'es' ? badge.es : badge.en}</Badge>
+          )}
         </div>
-        <p className="text-xs text-tribe-dark-80 mt-0.5 truncate">
-          {cameBack && visitDaysAgo !== null ? s.cameBackAgo(visitDaysAgo) : s.contactedAgo(touchDaysAgo)}
-          {channelLabel ? ` ${channelLabel}` : ''}
-        </p>
+        <p className="text-xs text-tribe-dark-80 mt-0.5 truncate">{subtitle}</p>
+        {nextStep && <p className="text-xs text-amber-700 mt-0.5 truncate">{nextStep}</p>}
       </div>
       {m.last_touch && (
         <button
