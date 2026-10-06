@@ -35,10 +35,14 @@ const copy = {
     back: 'Back',
     resultTitle: 'Import complete',
     resultTitleFailed: 'Import failed',
-    resultTitlePartial: 'Partial import',
+    resultTitlePartial: 'Import completed with errors',
+    resultTitleAllDups: 'Nothing new to import',
     inserted: 'Inserted',
     updated: 'Updated',
     skipped: 'Errors',
+    alreadyExisted: 'Already existed',
+    allDupsMessage: 'All {count} visits were already in the system. Nothing duplicated.',
+    newAndDupsMessage: '{inserted} new visits, {dupes} already existed.',
     downloadErrors: 'Download error rows',
     importAnother: 'Import another file',
     errorRow: 'Row error',
@@ -86,10 +90,14 @@ const copy = {
     back: 'Volver',
     resultTitle: 'Importación completa',
     resultTitleFailed: 'La importación falló',
-    resultTitlePartial: 'Importación parcial',
+    resultTitlePartial: 'Importación con errores',
+    resultTitleAllDups: 'Nada nuevo que importar',
     inserted: 'Insertados',
     updated: 'Actualizados',
     skipped: 'Errores',
+    alreadyExisted: 'Ya existían',
+    allDupsMessage: 'Las {count} visitas ya estaban en el sistema. No se duplicó nada.',
+    newAndDupsMessage: '{inserted} visitas nuevas, {dupes} ya existían.',
     downloadErrors: 'Descargar filas con error',
     importAnother: 'Importar otro archivo',
     errorRow: 'Error en fila',
@@ -132,6 +140,7 @@ interface ImportResult {
   inserted: number;
   updated: number;
   skipped: number;
+  already_existed: number;
   errors: ImportError[];
 }
 
@@ -361,6 +370,7 @@ export default function ImportPage() {
     let totalInserted = 0;
     let totalUpdated = 0;
     let totalSkipped = 0;
+    let totalAlreadyExisted = 0;
     let allErrors: ImportResult['errors'] = [];
     let importId = '';
 
@@ -382,7 +392,8 @@ export default function ImportPage() {
         if (json.success) {
           totalInserted += json.data.inserted;
           totalUpdated += json.data.updated;
-          totalSkipped += json.data.skipped;
+          totalSkipped += json.data.skipped ?? 0;
+          totalAlreadyExisted += json.data.already_existed ?? 0;
           const normalized: ImportError[] = (json.data.errors ?? []).map(
             (e: { index?: number; reason?: string; row?: Record<string, string>; error?: string }) => ({
               row: (e.index ?? 0) + 1,
@@ -417,6 +428,7 @@ export default function ImportPage() {
       inserted: totalInserted,
       updated: totalUpdated,
       skipped: totalSkipped,
+      already_existed: totalAlreadyExisted,
       errors: allErrors,
     });
     trackEvent('tribe_os_import_completed', {
@@ -635,39 +647,76 @@ export default function ImportPage() {
         {step === 'result' &&
           result &&
           (() => {
+            const errorCount = result.errors.length;
             const totalSuccess = result.inserted + result.updated;
-            const isFailed = totalSuccess === 0 && result.skipped > 0;
-            const isPartial = totalSuccess > 0 && result.skipped > 0;
-            const resultTitle = isFailed ? s.resultTitleFailed : isPartial ? s.resultTitlePartial : s.resultTitle;
-            const Icon = isFailed ? AlertTriangle : isPartial ? AlertTriangle : CheckCircle2;
-            const iconColor = isFailed ? 'text-red-600' : isPartial ? 'text-yellow-600' : 'text-green-600';
+            const dupes = result.already_existed;
+            const isAllErrors = totalSuccess === 0 && dupes === 0 && errorCount > 0;
+            const hasErrors = errorCount > 0;
+            const isAllDups = totalSuccess === 0 && dupes > 0 && errorCount === 0;
+
+            const resultTitle = isAllErrors
+              ? s.resultTitleFailed
+              : hasErrors
+                ? s.resultTitlePartial
+                : isAllDups
+                  ? s.resultTitleAllDups
+                  : s.resultTitle;
+
+            const Icon = isAllErrors ? AlertTriangle : hasErrors ? AlertTriangle : CheckCircle2;
+            const iconColor = isAllErrors ? 'text-red-600' : hasErrors ? 'text-yellow-600' : 'text-green-600';
+
+            const summaryMessage = isAllDups
+              ? s.allDupsMessage.replace('{count}', String(dupes))
+              : dupes > 0 && result.inserted > 0
+                ? s.newAndDupsMessage.replace('{inserted}', String(result.inserted)).replace('{dupes}', String(dupes))
+                : null;
+
             return (
               <section className="space-y-4">
                 <div className="flex items-center gap-2">
                   <Icon className={`h-6 w-6 ${iconColor}`} />
                   <h2 className="text-lg font-bold text-tribe-dark">{resultTitle}</h2>
                 </div>
-                <div className="grid grid-cols-3 gap-4">
+                {summaryMessage && <p className="text-sm text-tribe-dark-80">{summaryMessage}</p>}
+                <div
+                  className={`grid gap-4 ${tab === 'visits' ? (errorCount > 0 ? 'grid-cols-3' : dupes > 0 ? 'grid-cols-2' : 'grid-cols-1') : 'grid-cols-3'}`}
+                >
                   <div className="bg-green-50 rounded-tribe p-4 text-center">
                     <p className="text-2xl font-bold text-green-700">{result.inserted}</p>
                     <p className="text-xs text-green-600">{s.inserted}</p>
                   </div>
-                  <div className="bg-blue-50 rounded-tribe p-4 text-center">
-                    <p className="text-2xl font-bold text-blue-700">{result.updated}</p>
-                    <p className="text-xs text-blue-600">{s.updated}</p>
-                  </div>
-                  <div className="bg-red-50 rounded-tribe p-4 text-center">
-                    <p className="text-2xl font-bold text-red-700">{result.skipped}</p>
-                    <p className="text-xs text-red-600">{s.skipped}</p>
-                  </div>
+                  {tab === 'members' && (
+                    <div className="bg-blue-50 rounded-tribe p-4 text-center">
+                      <p className="text-2xl font-bold text-blue-700">{result.updated}</p>
+                      <p className="text-xs text-blue-600">{s.updated}</p>
+                    </div>
+                  )}
+                  {tab === 'visits' && dupes > 0 && (
+                    <div className="bg-gray-50 rounded-tribe p-4 text-center">
+                      <p className="text-2xl font-bold text-gray-600">{dupes}</p>
+                      <p className="text-xs text-gray-500">{s.alreadyExisted}</p>
+                    </div>
+                  )}
+                  {errorCount > 0 && (
+                    <div className="bg-red-50 rounded-tribe p-4 text-center">
+                      <p className="text-2xl font-bold text-red-700">{errorCount}</p>
+                      <p className="text-xs text-red-600">{s.skipped}</p>
+                    </div>
+                  )}
+                  {tab === 'members' && errorCount === 0 && (
+                    <div className="bg-red-50 rounded-tribe p-4 text-center">
+                      <p className="text-2xl font-bold text-red-700">0</p>
+                      <p className="text-xs text-red-600">{s.skipped}</p>
+                    </div>
+                  )}
                 </div>
-                {result.errors.length > 0 && (
+                {errorCount > 0 && (
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
                       <AlertTriangle className="h-4 w-4 text-red-500" />
                       <span className="text-sm font-medium text-tribe-dark">
-                        {result.errors.length} {s.errorRow}
-                        {result.errors.length > 1 ? 's' : ''}
+                        {errorCount} {s.errorRow}
+                        {errorCount > 1 ? 's' : ''}
                       </span>
                     </div>
                     <div className="max-h-40 overflow-y-auto text-xs bg-gray-50 rounded-tribe p-3 space-y-1">

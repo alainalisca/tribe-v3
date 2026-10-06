@@ -101,6 +101,7 @@ describe('POST /api/tribe-os/import/visits', () => {
 
     expect(json.success).toBe(true);
     expect(json.data.inserted).toBe(2);
+    expect(json.data.already_existed).toBe(0);
     expect(upsertedRows).toHaveLength(1);
     expect(upsertedRows[0]).toHaveLength(2);
 

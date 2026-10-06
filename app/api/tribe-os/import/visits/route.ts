@@ -262,15 +262,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       skippedDuplicates += chunk.length - insertedCount;
     }
 
-    const totalSkipped = errorRows.length + skippedDuplicates;
-
     // --- Update the import record with final counts ------------------------
     await supabase
       .from('client_imports')
       .update({
         inserted,
         updated: 0,
-        skipped: totalSkipped,
+        skipped: skippedDuplicates + errorRows.length,
         errors: errorRows,
       })
       .eq('id', importId);
@@ -282,7 +280,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       action: 'import.visits',
       targetType: 'client_imports',
       targetId: importId,
-      payload: { inserted, skipped: totalSkipped, skippedDuplicates },
+      payload: { inserted, already_existed: skippedDuplicates, errors: errorRows.length },
     });
 
     return NextResponse.json({
@@ -291,7 +289,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         import_id: importId,
         inserted,
         updated: 0,
-        skipped: totalSkipped,
+        already_existed: skippedDuplicates,
         errors: errorRows,
       },
     });
