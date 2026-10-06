@@ -39,9 +39,18 @@ const hash = (file: string) =>
     .update(executableSql(readFileSync(join(DIR, file), 'utf8')))
     .digest('hex');
 
-/** Leading number, or null for the 2026-04-19 bulk import's named files. */
+/**
+ * Leading number, or null for the 2026-04-19 bulk import's named files.
+ *
+ * `\d+`, not `\d{3}`. With `\d{3}` a T-AV block file (`8200_x.sql`) parsed as
+ * null, and null is treated as unfrozen below the line, so the first 8xxx
+ * migration (T-AV21, 2026-09-29) failed this guard although it is unapplied
+ * and sits far above the frozen ceiling. The only honest-looking way past it
+ * would have been freezing an unapplied migration. Parsing the whole number
+ * puts it above the line, where an unapplied migration belongs.
+ */
 const numberOf = (f: string): number | null => {
-  const m = /^(\d{3})_/.exec(f);
+  const m = /^(\d+)_/.exec(f);
   return m ? parseInt(m[1], 10) : null;
 };
 

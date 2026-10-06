@@ -7,8 +7,8 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { Resend } from 'resend';
 import { z } from 'zod';
+import { getResendClientOrNull, type EmailClient } from '@/lib/email/resendClient';
 import { logError } from '@/lib/logger';
 import { checkRateLimit } from '@/lib/rate-limit';
 import type { FeedbackCategory, FeedbackSubmitPayload } from '@/types/feedback';
@@ -31,13 +31,10 @@ function getSupabaseAdmin() {
   return createClient(url, key);
 }
 
-function getResendClient(): Resend | null {
-  const key = process.env.RESEND_API_KEY;
-  if (!key) {
-    logError(new Error('RESEND_API_KEY is not configured'), { action: 'getResendClient' });
-    return null;
-  }
-  return new Resend(key);
+function getResendClient(): EmailClient | null {
+  const client = getResendClientOrNull('feedbackWidget');
+  if (!client) logError(new Error('RESEND_API_KEY is not configured'), { action: 'getResendClient' });
+  return client;
 }
 
 const ADMIN_EMAIL = 'tribe@aplusfitnessllc.com';

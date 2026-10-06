@@ -35,6 +35,7 @@ import LiveNowSection from '@/components/home/LiveNowSection';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import FeaturedInstructors from '@/components/FeaturedInstructors';
 import FeaturedPartnerBanner from '@/components/FeaturedPartnerBanner';
+import AthletesEntryCard from '@/components/atletas/AthletesEntryCard';
 import FindTrainingPartners from '@/components/FindTrainingPartners';
 import LocalFitnessEventsSection from '@/components/LocalFitnessEventsSection';
 import AnimatedCard from '@/components/AnimatedCard';
@@ -170,6 +171,9 @@ export default function HomePage() {
               📍 {f.t('enableLocationNearby')}
             </button>
           )}
+
+          {/* T-AV24: only with the athletes flag on AND an active program row. */}
+          {f.user && <AthletesEntryCard where="home" />}
 
           {/* ── Live Now (only when sessions exist) ── */}
           <LiveNowSection liveNowSessions={f.liveNowSessions} userLocation={f.userLocation} language={f.language} />

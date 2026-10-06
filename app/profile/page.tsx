@@ -18,6 +18,7 @@ import MyCoachEntryCard from '@/components/tribe-os/MyCoachEntryCard';
 import TribeWordmark from '@/components/TribeWordmark';
 import ImageCropModal from '@/components/ImageCropModal';
 import PartnerDashboardEntryCard from '@/components/partner/PartnerDashboardEntryCard';
+import AthletesEntryCard from '@/components/atletas/AthletesEntryCard';
 export default function ProfilePage() {
   const { language, t } = useLanguage();
   const {
@@ -259,6 +260,7 @@ export default function ProfilePage() {
           {/* Gym dashboard — the way into the venue-request queue. Auto-hides
               for anyone without a featured_partners row, so it never shows to
               an athlete or an ordinary instructor. */}
+          <AthletesEntryCard where="profile" />
           <PartnerDashboardEntryCard />
 
           {/* Become a Featured Affiliate (instructors who are NOT already affiliates) */}

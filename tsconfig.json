@@ -8,6 +8,11 @@
     "esModuleInterop": true,
     "module": "esnext",
     "moduleResolution": "bundler",
+    // T-AV0: supabase/avMigrationCheck.ts is imported BOTH by vitest and by
+    // scripts/av-migration-check.mjs running under node --experimental-strip-types,
+    // and node ESM requires the explicit extension. Legal only with noEmit (set
+    // above); it permits the spelling and changes nothing else.
+    "allowImportingTsExtensions": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
     "jsx": "react-jsx",
