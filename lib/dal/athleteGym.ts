@@ -3,13 +3,13 @@
  * made with the SIGNED-IN USER'S client, so the definer functions and RLS
  * decide what comes back, never this file.
  *
- *   fetchPartnerSummary   av_athletes_partner_summary (8206): every number on
+ *   fetchPartnerSummary   av_athletes_partner_summary (207): every number on
  *                         the dashboard. Owner and admin get the bonus fields
  *                         and sales notes; a coach gets neither, at any depth.
- *   fetchMyPartnerRole    av_my_partner_role (8201), for the settings page and
+ *   fetchMyPartnerRole    av_my_partner_role (202), for the settings page and
  *                         route's own owner check.
  *   searchAthleteCandidates
- *                         av_athletes_search_candidates (8208): id, name and
+ *                         av_athletes_search_candidates (209): id, name and
  *                         avatar only, owner or admin only, rate limited.
  *
  * The writes are in athleteGymWrites.ts.
@@ -211,7 +211,7 @@ export async function searchAthleteCandidates(
 /**
  * Does this partner have an athletes program the caller can see. For the
  * entry card on /dashboard/partner: without a program the dashboard is a 404,
- * so the card must not lead there. "Program staff read the program" (8201)
+ * so the card must not lead there. "Program staff read the program" (202)
  * lets the owner, an active coach or an admin read the row; anyone else, or an
  * error, is false.
  */

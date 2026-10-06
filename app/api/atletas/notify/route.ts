@@ -4,7 +4,7 @@
  * captain ready, the gym owner).
  *
  * THE CALLER CHOOSES NOTHING BUT THE PASS AND THE EVENT. Whether anyone is
- * told is av_athletes_claim_notification's decision (8209), made with the
+ * told is av_athletes_claim_notification's decision (210), made with the
  * caller's own session: the caller must work that door, the event must have
  * happened, the guest must be credited, each event goes once, and the push
  * respects the cap. So calling this twice, early, or for another gym's pass

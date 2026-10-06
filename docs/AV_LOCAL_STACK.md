@@ -99,12 +99,13 @@ reproduce here.
 session. Both checks passed over it. If a probe result surprises you, compare
 `pg_policies` for that table against the dump before believing it.
 
-## Applying the branch migrations (8200 to 8207), repeatably
+## Applying the branch migrations (201 to 210), repeatably
 
 `db:reset` loads the production dump and nothing else: `[db.migrations]` is
 disabled in `supabase/config.toml` on purpose (see "Replaying
 supabase/migrations/ is NOT a substitute for the dump" below). So the T-AV
-branch's own migrations, the reserved 8200 block, are applied **by hand, with
+branch's own migrations, 201 to 210 (the reserved 8200 block until T-AV31
+renumbered them on 2026-10-06), are applied **by hand, with
 psql, in number order, after every reset**. Skipping this leaves a database
 that has production's shape and none of the program's tables, and every T-AV21
 and T-AV22 script then fails on its fixture checks rather than on anything
@@ -112,7 +113,7 @@ real.
 
 ```bash
 npm run db:reset
-for f in supabase/migrations/82[0-9][0-9]_*.sql; do
+for f in supabase/migrations/2[0-9][0-9]_t_av*.sql; do
   echo "== $f"
   psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -X -v ON_ERROR_STOP=1 -q -f "$f" < /dev/null || break
 done
@@ -125,19 +126,19 @@ npm run av:schema:verify   # dump landed, verify-migration-state, grant parity
 
 What to expect, and what each part guarantees:
 
-- **The glob sorts in number order** (8200, 8201, ... 8207), which is the order
-  the files depend on: 8202 references 8201's table, 8203 references 8202's,
-  8204 to 8206 read all three, and 8207 names 8203's columns.
+- **The glob sorts in number order** (201, 202, ... 210), which is the order
+  the files depend on: 203 references 202's table, 204 references 203's,
+  205 to 207 read all three, and 208 names 204's columns.
 - **Each file is one transaction** (`BEGIN` ... `COMMIT`, and a paste or `-f`
   of a multi-statement file is one implicit transaction anyway; see CLAUDE.md,
   2026-09-22). `ON_ERROR_STOP` plus `|| break` stops at the **first** failing
   file and applies nothing after it. A failed file leaves nothing behind.
 - **Every file ends with a `DO` block that asserts its end state** and raises
   if it is wrong, so "applied without error" means the assertions held.
-- **Re-running a file is safe except 8200 after 8203**, and 8200 refuses that
+- **Re-running a file is safe except 201 after 204**, and 201 refuses that
   itself: its pre-flight aborts when `pass_leads.referred_by_athlete_id`
-  exists, because re-running it would recreate the claim policy without 8203's
-  eight IS NULL clauses. To re-apply 8200, reset first.
+  exists, because re-running it would recreate the claim policy without 204's
+  eight IS NULL clauses. To re-apply 201, reset first.
 - **Grant parity compares only objects the production dump declares** and
   lists the branch-created ones by name (T-AV21). The new tables and
   functions appear there as "local objects NOT in the dump"; that is expected.

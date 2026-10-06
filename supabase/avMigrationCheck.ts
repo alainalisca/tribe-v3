@@ -1,6 +1,14 @@
 /**
  * T-AV0, Step 3. The tripwire over the T-AV migration block (8000-8999).
  *
+ * T-AV31, 2026-10-06. At the merge gate T-AV20's 8200 to 8209 were renumbered
+ * into main's sequence as 201 to 210 (Al's decision, recorded in
+ * docs/ATHLETE_VALUE_MERGE_GATE.md). The tripwire is KEPT and now covers both:
+ * the reserved block, for T-AV work not yet merged, and AV_RENUMBERED, the
+ * exact numbers the renumber took. A T-AV header on any other number is still
+ * refused, so the dishonest escape below stays closed; it just has ten more
+ * legitimate addresses, each listed by number rather than by range.
+ *
  * ═══════════════════════════════════════════════════════════════════════════
  * WHY A SEPARATE CHECK AT ALL: MAIN'S GUARDS CANNOT SEE FOUR-DIGIT FILES
  * ═══════════════════════════════════════════════════════════════════════════
@@ -65,6 +73,21 @@ import { sqlWithoutComments } from './executableSql.ts';
 export const AV_BLOCK_MIN = 8000;
 export const AV_BLOCK_MAX = 8999;
 
+/**
+ * T-AV migrations renumbered into main's sequence at the merge gate (T-AV31):
+ * 8200 to 8209 became 201 to 210. Listed one by one ON PURPOSE: a range would
+ * also admit whatever main numbers next, and the point of the list is that a
+ * T-AV header on a number nobody decided is still a failure. Every entry must
+ * be a T-AV migration on disk; the test file asserts that, so an entry cannot
+ * outlive the file it was added for.
+ */
+export const AV_RENUMBERED: readonly number[] = [201, 202, 203, 204, 205, 206, 207, 208, 209, 210];
+
+/** Is `n` a number a T-AV migration may carry: the reserved block or a renumbered one. */
+export function isAvNumber(n: number): boolean {
+  return (n >= AV_BLOCK_MIN && n <= AV_BLOCK_MAX) || AV_RENUMBERED.includes(n);
+}
+
 /** Who owns a table a T-AV migration touches. Anything else is a failure. */
 export const OWNERS = ['consumer', 'tribe-os', 't-av-new'] as const;
 
@@ -75,7 +98,7 @@ export interface AvMigrationProblem {
 }
 
 export interface AvMigrationCheckResult {
-  /** 8000-8999 migration filenames that were inspected. */
+  /** T-AV migration filenames that were inspected (the block and AV_RENUMBERED). */
   checked: string[];
   problems: AvMigrationProblem[];
 }
@@ -231,7 +254,7 @@ export function checkAvMigrations(dir: string, verifier: string): AvMigrationChe
     if (n === null) continue;
     const src = readFileSync(join(dir, f), 'utf8');
     const claimsAv = /^\s*--\s*PROGRAM:\s*T-AV\s*$/m.test(headerBlock(src));
-    const inBlock = n >= AV_BLOCK_MIN && n <= AV_BLOCK_MAX;
+    const inBlock = isAvNumber(n);
 
     if (claimsAv && !inBlock) {
       problems.push({
@@ -239,7 +262,8 @@ export function checkAvMigrations(dir: string, verifier: string): AvMigrationChe
         rule: 'block',
         detail:
           `declares \`-- PROGRAM: T-AV\` but is numbered ${n}; T-AV migrations use ` +
-          `${AV_BLOCK_MIN}-${AV_BLOCK_MAX} until they are renumbered at the merge gate`,
+          `${AV_BLOCK_MIN}-${AV_BLOCK_MAX} until they are renumbered at the merge gate, ` +
+          `or one of the renumbered numbers (${AV_RENUMBERED.join(', ')})`,
       });
     }
     if (!inBlock) continue;

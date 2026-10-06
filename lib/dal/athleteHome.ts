@@ -3,7 +3,7 @@
  * client, so row-level security and the definer function decide what comes
  * back, never this file.
  *
- *   fetchMyAthleteSummary   av_athletes_my_summary() (8206): scoped to
+ *   fetchMyAthleteSummary   av_athletes_my_summary() (207): scoped to
  *                           auth.uid() in the database. Guests carry first
  *                           name, claim date, collapsed status and the
  *                           no-credit reason; never contact details (D4).
@@ -100,7 +100,7 @@ export async function fetchOwnProfileBasics(
 
 /**
  * Does the caller have an ACTIVE program_athletes row. RLS lets a user read
- * only their own row (8202), and only `id` is selected, so nothing about the
+ * only their own row (203), and only `id` is selected, so nothing about the
  * row leaves this function except the boolean.
  */
 export async function hasActiveAthleteRow(supabase: SupabaseClient, userId: string): Promise<boolean> {

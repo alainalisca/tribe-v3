@@ -5,7 +5,7 @@
 #
 #   A. remove the partner check from av_can_work_door  -> test 3 must go RED
 #   B. remove "attended_at IS NULL" from the claim policy AND drop the
-#      restrictive policy (T-AV22, 8207), every layer gone  -> test 6 must go RED
+#      restrictive policy (T-AV22, 208), every layer gone  -> test 6 must go RED
 #
 # Each arm: record the original, apply the mutation, ASSERT IT LANDED (a
 # mutation that silently did not apply would report the guard as working),
@@ -31,8 +31,8 @@ POLICY="select with_check from pg_policies where schemaname='public' and tablena
 q "select pg_get_functiondef('public.av_can_work_door(uuid)'::regprocedure)" > "$TMP/fn.sql"
 FN_ORIG=$(q "$FN_MD5")
 POLICY_ORIG=$(q "$POLICY")
-# The claim policy as it is LIVE, for the restore: not 8200's text, which
-# 8203 superseded (see claim-policy.LOCAL.sh for what that cost).
+# The claim policy as it is LIVE, for the restore: not 201's text, which
+# 204 superseded (see claim-policy.LOCAL.sh for what that cost).
 apply() { psql -X -v ON_ERROR_STOP=1 -q -d "$PGURL" -f "$1" < /dev/null > /dev/null; }
 . "$ROOT/supabase/recon/claim-policy.LOCAL.sh"
 capture_claim_policy "$TMP/policy.sql" || exit 1

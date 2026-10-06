@@ -1,4 +1,4 @@
-/** T-AV27b: the two 8209 claims, their exact RPC names and arguments, and the mapping. */
+/** T-AV27b: the two 210 claims, their exact RPC names and arguments, and the mapping. */
 import { describe, it, expect, vi } from 'vitest';
 import type { SupabaseClient } from '@supabase/supabase-js';
 

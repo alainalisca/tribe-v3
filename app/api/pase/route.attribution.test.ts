@@ -158,7 +158,7 @@ describe('POST /api/pase, athletes flag on', () => {
     ]);
   });
 
-  it('T-AV27b: an attributed lead tells the athlete (in-app), through 8209, with the service role', async () => {
+  it('T-AV27b: an attributed lead tells the athlete (in-app), through 210, with the service role', async () => {
     vi.mocked(claimLeadNotification).mockResolvedValue({ success: true, data: [] });
     await post('atleta', 'ANA-7KQ');
     expect(claimLeadNotification).toHaveBeenCalledWith(expect.anything(), 'lead-1');

@@ -114,18 +114,150 @@ refused by objects the catalog does not show.
 - [ ] Rehearsal output shown to Al, in full, including the detail strings — not
       the verdict column alone.
 
-## 6. Order of operations on the day
+## 6. Order of operations on the day: the merge-day runbook
 
-- [ ] Manual production backup taken. **ID recorded here:** `________`
-- [ ] Al's written instruction received.
-- [ ] `git merge` — the merge happens FIRST.
-- [ ] Only then are the migrations pasted into the SQL editor, each as a
-      COMPLETE file, one paste per file, naming the commit on `main` the pasted
-      text corresponds to. A partial paste is the one way to get a partial
-      apply and it is entirely under the paster's control.
-- [ ] `supabase/migrations_applied.json` and the applied-migrations list inside
-      `verify-migration-state.sql` updated, and `verify-migration-state.sql`
-      run to confirm the two agree with `public.migrations_applied`.
+**Two phases, decided by Al 2026-10-06 (T-AV31).** Main's
+`migrationAppliedBeforeCode.test.ts` (the guard written after the 2026-09-21
+notification outage) refuses code that reads a column before the migration
+adding it is applied and recorded. The athlete code reads columns 201 and 204
+add, so it cannot merge in the same step as the migrations. Phase 1 merges the
+migrations alone (no app code), Al applies them, they are recorded, and phase 2
+merges the code. Same shape as main's #181 then #182. Rehearsed locally:
+`athlete/merge-phase1` (migrations only, full suite green, and main's current
+`/api/pase` claim verified against the migrated schema) and phase 2 (the
+recorded tree plus `athlete/main`, full re-run green).
+
+Every step is marked **[AL]** or **[CLAUDE CODE]**. Nothing marked [CLAUDE CODE]
+touches `main`, `origin` or production until Al has written the sentence in the
+step before it. If any step does not produce the good result it describes,
+stop there and do not continue to the next step.
+
+1. **[CLAUDE CODE] Pre-flight, the morning of.** `git fetch origin`. Confirm
+   `origin/main` is still `6b8df7ad` (if it moved: re-run the merge rehearsal,
+   merge it into `athlete/main` the way `37fb2293` did, and re-run everything
+   before going on). Confirm none of 201 to 210 is taken on `origin/main` (if
+   one is: stop and tell Al; nothing is renamed again without his decision).
+   Confirm 199 is recorded in `supabase/migrations_applied.json` on `origin/main`
+   (it is not as of `6b8df7ad`; `chore/record-199-applied` exists for that), or
+   step 5 will show a GUARD_184 row MISSING for 199 that has nothing to do with
+   this program. `npm run av:guard`. Report all of it to Al.
+2. **[AL] Take the production backup.** Supabase Dashboard, the production
+   project, **Database > Backups** (the procedure in `docs/WEEK_1_MISSIONS.md`).
+   Take a manual backup and copy the backup's identifier and timestamp exactly as
+   that page shows them into this line: **Backup ID and time:** `________`. If
+   the page offers no manual backup on our plan, record the newest daily
+   backup's timestamp instead and say so in this line, because that restore
+   point is older than the morning's data.
+3. **[AL] Authorize phase 1** by writing, in the Claude Code chat, exactly:
+   > I authorize phase 1 of the Tribe Athletes merge: merge the athlete migrations into main and push. Backup: <the ID from step 2>.
+4. **[CLAUDE CODE] Phase 1 merge.** Rebuild `athlete/merge-phase1` on the
+   current `origin/main` if it moved, run tsc, eslint and `npm run test:complete`
+   on it, then `git merge` it into `main` and `git push origin main`. Report the
+   commit hash on `main`; every paste in step 6 corresponds to that commit. If
+   the push is refused (branch protection), stop and tell Al: it then goes
+   through a pull request, which Al merges.
+   **What Vercel does:** a push to `main` deploys production automatically
+   (`engineering-standards.md`), and the iOS and Android apps load that live
+   build (`capacitor.config.ts`, `server.url`). Wait for the deploy to read
+   Ready.
+   **What users see after the phase 1 push: nothing.** Phase 1 contains no app
+   code, only the ten migration files, the verifier and three test files, so
+   the deployed pages are byte-for-byte the code already running. Even after
+   step 6 adds the tables and columns, main's code does not read them: main's
+   `/api/pase` claim was run against a database with 201 to 210 applied
+   (2026-10-06, local) and answered 200 with the new columns left NULL.
+5. **[AL] Verify BEFORE the pastes.** In the Supabase SQL editor (production),
+   paste the whole of `supabase/verify-migration-state.sql` from the phase 1
+   commit and run it. **Good result:** it runs to the end with no error; every
+   row from `201_t_av21_pass_leads_showup` to `210_t_av27b_notifications` reads
+   `MISSING -- ...` (those objects do not exist yet; T-AV30 is what makes this
+   a list rather than an error); every other row reads what it read before
+   today (`applied`, or one of the known `cannot verify automatically` /
+   `assumed` / `info` rows). Screenshot or copy the result for this file.
+6. **[AL] Paste 201 to 210, in this order, one complete file per paste,** each
+   from the phase 1 commit on `main`:
+   1. `201_t_av21_pass_leads_showup.sql`
+   2. `202_t_av22_athlete_programs.sql`
+   3. `203_t_av22_program_athletes.sql`
+   4. `204_t_av22_pass_leads_attribution.sql`
+   5. `205_t_av22_athletes_ledger.sql`
+   6. `206_t_av22_athletes_writes.sql`
+   7. `207_t_av22_athletes_reads.sql`
+   8. `208_t_av22_program_columns_server_only.sql`
+   9. `209_t_av26_athletes_search.sql`
+   10. `210_t_av27b_notifications.sql`
+
+   Select all of the file, paste, run. Each file is one transaction and ends
+   with its own checks, so a good run shows the file's closing notice (for
+   example `201: show-up columns added, claim policy closed, door read and
+confirm installed.`) and no error. **If any file raises an error, nothing
+   from that file was applied: stop, do not paste the next one, and send the
+   error to Claude Code.** Never paste part of a file (CLAUDE.md, per-paste
+   atomicity). Each file also records itself in `public.migrations_applied`.
+
+7. **[AL] Verify AFTER the pastes.** Run the whole verifier again. **Good
+   result:** every row from 201 to 210 reads `applied`, nothing else changed
+   from step 5, and `GUARD_184_mirror_matches_applied_table` reads `MISSING --
+this database has recorded a migration the JSON mirror omits`. That last one
+   is expected and is fixed by step 8; anything else not `applied` is a stop.
+8. **[CLAUDE CODE] Record 201 to 210 as applied.** On a branch from `main`: run
+   `npx tsx scripts/syncMigrationsApplied.ts <name>` once for each of the ten
+   (it takes one name per call), and delete the two T-AV31 entries from
+   `KNOWN_NAME_COLLISIONS` in `supabase/migrationAppliedBeforeCode.test.ts`
+   (its rot test fails until they are gone). Full suite green. Commit, not yet
+   pushed. Then merge that commit and `origin/main` into `athlete/main`, and re-run
+   tsc, eslint, `test:complete`, `test:e2e:av`, and every proof and mutation
+   driver from t-av21 to t-av30 on it. Report all results to Al.
+9. **[AL] Turn the flag to allowlist in Vercel, BEFORE phase 2 is pushed.**
+   Unset is not fully off: an unset `ATHLETE_VALUE_ENABLED` reads as `off`
+   (`lib/features/athleteValue.ts:78-79`), but an app admin is on whatever
+   the mode (`:140`, `return callerIsAppAdmin(supabase)`; spec section 3, and
+   the comment at `:31`). Setting it first means the phase 2 deploy is built
+   with the final values, and nothing in today's `main` reads these variables,
+   so setting them early changes nothing until phase 2 deploys.
+   - **Find the UUIDs.** Supabase Dashboard, the production project,
+     **Authentication > Users**: search each email and copy the **User UID**
+     column. Or, in the SQL editor:
+     `select id, email from auth.users where email in ('<Al>', '<Ana>', '<test 1>', '<test 2>');`
+     Al's email is the one Al signs in to Tribe with.
+   - **Set them.** Vercel, the project's **Settings > Environment Variables**,
+     **Production** environment only:
+     `ATHLETE_VALUE_ENABLED` = `allowlist`;
+     `ATHLETE_VALUE_ALLOWLIST` = the four UUIDs, comma-separated (UUIDs, not
+     emails; Al's must be in it);
+     `ATHLETE_VALUE_FEATURES` = the one feature Al has chosen in writing. Do not
+     leave `ATHLETE_VALUE_FEATURES` unset: unset means every feature. None of
+     the three may be `NEXT_PUBLIC_`. No redeploy is needed now; the phase 2
+     push in step 11 is the deployment that picks them up.
+   - D2 is tabled: no feature is turned on for BullBox.
+10. **[AL] Authorize phase 2** by writing, in the Claude Code chat, exactly:
+    > I authorize phase 2 of the Tribe Athletes merge: the allowlist is set in Vercel Production; push the record of 201 to 210, then merge athlete/main into main and push.
+11. **[CLAUDE CODE] Phase 2 merge.** `git push origin main` with the record
+    commit (Vercel deploys it; it changes only the applied list and a test, so
+    users see nothing from that deploy), then `git merge athlete/main` into
+    `main` and `git push origin main`. Report both hashes. **What Vercel does:**
+    production deploys the athlete code, and the iOS and Android apps load it at
+    the same moment.
+    **What users see after the phase 2 push:**
+    - **Everyone not on the allowlist and not an app admin: no program
+      surface.** Every program page is a real 404 (`/atletas/`,
+      `/atletas/gym/...`, `/pase/verificar/...`, `/admin/atletas/`), proven by
+      the flag-off e2e project and `t-av24-proof`. The public pass page
+      `/pase/{slug}/` looks as it does today: a signed-out visitor is off unless
+      the mode is literally `all` (`lib/features/athleteValueServer.ts:30-32`),
+      so no "Te invita" chip and no voucher QR. The shared-file changes listed
+      under "Things T-AV0 changed in SHARED files" below have no visible effect.
+    - **The four allowlisted accounts:** the feature named in
+      `ATHLETE_VALUE_FEATURES`, and nothing else.
+    - **App admins:** every program surface, whatever the variables say (the
+      admin rule above). Al is an app admin.
+12. **[AL] Verify once more and smoke-test.** Run the verifier: every row
+    `applied` or a known status, `GUARD_184_mirror_matches_applied_table` now
+    `applied`. Open `/atletas/` signed in as an ordinary (non-admin,
+    non-allowlisted) account: a 404. Open a real `/pase/{slug}/` page signed
+    out: unchanged from before today.
+13. **[AL] Section 7 begins:** the dark phase of at least 7 days, including the
+    real voucher scan on production.
 
 ## 7. After the merge
 
@@ -197,18 +329,20 @@ be automated and were deferred to the gate on purpose.
 - [x] **`NEXT_PUBLIC_SITE_URL` in Vercel Production is the real production domain** (Al). Since T-AV29 the voucher QR and the door link are built from it first, so a wrong or preview value there would print a QR that sends coaches to the wrong site.
       **Checked by Al 2026-10-06:** set to the real production domain with https, applied to all environments.
       Note: because it applies to Preview too, a QR made on a preview deployment opens production. Accepted, no change.
-- [ ] **Renumber 8200 to 8209 against `origin/main`** at the moment of merging (CLAUDE.md, "A migration number is claimed by whoever merges first"). Rename, state in each header what it was and why it moved, and update every probe id in `supabase/verify-migration-state.sql` and every `migrations_applied` reference.
+- [x] **Renumber 8200 to 8209 against `origin/main`** at the moment of merging (CLAUDE.md, "A migration number is claimed by whoever merges first"). Rename, state in each header what it was and why it moved, and update every probe id in `supabase/verify-migration-state.sql` and every `migrations_applied` reference.
       **Numbers decided by Al 2026-10-06:** 8200 to 8209 become **201 to 210**, in the same order (8200 -> 201, ... 8209 -> 210). 194, 195 and 200 are skipped because unmerged branches already claim them (`chore/194-scrub-push-send-bearer`, `fix/s3-notification-forgery`, `hotfix/recap-report-policy`). In the same merge-day renumber commit, `supabase/avMigrationCheck.ts` is updated to recognize 201 to 210 as the T-AV set; the tripwire is kept, not deleted. **If any of 201 to 210 is taken on `origin/main` by merge day, stop and tell Al before renaming anything.**
+      **Done 2026-10-06 in T-AV31** on `athlete/main`: files renamed, each header states its old number, every reference updated (`avMigrationCheck.ts` now lists 201 to 210 in `AV_RENUMBERED`; the tripwire is kept), and each of 201 to 210 now inserts its own `migrations_applied` row, as every migration since 184 does. `origin/main` was still `6b8df7ad` and none of 201 to 210 was taken. Re-check both on the day (section 6, step 1).
 - [x] **Merge rehearsal, 2026-10-06** (`athlete/merge-rehearsal` at `d701e90a`, local only: `origin/main` `6b8df7ad` plus `athlete/main` `4f3f09c9`). One conflict, append-on-append in `supabase/verify-migration-state.sql`, resolved by keeping both blocks with no line of main's removed. On the merged tree: tsc clean, `test:complete` 314 of 314 files and 2820 tests, `test:e2e:av` green, every proof and mutation driver from t-av21 to t-av29 green. **Accepted by Al.** On merge day, re-run it only if `origin/main` has new commits since this rehearsal (its base `6b8df7ad`).
       Local limitation only, not a production concern: migrations 192 and 199 do not apply to the local dump, because the dump has no storage buckets or storage policies (the same reason main's own 090 and 091 probes read MISSING locally). Both abort on their own pre-flights there; neither touches an object the T-AV migrations touch.
-- [ ] **Apply 8200 to 8209 in order, each as one complete paste, AFTER the merge commit is on `main`** (CLAUDE.md, "the branch merges before the paste"), and record the commit each paste corresponds to.
+- [ ] **Apply 201 to 210 in order, each as one complete paste, AFTER the merge commit is on `main`** (CLAUDE.md, "the branch merges before the paste"), and record the commit each paste corresponds to.
+      Two phases since T-AV31: see section 6, steps 4 to 8. The migrations merge first with no code that reads them; the code merges after they are applied and recorded.
 - [ ] **D2 answered.** A Colombian lawyer has reviewed gym-to-athlete referral payments and Al has recorded the answer in the spec's decisions log. Blocking for turning the program on for a real gym.
       **2026-10-06: D2 tabled by Al. Does not block the merge; the program stays inactive for real gyms (allowlist only, no feature flipped for BullBox) until D2 is answered and recorded.**
 - [ ] **The real BullBox program row is created by hand** through `/admin/atletas/` (or the admin route), never by a seed. `scripts/seed-bullbox.sql` is not touched.
 - [ ] **One real push to a device.** An athlete with a real FCM or web-push subscription receives "{guest} arrived at class" once, after a real confirm. Log mode proved the path (`t-av27b-proof`); only a device proves delivery.
 - [ ] **The owner's lead email in a real inbox (Gmail).** An attributed claim shows "Invitación de {athlete}" and a working "Confirmar en la puerta" link, and a plain claim's email is unchanged.
 - [ ] **`npm run test:e2e:av` green on the merge-day tree**, both projects (flag on: the full loop; flag off: the real 404s).
-- [ ] **Every T-AV proof and mutation driver re-run** on the merge-day tree: `supabase/recon/t-av21` to `t-av29` `-proof.LOCAL.sh` and `-mutations.LOCAL.sh`. A mutation proof expires when the code around it moves (CLAUDE.md).
+- [ ] **Every T-AV proof and mutation driver re-run** on the merge-day tree: `supabase/recon/t-av21` to `t-av30` `-proof.LOCAL.sh` and `-mutations.LOCAL.sh`. A mutation proof expires when the code around it moves (CLAUDE.md).
 - [x] **Read `docs/T-AV20_RELEASE.md` section 6** (the Spanish-only pass page, admins with the flag off, the pre-existing email-test environment dependency) and decide each item is acceptable for `main`.
       **Read and accepted by Al 2026-10-06, all four items:** the pass page stays Spanish only; app admins reach `/admin/atletas/` with the flag off; the email tests fail when `.env.av.local` is loaded; the keepalive and React streaming notes.
 

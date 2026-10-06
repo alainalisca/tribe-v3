@@ -140,7 +140,7 @@ describe('DoorPassView', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Confirm attendance' }));
     await waitFor(() => expect(screen.getByText('Attendance confirmed')).toBeTruthy());
     expect(h.confirmPassAttendance).toHaveBeenCalledWith(expect.anything(), 'BU-4F7K', 'scan');
-    // T-AV27b: the confirm tells the referring athlete (8209 decides whether anyone is told).
+    // T-AV27b: the confirm tells the referring athlete (210 decides whether anyone is told).
     expect(h.notifyAthlete).toHaveBeenCalledWith('BU-4F7K', 'arrived');
     expect(container.querySelector('[data-welcome-offer]')?.textContent).toBe(
       'Next: your close' + 'First month at 20% off if you join this week.'

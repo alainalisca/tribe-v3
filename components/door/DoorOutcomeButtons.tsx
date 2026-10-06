@@ -8,7 +8,7 @@ import { notifyAthlete } from '@/lib/atletas/notifyAthlete';
 
 /**
  * T-AV25. "What happened after class?": the four outcomes, through
- * av_athletes_set_outcome (8205). Shared by the verify page and the door list.
+ * av_athletes_set_outcome (206). Shared by the verify page and the door list.
  *
  * The database is the rule: `joined` is refused without a confirmed show-up
  * (`not_attended`) and a retained or settled join cannot change (`locked`).
@@ -51,7 +51,7 @@ export default function DoorOutcomeButtons({ passCode, initialOutcome, onSaved }
     setSaving(false);
     if (result.success) {
       setOutcome(next);
-      // T-AV27b: a join tells the athlete; 8209 decides whether anyone is told.
+      // T-AV27b: a join tells the athlete; 210 decides whether anyone is told.
       if (next === 'joined') notifyAthlete(passCode, 'joined');
       setMessage({ kind: 'saved', text: t('outcomeSaved') });
       onSaved?.();

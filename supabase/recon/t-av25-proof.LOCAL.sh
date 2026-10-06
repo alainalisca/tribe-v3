@@ -1,6 +1,6 @@
 #!/bin/bash
 # T-AV25 acceptance proof: the door, end to end, against the LOCAL stack
-# (8200 to 8207, `npm run av:seed`), through a dev:av on the proof port.
+# (201 to 208, `npm run av:seed`), through a dev:av on the proof port.
 #
 #   bash supabase/recon/t-av25-proof.LOCAL.sh            # every test
 #   ONLY="4 6" bash supabase/recon/t-av25-proof.LOCAL.sh  # a subset (the mutation driver uses this)

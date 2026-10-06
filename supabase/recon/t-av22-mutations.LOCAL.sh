@@ -10,11 +10,11 @@
 #   M4  coach bonus-field exclusion removed (partner_summary)-> test 4  must go RED
 #   M5  self-referral email match removed from the ledger    -> test 7  must go RED
 #   M6  referred_by_athlete_id IS NULL removed from the claim policy AND the
-#       restrictive policy (8207) dropped: every layer gone  -> test 8  must go RED
-#   M6b the clause removed from the claim policy ONLY: 8207 still refuses
+#       restrictive policy (208) dropped: every layer gone  -> test 8  must go RED
+#   M6b the clause removed from the claim policy ONLY: 208 still refuses
 #       (the redundancy is deliberate, and this records it)  -> test 8  must stay GREEN
 #   M7  bonus_eligible removed from the ledger's bonus owed  -> test 7  must go RED
-#   M8  the restrictive 'server only' INSERT policy dropped (8207) -> test 12 must go RED,
+#   M8  the restrictive 'server only' INSERT policy dropped (208) -> test 12 must go RED,
 #       and test 8 must stay GREEN (the claim policy alone still refuses anon)
 #
 # Each arm: record the original, apply the mutation, ASSERT IT LANDED (the
@@ -132,7 +132,7 @@ verdict 8 RED || all_ok=1
 restore_both M6
 verdict 8 GREEN || all_ok=1
 
-echo "== M6b. clause removed from the claim policy ONLY (test 8 must stay GREEN: 8207 still refuses)"
+echo "== M6b. clause removed from the claim policy ONLY (test 8 must stay GREEN: 208 still refuses)"
 apply "$TMP/policy_mut.sql" && reload
 [[ "$(q "$POLICY_SQL")" != *"referred_by_athlete_id IS NULL"* ]] && [ "$(q "$SERVER_ONLY_POLICY_SQL")" = "$SO_ORIG" ] \
   && echo "  mutation landed (claim policy lost the clause; restrictive policy untouched)" || { echo "  FATAL: M6b did not land"; exit 1; }

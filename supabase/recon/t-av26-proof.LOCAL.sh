@@ -1,6 +1,6 @@
 #!/bin/bash
 # T-AV26 acceptance proof: the gym dashboard, settings and Add athlete, against
-# the LOCAL stack (8200 to 8208, `npm run av:seed`), through a dev:av on the
+# the LOCAL stack (201 to 209, `npm run av:seed`), through a dev:av on the
 # proof port.
 #
 #   bash supabase/recon/t-av26-proof.LOCAL.sh            # every test
@@ -43,7 +43,7 @@ ID() { printf '00000000-0000-4000-8000-%012d' "$1"; }
 PA=$(q "select id from featured_partners where user_id='$(ID 7)'")
 PB=$(q "select id from featured_partners where user_id='$(ID 9)'")
 [ -n "$PA" ] && [ -n "$PB" ] || { echo "FATAL: seed partners missing"; exit 1; }
-[ "$(q "select count(*) from pg_proc where proname='av_athletes_search_candidates'")" = 1 ] || { echo "FATAL: 8208 is not applied"; exit 1; }
+[ "$(q "select count(*) from pg_proc where proname='av_athletes_search_candidates'")" = 1 ] || { echo "FATAL: 209 is not applied"; exit 1; }
 
 for who in bullbox elena felipe otro admin ana gabi; do
   c=$(node scripts/avSessionCookie.mjs "$who@av.local") || { echo "FATAL: no session for $who"; exit 1; }

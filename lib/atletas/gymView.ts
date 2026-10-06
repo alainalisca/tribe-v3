@@ -1,6 +1,6 @@
 /**
  * T-AV26. What the gym dashboard sends to the browser, built field by field
- * from av_athletes_partner_summary (8206), as toAthleteHomeView does for the
+ * from av_athletes_partner_summary (207), as toAthleteHomeView does for the
  * athlete (T-AV24).
  *
  * AN ALLOWLIST. Nothing from the RPC result is spread into the view; every key

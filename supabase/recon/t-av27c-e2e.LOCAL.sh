@@ -1,6 +1,6 @@
 #!/bin/bash
 # T-AV27c. `npm run test:e2e:av`: the Tribe Athletes Playwright suite, against
-# the LOCAL stack only (8200 to 8209, `npm run av:seed`).
+# the LOCAL stack only (201 to 210, `npm run av:seed`).
 #
 #   npm run test:e2e:av                     # both projects
 #   AV_E2E_ONLY=flag-on npm run test:e2e:av # one project (the mutation driver uses this)

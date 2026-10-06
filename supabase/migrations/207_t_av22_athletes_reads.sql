@@ -1,6 +1,9 @@
 -- PROGRAM: T-AV
 -- SUB-PROGRAM: T-AV20 Tribe Athletes
 -- TICKET: T-AV22
+-- RENUMBERED: was 8206_t_av22_athletes_reads.sql until 2026-10-06 (T-AV31). 8200 to 8209 became 201
+--   to 210 at the merge gate, skipping 194, 195 and 200, which unmerged
+--   branches already claim (Al's decision, docs/ATHLETE_VALUE_MERGE_GATE.md).
 -- CREATES: av_athletes_my_summary, av_athletes_partner_summary, av_door_list
 -- REPLACES: av_door_pass(text) (T-AV21, adds athlete first name, outcome, welcome offer EN/ES)
 -- RISK: HIGH
@@ -9,8 +12,8 @@
 -- T-AV22 (6 of 6): every read a client makes
 -- ════════════════════════════════════════════════════════════════════════════
 --
--- 8206 was free on origin/main (highest 198, d236656d), every branch, every
--- worktree and all history on 2026-09-30. Split from 8205 (the writes) to keep
+-- 207 was free on origin/main (highest 198, d236656d), every branch, every
+-- worktree and all history on 2026-09-30. Split from 206 (the writes) to keep
 -- each file under the 300-line rule.
 --
 -- EVERY FUNCTION HERE is SECURITY DEFINER with search_path pinned, revoked from
@@ -40,7 +43,7 @@
 --   totals.to_close       credited show-ups with no outcome yet ("Por cerrar")
 --   guests.contacted_at   owner and admin only ("Oferta enviada")
 --   guests.retain_from    owner and admin only: outcome_at + retention_days,
---                         the same instant av_athletes_mark_retained (8205)
+--                         the same instant av_athletes_mark_retained (206)
 --                         refuses before, so the button and the rule agree
 -- Coaches still get no bonus field and no sales note at any depth.
 
@@ -313,18 +316,24 @@ BEGIN
     'public.av_door_list(uuid)',
     'public.av_door_pass(text)'] LOOP
     IF to_regprocedure(v_fn) IS NULL THEN
-      RAISE EXCEPTION '8206 ABORTED: % is missing.', v_fn;
+      RAISE EXCEPTION '207 ABORTED: % is missing.', v_fn;
     END IF;
     IF NOT (SELECT prosecdef FROM pg_proc WHERE oid = to_regprocedure(v_fn))
        OR (SELECT proconfig FROM pg_proc WHERE oid = to_regprocedure(v_fn)) IS NULL THEN
-      RAISE EXCEPTION '8206 ABORTED: % must be SECURITY DEFINER with a pinned search_path.', v_fn;
+      RAISE EXCEPTION '207 ABORTED: % must be SECURITY DEFINER with a pinned search_path.', v_fn;
     END IF;
     IF has_function_privilege('anon', v_fn, 'EXECUTE')
        OR NOT has_function_privilege('authenticated', v_fn, 'EXECUTE') THEN
-      RAISE EXCEPTION '8206 ABORTED: % has the wrong grants.', v_fn;
+      RAISE EXCEPTION '207 ABORTED: % has the wrong grants.', v_fn;
     END IF;
   END LOOP;
-  RAISE NOTICE '8206: athlete read functions installed; door read widened.';
+  RAISE NOTICE '207: athlete read functions installed; door read widened.';
 END $$;
+
+-- ── Record this migration as applied (T-AV31: renumbered into main's sequence,
+--    so it records itself like every migration since 184) ─────────────────
+INSERT INTO public.migrations_applied (migration, note)
+VALUES ('207_t_av22_athletes_reads', 'T-AV22: athlete read functions, door read widened (was 8206)')
+ON CONFLICT (migration) DO NOTHING;
 
 COMMIT;

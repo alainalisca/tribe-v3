@@ -1,6 +1,6 @@
 #!/bin/bash
 # T-AV23 acceptance proof: /api/pase and /pase/[slug] end to end, against the
-# LOCAL stack (8200 to 8207 applied, `npm run av:seed`), through `dev:av` on
+# LOCAL stack (201 to 208 applied, `npm run av:seed`), through `dev:av` on
 # the proof port (devServer.LOCAL.sh, 3101), started by this script with the flag OFF and then ON.
 #
 #   bash supabase/recon/t-av23-proof.LOCAL.sh             # every test

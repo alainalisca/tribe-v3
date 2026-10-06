@@ -6,9 +6,9 @@
  * AN ALLOWLIST, NOT A FILTER. parseProgramSettings builds its result from the
  * keys below and nothing else, so `partner_id`, `is_active` or any other key in
  * the request body is never forwarded (mass assignment). is_active stays an
- * admin-only switch behind its trigger (8201).
+ * admin-only switch behind its trigger (202).
  *
- * The numeric ranges repeat the table's CHECK constraints (8201) so the route
+ * The numeric ranges repeat the table's CHECK constraints (202) so the route
  * can answer 400 with the field name; the database remains the rule.
  */
 
@@ -25,7 +25,7 @@ export const TEXT_FIELDS = [
 
 export type TextField = (typeof TEXT_FIELDS)[number];
 
-/** Field, minimum, maximum, and whether empty means NULL. Mirrors 8201's CHECKs. */
+/** Field, minimum, maximum, and whether empty means NULL. Mirrors 202's CHECKs. */
 export const NUMBER_FIELDS = [
   { key: 'conversion_bonus_cop', min: 0, max: 5_000_000, optional: true },
   { key: 'retention_days', min: 7, max: 180, optional: false },

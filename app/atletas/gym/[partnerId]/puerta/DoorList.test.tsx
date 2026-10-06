@@ -62,7 +62,7 @@ describe('DoorList rows', () => {
     expect(container.querySelectorAll('[data-outcome]')).toHaveLength(4);
     expect(h.confirm).toHaveBeenCalledWith(expect.anything(), 'BU-4F7K', 'toggle');
     expect(screen.queryByRole('button', { name: 'Llegó' })).toBeNull();
-    // T-AV27b: "Llegó" tells the referring athlete; 8209 decides whether anyone is told.
+    // T-AV27b: "Llegó" tells the referring athlete; 210 decides whether anyone is told.
     expect(h.notify).toHaveBeenCalledExactlyOnceWith('BU-4F7K', 'arrived');
   });
 

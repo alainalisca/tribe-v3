@@ -1,6 +1,6 @@
 /**
- * T-AV22: the claim policy in 8203 is 8200's text plus exactly eight
- * IS NULL clauses, and 8200 refuses to run once 8203 has.
+ * T-AV22: the claim policy in 204 is 201's text plus exactly eight
+ * IS NULL clauses, and 201 refuses to run once 204 has.
  *
  * Textual on purpose, and only for these two properties. Whether the policy
  * REFUSES a forged insert is a behaviour question and is answered against the
@@ -13,8 +13,8 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 
 const read = (f: string) => readFileSync(`supabase/migrations/${f}`, 'utf8');
-const M8200 = read('8200_t_av21_pass_leads_showup.sql');
-const M8203 = read('8203_t_av22_pass_leads_attribution.sql');
+const M201 = read('201_t_av21_pass_leads_showup.sql');
+const M204 = read('204_t_av22_pass_leads_attribution.sql');
 
 const policyOf = (sql: string): string => {
   const lines = sql.split('\n').filter((l) => l.startsWith('CREATE POLICY "Anyone can claim a pass"'));
@@ -33,11 +33,11 @@ const EIGHT = [
   'bonus_settled_by',
 ];
 
-describe('the 8203 claim policy', () => {
-  it("is 8200's policy with exactly the eight new clauses appended, and nothing else changed", () => {
-    const before = policyOf(M8200);
-    const after = policyOf(M8203);
-    // 8200 ends `("attended_method" IS NULL)));`: the clause's own paren,
+describe('the 204 claim policy', () => {
+  it("is 201's policy with exactly the eight new clauses appended, and nothing else changed", () => {
+    const before = policyOf(M201);
+    const after = policyOf(M204);
+    // 201 ends `("attended_method" IS NULL)));`: the clause's own paren,
     // then two that close WITH CHECK, then the semicolon. The eight go after
     // the clause's paren and before the last three characters `));`.
     expect(before.endsWith('("attended_method" IS NULL)));')).toBe(true);
@@ -47,29 +47,29 @@ describe('the 8203 claim policy', () => {
 
   it("keeps T-AV21's three clauses", () => {
     for (const c of ['attended_at', 'attended_marked_by', 'attended_method']) {
-      expect(policyOf(M8203)).toContain(`("${c}" IS NULL)`);
+      expect(policyOf(M204)).toContain(`("${c}" IS NULL)`);
     }
   });
 
   it('asserts all eleven clauses in its end-state block', () => {
     for (const c of ['attended_at', 'attended_marked_by', 'attended_method', ...EIGHT]) {
-      expect(M8203).toContain(`'${c}'`);
+      expect(M204).toContain(`'${c}'`);
     }
   });
 });
 
-describe('the 8200 pre-flight', () => {
-  it('checks for referred_by_athlete_id before 8200 writes anything', () => {
-    const preflight = M8200.indexOf("attname = 'referred_by_athlete_id'");
-    const firstWrite = M8200.indexOf('ALTER TABLE public.pass_leads');
+describe('the 201 pre-flight', () => {
+  it('checks for referred_by_athlete_id before 201 writes anything', () => {
+    const preflight = M201.indexOf("attname = 'referred_by_athlete_id'");
+    const firstWrite = M201.indexOf('ALTER TABLE public.pass_leads');
     expect(preflight).toBeGreaterThan(-1);
     expect(firstWrite).toBeGreaterThan(-1);
     expect(preflight).toBeLessThan(firstWrite);
-    expect(M8200.indexOf('BEGIN;')).toBeLessThan(preflight);
+    expect(M201.indexOf('BEGIN;')).toBeLessThan(preflight);
   });
 
   it('raises rather than notices', () => {
-    const block = M8200.slice(M8200.indexOf('-- ── 0. Pre-flight'), M8200.indexOf('-- ── 1. Columns'));
+    const block = M201.slice(M201.indexOf('-- ── 0. Pre-flight'), M201.indexOf('-- ── 1. Columns'));
     expect(block).toContain('RAISE EXCEPTION');
     expect(block).not.toContain('RAISE NOTICE');
   });

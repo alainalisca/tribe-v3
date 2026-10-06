@@ -1,6 +1,6 @@
 /**
  * T-AV26. Every write the gym dashboard makes, through the SIGNED-IN USER'S
- * client. Each one is a definer function from 8205 that checks the caller's
+ * client. Each one is a definer function from 206 that checks the caller's
  * partner role itself (owner or admin; outcomes also accept an active coach),
  * so these wrappers only translate the function's answer.
  *

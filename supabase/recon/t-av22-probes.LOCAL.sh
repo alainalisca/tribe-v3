@@ -205,7 +205,7 @@ echo
   echo "# T-AV22 probe matrix"
   echo
   echo "Generated $(date -u '+%Y-%m-%d %H:%M UTC') by \`supabase/recon/t-av22-probes.LOCAL.sh\` against the LOCAL stack"
-  echo "(8200 to 8207 applied, \`npm run av:seed\`), on branch \`$(git rev-parse --abbrev-ref HEAD)\` at \`$(git rev-parse --short HEAD)\` plus the uncommitted T-AV22 work."
+  echo "(201 to 208 applied, \`npm run av:seed\`), on branch \`$(git rev-parse --abbrev-ref HEAD)\` at \`$(git rev-parse --short HEAD)\` plus the uncommitted T-AV22 work."
   echo
   echo "Every cell is a real request with that role's JWT (anon: the anon key) through PostgREST."
   echo "Reads show a row count or the SQLSTATE. Writes are judged by reading the database afterwards:"

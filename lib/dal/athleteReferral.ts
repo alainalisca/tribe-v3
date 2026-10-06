@@ -1,7 +1,7 @@
 /**
  * T-AV23. The two reads the anonymous Pase path makes for athlete
  * attribution. Service role only: athlete_programs and program_athletes grant
- * nothing to anon (8201, 8202), and /api/pase and the pass page already hold a
+ * nothing to anon (202, 203), and /api/pase and the pass page already hold a
  * service-role client.
  *
  * Both THROW on a database error instead of returning null. A null here means

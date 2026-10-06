@@ -1,6 +1,6 @@
 #!/bin/bash
 # T-AV27b acceptance proof: log-mode notifications and the admin screen,
-# against the LOCAL stack (8200 to 8209, av:seed), through a dev:av on the
+# against the LOCAL stack (201 to 210, av:seed), through a dev:av on the
 # proof port.
 #
 #   bash supabase/recon/t-av27b-proof.LOCAL.sh            # every test
@@ -47,7 +47,7 @@ reset
 PA=$(q "select id from featured_partners where user_id='$(ID 7)'")
 PB=$(q "select id from featured_partners where user_id='$(ID 9)'")
 [ -n "$PA" ] && [ -n "$PB" ] || { echo "FATAL: seed partners missing"; exit 1; }
-[ "$(q "select count(*) from pg_proc where proname='av_athletes_claim_notification'")" = 1 ] || { echo "FATAL: 8209 is not applied"; exit 1; }
+[ "$(q "select count(*) from pg_proc where proname='av_athletes_claim_notification'")" = 1 ] || { echo "FATAL: 210 is not applied"; exit 1; }
 fake_tokens() { q "update users set fcm_token = 'proof-fake-token-' || id, fcm_platform = 'android' where id in ($PEOPLE)" > /dev/null; }
 # Every test that counts rows or pushes starts from the seed, so no test sees
 # another's notifications or spends another's daily push.

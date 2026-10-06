@@ -3,7 +3,7 @@
 #
 #   bash supabase/recon/t-av27b-mutations.LOCAL.sh
 #
-# 8209, each refusal it owns (live proof):
+# 210, each refusal it owns (live proof):
 #   N1  the push cap always says yes                 -> proof test 5 RED
 #   N2  the once-per-lead-and-event index dropped     -> proof test 2 RED
 #   N3  the credited check removed                    -> proof test 3 RED (a self-referral notifies)

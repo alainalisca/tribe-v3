@@ -1,6 +1,6 @@
 #!/bin/bash
 # T-AV22 acceptance proof. Real JWTs, through PostgREST, against the LOCAL
-# stack with 8200 to 8207 applied and `npm run av:seed` run.
+# stack with 201 to 208 applied and `npm run av:seed` run.
 #
 #   bash supabase/recon/t-av22-proof.LOCAL.sh             # every test
 #   ONLY="7 8" bash supabase/recon/t-av22-proof.LOCAL.sh   # a subset (the mutation driver uses this)
@@ -234,7 +234,7 @@ if want 11; then echo "== 11. door list, and the is_active guard"
   reset
 fi
 
-if want 12; then echo "== 12. program columns are server only, admin included (8207)"
+if want 12; then echo "== 12. program columns are server only, admin included (208)"
   code=$(ins "$(jwt admin)" "$(body TW-ADMA ",\"referred_by_athlete_id\":\"$ANA_PA\"")")
   [ "$(q "select count(*) from pass_leads where pass_code='TW-ADMA'")" = 0 ] && ok "admin INSERT with referred_by_athlete_id: refused (http $code, 0 -> 0)" || bad "admin forged attribution WROTE (http $code)"
   code=$(ins "$(jwt admin)" "$(body TW-ADMB ",\"attended_at\":\"2026-09-29T12:00:00Z\"")")

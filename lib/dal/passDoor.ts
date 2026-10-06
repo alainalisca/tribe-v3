@@ -2,7 +2,7 @@
  * DAL: the pass door (T-AV21, T-AV25). Read and confirm a guest's pass at the
  * gym, record what happened after class, and list the passes expected.
  *
- * Every call goes through a SECURITY DEFINER RPC (8200, 8205, 8206), because a
+ * Every call goes through a SECURITY DEFINER RPC (201, 206, 207), because a
  * coach cannot SELECT pass_leads (recon F6) and no client role may UPDATE it.
  * Call them with the SIGNED-IN user's client: the RPC decides from auth.uid()
  * whether this person may work this partner's door.
@@ -34,7 +34,7 @@ export interface DoorPass {
   welcomeOfferEs: string | null;
 }
 
-/** One row of the door list (av_door_list, 8206): first names only. */
+/** One row of the door list (av_door_list, 207): first names only. */
 export interface DoorListEntry {
   guestFirstName: string;
   passCode: string;
@@ -124,7 +124,7 @@ export async function confirmPassAttendance(
 }
 
 /**
- * Record what happened after the class (av_athletes_set_outcome, 8205). The
+ * Record what happened after the class (av_athletes_set_outcome, 206). The
  * database refuses `joined` without a confirmed show-up (`not_attended`) and
  * a change to a retained or settled join (`locked`); those come back as the
  * error string for the caller to word.
@@ -156,7 +156,7 @@ export async function setPassOutcome(
 
 /**
  * The passes claimed at this partner in the last 14 days (av_door_list,
- * 8206), for the owner, an active coach or an admin. `data` is null for
+ * 207), for the owner, an active coach or an admin. `data` is null for
  * everyone else and for a partner that does not exist: one answer, as with
  * the pass itself.
  */

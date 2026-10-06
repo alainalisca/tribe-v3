@@ -1,5 +1,5 @@
 /**
- * T-AV27b. The two 8209 functions that decide who is told about a guest.
+ * T-AV27b. The two 210 functions that decide who is told about a guest.
  *
  *   claimDoorNotifications   av_athletes_claim_notification, with the caller's
  *                            session (the coach or owner who just confirmed or

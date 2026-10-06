@@ -33,7 +33,15 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { checkAvMigrations, headerBlock, tablesTouched, ownerLines } from './avMigrationCheck.ts';
+import { readdirSync, readFileSync } from 'node:fs';
+import {
+  checkAvMigrations,
+  headerBlock,
+  tablesTouched,
+  ownerLines,
+  AV_RENUMBERED,
+  migrationNumber,
+} from './avMigrationCheck.ts';
 
 let dir: string;
 let verifier: string;
@@ -46,7 +54,9 @@ union all select '8002_drop_column'
 union all select '8003_prose_only'
 union all select '8004_unowned_table'
 union all select '8005_rename'
-union all select '193_wrong_block';
+union all select '193_wrong_block'
+union all select '201_renumbered'
+union all select '211_undecided';
 `;
 
 const GOOD = `-- 8000_pass_catalog.sql
@@ -164,6 +174,18 @@ create table if not exists public.av_sneaky (id uuid primary key);
     expect(problemsFor('193_wrong_block.sql')).toContainEqual(expect.stringContaining('numbered 193'));
   });
 
+  it('T-AV31: accepts a T-AV migration on a renumbered number (201), and checks it like the block', () => {
+    write('201_renumbered.sql', GOOD.replace('-- 8000_pass_catalog.sql', '-- 201_renumbered.sql'));
+    const result = checkAvMigrations(dir, verifier);
+    expect(result.checked).toContain('201_renumbered.sql');
+    expect(problemsFor('201_renumbered.sql')).toEqual([]);
+  });
+
+  it('T-AV31: still rejects a T-AV migration on a number nobody decided (211)', () => {
+    write('211_undecided.sql', GOOD.replace('-- 8000_pass_catalog.sql', '-- 211_undecided.sql'));
+    expect(problemsFor('211_undecided.sql')).toContainEqual(expect.stringContaining('numbered 211'));
+  });
+
   it('rejects an 8000+ migration with no probe in the verifier', () => {
     write(
       '8009_no_probe.sql',
@@ -219,5 +241,14 @@ describe('the real migrations directory', () => {
       join(import.meta.dirname, 'verify-migration-state.sql')
     );
     expect(problems.map((p) => `${p.file} [${p.rule}] ${p.detail}`)).toEqual([]);
+  });
+
+  it('T-AV31: every AV_RENUMBERED number is a T-AV migration on disk (remove the entry if not)', () => {
+    const dirPath = join(import.meta.dirname, 'migrations');
+    const tav = readdirSync(dirPath)
+      .filter((f) => f.endsWith('.sql'))
+      .filter((f) => /^\s*--\s*PROGRAM:\s*T-AV\s*$/m.test(headerBlock(readFileSync(join(dirPath, f), 'utf8'))))
+      .map((f) => migrationNumber(f));
+    expect(AV_RENUMBERED.filter((n) => !tav.includes(n))).toEqual([]);
   });
 });

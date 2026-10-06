@@ -1,6 +1,9 @@
 -- PROGRAM: T-AV
 -- SUB-PROGRAM: T-AV20 Tribe Athletes
 -- TICKET: T-AV22
+-- RENUMBERED: was 8204_t_av22_athletes_ledger.sql until 2026-10-06 (T-AV31). 8200 to 8209 became 201
+--   to 210 at the merge gate, skipping 194, 195 and 200, which unmerged
+--   branches already claim (Al's decision, docs/ATHLETE_VALUE_MERGE_GATE.md).
 -- CREATES: av_athletes_ledger(uuid), av_athletes_ledger_totals(uuid)
 -- RISK: MEDIUM
 --
@@ -8,7 +11,7 @@
 -- T-AV22 (4 of 5): the one ledger
 -- ════════════════════════════════════════════════════════════════════════════
 --
--- 8204 was free on origin/main (highest 198), every branch, every worktree and
+-- 205 was free on origin/main (highest 198), every branch, every worktree and
 -- all history on 2026-09-29.
 --
 -- EVERY SUMMARY READS THIS, so an athlete and their gym cannot see different
@@ -44,7 +47,7 @@
 -- two emails and two phones across three claims through one athlete.
 --
 -- SECURITY INVOKER AND NOT EXECUTABLE BY ANY CLIENT ROLE. Called only from the
--- definer functions in 8205 and 8206, which run as the owner. Invoker means a grant
+-- definer functions in 206 and 207, which run as the owner. Invoker means a grant
 -- added by mistake later cannot turn this into a read of every lead.
 
 BEGIN;
@@ -187,13 +190,19 @@ BEGIN
      OR has_function_privilege('authenticated', 'public.av_athletes_ledger(uuid)', 'EXECUTE')
      OR has_function_privilege('anon', 'public.av_athletes_ledger_totals(uuid)', 'EXECUTE')
      OR has_function_privilege('authenticated', 'public.av_athletes_ledger_totals(uuid)', 'EXECUTE') THEN
-    RAISE EXCEPTION '8204 ABORTED: a client role can execute the ledger.';
+    RAISE EXCEPTION '205 ABORTED: a client role can execute the ledger.';
   END IF;
   IF (SELECT prosecdef FROM pg_proc WHERE oid = 'public.av_athletes_ledger(uuid)'::regprocedure)
      OR (SELECT prosecdef FROM pg_proc WHERE oid = 'public.av_athletes_ledger_totals(uuid)'::regprocedure) THEN
-    RAISE EXCEPTION '8204 ABORTED: the ledger must be SECURITY INVOKER.';
+    RAISE EXCEPTION '205 ABORTED: the ledger must be SECURITY INVOKER.';
   END IF;
-  RAISE NOTICE '8204: one ledger installed, callable only from definer functions.';
+  RAISE NOTICE '205: one ledger installed, callable only from definer functions.';
 END $$;
+
+-- ── Record this migration as applied (T-AV31: renumbered into main's sequence,
+--    so it records itself like every migration since 184) ─────────────────
+INSERT INTO public.migrations_applied (migration, note)
+VALUES ('205_t_av22_athletes_ledger', 'T-AV22: the athletes ledger, callable only from definer functions (was 8204)')
+ON CONFLICT (migration) DO NOTHING;
 
 COMMIT;

@@ -1,15 +1,18 @@
 -- PROGRAM: T-AV
 -- SUB-PROGRAM: T-AV20 Tribe Athletes
 -- TICKET: T-AV22
+-- RENUMBERED: was 8202_t_av22_program_athletes.sql until 2026-10-06 (T-AV31). 8200 to 8209 became 201
+--   to 210 at the merge gate, skipping 194, 195 and 200, which unmerged
+--   branches already claim (Al's decision, docs/ATHLETE_VALUE_MERGE_GATE.md).
 -- TABLE: public.program_athletes OWNER: t-av-new
--- CREATES: public.program_athletes, RLS, column grants; policy "Program athletes read their program" on public.athlete_programs (8201's table, t-av-new)
+-- CREATES: public.program_athletes, RLS, column grants; policy "Program athletes read their program" on public.athlete_programs (202's table, t-av-new)
 -- RISK: MEDIUM
 --
 -- ════════════════════════════════════════════════════════════════════════════
 -- T-AV22 (2 of 5): the athletes of a program
 -- ════════════════════════════════════════════════════════════════════════════
 --
--- 8202 was free on origin/main (highest 198), every branch, every worktree and
+-- 203 was free on origin/main (highest 198), every branch, every worktree and
 -- all history on 2026-09-29.
 --
 -- CONTACT COLUMNS
@@ -27,7 +30,7 @@
 --
 -- NO CLIENT WRITES
 --   INSERT, UPDATE and DELETE are granted to no client role. Every write goes
---   through the definer functions in 8205 (writes), which enforce the pilot cap and the
+--   through the definer functions in 206 (writes), which enforce the pilot cap and the
 --   level rules.
 --
 -- THE ATHLETES' READ OF athlete_programs LIVES HERE because it references
@@ -94,29 +97,35 @@ CREATE POLICY "Program athletes read their program" ON public.athlete_programs
 DO $$
 BEGIN
   IF NOT (SELECT relrowsecurity FROM pg_class WHERE oid = 'public.program_athletes'::regclass) THEN
-    RAISE EXCEPTION '8202 ABORTED: RLS is not enabled on program_athletes.';
+    RAISE EXCEPTION '203 ABORTED: RLS is not enabled on program_athletes.';
   END IF;
   IF has_any_column_privilege('anon', 'public.program_athletes', 'SELECT')
      OR has_any_column_privilege('anon', 'public.program_athletes', 'INSERT')
      OR has_any_column_privilege('anon', 'public.program_athletes', 'UPDATE')
      OR has_table_privilege('anon', 'public.program_athletes', 'DELETE') THEN
-    RAISE EXCEPTION '8202 ABORTED: anon holds a privilege on program_athletes.';
+    RAISE EXCEPTION '203 ABORTED: anon holds a privilege on program_athletes.';
   END IF;
   IF has_any_column_privilege('authenticated', 'public.program_athletes', 'INSERT')
      OR has_any_column_privilege('authenticated', 'public.program_athletes', 'UPDATE')
      OR has_table_privilege('authenticated', 'public.program_athletes', 'DELETE') THEN
-    RAISE EXCEPTION '8202 ABORTED: authenticated can write program_athletes directly.';
+    RAISE EXCEPTION '203 ABORTED: authenticated can write program_athletes directly.';
   END IF;
   IF has_column_privilege('authenticated', 'public.program_athletes', 'email_lower', 'SELECT')
      OR has_column_privilege('authenticated', 'public.program_athletes', 'whatsapp_e164', 'SELECT') THEN
-    RAISE EXCEPTION '8202 ABORTED: authenticated can SELECT an athlete contact column.';
+    RAISE EXCEPTION '203 ABORTED: authenticated can SELECT an athlete contact column.';
   END IF;
   IF (SELECT count(*) FROM pg_policies
        WHERE schemaname = 'public' AND tablename = 'athlete_programs'
          AND cmd IN ('SELECT', 'ALL') AND permissive = 'PERMISSIVE') <> 2 THEN
-    RAISE EXCEPTION '8202 ABORTED: athlete_programs must have exactly two permissive SELECT policies.';
+    RAISE EXCEPTION '203 ABORTED: athlete_programs must have exactly two permissive SELECT policies.';
   END IF;
-  RAISE NOTICE '8202: program_athletes created, no client writes, contact columns unselectable.';
+  RAISE NOTICE '203: program_athletes created, no client writes, contact columns unselectable.';
 END $$;
+
+-- ── Record this migration as applied (T-AV31: renumbered into main's sequence,
+--    so it records itself like every migration since 184) ─────────────────
+INSERT INTO public.migrations_applied (migration, note)
+VALUES ('203_t_av22_program_athletes', 'T-AV22: program_athletes, no client writes, contact columns unselectable (was 8202)')
+ON CONFLICT (migration) DO NOTHING;
 
 COMMIT;

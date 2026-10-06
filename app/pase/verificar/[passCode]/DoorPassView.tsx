@@ -61,7 +61,7 @@ export default function DoorPassView({ passCode, pass, method = 'scan', readFail
     }
     setAttendedAt(result.data.attendedAt);
     setJustConfirmed(!result.data.alreadyConfirmed);
-    // T-AV27b: tell the referring athlete. 8209 decides whether anyone is told.
+    // T-AV27b: tell the referring athlete. 210 decides whether anyone is told.
     notifyAthlete(passCode, 'arrived');
   }
 

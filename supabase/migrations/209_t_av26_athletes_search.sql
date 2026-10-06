@@ -1,6 +1,9 @@
 -- PROGRAM: T-AV
 -- SUB-PROGRAM: T-AV20 Tribe Athletes
 -- TICKET: T-AV26
+-- RENUMBERED: was 8208_t_av26_athletes_search.sql until 2026-10-06 (T-AV31). 8200 to 8209 became 201
+--   to 210 at the merge gate, skipping 194, 195 and 200, which unmerged
+--   branches already claim (Al's decision, docs/ATHLETE_VALUE_MERGE_GATE.md).
 -- CREATES: av_athletes_search_candidates(uuid, text)
 -- RISK: MEDIUM
 --
@@ -8,7 +11,7 @@
 -- T-AV26: "Add athlete" search for the gym dashboard
 -- ════════════════════════════════════════════════════════════════════════════
 --
--- 8208 was free on origin/main (highest 198, d236656d), every branch, every
+-- 209 was free on origin/main (highest 198, d236656d), every branch, every
 -- worktree and all history on 2026-10-01.
 --
 -- WHY A DEFINER FUNCTION. users.email is not selectable by authenticated
@@ -100,17 +103,23 @@ DECLARE
   v_fn constant text := 'public.av_athletes_search_candidates(uuid,text)';
 BEGIN
   IF to_regprocedure(v_fn) IS NULL THEN
-    RAISE EXCEPTION '8208 ABORTED: % is missing.', v_fn;
+    RAISE EXCEPTION '209 ABORTED: % is missing.', v_fn;
   END IF;
   IF NOT (SELECT prosecdef FROM pg_proc WHERE oid = to_regprocedure(v_fn))
      OR (SELECT proconfig FROM pg_proc WHERE oid = to_regprocedure(v_fn)) IS NULL THEN
-    RAISE EXCEPTION '8208 ABORTED: % must be SECURITY DEFINER with a pinned search_path.', v_fn;
+    RAISE EXCEPTION '209 ABORTED: % must be SECURITY DEFINER with a pinned search_path.', v_fn;
   END IF;
   IF has_function_privilege('anon', v_fn, 'EXECUTE')
      OR NOT has_function_privilege('authenticated', v_fn, 'EXECUTE') THEN
-    RAISE EXCEPTION '8208 ABORTED: % has the wrong grants.', v_fn;
+    RAISE EXCEPTION '209 ABORTED: % has the wrong grants.', v_fn;
   END IF;
-  RAISE NOTICE '8208: athlete search installed.';
+  RAISE NOTICE '209: athlete search installed.';
 END $$;
+
+-- ── Record this migration as applied (T-AV31: renumbered into main's sequence,
+--    so it records itself like every migration since 184) ─────────────────
+INSERT INTO public.migrations_applied (migration, note)
+VALUES ('209_t_av26_athletes_search', 'T-AV26: Add-athlete search (was 8208)')
+ON CONFLICT (migration) DO NOTHING;
 
 COMMIT;

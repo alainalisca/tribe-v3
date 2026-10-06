@@ -1,5 +1,5 @@
 #!/bin/bash
-# T-AV27a acceptance proof, against the LOCAL stack (8200 to 8208, av:seed),
+# T-AV27a acceptance proof, against the LOCAL stack (201 to 209, av:seed),
 # through a dev:av on the proof port.
 #
 #   bash supabase/recon/t-av27a-proof.LOCAL.sh            # every test

@@ -1,6 +1,9 @@
 -- PROGRAM: T-AV
 -- SUB-PROGRAM: T-AV20 Tribe Athletes
 -- TICKET: T-AV22
+-- RENUMBERED: was 8201_t_av22_athlete_programs.sql until 2026-10-06 (T-AV31). 8200 to 8209 became 201
+--   to 210 at the merge gate, skipping 194, 195 and 200, which unmerged
+--   branches already claim (Al's decision, docs/ATHLETE_VALUE_MERGE_GATE.md).
 -- TABLE: public.athlete_programs OWNER: t-av-new
 -- CREATES: public.athlete_programs, RLS, column grants, updated_at trigger, is_active admin guard, av_my_partner_role(uuid)
 -- RISK: MEDIUM
@@ -9,13 +12,13 @@
 -- T-AV22 (1 of 5): one program row per partner gym
 -- ════════════════════════════════════════════════════════════════════════════
 --
--- Branch-only, reserved T-AV block, renumbered at the merge gate. 8201 was
+-- Branch-only, reserved T-AV block, renumbered at the merge gate. 202 was
 -- free on origin/main (highest 198, d236656d), every branch, every worktree
 -- and all history on 2026-09-29.
 --
 -- WHO SEES WHAT
 --   SELECT: owner, active coach, admin (this file); active athletes of the
---   program (8202, which is where program_athletes exists).
+--   program (203, which is where program_athletes exists).
 --   UPDATE: owner and admin, and only the columns granted below.
 --   INSERT, DELETE: admin only.
 --
@@ -24,7 +27,7 @@
 --   are all `authenticated`. A coach allowed to SELECT conversion_bonus_cop on
 --   this table would read the bonus directly and make "the coach payload has
 --   no bonus fields" (acceptance 4) decorative. Owners, admins and athletes
---   get those fields through the definer functions in 8206.
+--   get those fields through the definer functions in 207.
 --
 -- WHY is_active NEEDS A TRIGGER AS WELL AS A GRANT (decision 3)
 --   The admin is also `authenticated`, so no grant can let the admin write
@@ -40,7 +43,8 @@
 --   is_active IS TRUE) or NULL. It can tell a signed-in user nothing about
 --   anyone else.
 --
--- NOT A migrations_applied ROW: the 8000 block is renumbered at the merge gate.
+-- RECORDS ITSELF IN migrations_applied (T-AV31), just before COMMIT; it was not
+-- a row while it sat in the 8000 block, and the record belonged to the renumbered file.
 
 BEGIN;
 
@@ -169,35 +173,41 @@ CREATE POLICY "Admins delete programs" ON public.athlete_programs
 DO $$
 BEGIN
   IF NOT (SELECT relrowsecurity FROM pg_class WHERE oid = 'public.athlete_programs'::regclass) THEN
-    RAISE EXCEPTION '8201 ABORTED: RLS is not enabled on athlete_programs.';
+    RAISE EXCEPTION '202 ABORTED: RLS is not enabled on athlete_programs.';
   END IF;
   IF has_any_column_privilege('anon', 'public.athlete_programs', 'SELECT')
      OR has_any_column_privilege('anon', 'public.athlete_programs', 'INSERT')
      OR has_any_column_privilege('anon', 'public.athlete_programs', 'UPDATE')
      OR has_table_privilege('anon', 'public.athlete_programs', 'DELETE') THEN
-    RAISE EXCEPTION '8201 ABORTED: anon holds a privilege on athlete_programs.';
+    RAISE EXCEPTION '202 ABORTED: anon holds a privilege on athlete_programs.';
   END IF;
   IF has_column_privilege('authenticated', 'public.athlete_programs', 'conversion_bonus_cop', 'SELECT')
      OR has_column_privilege('authenticated', 'public.athlete_programs', 'conversion_bonus_note_en', 'SELECT')
      OR has_column_privilege('authenticated', 'public.athlete_programs', 'conversion_bonus_note_es', 'SELECT') THEN
-    RAISE EXCEPTION '8201 ABORTED: authenticated can SELECT a bonus column directly.';
+    RAISE EXCEPTION '202 ABORTED: authenticated can SELECT a bonus column directly.';
   END IF;
   IF has_column_privilege('authenticated', 'public.athlete_programs', 'partner_id', 'UPDATE') THEN
-    RAISE EXCEPTION '8201 ABORTED: authenticated can move a program to another partner.';
+    RAISE EXCEPTION '202 ABORTED: authenticated can move a program to another partner.';
   END IF;
   IF has_function_privilege('anon', 'public.av_my_partner_role(uuid)', 'EXECUTE')
      OR NOT has_function_privilege('authenticated', 'public.av_my_partner_role(uuid)', 'EXECUTE') THEN
-    RAISE EXCEPTION '8201 ABORTED: av_my_partner_role grants are wrong.';
+    RAISE EXCEPTION '202 ABORTED: av_my_partner_role grants are wrong.';
   END IF;
-  -- Named rather than counted: 8202 adds a fifth (the athletes' read), and a
-  -- count would make this file abort on an ordinary re-run after 8202.
+  -- Named rather than counted: 203 adds a fifth (the athletes' read), and a
+  -- count would make this file abort on an ordinary re-run after 203.
   IF (SELECT count(*) FROM pg_policies
        WHERE schemaname = 'public' AND tablename = 'athlete_programs'
          AND policyname IN ('Program staff read the program', 'Owner or admin edits the program',
                             'Admins create programs', 'Admins delete programs')) <> 4 THEN
-    RAISE EXCEPTION '8201 ABORTED: a program policy is missing.';
+    RAISE EXCEPTION '202 ABORTED: a program policy is missing.';
   END IF;
-  RAISE NOTICE '8201: athlete_programs created, grants from zero, is_active guarded.';
+  RAISE NOTICE '202: athlete_programs created, grants from zero, is_active guarded.';
 END $$;
+
+-- ── Record this migration as applied (T-AV31: renumbered into main's sequence,
+--    so it records itself like every migration since 184) ─────────────────
+INSERT INTO public.migrations_applied (migration, note)
+VALUES ('202_t_av22_athlete_programs', 'T-AV22: athlete_programs, grants from zero, is_active admin-guarded (was 8201)')
+ON CONFLICT (migration) DO NOTHING;
 
 COMMIT;

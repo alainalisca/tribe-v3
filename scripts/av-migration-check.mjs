@@ -4,7 +4,8 @@
  *
  *   node scripts/av-migration-check.mjs [migrationsDir] [verifierSql]
  *
- * Exit 0 when every 8000-8999 migration passes, 1 otherwise. Run by
+ * Exit 0 when every T-AV migration (8000-8999 and the renumbered 201 to 210)
+ * passes, 1 otherwise. Run by
  * `npm run av:guard`, which is run by the pre-push hook.
  *
  * ═══════════════════════════════════════════════════════════════════════════

@@ -1,5 +1,5 @@
 #!/bin/bash
-# T-AV27c acceptance proof, against the LOCAL stack (8200 to 8209, av:seed).
+# T-AV27c acceptance proof, against the LOCAL stack (201 to 210, av:seed).
 #
 #   bash supabase/recon/t-av27c-proof.LOCAL.sh            # every test
 #   ONLY="1" bash supabase/recon/t-av27c-proof.LOCAL.sh   # a subset (the mutation driver uses this)
@@ -39,7 +39,7 @@ cleanup() { stop_server; reset; rm -rf "$TMP"; }
 if port_busy; then echo "REFUSED: something is already listening on $AV_PROOF_PORT; stop it first"; exit 2; fi
 trap cleanup EXIT
 reset
-[ "$(q "select count(*) from pg_proc where proname='av_push_allowed' and pronargs=2")" = 1 ] || { echo "FATAL: 8209 is not the T-AV27c version"; exit 1; }
+[ "$(q "select count(*) from pg_proc where proname='av_push_allowed' and pronargs=2")" = 1 ] || { echo "FATAL: 210 is not the T-AV27c version"; exit 1; }
 export CRON_SECRET="t-av27c-proof-$$"
 
 c_elena=$(node scripts/avSessionCookie.mjs elena@av.local) || { echo "FATAL: no session for elena"; exit 1; }

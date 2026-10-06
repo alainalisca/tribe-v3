@@ -2394,7 +2394,7 @@ union all
 -- The show-up columns exist, the claim policy refuses a pre-attended row (F2),
 -- no other permissive INSERT policy reopens it, and only authenticated can
 -- reach the door. Columns are read from pg_attribute keyed on regclass.
-select '8200_t_av21_pass_leads_showup',
+select '201_t_av21_pass_leads_showup',
        case
          when (select count(*) from pg_attribute
                 where attrelid = 'public.pass_leads'::regclass and not attisdropped
@@ -2430,7 +2430,7 @@ union all
 -- T-AV22 (reserved block; renumbered at the merge gate). athlete_programs:
 -- RLS on, anon holds nothing, the bonus columns are not selectable by any
 -- client role, and is_active is guarded by the admin trigger.
-select '8201_t_av22_athlete_programs',
+select '202_t_av22_athlete_programs',
        case
          when to_regclass('public.athlete_programs') is null
            then 'MISSING -- athlete_programs is absent'
@@ -2458,7 +2458,7 @@ union all
 
 -- T-AV22. program_athletes: no client role writes it, and the contact columns
 -- are not selectable; athlete_programs has exactly two permissive SELECTs.
-select '8202_t_av22_program_athletes',
+select '203_t_av22_program_athletes',
        case
          when to_regclass('public.program_athletes') is null
            then 'MISSING -- program_athletes is absent'
@@ -2483,7 +2483,7 @@ union all
 
 -- T-AV22. The eight attribution and outcome columns exist and the claim
 -- policy refuses every one of them preset (F2), alongside T-AV21's three.
-select '8203_t_av22_pass_leads_attribution',
+select '204_t_av22_pass_leads_attribution',
        case
          when (select count(*) from pg_attribute
                 where attrelid = 'public.pass_leads'::regclass and not attisdropped
@@ -2510,7 +2510,7 @@ select '8203_t_av22_pass_leads_attribution',
 union all
 
 -- T-AV22. The one ledger exists and no client role can call it.
-select '8204_t_av22_athletes_ledger',
+select '205_t_av22_athletes_ledger',
        case
          when to_regprocedure('public.av_athletes_ledger(uuid)') is null
            or to_regprocedure('public.av_athletes_ledger_totals(uuid)') is null
@@ -2527,7 +2527,7 @@ union all
 
 -- T-AV22. Every athlete WRITE function exists, is a definer with a pinned
 -- search_path, and is callable by authenticated and not by anon.
-select '8205_t_av22_athletes_writes',
+select '206_t_av22_athletes_writes',
        case
          when exists (select 1 from unnest(array[
                         'public.av_athletes_add(uuid,uuid,text)', 'public.av_athletes_set_status(uuid,text)',
@@ -2552,7 +2552,7 @@ union all
 -- T-AV22. Every athlete READ function exists with the same properties, and
 -- av_door_pass is the widened version (it names athlete_first_name) while
 -- still reading the guest's first name only.
-select '8206_t_av22_athletes_reads',
+select '207_t_av22_athletes_reads',
        case
          when exists (select 1 from unnest(array[
                         'public.av_athletes_my_summary()', 'public.av_athletes_partner_summary(uuid)',
@@ -2569,7 +2569,7 @@ select '8206_t_av22_athletes_reads',
            then 'MISSING -- an athlete read function lost SECURITY DEFINER, its search_path, or its grants'
          when position('athlete_first_name' in pg_get_functiondef(to_regprocedure('public.av_door_pass(text)'))) = 0
            then 'MISSING -- av_door_pass is not the T-AV22 version'
-         -- T-AV26 widened partner_summary in place (8206 header, 2026-10-01).
+         -- T-AV26 widened partner_summary in place (207 header, 2026-10-01).
          when position('retain_from' in pg_get_functiondef(to_regprocedure('public.av_athletes_partner_summary(uuid)'))) = 0
            or position('to_close' in pg_get_functiondef(to_regprocedure('public.av_athletes_partner_summary(uuid)'))) = 0
            then 'MISSING -- av_athletes_partner_summary is not the T-AV26 version (no to_close or retain_from)'
@@ -2580,7 +2580,7 @@ union all
 
 -- T-AV22. The restrictive INSERT policy exists, binds every role (admin
 -- included, through its permissive policy), and names all eleven columns.
-select '8207_t_av22_program_columns_server_only',
+select '208_t_av22_program_columns_server_only',
        case
          when not exists (select 1 from pg_policies
                            where schemaname = 'public' and tablename = 'pass_leads'
@@ -2604,7 +2604,7 @@ union all
 -- T-AV26. The Add-athlete search exists, is a definer with a pinned
 -- search_path, is callable by authenticated and not by anon, and still reads
 -- users_discoverable (deleted, banned and test accounts never appear).
-select '8208_t_av26_athletes_search',
+select '209_t_av26_athletes_search',
        case
          when to_regprocedure('public.av_athletes_search_candidates(uuid,text)') is null
            then 'MISSING -- av_athletes_search_candidates is absent'
@@ -2624,7 +2624,7 @@ union all
 -- T-AV27b. The notification log is server-only, and the two claim functions
 -- carry the grants their callers need and no more: the door's to
 -- authenticated, /api/pase's to the service role only.
-select '8209_t_av27b_notifications',
+select '210_t_av27b_notifications',
        case
          when to_regclass('public.av_notification_log') is null
            or to_regprocedure('public.av_athletes_claim_notification(text,text)') is null

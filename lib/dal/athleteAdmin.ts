@@ -5,9 +5,9 @@
  * an app admin, so a second, independent layer refuses a non-admin even if a
  * caller skips the route's own check:
  *
- *   createAthleteProgram  INSERT on athlete_programs: "Admins create programs" (8201)
+ *   createAthleteProgram  INSERT on athlete_programs: "Admins create programs" (202)
  *   setProgramActive      UPDATE of is_active: the av_athlete_programs_guard
- *                         trigger raises 42501 for anyone but an admin (8201)
+ *                         trigger raises 42501 for anyone but an admin (202)
  *
  * Reads: an admin sees every program ("Program staff read the program", via
  * av_my_partner_role = 'admin') and every partner ("admin reads all").

@@ -1,6 +1,6 @@
 #!/bin/bash
 # T-AV21 acceptance proof. Real JWTs, through PostgREST, against the LOCAL
-# stack (production's schema, T-AV19 grant parity) with migration 8200 applied.
+# stack (production's schema, T-AV19 grant parity) with migration 201 applied.
 #
 #   bash supabase/recon/t-av21-proof.LOCAL.sh            # every test
 #   ONLY="3 6" bash supabase/recon/t-av21-proof.LOCAL.sh  # a subset (the mutation driver uses this)
@@ -171,7 +171,7 @@ if want 7; then echo "== 7. second confirm"
   [ "$(attended $C1)" = "$before" ] && [[ "$r" == *'"already_confirmed": true'* ]] && ok "attended_at, method and marker unchanged; reported already_confirmed" || bad "second confirm changed the row: $before -> $(attended $C1) ($r)"
 fi
 
-# T-AV22 (8206) widened av_door_pass by athlete_first_name, outcome and the
+# T-AV22 (207) widened av_door_pass by athlete_first_name, outcome and the
 # welcome offer. The exact key set below is the new contract; the point of
 # the test is unchanged: the guest's first name only, never contact details.
 if want 10; then echo "== added: av_door_pass returns the first name only, for every authorized caller"

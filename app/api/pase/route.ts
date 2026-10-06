@@ -288,7 +288,7 @@ export async function POST(request: NextRequest) {
     }
 
     // T-AV27b: "{guest} claimed a pass with your link", in-app only, to the
-    // athlete. Only for an attributed lead (flag on), and 8209 decides the
+    // athlete. Only for an attributed lead (flag on), and 210 decides the
     // rest (credited, once). Best effort: the lead is saved whatever happens.
     if (referredByAthleteId) {
       try {

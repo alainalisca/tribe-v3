@@ -6,8 +6,8 @@
 #   M1  the rehearsal bug put back: av_door_pass resolved with a literal
 #       '...'::regprocedure                  -> proof test 1 RED (the verifier raises)
 #                                               and verifyTavProbes.test.ts "literal reg* cast" RED
-#   M2  the existence guard removed from 8206 ("an athlete read function is
-#       absent")                             -> proof test 1 RED (8206 falls through
+#   M2  the existence guard removed from 207 ("an athlete read function is
+#       absent")                             -> proof test 1 RED (207 falls through
 #                                               to 'applied' on a database without it)
 #   U1  a T-AV object passed to has_function_privilege by name
 #                                            -> verifyTavProbes.test.ts "by name" RED
@@ -63,7 +63,7 @@ echo "== M1. the rehearsal bug put back: a literal ::regprocedure on av_door_pas
 replace_once "$VERIFIER" "pg_get_functiondef(to_regprocedure('public.av_door_pass(text)'))" "pg_get_functiondef('public.av_door_pass(text)'::regprocedure)" || exit 1
 landed M1; verdict 1 RED; unit RED "literal reg* cast"; restore M1
 
-echo "== M2. the existence guard removed from 8206 (test 1 must go RED)"
+echo "== M2. the existence guard removed from 207 (test 1 must go RED)"
 replace_once "$VERIFIER" "         when exists (select 1 from unnest(array[
                         'public.av_athletes_my_summary()', 'public.av_athletes_partner_summary(uuid)',
                         'public.av_door_list(uuid)', 'public.av_door_pass(text)']) f(sig)

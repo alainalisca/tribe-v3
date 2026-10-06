@@ -1,6 +1,6 @@
 /**
  * T-AV27b: POST /api/atletas/notify. The route chooses nothing but the pass and
- * the event; who is told is 8209's decision (proof: t-av27b-proof.LOCAL.sh).
+ * the event; who is told is 210's decision (proof: t-av27b-proof.LOCAL.sh).
  *
  * Mutation proofs (run by the T-AV27b unit arms):
  *   - claim with a service-role client instead of the caller's -> "claims with the caller's own session"

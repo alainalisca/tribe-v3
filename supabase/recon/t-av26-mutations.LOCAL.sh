@@ -4,7 +4,7 @@
 #   bash supabase/recon/t-av26-mutations.LOCAL.sh
 #
 # THE SETTINGS ROUTE HAS TWO LAYERS, so its owner check takes three arms
-# (as 8207 did in T-AV22): remove each alone and the coach is still refused,
+# (as 208 did in T-AV22): remove each alone and the coach is still refused,
 # remove both and the coach's save lands.
 #   S1  the route's role check removed (source)           -> proof test 5 stays GREEN (RLS refuses)
 #   S2  the RLS UPDATE policy opened to any staff (db)    -> proof test 5 stays GREEN (the route refuses)

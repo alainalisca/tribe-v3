@@ -1,6 +1,9 @@
 -- PROGRAM: T-AV
 -- SUB-PROGRAM: T-AV20 Tribe Athletes
 -- TICKET: T-AV27
+-- RENUMBERED: was 8209_t_av27b_notifications.sql until 2026-10-06 (T-AV31). 8200 to 8209 became 201
+--   to 210 at the merge gate, skipping 194, 195 and 200, which unmerged
+--   branches already claim (Al's decision, docs/ATHLETE_VALUE_MERGE_GATE.md).
 -- TABLE: public.av_notification_log OWNER: t-av-new
 -- CREATES: public.av_notification_log, av_athletes_claim_notification(text, text), av_athletes_claim_lead_notification(uuid)
 -- RISK: MEDIUM
@@ -9,7 +12,7 @@
 -- T-AV27b (the second part of T-AV27): who is told what, once, within the push cap
 -- ════════════════════════════════════════════════════════════════════════════
 --
--- 8209 was free on origin/main (highest 198), every branch, every worktree and
+-- 210 was free on origin/main (highest 198), every branch, every worktree and
 -- all history on 2026-10-01.
 --
 -- THE FIVE EVENTS (Al, 2026-10-01). The first four go through here; the fifth
@@ -227,21 +230,27 @@ GRANT EXECUTE ON FUNCTION public.av_athletes_claim_lead_notification(uuid) TO se
 DO $$
 BEGIN
   IF NOT (SELECT relrowsecurity FROM pg_class WHERE oid = 'public.av_notification_log'::regclass) THEN
-    RAISE EXCEPTION '8209 ABORTED: RLS is not enabled on av_notification_log.';
+    RAISE EXCEPTION '210 ABORTED: RLS is not enabled on av_notification_log.';
   END IF;
   IF has_any_column_privilege('anon', 'public.av_notification_log', 'SELECT')
      OR has_any_column_privilege('authenticated', 'public.av_notification_log', 'SELECT')
      OR has_any_column_privilege('authenticated', 'public.av_notification_log', 'INSERT')
      OR has_any_column_privilege('authenticated', 'public.av_notification_log', 'UPDATE') THEN
-    RAISE EXCEPTION '8209 ABORTED: a client role holds a privilege on av_notification_log.';
+    RAISE EXCEPTION '210 ABORTED: a client role holds a privilege on av_notification_log.';
   END IF;
   IF has_function_privilege('anon', 'public.av_athletes_claim_notification(text,text)', 'EXECUTE')
      OR NOT has_function_privilege('authenticated', 'public.av_athletes_claim_notification(text,text)', 'EXECUTE')
      OR has_function_privilege('authenticated', 'public.av_athletes_claim_lead_notification(uuid)', 'EXECUTE')
      OR has_function_privilege('authenticated', 'public.av_push_allowed(uuid,text)', 'EXECUTE') THEN
-    RAISE EXCEPTION '8209 ABORTED: a notification function has the wrong grants.';
+    RAISE EXCEPTION '210 ABORTED: a notification function has the wrong grants.';
   END IF;
-  RAISE NOTICE '8209: notification log and claim functions installed.';
+  RAISE NOTICE '210: notification log and claim functions installed.';
 END $$;
+
+-- ── Record this migration as applied (T-AV31: renumbered into main's sequence,
+--    so it records itself like every migration since 184) ─────────────────
+INSERT INTO public.migrations_applied (migration, note)
+VALUES ('210_t_av27b_notifications', 'T-AV27b and T-AV27c: athlete notification log and claims, event-aware push cap (was 8209)')
+ON CONFLICT (migration) DO NOTHING;
 
 COMMIT;

@@ -1,6 +1,9 @@
 -- PROGRAM: T-AV
 -- SUB-PROGRAM: T-AV20 Tribe Athletes
 -- TICKET: T-AV22
+-- RENUMBERED: was 8205_t_av22_athletes_writes.sql until 2026-10-06 (T-AV31). 8200 to 8209 became 201
+--   to 210 at the merge gate, skipping 194, 195 and 200, which unmerged
+--   branches already claim (Al's decision, docs/ATHLETE_VALUE_MERGE_GATE.md).
 -- CREATES: av_athletes_add, _set_status, _set_level, _set_outcome, _mark_retained, _mark_bonus_settled
 -- RISK: HIGH
 --
@@ -8,8 +11,8 @@
 -- T-AV22 (5 of 6): every write
 -- ════════════════════════════════════════════════════════════════════════════
 --
--- 8205 was free on origin/main (highest 198), every branch, every worktree and
--- all history on 2026-09-29. Split from the reads (now 8206) on 2026-09-30 to
+-- 206 was free on origin/main (highest 198), every branch, every worktree and
+-- all history on 2026-09-29. Split from the reads (now 207) on 2026-09-30 to
 -- keep each file under the 300-line rule; nothing had been applied anywhere.
 --
 -- EVERY FUNCTION HERE is SECURITY DEFINER with search_path pinned, revoked from
@@ -399,18 +402,24 @@ BEGIN
     'public.av_athletes_mark_retained(uuid)',
     'public.av_athletes_mark_bonus_settled(uuid)'] LOOP
     IF to_regprocedure(v_fn) IS NULL THEN
-      RAISE EXCEPTION '8205 ABORTED: % is missing.', v_fn;
+      RAISE EXCEPTION '206 ABORTED: % is missing.', v_fn;
     END IF;
     IF NOT (SELECT prosecdef FROM pg_proc WHERE oid = to_regprocedure(v_fn))
        OR (SELECT proconfig FROM pg_proc WHERE oid = to_regprocedure(v_fn)) IS NULL THEN
-      RAISE EXCEPTION '8205 ABORTED: % must be SECURITY DEFINER with a pinned search_path.', v_fn;
+      RAISE EXCEPTION '206 ABORTED: % must be SECURITY DEFINER with a pinned search_path.', v_fn;
     END IF;
     IF has_function_privilege('anon', v_fn, 'EXECUTE')
        OR NOT has_function_privilege('authenticated', v_fn, 'EXECUTE') THEN
-      RAISE EXCEPTION '8205 ABORTED: % has the wrong grants.', v_fn;
+      RAISE EXCEPTION '206 ABORTED: % has the wrong grants.', v_fn;
     END IF;
   END LOOP;
-  RAISE NOTICE '8205: athlete write functions installed.';
+  RAISE NOTICE '206: athlete write functions installed.';
 END $$;
+
+-- ── Record this migration as applied (T-AV31: renumbered into main's sequence,
+--    so it records itself like every migration since 184) ─────────────────
+INSERT INTO public.migrations_applied (migration, note)
+VALUES ('206_t_av22_athletes_writes', 'T-AV22: athlete write functions (was 8205)')
+ON CONFLICT (migration) DO NOTHING;
 
 COMMIT;

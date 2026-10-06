@@ -13,7 +13,7 @@
 #      those rows must read MISSING. This is the state production is in
 #      between the merge and the pastes, and the state that crashed the
 #      verifier in the 2026-10-06 merge rehearsal.
-#   2  WITH: 8200 to 8209 applied in order (each must apply), then the same
+#   2  WITH: 201 to 210 applied in order (each must apply), then the same
 #      verifier, and every T-AV row must read 'applied'.
 #
 # Every run ends with the stack as the proofs expect it: the T-AV migrations
@@ -35,8 +35,8 @@ TAV_COUNT=$(grep -l '^-- PROGRAM: T-AV[[:space:]]*$' supabase/migrations/*.sql |
 reset_to_dump() {
   npm run db:reset < /dev/null > "$TMP/reset.out" 2>&1 || { echo "FATAL: db:reset failed"; tail -5 "$TMP/reset.out"; exit 1; }
 }
-apply_tav() { # apply 8200.. in number order; 0 when every file applied
-  for f in supabase/migrations/82[0-9][0-9]_*.sql; do
+apply_tav() { # apply 201.. in number order; 0 when every file applied
+  for f in supabase/migrations/2[0-9][0-9]_t_av*.sql; do
     psql "$PGURL" -X -v ON_ERROR_STOP=1 -q -f "$f" < /dev/null > "$TMP/apply.out" 2>&1 || { echo "  apply failed: $f"; tail -3 "$TMP/apply.out"; return 1; }
   done
   q "NOTIFY pgrst, 'reload schema';" > /dev/null
@@ -81,7 +81,7 @@ fi
 
 if want 2; then echo "== 2. WITH the T-AV migrations: every T-AV row reads applied"
   if ! apply_tav; then
-    bad "8200 to 8209 did not apply"
+    bad "201 to 210 did not apply"
   else
     verify "$TMP/with.txt"; rc=$?
     rows=$(grep -cE '^[0-9]+_t_av' "$TMP/with.txt"); applied=$(grep -cE '^[0-9]+_t_av[a-z0-9_]*\|applied$' "$TMP/with.txt")

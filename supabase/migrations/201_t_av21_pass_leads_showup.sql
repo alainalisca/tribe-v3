@@ -1,6 +1,9 @@
 -- PROGRAM: T-AV
 -- SUB-PROGRAM: T-AV20 Tribe Athletes
 -- TICKET: T-AV21
+-- RENUMBERED: was 8200_t_av21_pass_leads_showup.sql until 2026-10-06 (T-AV31). 8200 to 8209 became 201
+--   to 210 at the merge gate, skipping 194, 195 and 200, which unmerged
+--   branches already claim (Al's decision, docs/ATHLETE_VALUE_MERGE_GATE.md).
 -- TABLE: public.pass_leads OWNER: consumer
 -- ALTERS: public.pass_leads (3 columns), policy "Anyone can claim a pass"
 -- RISK: HIGH
@@ -10,7 +13,7 @@
 -- ════════════════════════════════════════════════════════════════════════════
 --
 -- Branch-only. Numbered in the reserved T-AV block and renumbered into main's
--- sequence at the merge gate, reading origin/main at that moment. 8200 was
+-- sequence at the merge gate, reading origin/main at that moment. 201 was
 -- free on origin/main (highest 198), every branch and every worktree on
 -- 2026-09-29.
 --
@@ -45,9 +48,10 @@
 --   typed), claim time and attended_at. Never the full name, email or WhatsApp.
 --   T-AV22 adds athlete first name, outcome and welcome offer.
 --
--- NOT A migrations_applied ROW
---   The 8000 block is renumbered at the merge gate; the record belongs to the
---   renumbered file.
+-- RECORDS ITSELF IN migrations_applied (T-AV31)
+--   This was "not a migrations_applied row" while it sat in the 8000 block; the
+--   record belonged to the renumbered file, and this is that file. The row is
+--   inserted just before COMMIT.
 
 BEGIN;
 
@@ -58,7 +62,7 @@ BEGIN
               WHERE attrelid = 'public.pass_leads'::regclass
                 AND attname = 'referred_by_athlete_id'
                 AND NOT attisdropped) THEN
-    RAISE EXCEPTION '8200 REFUSED: pass_leads.referred_by_athlete_id exists, so 8203 (T-AV22) has run. Re-running 8200 would recreate the claim policy without 8203''s eight IS NULL clauses and reopen F2. Nothing was changed.';
+    RAISE EXCEPTION '201 REFUSED: pass_leads.referred_by_athlete_id exists, so 204 (T-AV22) has run. Re-running 201 would recreate the claim policy without 204''s eight IS NULL clauses and reopen F2. Nothing was changed.';
   END IF;
 END $$;
 
@@ -193,28 +197,34 @@ BEGIN
      OR position('attended_marked_by IS NULL' IN v_check) = 0
      OR position('attended_method IS NULL' IN v_check) = 0
      OR position('pass_is_active' IN v_check) = 0 THEN
-    RAISE EXCEPTION '8200 ABORTED: the claim policy is missing an IS NULL clause or the pass_is_active check.';
+    RAISE EXCEPTION '201 ABORTED: the claim policy is missing an IS NULL clause or the pass_is_active check.';
   END IF;
   IF (SELECT count(*) FROM pg_policies
        WHERE schemaname = 'public' AND tablename = 'pass_leads' AND cmd IN ('INSERT', 'ALL')
          AND permissive = 'PERMISSIVE' AND policyname NOT IN ('Anyone can claim a pass', 'Admins manage pass leads')) > 0 THEN
-    RAISE EXCEPTION '8200 ABORTED: another permissive INSERT policy on pass_leads would reopen F2.';
+    RAISE EXCEPTION '201 ABORTED: another permissive INSERT policy on pass_leads would reopen F2.';
   END IF;
   IF has_function_privilege('anon', 'public.av_door_pass(text)', 'EXECUTE')
      OR has_function_privilege('anon', 'public.av_confirm_pass_attendance(text,text)', 'EXECUTE')
      OR has_function_privilege('authenticated', 'public.av_can_work_door(uuid)', 'EXECUTE') THEN
-    RAISE EXCEPTION '8200 ABORTED: a client role can execute something it must not.';
+    RAISE EXCEPTION '201 ABORTED: a client role can execute something it must not.';
   END IF;
   IF NOT has_function_privilege('authenticated', 'public.av_door_pass(text)', 'EXECUTE')
      OR NOT has_function_privilege('authenticated', 'public.av_confirm_pass_attendance(text,text)', 'EXECUTE') THEN
-    RAISE EXCEPTION '8200 ABORTED: authenticated cannot execute the door functions.';
+    RAISE EXCEPTION '201 ABORTED: authenticated cannot execute the door functions.';
   END IF;
   IF has_any_column_privilege('authenticated', 'public.pass_leads', 'UPDATE')
      OR has_any_column_privilege('anon', 'public.pass_leads', 'UPDATE') THEN
-    RAISE EXCEPTION '8200 ABORTED: a client role holds UPDATE on pass_leads; the door write must be the only path.';
+    RAISE EXCEPTION '201 ABORTED: a client role holds UPDATE on pass_leads; the door write must be the only path.';
   END IF;
-  RAISE NOTICE '8200: show-up columns added, claim policy closed, door read and confirm installed.';
+  RAISE NOTICE '201: show-up columns added, claim policy closed, door read and confirm installed.';
 END $$;
+
+-- ── Record this migration as applied (T-AV31: renumbered into main's sequence,
+--    so it records itself like every migration since 184) ─────────────────
+INSERT INTO public.migrations_applied (migration, note)
+VALUES ('201_t_av21_pass_leads_showup', 'T-AV21: pass_leads show-up columns, claim policy closed, door read and confirm (was 8200)')
+ON CONFLICT (migration) DO NOTHING;
 
 COMMIT;
 
@@ -224,9 +234,9 @@ COMMIT;
 -- stack only. It has never been applied to production. Nothing above it
 -- changed.
 --
--- Why: 8203 drops and recreates "Anyone can claim a pass" with this file's
+-- Why: 204 drops and recreates "Anyone can claim a pass" with this file's
 -- text plus eight IS NULL clauses. This file drops and recreates the same
--- policy with only its own three. Re-running it after 8203, which is the
+-- policy with only its own three. Re-running it after 204, which is the
 -- normal thing to do with a hand-applied file whose apply you are unsure of,
 -- would succeed quietly and reopen F2: anon could insert a lead already
 -- credited to an athlete, joined and bonus-eligible. Its end-state assert

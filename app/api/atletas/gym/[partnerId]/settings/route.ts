@@ -5,7 +5,7 @@
  * THE OWNER'S OWN SESSION, NEVER THE SERVICE ROLE. The update runs through
  * createClient() from lib/supabase/server, so it carries the caller's JWT and
  * the database decides: the "Owner or admin edits the program" UPDATE policy
- * (8201) and the column grants. route.test.ts fails if this file builds a
+ * (202) and the column grants. route.test.ts fails if this file builds a
  * client from SUPABASE_SERVICE_ROLE_KEY by any spelling.
  *
  * TWO LAYERS, and the mutation proof removes each (t-av26-mutations.LOCAL.sh):

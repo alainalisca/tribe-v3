@@ -1,6 +1,6 @@
 #!/bin/bash
 # T-AV24 acceptance proof: /atletas/ and /api/atletas/home-card end to end,
-# signed in as each seed account, against the LOCAL stack (8200 to 8207,
+# signed in as each seed account, against the LOCAL stack (201 to 208,
 # `npm run av:seed`), through a dev:av this script starts (flag off, then on).
 #
 #   bash supabase/recon/t-av24-proof.LOCAL.sh            # every test

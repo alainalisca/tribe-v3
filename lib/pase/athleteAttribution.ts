@@ -9,7 +9,7 @@
  * T-AV23 ticket). It decides ATTRIBUTION only: the athlete whose code this
  * is. It never applies a credit rule. Self-referral, returning guests,
  * duplicates and already-members are all attributed, and av_athletes_ledger
- * (8204) alone decides credit. Two places deciding credit is how an athlete
+ * (205) alone decides credit. Two places deciding credit is how an athlete
  * and a gym end up seeing different numbers.
  *
  * FAILURE IS SILENT TO THE GUEST AND LOUD IN THE LOG. Any error is logged and

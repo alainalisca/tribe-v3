@@ -14,7 +14,7 @@
 #   M4   only the /atletas/ page's own flag check removed   -> T-AV24 test 1 stays GREEN
 #   M4b  only the door page's own flag check removed        -> T-AV21 test 11 stays GREEN
 #
-# The link gate is two layers on purpose (decision 1). As with 8207 in T-AV22,
+# The link gate is two layers on purpose (decision 1). As with 208 in T-AV22,
 # a guard held by two layers needs a mutation that removes both to show the
 # test bites, and one per layer to show each holds alone.
 #

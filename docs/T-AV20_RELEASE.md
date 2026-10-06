@@ -3,7 +3,7 @@
 Branch `athlete/main`, T-AV19 to T-AV27c, written 2026-10-01 for the merge
 gate (`docs/ATHLETE_VALUE_MERGE_GATE.md`, section 8). Nothing here has run
 against production. Every number below was measured on the LOCAL stack
-(the production schema dump plus 8200 to 8209, `npm run av:seed`) and is
+(the production schema dump plus 201 to 210, `npm run av:seed`) and is
 re-runnable with the script named beside it.
 
 This report is evidence, not a tick. Every proof expires when the code moves;
@@ -54,7 +54,7 @@ table and function, real JWTs); athlete A cannot read B; the coach payload
 has no bonus fields; the sixth athlete and an owner setting `sponsored` are
 refused; `joined` without a show-up and retained before `retention_days` are
 refused; the ledger returns the pre-written expected table, `ready` at 10 and
-not at 9; anon INSERT with any program column set refused (8207 RESTRICTIVE
+not at 9; anon INSERT with any program column set refused (208 RESTRICTIVE
 policy binds admins too). Ten mutation proofs.
 
 **T-AV23.** Flag off identical (frozen tests, no assertion edits); admin with
@@ -103,17 +103,17 @@ test:e2e:av`, arm E1 names the broken step).
 Every cell measured with real sessions on 2026-10-01 against BullBox (Prueba);
 "404" is a real HTTP 404 from middleware. The inactive coach is Felipe.
 
-| Surface                               | Owner             | Active coach      | Inactive coach    | Other gym's owner or coach | Athlete             | App admin         | Signed out                                                                             |
-| ------------------------------------- | ----------------- | ----------------- | ----------------- | -------------------------- | ------------------- | ----------------- | -------------------------------------------------------------------------------------- |
-| `/atletas/`                           | 200               | 200               | 200               | 200                        | 200 (own data only) | 200               | redirect to `/auth`                                                                    |
-| `/atletas/gym/{id}/`                  | 200               | 200, read-only    | 404               | 404                        | 404                 | 200               | redirect to `/auth`                                                                    |
-| `/atletas/gym/{id}/ajustes/`          | 200               | 404               | 404               | 404                        | 404                 | 200               | redirect to `/auth`                                                                    |
-| `/atletas/gym/{id}/puerta/`           | 200               | 200               | 404               | 404                        | 404                 | 200               | redirect to `/auth`                                                                    |
-| `/pase/verificar/{code}/`             | 200               | 200               | refusal sentence  | refusal sentence           | refusal sentence    | 200               | sent to `/auth` by the page (HTTP 200: the root loading boundary streams the redirect) |
-| `/admin/atletas/`                     | 404               | 404               | 404               | 404                        | 404                 | 200               | redirect to `/auth`                                                                    |
-| `POST /api/atletas/gym/{id}/settings` | 200               | 404               | 404               | 404                        | 404                 | 200               | 307 to `/auth` (middleware)                                                            |
-| `POST /api/admin/atletas`             | 404               | 404               | 404               | 404                        | 404                 | 200               | 307 to `/auth` (middleware)                                                            |
-| `POST /api/atletas/notify`            | 200, 8209 decides | 200, 8209 decides | 200, nothing told | 200, nothing told          | 200, nothing told   | 200, 8209 decides | 307 to `/auth` (middleware)                                                            |
+| Surface                               | Owner            | Active coach     | Inactive coach    | Other gym's owner or coach | Athlete             | App admin        | Signed out                                                                             |
+| ------------------------------------- | ---------------- | ---------------- | ----------------- | -------------------------- | ------------------- | ---------------- | -------------------------------------------------------------------------------------- |
+| `/atletas/`                           | 200              | 200              | 200               | 200                        | 200 (own data only) | 200              | redirect to `/auth`                                                                    |
+| `/atletas/gym/{id}/`                  | 200              | 200, read-only   | 404               | 404                        | 404                 | 200              | redirect to `/auth`                                                                    |
+| `/atletas/gym/{id}/ajustes/`          | 200              | 404              | 404               | 404                        | 404                 | 200              | redirect to `/auth`                                                                    |
+| `/atletas/gym/{id}/puerta/`           | 200              | 200              | 404               | 404                        | 404                 | 200              | redirect to `/auth`                                                                    |
+| `/pase/verificar/{code}/`             | 200              | 200              | refusal sentence  | refusal sentence           | refusal sentence    | 200              | sent to `/auth` by the page (HTTP 200: the root loading boundary streams the redirect) |
+| `/admin/atletas/`                     | 404              | 404              | 404               | 404                        | 404                 | 200              | redirect to `/auth`                                                                    |
+| `POST /api/atletas/gym/{id}/settings` | 200              | 404              | 404               | 404                        | 404                 | 200              | 307 to `/auth` (middleware)                                                            |
+| `POST /api/admin/atletas`             | 404              | 404              | 404               | 404                        | 404                 | 200              | 307 to `/auth` (middleware)                                                            |
+| `POST /api/atletas/notify`            | 200, 210 decides | 200, 210 decides | 200, nothing told | 200, nothing told          | 200, nothing told   | 200, 210 decides | 307 to `/auth` (middleware)                                                            |
 
 With the flag OFF every row is a real 404, except `/admin/atletas/` for an
 app admin (see section 6) and the public `/pase/{slug}/`, which is unchanged.

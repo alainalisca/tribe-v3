@@ -1,6 +1,9 @@
 -- PROGRAM: T-AV
 -- SUB-PROGRAM: T-AV20 Tribe Athletes
 -- TICKET: T-AV22
+-- RENUMBERED: was 8203_t_av22_pass_leads_attribution.sql until 2026-10-06 (T-AV31). 8200 to 8209 became 201
+--   to 210 at the merge gate, skipping 194, 195 and 200, which unmerged
+--   branches already claim (Al's decision, docs/ATHLETE_VALUE_MERGE_GATE.md).
 -- TABLE: public.pass_leads OWNER: consumer
 -- ALTERS: public.pass_leads (8 columns, 1 CHECK, 1 partial index), policy "Anyone can claim a pass"
 -- RISK: HIGH
@@ -9,7 +12,7 @@
 -- T-AV22 (3 of 5): attribution and outcome on pass_leads
 -- ════════════════════════════════════════════════════════════════════════════
 --
--- 8203 was free on origin/main (highest 198), every branch, every worktree and
+-- 204 was free on origin/main (highest 198), every branch, every worktree and
 -- all history on 2026-09-29.
 --
 -- THE EIGHT COLUMNS
@@ -33,14 +36,15 @@
 --   The new columns inherit the table-level INSERT that anon and
 --   authenticated hold. Without this, anyone with the anon key could POST a
 --   lead already credited to an athlete, joined and bonus-eligible. The
---   policy is T-AV21's (8200) text copied verbatim, with exactly eight
+--   policy is T-AV21's (201) text copied verbatim, with exactly eight
 --   IS NULL clauses appended. Only definer functions and the service-role
 --   /api/pase insert write these columns.
 --
---   Re-running 8200 after this file would drop these eight clauses. 8200 now
+--   Re-running 201 after this file would drop these eight clauses. 201 now
 --   carries a pre-flight that aborts when referred_by_athlete_id exists.
 --
--- NOT A migrations_applied ROW: the 8000 block is renumbered at the merge gate.
+-- RECORDS ITSELF IN migrations_applied (T-AV31), just before COMMIT; it was not
+-- a row while it sat in the 8000 block, and the record belonged to the renumbered file.
 
 BEGIN;
 
@@ -77,25 +81,31 @@ BEGIN
   SELECT with_check INTO v_check FROM pg_policies
    WHERE schemaname = 'public' AND tablename = 'pass_leads' AND policyname = 'Anyone can claim a pass';
   IF v_check IS NULL OR position('pass_is_active' IN v_check) = 0 THEN
-    RAISE EXCEPTION '8203 ABORTED: the claim policy is missing or lost its pass_is_active check.';
+    RAISE EXCEPTION '204 ABORTED: the claim policy is missing or lost its pass_is_active check.';
   END IF;
   FOREACH v_col IN ARRAY ARRAY['attended_at', 'attended_marked_by', 'attended_method',
                                'referred_by_athlete_id', 'outcome', 'outcome_at', 'outcome_marked_by',
                                'retained_at', 'bonus_eligible', 'bonus_settled_at', 'bonus_settled_by'] LOOP
     IF position(v_col || ' IS NULL' IN v_check) = 0 THEN
-      RAISE EXCEPTION '8203 ABORTED: the claim policy has no "% IS NULL" clause.', v_col;
+      RAISE EXCEPTION '204 ABORTED: the claim policy has no "% IS NULL" clause.', v_col;
     END IF;
   END LOOP;
   IF (SELECT count(*) FROM pg_policies
        WHERE schemaname = 'public' AND tablename = 'pass_leads' AND cmd IN ('INSERT', 'ALL')
          AND permissive = 'PERMISSIVE' AND policyname NOT IN ('Anyone can claim a pass', 'Admins manage pass leads')) > 0 THEN
-    RAISE EXCEPTION '8203 ABORTED: another permissive INSERT policy on pass_leads would reopen F2.';
+    RAISE EXCEPTION '204 ABORTED: another permissive INSERT policy on pass_leads would reopen F2.';
   END IF;
   IF has_any_column_privilege('authenticated', 'public.pass_leads', 'UPDATE')
      OR has_any_column_privilege('anon', 'public.pass_leads', 'UPDATE') THEN
-    RAISE EXCEPTION '8203 ABORTED: a client role holds UPDATE on pass_leads.';
+    RAISE EXCEPTION '204 ABORTED: a client role holds UPDATE on pass_leads.';
   END IF;
-  RAISE NOTICE '8203: attribution and outcome columns added, claim policy closed over all eleven.';
+  RAISE NOTICE '204: attribution and outcome columns added, claim policy closed over all eleven.';
 END $$;
+
+-- ── Record this migration as applied (T-AV31: renumbered into main's sequence,
+--    so it records itself like every migration since 184) ─────────────────
+INSERT INTO public.migrations_applied (migration, note)
+VALUES ('204_t_av22_pass_leads_attribution', 'T-AV22: pass_leads attribution and outcome columns, claim policy closed over all eleven (was 8203)')
+ON CONFLICT (migration) DO NOTHING;
 
 COMMIT;

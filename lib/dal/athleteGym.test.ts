@@ -86,7 +86,7 @@ describe('searchAthleteCandidates', () => {
   });
 });
 
-describe('the writes call the 8205 functions with their own argument names', () => {
+describe('the writes call the 206 functions with their own argument names', () => {
   it('add', async () => {
     const { client, rpc } = rpcClient({ data: { success: true }, error: null });
     await addProgramAthlete(client, P, 'u1', '+573001112233');
