@@ -15,6 +15,7 @@ export type RetentionLevel = 'high' | 'medium' | 'low' | 'new' | 'insufficient_d
 
 export interface RetentionSignals {
   days_since_last_activity: number | null;
+  last_activity_at: string | null;
   visits_last_14d: number;
   visits_last_28d: number;
   baseline_weekly_rate: number;

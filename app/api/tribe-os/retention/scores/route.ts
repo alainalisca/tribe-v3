@@ -48,10 +48,41 @@ export async function GET(): Promise<NextResponse> {
       }
     }
 
+    // Fetch latest visit per client from client_visits (imported visits)
+    const thirtyDaysAgo = new Date(now);
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const { data: recentVisits } = await supabase
+      .from('client_visits')
+      .select('client_id, visited_at')
+      .eq('gym_id', gymId)
+      .gte('visited_at', thirtyDaysAgo.toISOString())
+      .order('visited_at', { ascending: false });
+
+    const latestVisitMap = new Map<string, string>();
+    for (const v of recentVisits ?? []) {
+      if (!latestVisitMap.has(v.client_id)) {
+        latestVisitMap.set(v.client_id, v.visited_at);
+      }
+    }
+
     const rows = (members ?? []).map((m) => {
       const s = scoreMap.get(m.id);
       const lastActivity = s?.signals?.days_since_last_activity;
       const touch = touchMap.get(m.id);
+
+      // Best last_activity_at: from signals (if recomputed), or from client_visits
+      let lastActivityAt: string | null = s?.signals?.last_activity_at ?? null;
+      const latestVisit = latestVisitMap.get(m.id);
+      if (latestVisit) {
+        if (!lastActivityAt || new Date(latestVisit) > new Date(lastActivityAt)) {
+          lastActivityAt = latestVisit;
+        }
+      }
+      // Fallback: derive from computed_at - days_since_last_activity (approximate)
+      if (!lastActivityAt && lastActivity !== null && s?.computed_at) {
+        lastActivityAt = new Date(new Date(s.computed_at).getTime() - lastActivity * 86_400_000).toISOString();
+      }
+
       return {
         id: m.id,
         name: m.name,
@@ -62,6 +93,7 @@ export async function GET(): Promise<NextResponse> {
         level: s?.level ?? null,
         reasons: s?.reasons ?? [],
         days_since_last_activity: lastActivity ?? null,
+        last_activity_at: lastActivityAt,
         visits_last_14d: s?.signals?.visits_last_14d ?? 0,
         visits_last_28d: s?.signals?.visits_last_28d ?? 0,
         computed_at: s?.computed_at ?? null,

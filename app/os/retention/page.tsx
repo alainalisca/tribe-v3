@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLanguage } from '@/lib/LanguageContext';
 import { useTribeOSPremiumGate } from '@/hooks/useTribeOSPremiumGate';
 import { trackEvent } from '@/lib/analytics';
@@ -33,6 +33,8 @@ const copy = {
     contactedAgo: (d: number) =>
       d === 0 ? 'Contacted today' : d === 1 ? 'Contacted 1 day ago' : `Contacted ${d} days ago`,
     cameBack: 'Came back',
+    cameBackAgo: (d: number) =>
+      d === 0 ? 'Came back today' : d === 1 ? 'Came back 1 day ago' : `Came back ${d} days ago`,
     undo: 'Undo',
     channelWhatsapp: 'WhatsApp',
     channelCall: 'Call',
@@ -65,6 +67,7 @@ const copy = {
     contactedAgo: (d: number) =>
       d === 0 ? 'Contactado hoy' : d === 1 ? 'Contactado hace 1 día' : `Contactado hace ${d} días`,
     cameBack: 'Volvió',
+    cameBackAgo: (d: number) => (d === 0 ? 'Volvió hoy' : d === 1 ? 'Volvió hace 1 día' : `Volvió hace ${d} días`),
     undo: 'Deshacer',
     channelWhatsapp: 'WhatsApp',
     channelCall: 'Llamada',
@@ -85,6 +88,7 @@ interface MemberRow {
   level: string | null;
   reasons: string[];
   days_since_last_activity: number | null;
+  last_activity_at: string | null;
   visits_last_14d: number;
   visits_last_28d: number;
   computed_at: string | null;
@@ -141,6 +145,8 @@ export default function RetentionPage() {
   const [winBackOpen, setWinBackOpen] = useState(false);
   const [wellOpen, setWellOpen] = useState(false);
   const [contactedOpen, setContactedOpen] = useState(false);
+  const contactRef = useRef<HTMLElement>(null);
+  const winBackRef = useRef<HTMLElement>(null);
 
   const fetchScores = useCallback(async () => {
     setLoading(true);
@@ -216,24 +222,38 @@ export default function RetentionPage() {
 
   const allMembers = data?.members ?? [];
 
-  const contactCandidates = allMembers.filter(
-    (m) =>
-      (m.level === 'high' || m.level === 'medium') &&
-      m.days_since_last_activity !== null &&
-      m.days_since_last_activity >= 7 &&
-      m.days_since_last_activity <= 30
-  );
-
-  const contactedThisWeek = contactCandidates
+  // Contacted this week: ANY member with a touch in the last 7 days, regardless of level
+  const contactedIds = new Set<string>();
+  const contactedThisWeek = allMembers
     .filter((m) => m.last_touch !== null)
-    .sort((a, b) => new Date(b.last_touch!.created_at).getTime() - new Date(a.last_touch!.created_at).getTime());
+    .map((m) => {
+      contactedIds.add(m.id);
+      const cameBack =
+        m.last_touch != null &&
+        m.last_activity_at != null &&
+        new Date(m.last_activity_at) > new Date(m.last_touch.created_at);
+      return { ...m, cameBack };
+    })
+    .sort((a, b) => {
+      if (a.cameBack !== b.cameBack) return a.cameBack ? -1 : 1;
+      return new Date(b.last_touch!.created_at).getTime() - new Date(a.last_touch!.created_at).getTime();
+    });
 
-  const contactToday = contactCandidates
-    .filter((m) => m.last_touch === null)
+  // Contact today: high/medium, 7–30 days absent, NOT already contacted this week
+  const contactToday = allMembers
+    .filter(
+      (m) =>
+        !contactedIds.has(m.id) &&
+        (m.level === 'high' || m.level === 'medium') &&
+        m.days_since_last_activity !== null &&
+        m.days_since_last_activity >= 7 &&
+        m.days_since_last_activity <= 30
+    )
     .sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
 
+  // Win back: >30 days absent, NOT already contacted this week
   const winBack = allMembers
-    .filter((m) => m.days_since_last_activity !== null && m.days_since_last_activity > 30)
+    .filter((m) => !contactedIds.has(m.id) && m.days_since_last_activity !== null && m.days_since_last_activity > 30)
     .sort((a, b) => (b.days_since_last_activity ?? 0) - (a.days_since_last_activity ?? 0));
 
   const activeCount = allMembers.filter((m) => m.visits_last_14d > 0 || m.visits_last_28d > 0).length;
@@ -280,13 +300,37 @@ export default function RetentionPage() {
         ) : (
           <>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <StatCard icon={Users} label={s.activeMembersLabel} value={activeCount} changeLabel="" />
-              <StatCard icon={Phone} label={s.contactTodayLabel} value={contactToday.length} changeLabel="" />
-              <StatCard icon={RotateCcw} label={s.winBackLabel} value={winBack.length} changeLabel="" />
+              <StatCard
+                icon={Users}
+                label={s.activeMembersLabel}
+                value={activeCount}
+                changeLabel=""
+                className="cursor-pointer hover:ring-2 hover:ring-tribe-green/40 transition-shadow"
+                onClick={() => (window.location.href = '/os/members')}
+              />
+              <StatCard
+                icon={Phone}
+                label={s.contactTodayLabel}
+                value={contactToday.length}
+                changeLabel=""
+                className="cursor-pointer hover:ring-2 hover:ring-tribe-green/40 transition-shadow"
+                onClick={() => contactRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+              />
+              <StatCard
+                icon={RotateCcw}
+                label={s.winBackLabel}
+                value={winBack.length}
+                changeLabel=""
+                className="cursor-pointer hover:ring-2 hover:ring-tribe-green/40 transition-shadow"
+                onClick={() => {
+                  if (!winBackOpen) setWinBackOpen(true);
+                  setTimeout(() => winBackRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+                }}
+              />
             </div>
 
             {contactToday.length > 0 && (
-              <section>
+              <section ref={contactRef}>
                 <h2 className="text-lg font-bold text-tribe-dark mb-3">{s.talkToday}</h2>
                 <div className="space-y-2">
                   {contactVisible.map((m) => (
@@ -306,7 +350,7 @@ export default function RetentionPage() {
             )}
 
             {winBack.length > 0 && (
-              <section>
+              <section ref={winBackRef}>
                 <button
                   type="button"
                   onClick={() => setWinBackOpen(!winBackOpen)}
@@ -346,7 +390,14 @@ export default function RetentionPage() {
                 {contactedOpen && (
                   <div className="space-y-2 mt-3">
                     {contactedThisWeek.map((m) => (
-                      <ContactedCard key={m.id} member={m} language={language} s={s} onUndo={undoTouch} />
+                      <ContactedCard
+                        key={m.id}
+                        member={m}
+                        cameBack={m.cameBack}
+                        language={language}
+                        s={s}
+                        onUndo={undoTouch}
+                      />
                     ))}
                   </div>
                 )}
@@ -489,11 +540,13 @@ function MemberCard({
 
 function ContactedCard({
   member: m,
+  cameBack,
   language,
   s,
   onUndo,
 }: {
   member: MemberRow;
+  cameBack: boolean;
   language: 'en' | 'es';
   s: (typeof copy)['en'] | (typeof copy)['es'];
   onUndo: (touchId: string) => void;
@@ -504,8 +557,10 @@ function ContactedCard({
     ? Math.floor((Date.now() - new Date(m.last_touch.created_at).getTime()) / 86_400_000)
     : 0;
 
-  const hasVisitAfterTouch =
-    m.last_touch && m.days_since_last_activity !== null && m.days_since_last_activity < touchDaysAgo;
+  const visitDaysAgo =
+    cameBack && m.last_activity_at
+      ? Math.floor((Date.now() - new Date(m.last_activity_at).getTime()) / 86_400_000)
+      : null;
 
   const channelLabel = m.last_touch ? s.viaChannel(m.last_touch.channel) : '';
 
@@ -515,10 +570,10 @@ function ContactedCard({
         <div className="flex items-center gap-2 flex-wrap">
           <span className="font-semibold text-tribe-dark truncate">{m.name ?? 'Sin nombre'}</span>
           <Badge variant={badge.variant}>{language === 'es' ? badge.es : badge.en}</Badge>
-          {hasVisitAfterTouch && <Badge variant="success">{s.cameBack}</Badge>}
+          {cameBack && <Badge variant="success">{s.cameBack}</Badge>}
         </div>
         <p className="text-xs text-tribe-dark-80 mt-0.5 truncate">
-          {s.contactedAgo(touchDaysAgo)}
+          {cameBack && visitDaysAgo !== null ? s.cameBackAgo(visitDaysAgo) : s.contactedAgo(touchDaysAgo)}
           {channelLabel ? ` ${channelLabel}` : ''}
         </p>
       </div>

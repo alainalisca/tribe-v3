@@ -80,8 +80,11 @@ export function computeSignals(input: MemberInput): RetentionSignals {
 
   const is_new = input.joined_on ? -calendarDaysDiff(input.joined_on, now, tz) <= T.new_member_days : false;
 
+  const last_activity_at = activities.length > 0 ? activities[0].toISOString() : null;
+
   return {
     days_since_last_activity,
+    last_activity_at,
     visits_last_14d,
     visits_last_28d,
     baseline_weekly_rate,
