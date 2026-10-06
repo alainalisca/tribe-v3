@@ -1,6 +1,7 @@
 import { showSuccess, showError, showInfo } from '@/lib/toast';
 import { getErrorMessage } from '@/lib/errorMessages';
 import { insertRecapPhoto, deleteRecapPhoto as dalDeleteRecapPhoto, updateRecapPhotoReport } from '@/lib/dal';
+import { uploadRecapPhotoFile } from '@/lib/storage/recapPhotoUpload';
 
 export interface RecapPhoto {
   id: string;
@@ -103,19 +104,14 @@ export async function handleRecapUpload(
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       const compressedBlob = await compressImage(file);
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${user.id}/${Date.now()}-recap-${i}.${fileExt}`;
-
-      const { error } = await supabase.storage.from('session-photos').upload(fileName, compressedBlob, {
-        cacheControl: '3600',
-        upsert: false,
+      const fileExt = file.name.split('.').pop() || 'jpg';
+      const publicUrl = await uploadRecapPhotoFile(supabase, {
+        sessionId,
+        userId: user.id,
+        blob: compressedBlob,
+        fileExt,
+        label: String(i),
       });
-
-      if (error) throw error;
-
-      const {
-        data: { publicUrl },
-      } = supabase.storage.from('session-photos').getPublicUrl(fileName);
 
       const insertResult = await insertRecapPhoto(supabase, {
         session_id: sessionId,

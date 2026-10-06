@@ -16,6 +16,10 @@
     "189_stable_unsub_token",
     "190_community_soft_delete",
     "191_close_open_community_comments_read",
-    "192_community_banner_storage_scope"
+    "192_community_banner_storage_scope",
+    "193_private_communities_visible_to_members",
+    "196_admin_delete_user_revoke_anon",
+    "197_revoke_anon_payment_venue_revenue_rpcs",
+    "198_service_role_only_internal_rpcs"
   ]
 }

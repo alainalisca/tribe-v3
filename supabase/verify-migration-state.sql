@@ -104,8 +104,27 @@ select '076_training_partner_trigger',
             then 'applied' else 'MISSING' end
 union all
 select '077_backfill_training_partners',
-       case when exists (select 1 from public.training_partners limit 1)
-            then 'applied (rows present)' else 'MISSING or empty gym' end
+       -- Rewritten 2026-09-28 (T-DRIFT2). Was: "training_partners has any row",
+       -- so an empty table read MISSING even with nothing to backfill; production
+       -- had 2 attended client_attendance rows and 0 pairs. 077's intent is that
+       -- every co-attendance pair it can derive has a training_partners row, so
+       -- that is what this asks, with 077's own source: attended rows joined to
+       -- clients with a gym, pairs within one session and one gym, member_a the
+       -- lower client id.
+       case when exists (
+              select 1
+                from public.client_attendance a
+                join public.clients ca on ca.id = a.client_id and ca.gym_id is not null
+                join public.client_attendance b on b.session_id = a.session_id
+                                               and b.client_id > a.client_id and b.attended = true
+                join public.clients cb on cb.id = b.client_id and cb.gym_id = ca.gym_id
+               where a.attended = true
+                 and not exists (select 1 from public.training_partners tp
+                                  where tp.gym_id = ca.gym_id
+                                    and tp.member_a_id = a.client_id
+                                    and tp.member_b_id = b.client_id))
+            then 'MISSING -- a co-attendance pair has no training_partners row'
+            else 'applied' end
 union all
 select '078_bump_longest_streak',
        case when (select to_regprocedure('public.bump_longest_streak(uuid,integer)')) is not null
@@ -212,13 +231,29 @@ select '092_fix_community_rls_recursion',
        ) then 'applied' else 'MISSING' end
 union all
 select '093_restore_users_select_grant',
-       -- 093 restores table-level SELECT on public.users to the authenticated
-       -- role (the grant that, when missing, blanked every profile page).
-       case when exists (
-         select 1 from information_schema.role_table_grants
-         where table_schema = 'public' and table_name = 'users'
-           and grantee = 'authenticated' and privilege_type = 'SELECT'
-       ) then 'applied' else 'MISSING' end
+       -- Rewritten 2026-09-28 (T-DRIFT2). Was: "authenticated holds TABLE-level
+       -- SELECT on users". 093 did grant that, but 066/067 had already moved
+       -- users to column-level grants, 113 records that no table-level SELECT
+       -- exists since 067, and a table-level grant voids every column REVOKE
+       -- (CLAUDE.md, 093). Production correctly has none, so the old probe
+       -- asked for the unsafe state. What 093 was FOR still has to hold:
+       -- profiles readable, and the four Tribe.OS billing columns it hid, hidden.
+       -- Columns are found via pg_attribute on regclass and checked by
+       -- (oid, attnum), so a dropped column cannot make this raise.
+       case when has_table_privilege('authenticated', 'public.users', 'SELECT')
+              then 'MISSING -- authenticated holds table-level SELECT on users; every column-level restriction is void'
+            when not exists (select 1 from pg_attribute a
+                              where a.attrelid = 'public.users'::regclass and a.attname = 'name'
+                                and not a.attisdropped
+                                and has_column_privilege('authenticated', a.attrelid, a.attnum, 'SELECT'))
+              then 'MISSING -- authenticated cannot read users.name; profile pages go blank'
+            when exists (select 1 from pg_attribute a
+                          where a.attrelid = 'public.users'::regclass and not a.attisdropped
+                            and a.attname in ('tribe_os_stripe_customer_id', 'tribe_os_stripe_subscription_id',
+                                              'tribe_os_granted_at', 'tribe_os_granted_by')
+                            and has_column_privilege('authenticated', a.attrelid, a.attnum, 'SELECT'))
+              then 'MISSING -- a Tribe.OS billing column 093 hid is readable by authenticated'
+            else 'applied' end
 union all
 select '094_release_notes',
        case when to_regclass('public.release_notes') is not null
@@ -310,14 +345,21 @@ select '106_community_events_update_with_check',
        ) then 'applied' else 'MISSING' end
 union all
 select '108_fix_join_notify_triggers_session_title',
-       -- BUG-001 hotfix: notify_join_request / notify_join_accepted selected
-       -- the nonexistent sessions.name, aborting every pending join + approval.
-       -- Applied once the corrected function selects s.title (not s.name).
-       case when exists (
-         select 1 from pg_proc
-         where proname = 'notify_join_request'
-           and pg_get_functiondef(oid) ilike '%s.title%'
-       ) then 'applied' else 'MISSING' end
+       -- Rewritten 2026-09-28 (T-DRIFT2). Was: "notify_join_request's body
+       -- selects s.title". 111 replaced that function and 136 DROPPED it,
+       -- together with notify_join_accepted and both join triggers, when join
+       -- notifications moved to the app's push path. Production has neither,
+       -- correctly. What must hold now is that they stay retired: if one comes
+       -- back, joins run the legacy trigger path again (T-DRIFT1's July outage).
+       case when exists (select 1 from pg_proc
+                          where pronamespace = 'public'::regnamespace
+                            and proname in ('notify_join_request', 'notify_join_accepted'))
+              then 'MISSING -- a notify_join_* function retired by 136 exists again'
+            when exists (select 1 from pg_trigger
+                          where not tgisinternal
+                            and tgname in ('on_join_request_created', 'on_join_accepted'))
+              then 'MISSING -- a join notify trigger retired by 136 exists again'
+            else 'applied' end
 union all
 select '109_fix_participant_count_drift',
        -- T-COUNT1: dropped the legacy delta trigger update_participant_count so
@@ -353,16 +395,45 @@ select '043_lock_is_admin',
        ) then 'applied' else 'MISSING' end
 union all
 select '111_async_http_and_externalize_secrets',
-       -- T-HTTP1: the sync HTTP triggers moved to net.http_post and the
-       -- hardcoded secrets moved to Vault. Applied once notify_join_request is
-       -- async (uses net.http_post, no extensions.http).
-       case when exists (
-         select 1 from pg_proc
-         where proname = 'notify_join_request'
-           and pronamespace = 'public'::regnamespace
-           and pg_get_functiondef(oid) like '%net.http_post%'
-           and pg_get_functiondef(oid) not like '%extensions.http%'
-       ) then 'applied' else 'MISSING' end
+       -- Rewritten 2026-09-28 (T-DRIFT2). Was: "notify_join_request uses
+       -- net.http_post", a function 136 dropped. 111's lasting intent is on the
+       -- one trigger function of its five that 136 kept, notify_chat_message_webhook:
+       -- the call is async (net.http_post, never extensions.http), the secret
+       -- comes from Vault, and no credential is a literal in the body. The other
+       -- three 111 functions and their triggers must stay retired (136).
+       -- Code checks run on the body's CODE SKELETON: string literals and comments
+       -- removed in ONE left-to-right pass (a regex alternation where whichever
+       -- token starts first wins), so a "--" inside a string and an apostrophe
+       -- inside a comment are both handled, as a tokeniser would. Dollar-quoted
+       -- strings nested inside a body are not handled; none of these bodies has
+       -- one. The literal-credential check reads the RAW body: a key in a comment
+       -- is still a leaked key.
+       -- The trigger must be ENABLED: disabled, chat push stops. (The T-AV local
+       -- stack disables it on purpose, so this row reads MISSING there.)
+       case when exists (select 1 from pg_proc
+                          where pronamespace = 'public'::regnamespace
+                            and proname in ('notify_new_message', 'send_push_notification_webhook'))
+              then 'MISSING -- a push trigger function retired by 136 exists again'
+            when exists (select 1 from pg_trigger
+                          where not tgisinternal
+                            and tgname in ('on_message_sent', 'send_push_notification_trigger'))
+              then 'MISSING -- a push trigger retired by 136 exists again'
+            when to_regprocedure('public.notify_chat_message_webhook()') is null
+              then 'MISSING -- notify_chat_message_webhook is gone; chat push stops'
+            when (select regexp_replace(prosrc, '''([^'']|'''')*''|--[^\n]*|/\*([^*]|\*+[^*/])*\*+/', ' ', 'g') !~ 'net\.http_post' or regexp_replace(prosrc, '''([^'']|'''')*''|--[^\n]*|/\*([^*]|\*+[^*/])*\*+/', ' ', 'g') ~* 'extensions\.http'
+                    from pg_proc where oid = to_regprocedure('public.notify_chat_message_webhook()'))
+              then 'MISSING -- the chat webhook is not async (net.http_post); a slow endpoint blocks chat writes'
+            when (select regexp_replace(prosrc, '''([^'']|'''')*''|--[^\n]*|/\*([^*]|\*+[^*/])*\*+/', ' ', 'g') !~* 'vault\.decrypted_secrets'
+                    from pg_proc where oid = to_regprocedure('public.notify_chat_message_webhook()'))
+              then 'MISSING -- the chat webhook no longer reads its secret from Vault'
+            when (select prosrc ~ 'eyJ[A-Za-z0-9_-]{10,}' or prosrc ~* '''x-webhook-secret''\s*,\s*'''
+                    from pg_proc where oid = to_regprocedure('public.notify_chat_message_webhook()'))
+              then 'MISSING -- a literal credential is in the chat webhook body; rotate it'
+            when not exists (select 1 from pg_trigger
+                              where tgrelid = 'public.chat_messages'::regclass
+                                and tgname = 'chat_message_webhook' and tgenabled <> 'D')
+              then 'MISSING -- the chat_message_webhook trigger is missing or disabled; chat push stops'
+            else 'applied' end
 union all
 select '067_users_push_token_revoke',
        -- T-SEC (drift audit RLS-H1): 067 revokes SELECT on push/FCM + Tribe.OS
@@ -460,17 +531,31 @@ select '118_revoke_users_email',
        ) then 'applied' else 'MISSING' end
 union all
 select '119_join_session_enforce_policy_and_owner',
-       -- T-SEC1 Gate 1: join_session hardened (server-side policy + token +
-       -- p_user_id=auth.uid()). Applied once join_session has the 4-arg
-       -- (uuid,uuid,text,text) signature with p_invite_token.
-       case when exists (
-         select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
-         where n.nspname='public' and p.proname='join_session'
-           and pg_get_function_identity_arguments(p.oid) = 'uuid, uuid, text, text'
-       ) and exists (
-         select 1 from pg_proc where proname='join_session_as_guest'
-           and pronamespace='public'::regnamespace
-       ) then 'applied' else 'MISSING' end
+       -- Rewritten 2026-09-28 (T-DRIFT2). Was: an overload whose
+       -- pg_get_function_identity_arguments equals 'uuid, uuid, text, text'.
+       -- That function returns argument NAMES as well as types
+       -- ('p_session_id uuid, ...'), so the probe could never match. Production
+       -- has the hardened 4-argument join_session (last replaced by 185).
+       -- T-SEC1's intent: EVERY join_session overload enforces the session's
+       -- join_policy and checks the caller. An older overload without those is a
+       -- bypass, so all overloads are checked, not "one good one exists".
+       -- This reads the code skeleton (string literals and comments removed in one
+       -- pass, see 111 above), which shows the checks are written, not that they
+       -- are correct; T-SEC1's behaviour tests own that.
+       case when not exists (select 1 from pg_proc
+                              where pronamespace = 'public'::regnamespace and proname = 'join_session')
+              then 'MISSING -- join_session is gone; every join fails'
+            when exists (select 1 from pg_proc
+                          where pronamespace = 'public'::regnamespace and proname = 'join_session'
+                            and (regexp_replace(prosrc, '''([^'']|'''')*''|--[^\n]*|/\*([^*]|\*+[^*/])*\*+/', ' ', 'g') !~* 'join_policy' or regexp_replace(prosrc, '''([^'']|'''')*''|--[^\n]*|/\*([^*]|\*+[^*/])*\*+/', ' ', 'g') !~* 'auth\.uid\(\)'))
+              then 'MISSING -- a join_session overload does not check join_policy and the caller'
+            when not exists (select 1 from pg_proc
+                              where pronamespace = 'public'::regnamespace and proname = 'join_session'
+                                and 'p_invite_token' = any (proargnames))
+              then 'MISSING -- join_session takes no p_invite_token; invite-only sessions cannot be enforced'
+            when to_regprocedure('public.join_session_as_guest(uuid,text,text,text,text)') is null
+              then 'MISSING -- join_session_as_guest is gone; guest joins fail'
+            else 'applied' end
 union all
 select '120_guest_tokenless_open_and_waitlist_accept',
        -- T-SEC1 Gate 2.5b: guest RPC token made optional (open-only when absent)
@@ -591,12 +676,22 @@ select '132_rls_h2_gate2_invite_notification_rpc',
             then 'applied' else 'MISSING' end
 union all
 select '133_rls_h2_gate2_invite_notification_rpc_fix',
-       -- Fix: entity_id is uuid, so the body must compare uuid=uuid (was ::text,
-       -- which threw at runtime). Applied once the function body no longer casts
-       -- p_session_id to text.
-       case when (select to_regprocedure('public.get_invite_token_for_notification(uuid)')) is not null
-              and pg_get_functiondef('public.get_invite_token_for_notification(uuid)'::regprocedure) not like '%p_session_id::text%'
-            then 'applied' else 'MISSING' end
+       -- Rewritten 2026-09-28 (T-DRIFT2). Was: definition NOT LIKE
+       -- '%p_session_id::text%'. The fixed body keeps a comment saying it
+       -- "was p_session_id::text", and Postgres stores function comments
+       -- verbatim, so the probe matched its author's own note and read MISSING
+       -- on the fixed function. Now it reads the code skeleton only (string
+       -- literals and comments removed in one pass, see 111 above): no ::text
+       -- cast on p_session_id, and a direct entity_id = p_session_id comparison.
+       case when to_regprocedure('public.get_invite_token_for_notification(uuid)') is null
+              then 'MISSING -- get_invite_token_for_notification(uuid) is gone; invite notifications cannot open'
+            when (select regexp_replace(prosrc, '''([^'']|'''')*''|--[^\n]*|/\*([^*]|\*+[^*/])*\*+/', ' ', 'g') ~ 'p_session_id\s*::\s*text' from pg_proc
+                   where oid = to_regprocedure('public.get_invite_token_for_notification(uuid)'))
+              then 'MISSING -- executable code casts p_session_id to text; uuid = text throws on every call'
+            when (select regexp_replace(prosrc, '''([^'']|'''')*''|--[^\n]*|/\*([^*]|\*+[^*/])*\*+/', ' ', 'g') !~ 'entity_id\s*=\s*p_session_id' from pg_proc
+                   where oid = to_regprocedure('public.get_invite_token_for_notification(uuid)'))
+              then 'MISSING -- the body no longer compares entity_id = p_session_id'
+            else 'applied' end
 union all
 select '134_rls_h2_gate3_lock_invite_tokens',
        -- Gate 3: raw invite_tokens locked. Applied once anon no longer holds a
@@ -671,14 +766,48 @@ select '141_tc1_gate4_widen_invite_mint',
        ) then 'applied' else 'MISSING' end
 union all
 select '142_flag_founder_test_accounts',
-       -- Additive data migration (applied by hand 2026-08-08, verified live
-       -- 2026-08-14): flags the 13 founder/test accounts enumerated in the
-       -- file. Structural artifact check pinned to the migration's own
-       -- "exactly 13" expectation — if this reads MISSING after more accounts
-       -- are legitimately flagged by a LATER migration, update both counts
-       -- together.
-       case when (select count(*) from public.users where is_test_account = true) = 13
-            then 'applied' else 'MISSING' end
+       -- Rewritten 2026-09-28 (T-DRIFT2). Was: "exactly 13 users flagged", which
+       -- broke as soon as later accounts were flagged (production: 26). Strict on
+       -- what 142 did, with one decided exception: 12 of the 13 accounts 142
+       -- names must be flagged, and eaff348f-5df3-4df5-bd80-69ec233aad0e must NOT be.
+       -- eaff348f-5df3-4df5-bd80-69ec233aad0e: founder's real account, intentionally unflagged, decided 2026-09-28.
+       -- Accounts flagged later do not count against this. The 12 ids are 142's
+       -- own list minus that one.
+       case when (select count(*) from public.users
+                   where id = any (array['d7cc0e7e-44db-4e57-80d3-a82f6e90bff4',
+                   'd92d4816-af5d-42ae-9d33-02f330e221bd',
+                   '7ad0c072-6519-481d-ba8c-bab2526b3449',
+                   '3af48aac-3f33-4055-ab6a-354791d5b1bb',
+                   '00bbef64-123f-432f-bf13-0c7572137c9d',
+                   'd479736b-bfe1-4f92-9a0f-8d5871859400',
+                   'a59598c6-42a0-4b22-aa3d-e61ea778a841',
+                   'c5d7e023-bc9d-4c5d-904b-3f7844943672',
+                   'ddf4ea3c-3aab-411b-8960-9e57d9bcd526',
+                   'fd7dbf6a-6198-42fe-bb1c-347af3d111bd',
+                   '8062bb54-d7bd-4946-bbe7-82b9330da69e',
+                   '673834b4-d9be-4782-86c9-ff27376233a7']::uuid[])
+                     and is_test_account = true) <> 12
+              then 'MISSING -- ' ||
+                   (select count(*) from public.users
+                     where id = any (array['d7cc0e7e-44db-4e57-80d3-a82f6e90bff4',
+                   'd92d4816-af5d-42ae-9d33-02f330e221bd',
+                   '7ad0c072-6519-481d-ba8c-bab2526b3449',
+                   '3af48aac-3f33-4055-ab6a-354791d5b1bb',
+                   '00bbef64-123f-432f-bf13-0c7572137c9d',
+                   'd479736b-bfe1-4f92-9a0f-8d5871859400',
+                   'a59598c6-42a0-4b22-aa3d-e61ea778a841',
+                   'c5d7e023-bc9d-4c5d-904b-3f7844943672',
+                   'ddf4ea3c-3aab-411b-8960-9e57d9bcd526',
+                   'fd7dbf6a-6198-42fe-bb1c-347af3d111bd',
+                   '8062bb54-d7bd-4946-bbe7-82b9330da69e',
+                   '673834b4-d9be-4782-86c9-ff27376233a7']::uuid[])
+                       and is_test_account = true)::text ||
+                   ' of the 12 test accounts 142 flagged are still flagged; all 12 must be'
+            when exists (select 1 from public.users
+                          where id = 'eaff348f-5df3-4df5-bd80-69ec233aad0e'::uuid
+                            and is_test_account = true)
+              then 'MISSING -- the founder''s real account eaff348f-5df3-4df5-bd80-69ec233aad0e is flagged as a test account; it must not be'
+            else 'applied' end
 union all
 select '143_d9_invite_expiry_session_anchored',
        -- Anchors invite expiry to the session: adds session_invite_expiry(uuid)
@@ -866,17 +995,36 @@ union all
 -- client by 066, 067, 113, 115 and 118. Anything NOT on it must be readable.
 -- Adding a column to public.users means either granting it or listing it here
 -- with the migration that restricts it -- never leaving it in neither.
+--
+-- ENUMERATE pg_attribute KEYED ON 'public.users'::regclass, AND CALL
+-- has_column_privilege WITH (oid, attnum), NOT (name, name). Fixed 2026-09-28.
+-- This guard first read information_schema.columns filtered by
+-- table_schema = 'public' AND table_name = 'users' and passed c.column_name to
+-- has_column_privilege('authenticated', 'public.users', c.column_name, ...).
+-- AND does not short-circuit: the planner may evaluate the privilege call
+-- before the schema filter, and auth.users is also named "users". Production's
+-- plan did, and the whole file died when it was run in production after #182:
+--   ERROR 42703: column "instance_id" of relation "users" does not exist
+-- (instance_id is an auth.users column). Local and CI never saw it: CI does not
+-- execute this file, and the local plan joins pg_namespace before scanning
+-- pg_attribute. Forcing a different local plan (enable_nestloop = off)
+-- reproduced the same 42703. CLAUDE.md records this exact shape from
+-- migration 168's rehearsal.
+-- Keyed on regclass, every row is a column of public.users by construction, and
+-- the (oid, attnum) form resolves no name, so no evaluation order can hand it a
+-- column that does not exist.
 -- ---------------------------------------------------------------------------
 select 'GUARD_users_columns_readable',
        coalesce(
          'MISSING -- not readable by authenticated: '
-           || string_agg(c.column_name, ', ' order by c.column_name),
+           || string_agg(a.attname::text, ', ' order by a.attname),
          'applied'
        )
-from information_schema.columns c
-where c.table_schema = 'public'
-  and c.table_name = 'users'
-  and c.column_name not in (
+from pg_attribute a
+where a.attrelid = 'public.users'::regclass
+  and a.attnum > 0
+  and not a.attisdropped
+  and a.attname not in (
     -- 066/067: Tribe.OS billing, push and device identity (service-role only)
     'tribe_os_stripe_customer_id', 'tribe_os_stripe_subscription_id',
     'tribe_os_granted_at', 'tribe_os_granted_by',
@@ -889,7 +1037,7 @@ where c.table_schema = 'public'
     -- 118: email
     'email'
   )
-  and not has_column_privilege('authenticated', 'public.users', c.column_name, 'SELECT')
+  and not has_column_privilege('authenticated', a.attrelid, a.attnum, 'SELECT')
 union all
 
 -- The mirror of the guard above: a column the app believes is withheld must
@@ -965,6 +1113,12 @@ union all
 -- partner_status and partner_reviewed_at are excluded on purpose: they are
 -- deliberately not writable, and GUARD_sessions_verdict_locked below asserts
 -- that they stay that way.
+--
+-- pg_attribute keyed on 'public.sessions'::regclass, (oid, attnum) privilege
+-- calls: the same fix, same date and same reason as GUARD_users_columns_readable
+-- above. auth.sessions exists too, and a forced local plan (enable_nestloop =
+-- off) made the name-based version of this guard fail with 42703 exactly as the
+-- users guard did in production.
 -- ---------------------------------------------------------------------------
 select 'GUARD_sessions_columns_writable',
        coalesce(
@@ -973,22 +1127,24 @@ select 'GUARD_sessions_columns_writable',
          'applied'
        )
 from (
-  select column_name,
+  select a.attname::text as column_name,
          case
-           when not has_column_privilege('authenticated', 'public.sessions', column_name, 'UPDATE')
-            and not has_column_privilege('authenticated', 'public.sessions', column_name, 'INSERT')
+           when not has_column_privilege('authenticated', a.attrelid, a.attnum, 'UPDATE')
+            and not has_column_privilege('authenticated', a.attrelid, a.attnum, 'INSERT')
              then 'insert+update'
-           when not has_column_privilege('authenticated', 'public.sessions', column_name, 'UPDATE')
+           when not has_column_privilege('authenticated', a.attrelid, a.attnum, 'UPDATE')
              then 'update'
            else 'insert'
          end as missing
-  from information_schema.columns
-  where table_schema = 'public' and table_name = 'sessions'
+  from pg_attribute a
+  where a.attrelid = 'public.sessions'::regclass
+    and a.attnum > 0
+    and not a.attisdropped
     -- THREE, not two: partner_id is revoked by 162 because it is the only way
     -- the verdict gets computed. See GUARD_sessions_verdict_locked below.
-    and column_name not in ('partner_status', 'partner_reviewed_at', 'partner_id')
-    and (not has_column_privilege('authenticated', 'public.sessions', column_name, 'UPDATE')
-      or not has_column_privilege('authenticated', 'public.sessions', column_name, 'INSERT'))
+    and a.attname not in ('partner_status', 'partner_reviewed_at', 'partner_id')
+    and (not has_column_privilege('authenticated', a.attrelid, a.attnum, 'UPDATE')
+      or not has_column_privilege('authenticated', a.attrelid, a.attnum, 'INSERT'))
 ) c
 union all
 
@@ -1724,7 +1880,11 @@ select 'GUARD_184_mirror_matches_applied_table',
     ('189_stable_unsub_token'),
     ('190_community_soft_delete'),
     ('191_close_open_community_comments_read'),
-    ('192_community_banner_storage_scope')
+    ('192_community_banner_storage_scope'),
+    ('193_private_communities_visible_to_members'),
+    ('196_admin_delete_user_revoke_anon'),
+    ('197_revoke_anon_payment_venue_revenue_rpcs'),
+    ('198_service_role_only_internal_rpcs')
     -- <<<END_MIRROR_LIST>>>
            ) as mirror(migration)
            where not exists (select 1 from public.migrations_applied a
@@ -1732,7 +1892,12 @@ select 'GUARD_184_mirror_matches_applied_table',
            then 'MISSING -- the JSON mirror claims a migration this database has not recorded'
          when exists (
            select 1 from public.migrations_applied a
-           where a.migration not in (
+           -- The reserved blocks are recorded but deliberately NOT mirrored: T-AV
+           -- (8000-8999, athlete-value branch) and Tribe.OS (9000-9999, T-OS0).
+           -- They are renumbered into main's sequence at their merge gates.
+           -- Counted by INFO_184_reserved_block_migrations below instead.
+           where a.migration !~ '^[89][0-9]{3}_'
+             and a.migration not in (
     -- <<<MIRROR_LIST>>> generated by scripts/syncMigrationsApplied.ts -- do not hand-edit
     ('179_users_cover_image_url'),
     ('180_find_training_partners_rpc'),
@@ -1747,13 +1912,28 @@ select 'GUARD_184_mirror_matches_applied_table',
     ('189_stable_unsub_token'),
     ('190_community_soft_delete'),
     ('191_close_open_community_comments_read'),
-    ('192_community_banner_storage_scope')
+    ('192_community_banner_storage_scope'),
+    ('193_private_communities_visible_to_members'),
+    ('196_admin_delete_user_revoke_anon'),
+    ('197_revoke_anon_payment_venue_revenue_rpcs'),
+    ('198_service_role_only_internal_rpcs')
     -- <<<END_MIRROR_LIST>>>
            ))
            then 'MISSING -- this database has recorded a migration the JSON mirror omits; re-sync it'
          else 'applied'
        end
 
+
+union all
+
+-- Informational, never MISSING: how many reserved-block migrations this
+-- database has recorded (8000-8999 T-AV, 9000-9999 Tribe.OS). They are
+-- excluded from GUARD_184_mirror_matches_applied_table by design.
+select 'INFO_184_reserved_block_migrations',
+       'info -- ' || count(*)::text ||
+       ' reserved-block migration(s) recorded (8000-8999 T-AV, 9000-9999 Tribe.OS); not mirrored by design'
+from public.migrations_applied
+where migration ~ '^[89][0-9]{3}_'
 union all
 
 select '186_sport_demand_counts',
@@ -2038,6 +2218,162 @@ select 'GUARD_192_banner_writes_scoped',
                            where id='community-banners' and public
                              and file_size_limit is not null and allowed_mime_types is not null)
            then 'MISSING -- the community-banners bucket lost its size or type limit, or is no longer public'
+         else 'applied'
+       end
+
+union all
+
+select '193_private_communities_visible_to_members',
+       case when exists (select 1 from pg_policies
+                          where schemaname='public' and tablename='communities'
+                            and policyname='Public communities are visible to all'
+                            and position('is_community_member' in qual) > 0)
+       then 'applied' else 'MISSING' end
+
+union all
+
+-- Members must see their private community, and nothing else may widen the
+-- read: policies are OR'd, so a second read policy could reopen private or
+-- deleted communities to everyone.
+select 'GUARD_193_private_communities_members_only',
+       case
+         when (select count(*) from pg_policies
+                where schemaname='public' and tablename='communities' and cmd in ('SELECT','ALL')) <> 1
+           then 'MISSING -- communities has more or fewer than one read policy; private or deleted rows may be exposed'
+         when not exists (select 1 from pg_policies
+                           where schemaname='public' and tablename='communities'
+                             and policyname='Public communities are visible to all'
+                             and position('deleted_at IS NULL' in qual) > 0
+                             and position('is_community_member' in qual) > 0)
+           then 'MISSING -- the read policy lost the member arm or the deleted_at filter'
+         when not (select prosecdef from pg_proc
+                    where oid = to_regprocedure('public.is_community_member(uuid, uuid)'))
+           then 'MISSING -- is_community_member is not SECURITY DEFINER; the read policy would loop through community_members'
+         else 'applied'
+       end
+
+union all
+
+-- admin_delete_user is SECURITY DEFINER with no caller check, so the grant IS
+-- the security control. has_function_privilege asks the capability (including
+-- via PUBLIC), not whether a GRANT row exists. Applied to production by hand
+-- 2026-09-27 before merge; see the migration header.
+select '196_admin_delete_user_revoke_anon',
+       case
+         when to_regprocedure('public.admin_delete_user(uuid)') is null
+           then 'MISSING -- admin_delete_user is gone; the admin delete route will fail'
+         when has_function_privilege('anon','public.admin_delete_user(uuid)','EXECUTE')
+           then 'MISSING -- anon can execute admin_delete_user; anyone with the anon key can delete any user'
+         when has_function_privilege('authenticated','public.admin_delete_user(uuid)','EXECUTE')
+           then 'MISSING -- authenticated can execute admin_delete_user; any signed-in user can delete any user'
+         when not has_function_privilege('service_role','public.admin_delete_user(uuid)','EXECUTE')
+           then 'MISSING -- service_role cannot execute admin_delete_user; the admin delete route will fail'
+         else 'applied'
+       end
+
+union all
+
+-- Six SECURITY DEFINER RPCs whose caller checks do nothing when auth.uid() is
+-- NULL, so the grant is the control. Every overload is checked, and each name
+-- must exist: a probe over an empty set would read 'applied' for nothing.
+-- Applied to production by hand 2026-09-27 before merge; see the migration.
+select '197_revoke_anon_payment_venue_revenue_rpcs',
+       case
+         when (select count(distinct p.proname) from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+                where n.nspname = 'public'
+                  and p.proname in ('finalize_payment','set_session_partner','review_venue_request',
+                                    'instructor_revenue_totals','instructor_revenue_buckets','list_gym_coaches')) <> 6
+           then 'MISSING -- one of the six functions is gone; its caller will fail'
+         when exists (select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+                       where n.nspname = 'public'
+                         and p.proname in ('finalize_payment','set_session_partner','review_venue_request',
+                                           'instructor_revenue_totals','instructor_revenue_buckets','list_gym_coaches')
+                         and has_function_privilege('anon', p.oid, 'EXECUTE'))
+           then 'MISSING -- anon can execute one of the six; payment approval, venue approval or revenue reads are open to anyone'
+         when exists (select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+                       where n.nspname = 'public' and p.proname = 'finalize_payment'
+                         and has_function_privilege('authenticated', p.oid, 'EXECUTE'))
+           then 'MISSING -- authenticated can execute finalize_payment; a signed-in user could approve their own payment'
+         when exists (select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+                       where n.nspname = 'public'
+                         and p.proname in ('set_session_partner','review_venue_request','instructor_revenue_totals',
+                                           'instructor_revenue_buckets','list_gym_coaches')
+                         and not has_function_privilege('authenticated', p.oid, 'EXECUTE'))
+           then 'MISSING -- authenticated lost EXECUTE on a venue, revenue or coach RPC; the signed-in screen will fail'
+         when exists (select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+                       where n.nspname = 'public'
+                         and p.proname in ('finalize_payment','set_session_partner','review_venue_request',
+                                           'instructor_revenue_totals','instructor_revenue_buckets','list_gym_coaches')
+                         and not has_function_privilege('service_role', p.oid, 'EXECUTE'))
+           then 'MISSING -- service_role cannot execute one of the six; the webhooks or server callers will fail'
+         else 'applied'
+       end
+
+union all
+
+-- Five internal RPCs that only the server calls. Every overload is checked and
+-- each name must exist. has_function_privilege includes PUBLIC, which two of
+-- them held by default in production.
+select '198_service_role_only_internal_rpcs',
+       case
+         when (select count(distinct p.proname) from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+                where n.nspname = 'public'
+                  and p.proname in ('bump_longest_streak','recompute_all_total_sessions_hosted',
+                                    'recompute_user_total_sessions_hosted','cron_try_lock','cron_release_lock')) <> 5
+           then 'MISSING -- one of the five functions is gone; its cron or pipeline will fail'
+         when exists (select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+                       where n.nspname = 'public'
+                         and p.proname in ('bump_longest_streak','recompute_all_total_sessions_hosted',
+                                           'recompute_user_total_sessions_hosted','cron_try_lock','cron_release_lock')
+                         and (has_function_privilege('anon', p.oid, 'EXECUTE')
+                              or has_function_privilege('authenticated', p.oid, 'EXECUTE')))
+           then 'MISSING -- anon or authenticated can execute an internal RPC; cron locks, streaks or counters are writable by clients'
+         when exists (select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+                       where n.nspname = 'public'
+                         and p.proname in ('bump_longest_streak','recompute_all_total_sessions_hosted',
+                                           'recompute_user_total_sessions_hosted','cron_try_lock','cron_release_lock')
+                         and not has_function_privilege('service_role', p.oid, 'EXECUTE'))
+           then 'MISSING -- service_role cannot execute an internal RPC; a tribe-os cron or the intelligence pipeline will fail'
+         when not exists (select 1 from pg_proc
+                           where oid = to_regprocedure('public.trg_recompute_sessions_hosted()') and prosecdef)
+           then 'MISSING -- trg_recompute_sessions_hosted is not SECURITY DEFINER; session writes will fail'
+         else 'applied'
+       end
+
+union all
+
+-- Recap photos and stories, rows and files: host, confirmed participants,
+-- uploader and admin only. session-photos stays public (listing photos) but
+-- cannot be listed by anyone but the owner.
+select '199_session_media_participants_only',
+       case
+         when to_regprocedure('public.can_view_session_media(text)') is null
+           or to_regprocedure('public.can_moderate_session_media(text)') is null
+           then 'MISSING -- the session media helpers do not exist'
+         when exists (select 1 from storage.buckets where id = 'session-stories' and public)
+           then 'MISSING -- session-stories is public; any story file can be downloaded by URL'
+         when not exists (select 1 from storage.buckets where id = 'session-recap-photos' and not public)
+           then 'MISSING -- the private session-recap-photos bucket does not exist; recap uploads will fail'
+         when not exists (select 1 from storage.buckets where id = 'session-photos' and public)
+           then 'MISSING -- session-photos is not public; every session listing photo stops loading'
+         when exists (select 1 from pg_policies
+                       where schemaname = 'public' and tablename in ('session_recap_photos', 'session_stories')
+                         and cmd in ('SELECT', 'ALL')
+                         and position('can_view_session_media' in coalesce(qual, '')) = 0
+                         and coalesce(qual, '') <> 'is_app_admin()')
+           then 'MISSING -- a SELECT policy on recap photos or stories does not check can_view_session_media'
+         when exists (select 1 from pg_policies
+                       where schemaname = 'storage' and tablename = 'objects' and cmd in ('SELECT', 'ALL')
+                         and coalesce(qual, '') ~ 'session-(stories|recap-photos)'
+                         and position('can_view_session_media' in coalesce(qual, '')) = 0)
+           then 'MISSING -- a storage SELECT policy exposes story or recap files beyond the session'
+         when exists (select 1 from pg_policies
+                       where schemaname = 'storage' and tablename = 'objects' and cmd in ('SELECT', 'ALL')
+                         and coalesce(qual, '') ~ 'session-photos'
+                         and position('auth.uid()' in coalesce(qual, '')) = 0)
+           then 'MISSING -- the session-photos bucket can be listed by anyone'
+         when has_function_privilege('anon', 'public.can_view_session_media(text)', 'EXECUTE')
+           then 'MISSING -- anon can execute can_view_session_media'
          else 'applied'
        end
 

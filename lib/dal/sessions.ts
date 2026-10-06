@@ -5,6 +5,7 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import type { Session, SessionUpdate, SessionInsert } from '@/lib/database.types';
 import { logError } from '@/lib/logger';
+import { signRecapPhotoUrls } from '@/lib/storage/privateMedia';
 import { bogotaToday } from '@/lib/time/bogotaDate';
 
 import type { DalResult, SessionWithCreator } from './types';
@@ -427,8 +428,10 @@ export async function fetchUpcomingSessions(supabase: SupabaseClient): Promise<D
  * Indexed by idx_session_recap_photos_session and idx_sessions_creator.
  *
  * `reported` photos are excluded — a photo someone flagged must never surface
- * on the feed. RLS on session_recap_photos is `TO authenticated`, so a logged
- * out visitor gets an empty map and the carousel simply has fewer slides.
+ * on the feed. Since migration 199 RLS returns only photos from sessions the
+ * VIEWER hosted or was a confirmed participant of (or uploaded to), so for most
+ * viewers, and for every logged out visitor, the map is empty and the carousel
+ * simply has fewer slides. That is the privacy rule working, not a bug.
  *
  * Ordered by created_at. The table also carries uploaded_at, which currently
  * holds the identical value on every row; that redundancy is a follow-up.
@@ -458,12 +461,19 @@ export async function fetchRecapPhotosByCreators(
       session: { creator_id: string | null } | null;
     }>;
 
+    // Private bucket since 199: sign what the viewer may see. RLS already
+    // returned only rows from sessions the viewer hosted or attended.
+    const signed = await signRecapPhotoUrls(
+      supabase,
+      rows.flatMap((r) => (r.photo_url ? [r.photo_url] : []))
+    );
+
     const byCreator: Record<string, string[]> = {};
     for (const row of rows) {
       const creatorId = row.session?.creator_id;
       if (!creatorId || !row.photo_url) continue;
       const bucket = (byCreator[creatorId] ??= []);
-      if (bucket.length < perCreator) bucket.push(row.photo_url);
+      if (bucket.length < perCreator) bucket.push(signed.get(row.photo_url) ?? row.photo_url);
     }
     return { success: true, data: byCreator };
   } catch (error) {

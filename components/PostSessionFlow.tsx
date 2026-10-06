@@ -10,6 +10,7 @@ import PostSessionShareStep from '@/components/PostSessionShareStep';
 import RebookingStep from '@/components/postSession/RebookingStep';
 import { compressImage } from '@/components/stories/storyUploadHelpers';
 import { insertRecapPhoto } from '@/lib/dal';
+import { uploadRecapPhotoFile } from '@/lib/storage/recapPhotoUpload';
 import { progressReferralOnSessionComplete } from '@/lib/dal/referrals-progression';
 import { showSuccess, showError } from '@/lib/toast';
 import { log } from '@/lib/logger';
@@ -260,18 +261,13 @@ export default function PostSessionFlow({
     try {
       const compressedBlob = await compressImage(recapFile);
       const fileExt = recapFile.name.split('.').pop() || 'jpg';
-      const fileName = `${userId}/${Date.now()}-recap-flow.${fileExt}`;
-
-      const { error: uploadError } = await supabase.storage.from('session-photos').upload(fileName, compressedBlob, {
-        cacheControl: '3600',
-        upsert: false,
+      const publicUrl = await uploadRecapPhotoFile(supabase, {
+        sessionId,
+        userId,
+        blob: compressedBlob,
+        fileExt,
+        label: 'flow',
       });
-
-      if (uploadError) throw uploadError;
-
-      const {
-        data: { publicUrl },
-      } = supabase.storage.from('session-photos').getPublicUrl(fileName);
 
       const insertResult = await insertRecapPhoto(supabase, {
         session_id: sessionId,

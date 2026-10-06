@@ -5,6 +5,7 @@
  */
 import { SupabaseClient } from '@supabase/supabase-js';
 import { logError } from '@/lib/logger';
+import { signRecapPhotoUrls, signStoryMedia } from '@/lib/storage/privateMedia';
 import type {
   DalResult,
   StoryWithDetails,
@@ -93,7 +94,13 @@ export async function fetchAllRecapPhotosForSession(
       .order('uploaded_at', { ascending: true })
       .limit(100);
     if (error) return { success: false, error: error.message };
-    return { success: true, data: data || [] };
+    const rows = data || [];
+    // Private bucket since 199: hand the screen a URL it can load.
+    const signed = await signRecapPhotoUrls(
+      supabase,
+      rows.map((r) => r.photo_url)
+    );
+    return { success: true, data: rows.map((r) => ({ ...r, photo_url: signed.get(r.photo_url) ?? r.photo_url })) };
   } catch (error) {
     logError(error, { action: 'fetchAllRecapPhotosForSession' });
     return { success: false, error: 'Failed to fetch recap photos' };
@@ -118,7 +125,7 @@ export async function fetchActiveStoriesForSession(
       .gt('expires_at', new Date().toISOString())
       .order('created_at', { ascending: true });
     if (error) return { success: false, error: error.message };
-    return { success: true, data: (data || []) as unknown as StoryWithDetails[] };
+    return { success: true, data: await signStoryMedia(supabase, (data || []) as unknown as StoryWithDetails[]) };
   } catch (error) {
     logError(error, { action: 'fetchActiveStoriesForSession' });
     return { success: false, error: 'Failed to fetch stories' };
@@ -141,7 +148,7 @@ export async function fetchAllActiveStories(supabase: SupabaseClient): Promise<D
       .gt('expires_at', new Date().toISOString())
       .order('created_at', { ascending: false });
     if (error) return { success: false, error: error.message };
-    return { success: true, data: (data || []) as unknown as StoryWithDetails[] };
+    return { success: true, data: await signStoryMedia(supabase, (data || []) as unknown as StoryWithDetails[]) };
   } catch (error) {
     logError(error, { action: 'fetchAllActiveStories' });
     return { success: false, error: 'Failed to fetch stories' };
