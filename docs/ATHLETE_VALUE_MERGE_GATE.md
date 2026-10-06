@@ -153,6 +153,11 @@ fixed there:
       and the Next.js dev "Issues" badge counts it. Guard the init on the key.
       Seen on the local stack since T-AV28 removed the placeholder PostHog values
       from `.env.av.example`.
+- [ ] **Email tests pin `EMAIL_MODE` instead of inheriting it from the
+      environment** (`docs/T-AV20_RELEASE.md` section 6). With `EMAIL_MODE=log`
+      loaded, the Resend factory returns its logging client and every test that
+      mocks the Resend SDK fails, `main`'s own
+      `lib/email/passLead.replyTo.test.ts` included.
 
 ---
 
@@ -187,8 +192,11 @@ be automated and were deferred to the gate on purpose.
       module for module, login returns to the exact pass with `?via=code`
       kept, an off-site `returnTo` lands on this site), and mutation arms
       M1, M2, M3 and U1 all behaving (`t-av29-mutations.LOCAL.sh`).
-- [ ] **Send modes in Vercel production.** `EMAIL_MODE` and `PUSH_MODE` are unset (or exactly `live`) in the production project. Only the exact value `log` means log, so a stray value would silently stop every email and push on `main`.
-- [ ] **`NEXT_PUBLIC_SITE_URL` in Vercel Production is the real production domain** (Al). Since T-AV29 the voucher QR and the door link are built from it first, so a wrong or preview value there would print a QR that sends coaches to the wrong site.
+- [x] **Send modes in Vercel production.** `EMAIL_MODE` and `PUSH_MODE` are unset (or exactly `live`) in the production project. Only the exact value `log` means log, so a stray value would silently stop every email and push on `main`.
+      **Checked by Al 2026-10-06:** `EMAIL_MODE` not set and `PUSH_MODE` not set in Vercel Production; both mean live.
+- [x] **`NEXT_PUBLIC_SITE_URL` in Vercel Production is the real production domain** (Al). Since T-AV29 the voucher QR and the door link are built from it first, so a wrong or preview value there would print a QR that sends coaches to the wrong site.
+      **Checked by Al 2026-10-06:** set to the real production domain with https, applied to all environments.
+      Note: because it applies to Preview too, a QR made on a preview deployment opens production. Accepted, no change.
 - [ ] **Renumber 8200 to 8209 against `origin/main`** at the moment of merging (CLAUDE.md, "A migration number is claimed by whoever merges first"). Rename, state in each header what it was and why it moved, and update every probe id in `supabase/verify-migration-state.sql` and every `migrations_applied` reference.
 - [ ] **Apply 8200 to 8209 in order, each as one complete paste, AFTER the merge commit is on `main`** (CLAUDE.md, "the branch merges before the paste"), and record the commit each paste corresponds to.
 - [ ] **D2 answered.** A Colombian lawyer has reviewed gym-to-athlete referral payments and Al has recorded the answer in the spec's decisions log. Blocking for turning the program on for a real gym.
@@ -197,7 +205,8 @@ be automated and were deferred to the gate on purpose.
 - [ ] **The owner's lead email in a real inbox (Gmail).** An attributed claim shows "Invitación de {athlete}" and a working "Confirmar en la puerta" link, and a plain claim's email is unchanged.
 - [ ] **`npm run test:e2e:av` green on the merge-day tree**, both projects (flag on: the full loop; flag off: the real 404s).
 - [ ] **Every T-AV proof and mutation driver re-run** on the merge-day tree: `supabase/recon/t-av21` to `t-av29` `-proof.LOCAL.sh` and `-mutations.LOCAL.sh`. A mutation proof expires when the code around it moves (CLAUDE.md).
-- [ ] **Read `docs/T-AV20_RELEASE.md` section 6** (the Spanish-only pass page, admins with the flag off, the pre-existing email-test environment dependency) and decide each item is acceptable for `main`.
+- [x] **Read `docs/T-AV20_RELEASE.md` section 6** (the Spanish-only pass page, admins with the flag off, the pre-existing email-test environment dependency) and decide each item is acceptable for `main`.
+      **Read and accepted by Al 2026-10-06, all four items:** the pass page stays Spanish only; app admins reach `/admin/atletas/` with the flag off; the email tests fail when `.env.av.local` is loaded; the keepalive and React streaming notes.
 
 ## Already measured, re-run from scratch 2026-09-25 (evidence, not a tick)
 
