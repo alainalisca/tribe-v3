@@ -1,5 +1,6 @@
-import { Resend } from 'resend';
+import { getResendClient } from '@/lib/email/resendClient';
 import { waMeDigits } from '@/lib/pase/phone';
+import { translate } from '@/lib/i18n/translate';
 
 /**
  * The two emails a claimed pass sends: one to the partner with the lead, one
@@ -12,12 +13,6 @@ import { waMeDigits } from '@/lib/pase/phone';
 
 const FROM = 'Tribe <tribe@aplusfitnessllc.com>';
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://tribe-v3.vercel.app';
-
-function getResendClient(): Resend {
-  const key = process.env.RESEND_API_KEY;
-  if (!key) throw new Error('RESEND_API_KEY is not configured');
-  return new Resend(key);
-}
 
 function escapeHtml(value: string): string {
   return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -45,6 +40,27 @@ export interface PartnerLeadEmailParams {
   src: string | null;
   code: string | null;
   createdAt: Date;
+  /**
+   * T-AV27b. Set ONLY for a lead a Tribe athlete invited (flag on, attributed):
+   * the athlete's first name and the door link for this pass. Absent, the email
+   * is byte for byte what it was before the program (hard line 8).
+   */
+  invitedBy?: string;
+  doorUrl?: string;
+}
+
+/** The two lines an attributed lead adds, in the email's language (Spanish). */
+function invitationLines(params: PartnerLeadEmailParams): { text: string[]; html: string[] } {
+  if (!params.invitedBy || !params.doorUrl) return { text: [], html: [] };
+  const invited = translate('es', 'email', 'invitedBy', { athlete: params.invitedBy });
+  const door = translate('es', 'email', 'doorLink');
+  return {
+    text: [invited, `${door}: ${params.doorUrl}`],
+    html: [
+      `<li>${escapeHtml(invited)}</li>`,
+      `<li><a href="${escapeHtml(params.doorUrl)}">${escapeHtml(door)}</a></li>`,
+    ],
+  };
 }
 
 /**
@@ -63,10 +79,11 @@ export function partnerSubject(name: string, choice1: string | null, choice2: st
  * Tribe inbox nobody is watching.
  */
 export async function sendPartnerLeadNotification(params: PartnerLeadEmailParams): Promise<void> {
-  const resend = getResendClient();
+  const resend = getResendClient('passLead');
   const wa = waMeDigits(params.whatsapp);
   const interes = [params.choice1, params.choice2].filter(Boolean).join(' · ') || 'sin especificar';
   const llego = [params.src, params.code].filter(Boolean).join(' · ') || 'sin datos de origen';
+  const invitation = invitationLines(params);
 
   const text = [
     `${params.name} reclamó su pase de clase gratis en ${params.partnerName}.`,
@@ -75,6 +92,7 @@ export async function sendPartnerLeadNotification(params: PartnerLeadEmailParams
     `Email: ${params.email}`,
     `Interés: ${interes}`,
     `Pase: ${params.passCode}`,
+    ...invitation.text,
     `Llegó por: ${llego}`,
     `Fecha: ${bogotaTimestamp(params.createdAt)}`,
     '',
@@ -88,13 +106,18 @@ export async function sendPartnerLeadNotification(params: PartnerLeadEmailParams
     `<li>Email: <a href="mailto:${escapeHtml(params.email)}">${escapeHtml(params.email)}</a></li>`,
     `<li>Interés: ${escapeHtml(interes)}</li>`,
     `<li>Pase: <strong>${escapeHtml(params.passCode)}</strong></li>`,
+    ...invitation.html,
     `<li>Llegó por: ${escapeHtml(llego)}</li>`,
     `<li>Fecha: ${escapeHtml(bogotaTimestamp(params.createdAt))}</li>`,
     '</ul>',
     '<p>Reservó en Tribe: todavía no.</p>',
   ].join('');
 
-  await resend.emails.send({
+  // T-AV27b. Resend reports a refused send in the return value and does not
+  // throw, so the error has to be read and turned into a rejection here:
+  // /api/pase stamps notified_at only when this promise fulfils. The message
+  // names the Resend error and nothing about the lead or the partner.
+  const { error } = await resend.emails.send({
     from: FROM,
     to: params.to,
     cc: params.cc.length > 0 ? params.cc : undefined,
@@ -103,6 +126,7 @@ export async function sendPartnerLeadNotification(params: PartnerLeadEmailParams
     text,
     html,
   });
+  if (error) throw new Error(`Resend refused the partner lead email: ${error.name}`);
 }
 
 export interface LeadPassEmailParams {
@@ -117,7 +141,7 @@ export interface LeadPassEmailParams {
 
 /** To the person: their code, where to use it, and what happens next. */
 export async function sendLeadPassEmail(params: LeadPassEmailParams): Promise<void> {
-  const resend = getResendClient();
+  const resend = getResendClient('passLead');
   const storefront = params.storefrontUrl ? `${SITE_URL}${params.storefrontUrl}` : null;
 
   const text = [

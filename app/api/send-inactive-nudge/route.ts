@@ -1,5 +1,5 @@
 import { getServiceRoleClient } from '@/lib/supabase/admin';
-import { Resend } from 'resend';
+import { getResendClient } from '@/lib/email/resendClient';
 import { NextResponse } from 'next/server';
 import { logError } from '@/lib/logger';
 import {
@@ -13,11 +13,6 @@ import { isEmailSuppressed, unsubUrlFor, unsubHeaders } from '@/lib/dal/emailUns
 import { bogotaDateOffset } from '@/lib/time/bogotaDate';
 import { isValidCronAuth } from '@/lib/auth/cron';
 
-function getResendClient() {
-  const key = process.env.RESEND_API_KEY;
-  if (!key) throw new Error('RESEND_API_KEY is not configured');
-  return new Resend(key);
-}
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://tribe-v3.vercel.app';
 
 /**
@@ -29,7 +24,7 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://tribe-v3.vercel.ap
  */
 export async function POST(request: Request) {
   try {
-    const resend = getResendClient();
+    const resend = getResendClient('inactiveNudge');
     // T1-3: fail CLOSED via the shared helper. The old direct compare to
     // `Bearer ${CRON_SECRET}` accepted the literal "Bearer undefined" when
     // CRON_SECRET was unset — anyone could trigger a mass email blast.

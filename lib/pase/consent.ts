@@ -30,3 +30,45 @@ export function consentTextFor(partnerName: string): string {
   if (!partnerName || partnerName === 'BullBox') return CONSENT_TEXT_V1;
   return CONSENT_TEXT_V1.replace('BullBox', partnerName);
 }
+
+/**
+ * T-AV27a (Al, 2026-10-01). What a guest invited by a Tribe athlete also
+ * agrees to. The athlete's home shows whether each guest JOINED, so the
+ * consent has to say so. Spanish only, because the pass page is Spanish only
+ * and the stored text is what the signer saw. First person, to match V1.
+ *
+ *   ES: "Mi primer nombre, si asistí a mi clase y si me inscribí se
+ *        compartirán con {firstName}, quien me invitó. {gym} y Tribe
+ *        registrarán si asistí."
+ *   EN: "My first name, whether I attended my class and whether I joined will
+ *        be shared with {firstName}, who invited me. {gym} and Tribe will
+ *        record whether I attended."
+ *
+ * IT REPLACES T-AV23's two constants rather than sitting beside them, which
+ * the rule above would otherwise require. That rule protects rows already
+ * written, and there are none: T-AV23's pair, "Mi primer nombre y si asistí se
+ * compartirán con {firstName}, quien me invitó." and "{gym} y Tribe
+ * registrarán si asistí a mi clase.", only ever ran on the unmerged athlete
+ * branch against the local stack, and no local lead carried it on 2026-10-01.
+ * From the merge on, the rule applies to this constant too.
+ */
+export const CONSENT_ATTRIBUTED_ES =
+  'Mi primer nombre, si asistí a mi clase y si me inscribí se compartirán con {firstName}, quien me invitó. {gym} y Tribe registrarán si asistí.';
+
+/** pass_leads_consent_text CHECK: 20 to 500 characters. */
+export const CONSENT_MAX_CHARS = 500;
+
+/**
+ * The sentence for an attributed lead: V1, then CONSENT_ATTRIBUTED_ES.
+ * Null when the result would not fit the 500-character
+ * CHECK (business_name has no length limit and appears twice): the caller
+ * then saves the lead WITHOUT attribution and with plain V1, because an
+ * insert refused by the CHECK would lose the lead.
+ */
+export function consentTextForAttributed(partnerName: string, firstName: string): string | null {
+  const text = [
+    consentTextFor(partnerName),
+    CONSENT_ATTRIBUTED_ES.replace('{firstName}', firstName).replace('{gym}', partnerName),
+  ].join(' ');
+  return text.length <= CONSENT_MAX_CHARS ? text : null;
+}

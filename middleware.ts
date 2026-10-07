@@ -1,6 +1,7 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { athletesGateAllows, isAthletesGatedPath, GATED_NOT_FOUND_PATH } from '@/lib/features/athleteValueGate';
 
 /**
  * Tribe middleware does three things, in order:
@@ -88,6 +89,15 @@ const publicApiPaths = [
   '/api/send-attendance-notification', // cron (CRON_SECRET) or user session — both checked in the handler
   '/api/send-welcome-email', // welcome onboarding email cron (CRON_SECRET); enforced via isValidCronAuth() in the handler
 
+  // T-AV0. "Is the athlete_value flag on for me" must be answerable WITHOUT a
+  // session, because a signed-out visitor is one of the answers -- and it is
+  // the answer `no`. Behind the auth gate the endpoint 307s to /auth, so a
+  // client component on a public page would read a redirect as an outage
+  // rather than as a flag being off, and would have every reason to guess.
+  // Nothing is exposed: the route reports a boolean about the caller and never
+  // what is behind the flag. Each T-AV route and page gates itself.
+  '/api/features',
+
   // Clicked from an inbox, where there is no session cookie by definition.
   // Without this the auth gate redirects the unsubscribe link to /auth and the
   // only way to stop receiving email silently stops working -- the same shape
@@ -146,8 +156,73 @@ export function isPublicPath(pathname: string): boolean {
 
 // Exported so middleware.csp.test.ts can pin the served policy. Next.js only
 // reserves `middleware` and `config` on this file; extra named exports are fine.
+/**
+ * The LOCAL Supabase stack's origins, or nothing at all.
+ *
+ * T-AV0 Step 4. The CSP allows `https://*.supabase.co`, which is every
+ * Supabase project except the one running in Docker on a developer's machine.
+ * Measured 2026-09-26: with the app pointed at http://127.0.0.1:54321, the
+ * browser refused every request to it, so signing in returned "No account
+ * found with these credentials" while the SAME credentials returned a token to
+ * curl in the same second. A CSP refusal is not reported as a refusal anywhere
+ * anyone looks -- it surfaces as a failed fetch, which the auth form maps to
+ * its friendliest error, so the symptom points at the data and the cause is in
+ * a header.
+ *
+ * ═══════════════════════════════════════════════════════════════════════════
+ * THE RULE IS `http:` PLUS A PRIVATE ADDRESS, AND THE PROTOCOL IS THE LOAD-
+ * BEARING HALF
+ * ═══════════════════════════════════════════════════════════════════════════
+ *
+ * Production Supabase is always https. So requiring `http:` means this can
+ * never add anything for any https URL, whatever its hostname -- which is a
+ * stronger and much easier property to check than reasoning about which
+ * hostnames are safe.
+ *
+ * Loopback alone is not enough, and the first version of this got that wrong.
+ * Step 4.6 of the ticket is phone testing: the phone opens the app at the
+ * Mac's LAN address, and `127.0.0.1` from the phone means THE PHONE. So
+ * `.env.av.local` has to name the Mac's LAN address, which is not loopback,
+ * and a loopback-only check would silently re-break exactly the case it was
+ * extended for. Private IPv4 ranges are therefore included, and only those:
+ * a public address over http gets nothing.
+ */
+function localSupabaseOrigins(): string[] {
+  const raw = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    return [];
+  }
+  // Production is https. This is what makes the rest of the check unable to
+  // widen a production CSP by one character, regardless of hostname.
+  if (url.protocol !== 'http:') return [];
+
+  const host = url.hostname;
+  const loopback = host === 'localhost' || host === '127.0.0.1' || host === '[::1]';
+  // RFC 1918 only: 10/8, 172.16/12, 192.168/16. Matched on the parsed octets
+  // rather than a string prefix, so "10.x" cannot be spoofed by a hostname
+  // that merely starts with those characters.
+  const octets = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(host)?.slice(1).map(Number);
+  const privateLan =
+    !!octets &&
+    octets.every((n) => n >= 0 && n <= 255) &&
+    (octets[0] === 10 ||
+      (octets[0] === 172 && octets[1] >= 16 && octets[1] <= 31) ||
+      (octets[0] === 192 && octets[1] === 168));
+
+  if (!loopback && !privateLan) return [];
+  // ws:, not wss: -- the local stack speaks plain http, and realtime over wss
+  // to a plaintext server is refused by the browser, not by the CSP.
+  return [url.origin, url.origin.replace(/^http/, 'ws')];
+}
+
 export function buildCsp(): string {
   const isDev = process.env.NODE_ENV !== 'production';
+  const localSupabase = localSupabaseOrigins();
+  const withLocal = (directive: string) =>
+    localSupabase.length ? `${directive} ${localSupabase.join(' ')}` : directive;
 
   const scriptSrc = [
     "'self'",
@@ -166,17 +241,20 @@ export function buildCsp(): string {
     'default-src': "'self'",
     'script-src': scriptSrc,
     'style-src': "'self' 'unsafe-inline' https://unpkg.com https://fonts.googleapis.com",
-    'img-src': "'self' https: data: blob:",
+    'img-src': withLocal("'self' https: data: blob:"),
     'font-src': "'self' data: https://fonts.gstatic.com https://vercel.live",
     // Cloudflare Stream hosts: upload.videodelivery.net receives the direct
     // upload POST, *.cloudflarestream.com and videodelivery.net serve the HLS
     // manifest and segments.
-    'connect-src':
-      "'self' https://*.supabase.co wss://*.supabase.co https://us.i.posthog.com https://us-assets.i.posthog.com https://maps.googleapis.com https://fcm.googleapis.com https://vercel.live https://fonts.googleapis.com https://fonts.gstatic.com https://images.unsplash.com https://*.tile.openstreetmap.org https://unpkg.com https://api.open-meteo.com https://*.cloudflarestream.com https://videodelivery.net https://upload.videodelivery.net",
+    'connect-src': withLocal(
+      "'self' https://*.supabase.co wss://*.supabase.co https://us.i.posthog.com https://us-assets.i.posthog.com https://maps.googleapis.com https://fcm.googleapis.com https://vercel.live https://fonts.googleapis.com https://fonts.gstatic.com https://images.unsplash.com https://*.tile.openstreetmap.org https://unpkg.com https://api.open-meteo.com https://*.cloudflarestream.com https://videodelivery.net https://upload.videodelivery.net"
+    ),
     // media-src was never set, so <video> and <audio> fell back to default-src
     // 'self' and every Supabase-hosted intro video was refused in production.
     // blob: covers object URLs used for client-side duration probing.
-    'media-src': "'self' blob: https://*.supabase.co https://*.cloudflarestream.com https://videodelivery.net",
+    'media-src': withLocal(
+      "'self' blob: https://*.supabase.co https://*.cloudflarestream.com https://videodelivery.net"
+    ),
     // *.cloudflarestream.com so the Stream iframe player remains an option.
     'frame-src': "'self' https://vercel.live https://*.cloudflarestream.com",
     'object-src': "'none'",
@@ -208,8 +286,14 @@ export async function middleware(request: NextRequest) {
     return applySecurityHeaders(NextResponse.next());
   }
 
+  // T-AV24: /atletas and /pase/verificar are gated on the athletes flag HERE,
+  // before the public-path short-circuit (/pase is public), because a page's
+  // notFound() cannot set a 404 once the root loading boundary has started
+  // streaming. Exact prefixes only; see lib/features/athleteValueGate.ts.
+  const gated = isAthletesGatedPath(pathname);
+
   // Public routes don't need auth but still need security headers.
-  if (isPublicPath(pathname)) {
+  if (isPublicPath(pathname) && !gated) {
     return applySecurityHeaders(NextResponse.next());
   }
 
@@ -234,11 +318,40 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  let userId: string | null = null;
+  if (gated) {
+    const allowed = await athletesGateAllows(
+      async () => {
+        const { data } = await supabase.auth.getUser();
+        userId = data.user?.id ?? null;
+        return userId;
+      },
+      supabase,
+      undefined,
+      pathname
+    );
+    // A gated path answers exactly as an UNKNOWN path would for this caller
+    // (measured 2026-09-30): signed in, an unknown URL is a real 404; signed
+    // out, an unknown non-public URL is the redirect to /auth below (decision
+    // 4), and an unknown path under the public /pase is a 404. So a signed-out
+    // visitor to /atletas falls through to that redirect rather than getting a
+    // 404 no other path gives them.
+    const signedOutOnPrivatePath = !userId && !isPublicPath(pathname);
+    if (!allowed && !signedOutOnPrivatePath) {
+      // A real 404, with the body an unknown URL gets: the rewrite target
+      // matches no route, so Next renders app/not-found.tsx.
+      return applySecurityHeaders(NextResponse.rewrite(new URL(GATED_NOT_FOUND_PATH, request.url), { status: 404 }));
+    }
+    // /pase/verificar is public: past the flag, its page handles the session.
+    if (allowed && isPublicPath(pathname)) return applySecurityHeaders(response);
+  } else {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    userId = user?.id ?? null;
+  }
 
-  if (!user) {
+  if (!userId) {
     const returnTo = encodeURIComponent(request.nextUrl.pathname + request.nextUrl.search);
     const redirectUrl = new URL(`/auth?returnTo=${returnTo}`, request.url);
     return applySecurityHeaders(NextResponse.redirect(redirectUrl));

@@ -16,7 +16,7 @@
  * Spanish copy is pending Verónica's review.
  */
 
-import { Resend } from 'resend';
+import { getResendClient } from '@/lib/email/resendClient';
 import { APP_STORE_URL, GOOGLE_PLAY_URL, INSTAGRAM_HANDLE } from './tribeOsWaitlist';
 import { formatCents } from '@/lib/format/currency';
 
@@ -42,12 +42,6 @@ export interface WeeklySummaryParams {
     /** Total active insights (active + un-dismissed + un-expired). */
     activeInsights: number;
   };
-}
-
-function getResendClient(): Resend {
-  const key = process.env.RESEND_API_KEY;
-  if (!key) throw new Error('RESEND_API_KEY is not configured');
-  return new Resend(key);
 }
 
 function escapeHtml(value: string): string {
@@ -212,7 +206,7 @@ function renderText(params: WeeklySummaryParams, siteUrl: string): string {
 }
 
 export async function sendWeeklySummary(params: WeeklySummaryParams, siteUrl: string): Promise<void> {
-  const resend = getResendClient();
+  const resend = getResendClient('weeklySummary');
   await resend.emails.send({
     from: FROM,
     to: params.ownerEmail,

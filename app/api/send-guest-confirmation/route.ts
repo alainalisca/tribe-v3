@@ -1,4 +1,4 @@
-import { Resend } from 'resend';
+import { getResendClient } from '@/lib/email/resendClient';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { logError } from '@/lib/logger';
@@ -11,12 +11,6 @@ function esc(s: string): string {
     /[&<>"']/g,
     (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] as string
   );
-}
-
-function getResendClient() {
-  const key = process.env.RESEND_API_KEY;
-  if (!key) throw new Error('RESEND_API_KEY is not configured');
-  return new Resend(key);
 }
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://tribe-v3.vercel.app';
@@ -74,7 +68,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Not eligible' }, { status: 403 });
     }
 
-    const resend = getResendClient();
+    const resend = getResendClient('guestConfirmation');
     const isSpanish = language === 'es';
 
     // Escaped copies for HTML interpolation (defense-in-depth — these

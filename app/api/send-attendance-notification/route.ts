@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import { getServiceRoleClient } from '@/lib/supabase/admin';
-import { Resend } from 'resend';
+import { getResendClient } from '@/lib/email/resendClient';
 import { NextResponse } from 'next/server';
 import { logError } from '@/lib/logger';
 import { isValidCronAuth } from '@/lib/auth/cron';
@@ -9,11 +9,6 @@ import { formatSessionLocation } from '@/lib/sessionLocation';
 import { shouldSendNotification } from '@/lib/dal/notificationPreferences';
 import { isEmailSuppressed, unsubUrlFor, unsubHeaders } from '@/lib/dal/emailUnsubscribe';
 
-function getResendClient() {
-  const key = process.env.RESEND_API_KEY;
-  if (!key) throw new Error('RESEND_API_KEY is not configured');
-  return new Resend(key);
-}
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://tribe-v3.vercel.app';
 
 /**
@@ -25,7 +20,7 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://tribe-v3.vercel.ap
  */
 export async function POST(request: Request) {
   try {
-    const resend = getResendClient();
+    const resend = getResendClient('attendanceNotification');
 
     // AUTH: allow EITHER a server-to-server cron call (CRON_SECRET bearer — the
     // post-session-followups cron, a trusted caller) OR an authenticated user

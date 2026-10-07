@@ -61,3 +61,9 @@ docs/ROUTE_INVENTORY_2026-08-16.md
 
 # T-LEAD1 recon output: a live schema dump, never committed
 supabase/recon-t-lead1.out.json
+
+# T-AV0 (athlete-value program) local stack artefacts.
+# The schema dump is a copy of production's SHAPE at a moment in time. It goes
+# stale, it is machine-generated, and a committed copy would be read as
+# authoritative. Regenerate with `npm run av:schema:pull`.
+supabase/av-local-schema.sql

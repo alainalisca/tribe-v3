@@ -25,7 +25,7 @@
  * Spanish copy is pending Verónica's review.
  */
 
-import { Resend } from 'resend';
+import { getResendClient } from '@/lib/email/resendClient';
 import { APP_STORE_URL, GOOGLE_PLAY_URL, INSTAGRAM_HANDLE } from './tribeOsWaitlist';
 import { renderTemplate, extractTemplate } from '@/lib/ai/insight-templates';
 
@@ -58,12 +58,6 @@ export interface DigestParams {
   gymName: string;
   /** Full list of new insights to summarize. Caller decides freshness. */
   insights: DigestInsight[];
-}
-
-function getResendClient(): Resend {
-  const key = process.env.RESEND_API_KEY;
-  if (!key) throw new Error('RESEND_API_KEY is not configured');
-  return new Resend(key);
 }
 
 function escapeHtml(value: string): string {
@@ -280,7 +274,7 @@ export async function sendIntelligenceDigest(params: DigestParams, siteUrl: stri
   // gate on length first.
   if (params.insights.length === 0) return;
 
-  const resend = getResendClient();
+  const resend = getResendClient('intelligenceDigest');
   await resend.emails.send({
     from: FROM,
     to: params.ownerEmail,
