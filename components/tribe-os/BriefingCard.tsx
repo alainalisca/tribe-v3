@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
-import { MessageCircle, Check, ChevronRight, Calendar, CreditCard, ArrowRight } from 'lucide-react';
+import { MessageCircle, ChevronRight, Calendar, CreditCard, ArrowRight } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
 import { Card, CardContent } from '@/components/tribe-os/ui';
 import DraftModal from '@/components/tribe-os/DraftModal';
@@ -131,18 +131,12 @@ export default function BriefingCard() {
           {/* Contacta hoy */}
           {data.contactToday.length > 0 && (
             <div>
-              <SectionHeader title="Contacta hoy" count={data.contactToday.filter((c) => !c.touchedToday).length} />
+              <SectionHeader title="Contacta hoy" count={data.contactToday.length} />
               <ul className="space-y-1.5">
                 {data.contactToday.map((c) => (
-                  <li
-                    key={c.id}
-                    className={`flex items-center justify-between gap-2 py-1.5 px-2 rounded-lg ${
-                      c.touchedToday ? 'opacity-50 bg-gray-50' : 'bg-white'
-                    }`}
-                  >
+                  <li key={c.id} className="flex items-center justify-between gap-2 py-1.5 px-2 rounded-lg bg-white">
                     <div className="min-w-0 flex-1">
                       <span className="text-sm font-semibold text-gray-900 truncate block">
-                        {c.touchedToday && <Check className="inline w-3.5 h-3.5 text-green-600 mr-1" />}
                         {c.name ?? 'Sin nombre'}
                       </span>
                       {c.reason && <span className="text-xs text-gray-500 truncate block">{c.reason}</span>}

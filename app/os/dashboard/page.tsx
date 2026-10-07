@@ -27,7 +27,6 @@ import { useLanguage } from '@/lib/LanguageContext';
 import { createClient } from '@/lib/supabase/client';
 import TribeOSWaitlistCard from '@/components/tribe-os/TribeOSWaitlistCard';
 import { useTranslations } from '@/lib/i18n/useTranslations';
-import AtRiskClientsWidget from '@/components/tribe-os/AtRiskClientsWidget';
 import CelebrateWinsWidget from '@/components/tribe-os/CelebrateWinsWidget';
 import RecentActivityWidget from '@/components/tribe-os/RecentActivityWidget';
 import TribeOSWelcomeGuide from '@/components/tribe-os/TribeOSWelcomeGuide';
@@ -365,16 +364,7 @@ export default function TribeOSDashboardPage() {
         {/* KPI strip */}
         <DashboardStats />
 
-        {/* Two-column mid section: upcoming sessions (2/3 wide) +
-            members at risk (1/3 wide). Stacks on smaller widths. */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-          <div className="lg:col-span-2">
-            <UpcomingSessionsCard />
-          </div>
-          <div>
-            <AtRiskClientsWidget teamId={selectedTeamId} />
-          </div>
-        </div>
+        <UpcomingSessionsCard />
 
         {/* Celebrate-wins widget — mirror image of the at-risk widget.
             Self-hides when no members are on an active streak so an

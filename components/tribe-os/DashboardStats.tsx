@@ -110,10 +110,14 @@ export default function DashboardStats() {
       : null;
   const totalAbs = data.total_members ? data.total_members.current - data.total_members.prior : null;
 
-  const revenueCurrentUsd = data.monthly_revenue?.current.USD ?? 0;
-  const revenuePriorUsd = data.monthly_revenue?.prior.USD ?? 0;
+  // Prefer COP if available (Colombian gyms), fall back to USD
+  const revenueCurrency: 'COP' | 'USD' = data.monthly_revenue?.current.COP !== undefined ? 'COP' : 'USD';
+  const revenueCurrent =
+    revenueCurrency === 'COP' ? (data.monthly_revenue?.current.COP ?? 0) : (data.monthly_revenue?.current.USD ?? 0);
+  const revenuePrior =
+    revenueCurrency === 'COP' ? (data.monthly_revenue?.prior.COP ?? 0) : (data.monthly_revenue?.prior.USD ?? 0);
   const revenueDelta =
-    revenuePriorUsd > 0 ? Math.round(((revenueCurrentUsd - revenuePriorUsd) / revenuePriorUsd) * 1000) / 10 : null;
+    revenuePrior > 0 ? Math.round(((revenueCurrent - revenuePrior) / revenuePrior) * 1000) / 10 : null;
 
   // Build per-card hint strings up-front to keep the JSX below tidy.
   const membersHint =
@@ -121,6 +125,7 @@ export default function DashboardStats() {
   const sessionsHint = data.active_sessions_today ? s.today(data.active_sessions_today.current) : undefined;
   const revenueHint = revenueDelta != null ? s.vsLastMonth : data.monthly_revenue ? s.noPriorData : undefined;
   const retentionHint = data.retention_rate?.current != null ? s.vsLastMonth : undefined;
+  const hasRetention = data.retention_rate?.current != null;
 
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
@@ -141,21 +146,19 @@ export default function DashboardStats() {
       <StatCard
         icon={DollarSign}
         label={s.monthlyRevenue}
-        value={data.monthly_revenue ? formatCents(revenueCurrentUsd, 'USD', language) : '—'}
+        value={data.monthly_revenue ? formatCents(revenueCurrent, revenueCurrency, language) : '—'}
         change={revenueDelta ?? undefined}
         changeLabel={revenueHint}
       />
-      <StatCard
-        icon={TrendingUp}
-        label={s.retentionRate}
-        value={
-          data.retention_rate && data.retention_rate.current != null
-            ? `${data.retention_rate.current.toFixed(1)}%`
-            : '—'
-        }
-        change={undefined}
-        changeLabel={retentionHint}
-      />
+      {hasRetention && (
+        <StatCard
+          icon={TrendingUp}
+          label={s.retentionRate}
+          value={`${data.retention_rate!.current!.toFixed(1)}%`}
+          change={undefined}
+          changeLabel={retentionHint}
+        />
+      )}
     </div>
   );
 }

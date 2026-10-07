@@ -8,6 +8,7 @@ import { buildWhatsAppUrl } from '@/lib/phone';
 import { StatCard, Badge, Button } from '@/components/tribe-os/ui';
 import DraftModal from '@/components/tribe-os/DraftModal';
 import type { DraftContext } from '@/lib/tribe-os/drafts/templates';
+import { filterContactToday } from '@/lib/tribe-os/contactFilter';
 import { Users, Phone, RotateCcw, MessageCircle, RefreshCw, ChevronDown, Check } from 'lucide-react';
 
 const copy = {
@@ -286,17 +287,8 @@ export default function RetentionPage() {
       return new Date(b.last_touch!.created_at).getTime() - new Date(a.last_touch!.created_at).getTime();
     });
 
-  // Contact today: high/medium, 7–30 days absent, NOT already contacted this week
-  const contactToday = allMembers
-    .filter(
-      (m) =>
-        !contactedIds.has(m.id) &&
-        (m.level === 'high' || m.level === 'medium') &&
-        m.days_since_last_activity !== null &&
-        m.days_since_last_activity >= 7 &&
-        m.days_since_last_activity <= 30
-    )
-    .sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
+  // Contact today: shared filter (high/medium, 7–30 days, no touch in 7 days)
+  const contactToday = filterContactToday(allMembers);
 
   // Win back: >30 days absent, NOT already contacted this week
   const winBack = allMembers

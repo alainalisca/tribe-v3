@@ -171,7 +171,11 @@ export default function RecentActivityWidget({ limit = 6 }: RecentActivityWidget
           setState({ kind: 'error' });
           return;
         }
-        setState({ kind: 'ready', items: body.data.activity ?? [] });
+        const sevenDaysAgo = new Date(Date.now() - 7 * 86_400_000).toISOString();
+        const filtered = (body.data.activity ?? []).filter(
+          (item) => item.kind !== 'insight' || item.created_at >= sevenDaysAgo
+        );
+        setState({ kind: 'ready', items: filtered });
       } catch {
         if (!cancelled) setState({ kind: 'error' });
       }
@@ -181,6 +185,8 @@ export default function RecentActivityWidget({ limit = 6 }: RecentActivityWidget
       cancelled = true;
     };
   }, [limit]);
+
+  if (state.kind === 'ready' && state.items.length === 0) return null;
 
   return (
     <Card>

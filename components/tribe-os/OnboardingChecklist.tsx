@@ -30,7 +30,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { CheckCircle2, Circle, X, ChevronRight, Sparkles } from 'lucide-react';
+import { CheckCircle2, Circle, X, ChevronRight, ChevronDown, Sparkles } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
 import { trackEvent } from '@/lib/analytics';
 
@@ -133,6 +133,8 @@ export default function OnboardingChecklist() {
     };
   }, []);
 
+  const [expanded, setExpanded] = useState(false);
+
   if (state.kind !== 'visible') return null;
 
   function handleDismiss() {
@@ -143,8 +145,11 @@ export default function OnboardingChecklist() {
     setState({ kind: 'hidden' });
   }
 
+  const doneCount = [state.data.has_client, state.data.has_attendance, state.data.has_coach].filter(Boolean).length;
+  const totalRequired = 3;
+
   return (
-    <section className="relative bg-gradient-to-br from-tribe-green/10 to-white rounded-xl border border-tribe-green/30 p-5">
+    <section className="relative bg-gradient-to-br from-tribe-green/10 to-white rounded-xl border border-tribe-green/30 p-4 sm:p-5">
       <button
         type="button"
         onClick={handleDismiss}
@@ -154,47 +159,52 @@ export default function OnboardingChecklist() {
         <X className="w-4 h-4" />
       </button>
 
-      <header className="flex items-center gap-2 mb-1 pr-8">
+      <button
+        type="button"
+        onClick={() => setExpanded((v) => !v)}
+        className="flex items-center gap-2 w-full text-left pr-8"
+      >
         <Sparkles className="w-4 h-4 text-tribe-green shrink-0" />
-        <h2 className="text-base font-bold text-gray-900">{s.title}</h2>
-      </header>
-      <p className="text-xs sm:text-sm text-gray-600 mb-4 leading-relaxed pr-8">{s.subtitle}</p>
+        <span className="text-sm font-bold text-gray-900">
+          {language === 'es' ? 'Configuración' : 'Setup'}: {doneCount} {language === 'es' ? 'de' : 'of'} {totalRequired}{' '}
+          {language === 'es' ? 'listos' : 'done'}
+        </span>
+        {expanded ? (
+          <ChevronDown className="w-3.5 h-3.5 text-gray-500 shrink-0 ml-auto" />
+        ) : (
+          <ChevronRight className="w-3.5 h-3.5 text-gray-500 shrink-0 ml-auto" />
+        )}
+      </button>
 
-      <ul className="space-y-2">
-        <ChecklistItem
-          done={state.data.has_client}
-          title={state.data.has_client ? s.addClientDone : s.addClient}
-          hint={s.addClientHint}
-          href="/os/clients/new"
-          eventName="onboarding_clients"
-          // When the client step is still pending, surface a second
-          // path: import from CSV. New coaches with an existing
-          // spreadsheet roster don't have to retype it client by
-          // client — they can land in the importer directly.
-          secondaryHref={state.data.has_client ? undefined : s.addClientSecondaryHref}
-          secondaryLabel={state.data.has_client ? undefined : s.addClientSecondaryLabel}
-          secondaryEventName="onboarding_clients_csv"
-        />
-        <ChecklistItem
-          done={state.data.has_attendance}
-          title={state.data.has_attendance ? s.recordAttendanceDone : s.recordAttendance}
-          hint={s.recordAttendanceHint}
-          href="/os/clients"
-          eventName="onboarding_attendance"
-          // Until the user has at least one client, recording
-          // attendance isn't actually possible — but linking to
-          // /os/clients (where they can add one) keeps the flow
-          // moving without us second-guessing the order.
-        />
-        <ChecklistItem
-          done={state.data.has_coach}
-          title={state.data.has_coach ? s.inviteCoachDone : s.inviteCoach}
-          hint={s.inviteCoachHint}
-          href="/os/coaches"
-          eventName="onboarding_coach"
-          badge={state.data.has_coach ? undefined : s.optional}
-        />
-      </ul>
+      {expanded && (
+        <ul className="space-y-2 mt-3">
+          <ChecklistItem
+            done={state.data.has_client}
+            title={state.data.has_client ? s.addClientDone : s.addClient}
+            hint={s.addClientHint}
+            href="/os/clients/new"
+            eventName="onboarding_clients"
+            secondaryHref={state.data.has_client ? undefined : s.addClientSecondaryHref}
+            secondaryLabel={state.data.has_client ? undefined : s.addClientSecondaryLabel}
+            secondaryEventName="onboarding_clients_csv"
+          />
+          <ChecklistItem
+            done={state.data.has_attendance}
+            title={state.data.has_attendance ? s.recordAttendanceDone : s.recordAttendance}
+            hint={s.recordAttendanceHint}
+            href="/os/clients"
+            eventName="onboarding_attendance"
+          />
+          <ChecklistItem
+            done={state.data.has_coach}
+            title={state.data.has_coach ? s.inviteCoachDone : s.inviteCoach}
+            hint={s.inviteCoachHint}
+            href="/os/coaches"
+            eventName="onboarding_coach"
+            badge={state.data.has_coach ? undefined : s.optional}
+          />
+        </ul>
+      )}
     </section>
   );
 }

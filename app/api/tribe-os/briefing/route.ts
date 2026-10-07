@@ -13,47 +13,10 @@ import { logError } from '@/lib/logger';
 import { requireTribeOSPremium } from '@/lib/auth/premium';
 import { listGymMemberUserIds } from '@/lib/dal/gymCoaches';
 import { listUnpaidAttendance } from '@/lib/dal/clients';
+import { filterContactToday } from '@/lib/tribe-os/contactFilter';
+import { bogotaToday, bogotaDateLabel, addDays, planExpiryLabel } from '@/lib/tribe-os/dates';
 
 const BOGOTA = 'America/Bogota';
-
-function bogotaToday(): string {
-  return new Date().toLocaleDateString('en-CA', { timeZone: BOGOTA });
-}
-
-function bogotaWeekday(dateStr: string): string {
-  const days = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
-  const d = new Date(dateStr + 'T12:00:00Z');
-  const bogota = new Date(d.toLocaleString('en-US', { timeZone: BOGOTA }));
-  return days[bogota.getDay()];
-}
-
-function bogotaDateLabel(today: string): string {
-  const d = new Date(today + 'T12:00:00Z');
-  const bogota = new Date(d.toLocaleString('en-US', { timeZone: BOGOTA }));
-  const day = bogota.getDate();
-  const months = [
-    'enero',
-    'febrero',
-    'marzo',
-    'abril',
-    'mayo',
-    'junio',
-    'julio',
-    'agosto',
-    'septiembre',
-    'octubre',
-    'noviembre',
-    'diciembre',
-  ];
-  const weekday = bogotaWeekday(today);
-  return `Hoy, ${weekday} ${day} de ${months[bogota.getMonth()]}`;
-}
-
-function addDays(dateStr: string, n: number): string {
-  const d = new Date(dateStr + 'T12:00:00Z');
-  d.setUTCDate(d.getUTCDate() + n);
-  return d.toISOString().slice(0, 10);
-}
 
 export interface BriefingContact {
   id: string;
@@ -61,7 +24,6 @@ export interface BriefingContact {
   phone: string | null;
   score: number | null;
   reason: string | null;
-  touchedToday: boolean;
   coachName: string | null;
   className: string | null;
   classStartTime: string | null;
@@ -130,7 +92,6 @@ export async function GET(): Promise<NextResponse> {
     const sevenDaysAgo = addDays(today, -7);
     const sevenDaysFromNow = addDays(today, 7);
 
-    // ── Parallel queries ──────────────────────────────────
     const [membersRes, scoresRes, touchesRes, visitsRes, unpaidRes, sessionsRes] = await Promise.all([
       supabase.from('clients').select('id, name, phone, plan_ends_on').eq('gym_id', gymId),
       supabase
@@ -178,7 +139,6 @@ export async function GET(): Promise<NextResponse> {
     const scoreMap = new Map(scores.map((s) => [s.client_id, s]));
     const memberMap = new Map(members.map((m) => [m.id, m]));
 
-    // Latest visit per client
     const visitMap = new Map<string, { visited_at: string; coach_name: string | null; class_name: string | null }>();
     for (const v of visits) {
       if (!visitMap.has(v.client_id)) {
@@ -186,27 +146,32 @@ export async function GET(): Promise<NextResponse> {
       }
     }
 
-    // Touch map: most recent touch per client in last 7 days
     const touchMap = new Map<string, string>();
     for (const t of touches) {
       if (!touchMap.has(t.client_id)) touchMap.set(t.client_id, t.created_at);
     }
 
-    // Touch today: any touch whose created_at is today (Bogota)
-    const todayTouched = new Set<string>();
-    for (const t of touches) {
-      const touchDate = new Date(t.created_at).toLocaleDateString('en-CA', { timeZone: BOGOTA });
-      if (touchDate === today) todayTouched.add(t.client_id);
-    }
-
-    // ── 1. Contact today (top 5 by score from high/medium retention) ──
-    const contactCandidates = scores
-      .filter((s) => s.level === 'high' || s.level === 'medium')
-      .sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
-
-    const contactToday: BriefingContact[] = contactCandidates.slice(0, 5).map((s) => {
+    // ── 1. Contact today — shared filter with retention page ──
+    // Build rows compatible with ContactFilterRow
+    const filterRows = scores.map((s) => {
       const m = memberMap.get(s.client_id);
-      const v = visitMap.get(s.client_id);
+      return {
+        id: s.client_id,
+        level: s.level,
+        score: s.score,
+        days_since_last_activity: s.signals?.days_since_last_activity ?? null,
+        last_touch: touchMap.has(s.client_id) ? { created_at: touchMap.get(s.client_id)! } : null,
+        _score: s,
+        _member: m,
+      };
+    });
+
+    const filtered = filterContactToday(filterRows).slice(0, 5);
+
+    const contactToday: BriefingContact[] = filtered.map((row) => {
+      const s = row._score;
+      const m = row._member;
+      const v = visitMap.get(row.id);
       const days = s.signals?.days_since_last_activity ?? null;
       let lastActivityAt: string | null = s.signals?.last_activity_at ?? null;
       if (v && (!lastActivityAt || new Date(v.visited_at) > new Date(lastActivityAt))) {
@@ -214,15 +179,13 @@ export async function GET(): Promise<NextResponse> {
       }
       const reasons: string[] = s.reasons ?? [];
       const shortReason = reasons[0]?.split(' / ')[0] ?? null;
-      const cameBack = !!(lastActivityAt && days !== null && days <= 7 && (s.level === 'high' || s.level === 'medium'));
 
       return {
-        id: s.client_id,
+        id: row.id,
         name: m?.name ?? null,
         phone: m?.phone ?? null,
         score: s.score,
         reason: shortReason,
-        touchedToday: todayTouched.has(s.client_id),
         coachName: v?.coach_name ?? null,
         className: v?.class_name ?? null,
         classStartTime: v?.visited_at ?? null,
@@ -230,14 +193,8 @@ export async function GET(): Promise<NextResponse> {
         daysSinceLastActivity: days,
         lastActivityAt,
         reasons,
-        cameBack,
+        cameBack: false,
       };
-    });
-
-    // Sort: untouched first, touched at bottom
-    contactToday.sort((a, b) => {
-      if (a.touchedToday !== b.touchedToday) return a.touchedToday ? 1 : -1;
-      return (b.score ?? 0) - (a.score ?? 0);
     });
 
     // ── 2. Came back (returned after a touch in last 7 days) ──
@@ -255,9 +212,7 @@ export async function GET(): Promise<NextResponse> {
     for (const m of members) {
       if (!m.plan_ends_on) continue;
       if (m.plan_ends_on >= sevenDaysAgo && m.plan_ends_on <= sevenDaysFromNow) {
-        const expired = m.plan_ends_on < today;
-        const weekday = bogotaWeekday(m.plan_ends_on);
-        const label = expired ? `venció el ${weekday}` : `vence el ${weekday}`;
+        const label = planExpiryLabel(today, m.plan_ends_on);
         const s = scoreMap.get(m.id);
         const v = visitMap.get(m.id);
         const days = s?.signals?.days_since_last_activity ?? null;
@@ -307,8 +262,8 @@ export async function GET(): Promise<NextResponse> {
 
     // ── Summary line ──
     const parts: string[] = [];
-    const contactCount = contactToday.filter((c) => !c.touchedToday).length;
-    if (contactCount > 0) parts.push(`${contactCount} persona${contactCount > 1 ? 's' : ''} para contactar`);
+    if (contactToday.length > 0)
+      parts.push(`${contactToday.length} persona${contactToday.length > 1 ? 's' : ''} para contactar`);
     if (planExpiry.length > 0)
       parts.push(
         `${planExpiry.length} plan${planExpiry.length > 1 ? 'es' : ''} vence${planExpiry.length > 1 ? 'n' : ''} esta semana`
