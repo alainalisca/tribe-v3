@@ -39,6 +39,7 @@ import GymWeekRecapCard from '@/components/tribe-os/GymWeekRecapCard';
 import UpcomingSessionsCard from '@/components/tribe-os/UpcomingSessionsCard';
 import InsightsBanner from '@/components/tribe-os/InsightsBanner';
 import RecentlyEndedSessionPrompt from '@/components/tribe-os/RecentlyEndedSessionPrompt';
+import BriefingCard from '@/components/tribe-os/BriefingCard';
 import { getTribeOSPremiumStatusForUser } from '@/lib/dal/tribeOSPremium';
 import { trackEvent } from '@/lib/analytics';
 
@@ -333,6 +334,10 @@ export default function TribeOSDashboardPage() {
             <AuditActivityChip />
           </div>
         </header>
+
+        {/* Daily briefing — "Hoy" card: who to contact, plans
+            expiring, came-back members, today's schedule, unpaid. */}
+        <BriefingCard />
 
         {/* Onboarding checklist — auto-hides once graduated or dismissed. */}
         <OnboardingChecklist />
