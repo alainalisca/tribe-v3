@@ -235,6 +235,9 @@ type EventName =
   | 'tribe_os_retention_recomputed' // recompute button clicked on /os/retention
   | 'tribe_os_retention_touch_whatsapp'
   | 'tribe_os_retention_touch_manual'
+  | 'tribe_os_draft_cycled'
+  | 'tribe_os_draft_copied'
+  | 'tribe_os_draft_whatsapp_sent'
   | 'tribe_os_import_completed'
 
   // Demand signal for not-yet-built paid flows (honest "notify me")

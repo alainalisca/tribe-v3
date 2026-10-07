@@ -14,6 +14,7 @@ import {
   CheckCircle,
   DollarSign,
   MessageCircle,
+  PenLine,
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { useLanguage } from '@/lib/LanguageContext';
@@ -30,6 +31,8 @@ import InsightHistorySection from '@/components/tribe-os/InsightHistorySection';
 import StreakMilestoneChip from '@/components/tribe-os/StreakMilestoneChip';
 import AttendanceHeatmap from '@/components/tribe-os/AttendanceHeatmap';
 import TrainingPatternInsight from '@/components/tribe-os/TrainingPatternInsight';
+import DraftModal from '@/components/tribe-os/DraftModal';
+import type { DraftContext } from '@/lib/tribe-os/drafts/templates';
 import type { AttendanceWithSession, ClientAttendanceSummary, ClientRow } from '@/lib/dal/clients';
 
 interface DetailResponse {
@@ -72,6 +75,7 @@ const copy = {
     // Contact
     contactTitle: 'Contact',
     noContact: 'No contact info recorded.',
+    draftLabel: 'Write',
     whatsappLabel: 'WhatsApp',
     whatsappCheckInMessage: (name: string) => `Hey ${name}! Just checking in — how's training going?`,
     whatsappStreakMessage: (name: string, days: number) =>
@@ -193,6 +197,7 @@ const copy = {
 
     contactTitle: 'Contacto',
     noContact: 'Sin información de contacto.',
+    draftLabel: 'Escribir',
     whatsappLabel: 'WhatsApp',
     whatsappCheckInMessage: (name: string) => `¡Hola ${name}! Pasaba a saludarte. ¿Cómo va el entrenamiento?`,
     whatsappStreakMessage: (name: string, days: number) =>
@@ -295,6 +300,7 @@ export default function ClientDetailPage() {
   const [state, setState] = useState<DetailState>({ kind: 'loading' });
   const [reloadKey, setReloadKey] = useState(0);
   const [showDelete, setShowDelete] = useState(false);
+  const [showDraft, setShowDraft] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   // When true, the delete dialog's confirm button hits the hard-
@@ -616,23 +622,34 @@ export default function ClientDetailPage() {
                           template = 'check_in';
                         }
                         const waUrl = buildWhatsAppUrl(state.client.phone, { message });
-                        if (!waUrl) return null;
                         return (
-                          <a
-                            href={waUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            onClick={() =>
-                              trackEvent('tribe_os_whatsapp_clicked', {
-                                surface: 'client_detail',
-                                template,
-                              })
-                            }
-                            className="inline-flex items-center gap-1 px-2.5 py-1 bg-tribe-green/15 text-tribe-green text-[11px] font-bold rounded-full border border-tribe-green/30 hover:bg-tribe-green/25 transition-colors ml-1"
-                          >
-                            <MessageCircle className="w-3 h-3" />
-                            {s.whatsappLabel}
-                          </a>
+                          <>
+                            {waUrl && (
+                              <a
+                                href={waUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={() =>
+                                  trackEvent('tribe_os_whatsapp_clicked', {
+                                    surface: 'client_detail',
+                                    template,
+                                  })
+                                }
+                                className="inline-flex items-center gap-1 px-2.5 py-1 bg-tribe-green/15 text-tribe-green text-[11px] font-bold rounded-full border border-tribe-green/30 hover:bg-tribe-green/25 transition-colors ml-1"
+                              >
+                                <MessageCircle className="w-3 h-3" />
+                                {s.whatsappLabel}
+                              </a>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => setShowDraft(true)}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 bg-tribe-green/15 text-tribe-green text-[11px] font-bold rounded-full border border-tribe-green/30 hover:bg-tribe-green/25 transition-colors ml-1"
+                            >
+                              <PenLine className="w-3 h-3" />
+                              {s.draftLabel}
+                            </button>
+                          </>
                         );
                       })()}
                     </li>
@@ -848,6 +865,32 @@ export default function ClientDetailPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {state.kind === 'ready' && (
+        <DraftModal
+          open={showDraft}
+          onClose={() => setShowDraft(false)}
+          context={
+            {
+              memberId: state.client.id,
+              memberName: state.client.name,
+              phone: state.client.phone,
+              reasons:
+                state.client.health_status === 'AT_RISK'
+                  ? ['Miembro en riesgo / At-risk member']
+                  : state.client.health_status === 'WATCH'
+                    ? ['Miembro bajo observación / Member under watch']
+                    : [],
+              daysSinceLastActivity: state.client.last_seen_at
+                ? Math.floor((Date.now() - new Date(state.client.last_seen_at).getTime()) / 86_400_000)
+                : null,
+              lastActivityAt: state.client.last_seen_at,
+              lastTouchCreatedAt: null,
+              language,
+            } satisfies DraftContext
+          }
+        />
+      )}
     </main>
   );
 }

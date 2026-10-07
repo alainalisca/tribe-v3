@@ -6,6 +6,8 @@ import { useTribeOSPremiumGate } from '@/hooks/useTribeOSPremiumGate';
 import { trackEvent } from '@/lib/analytics';
 import { buildWhatsAppUrl } from '@/lib/phone';
 import { StatCard, Badge, Button } from '@/components/tribe-os/ui';
+import DraftModal from '@/components/tribe-os/DraftModal';
+import type { DraftContext } from '@/lib/tribe-os/drafts/templates';
 import { Users, Phone, RotateCcw, MessageCircle, RefreshCw, ChevronDown, Check } from 'lucide-react';
 
 const copy = {
@@ -183,6 +185,7 @@ export default function RetentionPage() {
   const [winBackOpen, setWinBackOpen] = useState(false);
   const [wellOpen, setWellOpen] = useState(false);
   const [contactedOpen, setContactedOpen] = useState(false);
+  const [draftTarget, setDraftTarget] = useState<{ member: MemberRow; cameBack?: boolean } | null>(null);
   const contactRef = useRef<HTMLElement>(null);
   const winBackRef = useRef<HTMLElement>(null);
 
@@ -372,7 +375,14 @@ export default function RetentionPage() {
                 <h2 className="text-lg font-bold text-tribe-dark mb-3">{s.talkToday}</h2>
                 <div className="space-y-2">
                   {contactVisible.map((m) => (
-                    <MemberCard key={m.id} member={m} language={language} s={s} onTouch={recordTouch} />
+                    <MemberCard
+                      key={m.id}
+                      member={m}
+                      language={language}
+                      s={s}
+                      onTouch={recordTouch}
+                      onDraft={(member) => setDraftTarget({ member })}
+                    />
                   ))}
                 </div>
                 {contactToday.length > 10 && (
@@ -404,7 +414,14 @@ export default function RetentionPage() {
                 {winBackOpen && (
                   <div className="space-y-2 mt-3">
                     {winBack.map((m) => (
-                      <MemberCard key={m.id} member={m} language={language} s={s} onTouch={recordTouch} />
+                      <MemberCard
+                        key={m.id}
+                        member={m}
+                        language={language}
+                        s={s}
+                        onTouch={recordTouch}
+                        onDraft={(member) => setDraftTarget({ member })}
+                      />
                     ))}
                   </div>
                 )}
@@ -435,6 +452,7 @@ export default function RetentionPage() {
                         language={language}
                         s={s}
                         onUndo={undoTouch}
+                        onDraft={(member, cb) => setDraftTarget({ member, cameBack: cb })}
                       />
                     ))}
                   </div>
@@ -478,6 +496,27 @@ export default function RetentionPage() {
             )}
           </>
         )}
+
+        {draftTarget && (
+          <DraftModal
+            open={!!draftTarget}
+            onClose={() => setDraftTarget(null)}
+            context={
+              {
+                memberId: draftTarget.member.id,
+                memberName: draftTarget.member.name,
+                phone: draftTarget.member.phone,
+                reasons: draftTarget.member.reasons,
+                daysSinceLastActivity: draftTarget.member.days_since_last_activity,
+                lastActivityAt: draftTarget.member.last_activity_at,
+                lastTouchCreatedAt: draftTarget.member.last_touch?.created_at ?? null,
+                cameBack: draftTarget.cameBack,
+                language,
+              } satisfies DraftContext
+            }
+            onTouchRecorded={fetchScores}
+          />
+        )}
       </div>
     </div>
   );
@@ -490,17 +529,16 @@ function MemberCard({
   language,
   s,
   onTouch,
+  onDraft,
 }: {
   member: MemberRow;
   language: 'en' | 'es';
   s: (typeof copy)['en'] | (typeof copy)['es'];
   onTouch: (clientId: string, channel: Channel) => void;
+  onDraft: (member: MemberRow) => void;
 }) {
   const [picking, setPicking] = useState(false);
   const badge = levelBadge[m.level ?? 'insufficient_data'] ?? levelBadge.insufficient_data;
-  const waUrl = buildWhatsAppUrl(m.phone, {
-    message: s.waMessage(firstName(m.name)),
-  });
 
   const reasons = deduplicateReasons(m.reasons);
   const reasonText = reasons
@@ -559,18 +597,14 @@ function MemberCard({
             {s.contacted}
           </button>
         )}
-        {waUrl && (
-          <a
-            href={waUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={() => onTouch(m.id, 'whatsapp')}
-            className="shrink-0 p-2 rounded-tribe bg-tribe-green-50 hover:bg-tribe-green transition-colors"
-            aria-label={`WhatsApp ${firstName(m.name)}`}
-          >
-            <MessageCircle className="h-5 w-5 text-tribe-green-dark" />
-          </a>
-        )}
+        <button
+          type="button"
+          onClick={() => onDraft(m)}
+          className="shrink-0 p-2 rounded-tribe bg-tribe-green-50 hover:bg-tribe-green transition-colors"
+          aria-label={`${language === 'es' ? 'Redactar para' : 'Draft for'} ${firstName(m.name)}`}
+        >
+          <MessageCircle className="h-5 w-5 text-tribe-green-dark" />
+        </button>
       </div>
     </div>
   );
@@ -582,12 +616,14 @@ function ContactedCard({
   language,
   s,
   onUndo,
+  onDraft,
 }: {
   member: MemberRow;
   cameBack: boolean;
   language: 'en' | 'es';
   s: (typeof copy)['en'] | (typeof copy)['es'];
   onUndo: (touchId: string) => void;
+  onDraft: (member: MemberRow, cameBack: boolean) => void;
 }) {
   const badge = levelBadge[m.level ?? 'insufficient_data'] ?? levelBadge.insufficient_data;
 
@@ -636,15 +672,25 @@ function ContactedCard({
         <p className="text-xs text-tribe-dark-80 mt-0.5 truncate">{subtitle}</p>
         {nextStep && <p className="text-xs text-amber-700 mt-0.5 truncate">{nextStep}</p>}
       </div>
-      {m.last_touch && (
+      <div className="shrink-0 flex items-center gap-1.5">
         <button
           type="button"
-          onClick={() => onUndo(m.last_touch!.id)}
-          className="shrink-0 text-xs text-tribe-dark-80 hover:text-red-600 transition-colors"
+          onClick={() => onDraft(m, cameBack)}
+          className="p-1.5 rounded-tribe bg-tribe-green-50 hover:bg-tribe-green transition-colors"
+          aria-label={`${language === 'es' ? 'Redactar para' : 'Draft for'} ${firstName(m.name)}`}
         >
-          {s.undo}
+          <MessageCircle className="h-4 w-4 text-tribe-green-dark" />
         </button>
-      )}
+        {m.last_touch && (
+          <button
+            type="button"
+            onClick={() => onUndo(m.last_touch!.id)}
+            className="text-xs text-tribe-dark-80 hover:text-red-600 transition-colors"
+          >
+            {s.undo}
+          </button>
+        )}
+      </div>
     </div>
   );
 }
