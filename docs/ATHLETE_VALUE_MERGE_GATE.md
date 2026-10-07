@@ -146,6 +146,19 @@ refused by objects the catalog does not show.
   - **Step 7 (after), Al:** 201 to 210 all `applied`, every other row
     unchanged, `GUARD_184_mirror_matches_applied_table` `MISSING` (expected
     until step 8's record commit).
+- **Step 8 is done (2026-10-07).** Record commit `e3b8885b`
+  ("chore(migrations): record 201 to 210 as applied", on `b1734df3`) merged
+  into `athlete/main` as `9086cd72`. On `athlete/main`: tsc 0, eslint 0
+  errors, `test:complete` 319 of 319 files and 2848 tests, the
+  applied-before-code guard passing with `KNOWN_NAME_COLLISIONS` empty,
+  `test:e2e:av` 3 + 4 passed, and all eleven proofs t-av21 to t-av30 green.
+- **Step 9, Vercel, done by Al (2026-10-07):** in Vercel Production only,
+  `ATHLETE_VALUE_ENABLED=allowlist`, `ATHLETE_VALUE_ALLOWLIST` with Al's two
+  UUIDs, `ATHLETE_VALUE_FEATURES=athletes`; no redeploy (the phase 2 deploy
+  picks them up). Phase 2 then goes in as two pull requests, because the
+  worktree's pre-push hook refuses pushes to `main`: PR A, the record commit
+  alone, merged and its deploy Ready first; then PR B, `athlete/main` into
+  `main`.
 - **Mutation drivers last passed in full on the `de04d388` tree**
   (`athlete/main` `8795698f`, phase 2 rehearsal `2a3366ef`, 2026-10-06): all
   ten, every arm on its first run. **Not re-run on `f9fcc745`**, by Al's
