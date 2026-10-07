@@ -23,7 +23,7 @@
  * Spanish copy is pending Verónica's review.
  */
 
-import { Resend } from 'resend';
+import { getResendClient } from '@/lib/email/resendClient';
 import { APP_STORE_URL, GOOGLE_PLAY_URL, INSTAGRAM_HANDLE } from './tribeOsWaitlist';
 
 const FROM = 'Tribe <tribe@aplusfitnessllc.com>';
@@ -44,12 +44,6 @@ export interface SignUpInviteParams {
   gymName: string;
   /** Display name of the coach themselves. */
   coachName: string;
-}
-
-function getResendClient(): Resend {
-  const key = process.env.RESEND_API_KEY;
-  if (!key) throw new Error('RESEND_API_KEY is not configured');
-  return new Resend(key);
 }
 
 function escapeHtml(value: string): string {
@@ -228,7 +222,7 @@ function renderText(params: SignUpInviteParams, siteUrl: string): string {
  * error so the caller can decide whether to log-and-continue.
  */
 export async function sendSignUpInvite(params: SignUpInviteParams, siteUrl: string): Promise<void> {
-  const resend = getResendClient();
+  const resend = getResendClient('signUpInvite');
   await resend.emails.send({
     from: FROM,
     to: params.memberEmail,

@@ -28,6 +28,9 @@ import { defineConfig, devices } from '@playwright/test';
  */
 export default defineConfig({
   testDir: './e2e',
+  // T-AV27c: the Tribe Athletes suite needs the local stack and its own runner
+  // (npm run test:e2e:av, playwright.av.config.ts), so the default run skips it.
+  testIgnore: ['**/av/**'],
   fullyParallel: true,
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 2 : undefined,

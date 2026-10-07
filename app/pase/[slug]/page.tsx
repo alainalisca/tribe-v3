@@ -4,9 +4,12 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { getServiceRoleClient } from '@/lib/supabase/admin';
 import { fetchPassConfig, isOrganizationPartner, type PassConfig } from '@/lib/dal/passLeads';
-import { consentTextFor, CONSENT_POLICY_PATH } from '@/lib/pase/consent';
+import { CONSENT_POLICY_PATH } from '@/lib/pase/consent';
+import { consentForPassPage } from '@/lib/pase/athleteAttribution';
 import { passShareCard, passShareDescription } from '@/lib/pase/shareCard';
 import PaseForm from './PaseForm';
+import AthleteInviteChip from './AthleteInviteChip';
+import { initialsOf } from '@/lib/text/initials';
 
 /**
  * /pase/[slug] -- the digital pass.
@@ -35,6 +38,8 @@ const getConfig = cache(async (slug: string): Promise<PassConfig | null> => {
 
 interface PageProps {
   params: Promise<{ slug: string }>;
+  /** T-AV23: ?src=atleta&code=... Read only when the athletes flag is on. */
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }
 
 /**
@@ -130,11 +135,8 @@ const HERO_CARD_PAD_PX = 14;
 const HERO_MAX_ASPECT = 2.5;
 
 function PartnerHero({ config }: { config: PassConfig }) {
-  const initials = config.partnerName
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((w) => w[0]?.toUpperCase() ?? '')
-    .join('');
+  // T-AV28: letters only ("BullBox (Prueba)" is "BP", not "B(").
+  const initials = initialsOf(config.partnerName);
 
   // Squares for organizations, circles for people. Read off the row, never off
   // the slug or the name.
@@ -250,11 +252,12 @@ function InactivePass() {
   );
 }
 
-export default async function PasePage({ params }: PageProps) {
+export default async function PasePage({ params, searchParams }: PageProps) {
   const { slug } = await params;
   const config = await getConfig(slug);
 
   if (!config) return <InactivePass />;
+  const invite = await consentForPassPage(getServiceRoleClient(), config.partnerId, config.partnerName, searchParams);
 
   return (
     <main className="min-h-screen bg-tribe-dark px-4 py-8">
@@ -273,11 +276,13 @@ export default async function PasePage({ params }: PageProps) {
           </p>
         </div>
 
+        {invite.invitedByFirstName ? <AthleteInviteChip firstName={invite.invitedByFirstName} /> : null}
+
         <PaseForm
           slug={config.slug}
           partnerName={config.partnerName}
           options={config.options}
-          consentText={consentTextFor(config.partnerName)}
+          consentText={invite.consentText}
           consentPolicyPath={CONSENT_POLICY_PATH}
         />
 

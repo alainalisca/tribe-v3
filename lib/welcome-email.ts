@@ -1,12 +1,5 @@
-import { Resend } from 'resend';
+import { getResendClient } from '@/lib/email/resendClient';
 import { logError } from '@/lib/logger';
-
-/** Lazily build the Resend client. Throws if the API key is not configured. */
-function getResendClient(): Resend {
-  const key = process.env.RESEND_API_KEY;
-  if (!key) throw new Error('RESEND_API_KEY is not configured');
-  return new Resend(key);
-}
 
 interface SendWelcomeEmailParams {
   email: string;
@@ -31,7 +24,7 @@ interface SendWelcomeEmailResult {
 export async function sendWelcomeEmail(params: SendWelcomeEmailParams): Promise<SendWelcomeEmailResult> {
   const { email, name, language } = params;
   try {
-    const resend = getResendClient();
+    const resend = getResendClient('welcome');
     const isSpanish = language.startsWith('es');
 
     const trimmedName = name?.trim() || '';

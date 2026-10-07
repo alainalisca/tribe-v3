@@ -1,5 +1,5 @@
 import { getServiceRoleClient } from '@/lib/supabase/admin';
-import { Resend } from 'resend';
+import { getResendClient } from '@/lib/email/resendClient';
 import { NextResponse } from 'next/server';
 import { logError } from '@/lib/logger';
 import { fetchParticipationsWithSession, fetchSessionsByCreator, fetchUsersForEmailJobs } from '@/lib/dal';
@@ -10,11 +10,6 @@ import { isEmailSuppressed, unsubUrlFor, unsubHeaders } from '@/lib/dal/emailUns
 import { bogotaDateOffset } from '@/lib/time/bogotaDate';
 import { dateLocale } from '@/lib/dateLocale';
 
-function getResendClient() {
-  const key = process.env.RESEND_API_KEY;
-  if (!key) throw new Error('RESEND_API_KEY is not configured');
-  return new Resend(key);
-}
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://tribe-v3.vercel.app';
 
 /**
@@ -26,7 +21,7 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://tribe-v3.vercel.ap
  */
 export async function POST(request: Request) {
   try {
-    const resend = getResendClient();
+    const resend = getResendClient('weeklyRecap');
     // T1-3: fail CLOSED via the shared helper (see send-inactive-nudge).
     if (!isValidCronAuth(request.headers.get('authorization'))) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
