@@ -133,6 +133,19 @@ refused by objects the catalog does not show.
   athlete sections whole, no key changed, both files valid JSON with identical
   en/es key sets, 568 each). `athlete/merge-phase1` is rebuilt on `f9fcc745`
   as `663700d9`.
+- **Phase 1 is done (2026-10-07).** PR #192 (`athlete/merge-phase1`,
+  `663700d9`) merged by Al on GitHub as **`b1734df3`** on `main`, tree
+  identical to `663700d9`; the Vercel production deploy for it read Ready
+  ("Deployment has completed", 10:46:15 UTC). The worktree's pre-push hook
+  refuses pushes to `main`, so phase 1 went in through a PR rather than a
+  direct push (Al's choice).
+  - **Step 5 (before), Al:** 201 to 210 all `MISSING`, every other row as
+    before.
+  - **Step 6, Al:** pasted 201 to 210 in order, each a complete file from
+    `b1734df3` via `git show | pbcopy`, each "Success", no errors.
+  - **Step 7 (after), Al:** 201 to 210 all `applied`, every other row
+    unchanged, `GUARD_184_mirror_matches_applied_table` `MISSING` (expected
+    until step 8's record commit).
 - **Mutation drivers last passed in full on the `de04d388` tree**
   (`athlete/main` `8795698f`, phase 2 rehearsal `2a3366ef`, 2026-10-06): all
   ten, every arm on its first run. **Not re-run on `f9fcc745`**, by Al's
@@ -677,7 +690,8 @@ be automated and were deferred to the gate on purpose.
       **Done 2026-10-06 in T-AV31** on `athlete/main`: files renamed, each header states its old number, every reference updated (`avMigrationCheck.ts` now lists 201 to 210 in `AV_RENUMBERED`; the tripwire is kept), and each of 201 to 210 now inserts its own `migrations_applied` row, as every migration since 184 does. `origin/main` was still `6b8df7ad` and none of 201 to 210 was taken. Re-check both on the day (section 6, step 1).
 - [x] **Merge rehearsal, 2026-10-06** (`athlete/merge-rehearsal` at `d701e90a`, local only: `origin/main` `6b8df7ad` plus `athlete/main` `4f3f09c9`). One conflict, append-on-append in `supabase/verify-migration-state.sql`, resolved by keeping both blocks with no line of main's removed. On the merged tree: tsc clean, `test:complete` 314 of 314 files and 2820 tests, `test:e2e:av` green, every proof and mutation driver from t-av21 to t-av29 green. **Accepted by Al.** On merge day, re-run it only if `origin/main` has new commits since this rehearsal (its base `6b8df7ad`).
       Local limitation only, not a production concern: migrations 192 and 199 do not apply to the local dump, because the dump has no storage buckets or storage policies (the same reason main's own 090 and 091 probes read MISSING locally). Both abort on their own pre-flights there; neither touches an object the T-AV migrations touch.
-- [ ] **Apply 201 to 210 in order, each as one complete paste, AFTER the merge commit is on `main`** (CLAUDE.md, "the branch merges before the paste"), and record the commit each paste corresponds to.
+- [x] **Apply 201 to 210 in order, each as one complete paste, AFTER the merge commit is on `main`** (CLAUDE.md, "the branch merges before the paste"), and record the commit each paste corresponds to.
+      **Done 2026-10-07 by Al, from `b1734df3` (#192):** each "Success", verifier MISSING before and applied after (section 6).
       Two phases since T-AV31: see section 6, steps 4 to 8. The migrations merge first with no code that reads them; the code merges after they are applied and recorded.
 - [ ] **D2 answered.** A Colombian lawyer has reviewed gym-to-athlete referral payments and Al has recorded the answer in the spec's decisions log. Blocking for turning the program on for a real gym.
       **2026-10-06: D2 tabled by Al. Does not block the merge; the program stays inactive for real gyms (allowlist only, no feature flipped for BullBox) until D2 is answered and recorded.**
