@@ -1885,7 +1885,17 @@ select 'GUARD_184_mirror_matches_applied_table',
     ('196_admin_delete_user_revoke_anon'),
     ('197_revoke_anon_payment_venue_revenue_rpcs'),
     ('198_service_role_only_internal_rpcs'),
-    ('199_session_media_participants_only')
+    ('199_session_media_participants_only'),
+    ('201_t_av21_pass_leads_showup'),
+    ('202_t_av22_athlete_programs'),
+    ('203_t_av22_program_athletes'),
+    ('204_t_av22_pass_leads_attribution'),
+    ('205_t_av22_athletes_ledger'),
+    ('206_t_av22_athletes_writes'),
+    ('207_t_av22_athletes_reads'),
+    ('208_t_av22_program_columns_server_only'),
+    ('209_t_av26_athletes_search'),
+    ('210_t_av27b_notifications')
     -- <<<END_MIRROR_LIST>>>
            ) as mirror(migration)
            where not exists (select 1 from public.migrations_applied a
@@ -1918,7 +1928,17 @@ select 'GUARD_184_mirror_matches_applied_table',
     ('196_admin_delete_user_revoke_anon'),
     ('197_revoke_anon_payment_venue_revenue_rpcs'),
     ('198_service_role_only_internal_rpcs'),
-    ('199_session_media_participants_only')
+    ('199_session_media_participants_only'),
+    ('201_t_av21_pass_leads_showup'),
+    ('202_t_av22_athlete_programs'),
+    ('203_t_av22_program_athletes'),
+    ('204_t_av22_pass_leads_attribution'),
+    ('205_t_av22_athletes_ledger'),
+    ('206_t_av22_athletes_writes'),
+    ('207_t_av22_athletes_reads'),
+    ('208_t_av22_program_columns_server_only'),
+    ('209_t_av26_athletes_search'),
+    ('210_t_av27b_notifications')
     -- <<<END_MIRROR_LIST>>>
            ))
            then 'MISSING -- this database has recorded a migration the JSON mirror omits; re-sync it'
