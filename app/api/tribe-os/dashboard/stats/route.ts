@@ -38,6 +38,7 @@ import { logError } from '@/lib/logger';
 import { requireTribeOSPremium } from '@/lib/auth/premium';
 import { getRevenueSummary, getRevenueSummaryForGym } from '@/lib/dal/revenue';
 import { listGymMemberUserIds } from '@/lib/dal/gymCoaches';
+import { getGym, getGymForUser } from '@/lib/dal/gyms';
 
 interface DashboardStats {
   total_members: { current: number; prior: number } | null;
@@ -47,6 +48,7 @@ interface DashboardStats {
     prior: { USD?: number; COP?: number };
   } | null;
   retention_rate: { current: number | null; prior: number | null } | null;
+  default_currency: 'USD' | 'COP' | null;
 }
 
 /** First + last day of the given month (0-indexed) as YYYY-MM-DD UTC. */
@@ -81,6 +83,11 @@ export async function GET(_request: NextRequest): Promise<NextResponse> {
     const thisMonth = monthRange(now.getUTCFullYear(), now.getUTCMonth());
     const lastMonth = monthRange(now.getUTCFullYear(), now.getUTCMonth() - 1);
     const today = todayLocal();
+
+    // Gym settings — needed for default_currency on the revenue tile.
+    const gymRes = gymId ? await getGym(supabase, gymId) : await getGymForUser(supabase, userId);
+    const defaultCurrency =
+      gymRes.success && gymRes.data?.default_currency === 'COP' ? ('COP' as const) : ('USD' as const);
 
     // Total members (non-archived). Build a base query so we can
     // also derive "active last month" + "active this month" for
@@ -202,6 +209,7 @@ export async function GET(_request: NextRequest): Promise<NextResponse> {
         prior: {},
       },
       retention_rate: retention,
+      default_currency: defaultCurrency,
     };
 
     if (revenueThisResult.success && revenueThisResult.data && data.monthly_revenue) {

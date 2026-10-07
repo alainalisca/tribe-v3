@@ -30,6 +30,7 @@ interface DashboardStatsData {
     prior: { USD?: number; COP?: number };
   } | null;
   retention_rate: { current: number | null; prior: number | null } | null;
+  default_currency: 'USD' | 'COP' | null;
 }
 
 type WidgetState = { kind: 'loading' } | { kind: 'error' } | { kind: 'ready'; data: DashboardStatsData };
@@ -110,8 +111,7 @@ export default function DashboardStats() {
       : null;
   const totalAbs = data.total_members ? data.total_members.current - data.total_members.prior : null;
 
-  // Prefer COP if available (Colombian gyms), fall back to USD
-  const revenueCurrency: 'COP' | 'USD' = data.monthly_revenue?.current.COP !== undefined ? 'COP' : 'USD';
+  const revenueCurrency: 'COP' | 'USD' = data.default_currency === 'COP' ? 'COP' : 'USD';
   const revenueCurrent =
     revenueCurrency === 'COP' ? (data.monthly_revenue?.current.COP ?? 0) : (data.monthly_revenue?.current.USD ?? 0);
   const revenuePrior =
