@@ -32,18 +32,24 @@ import { PASS_ENTRY_CODES, hasClaimablePass, passEntryUrl } from '@/lib/pase/ent
 
 interface Props {
   gyms: GymDirectoryEntry[];
+  /**
+   * False inside the Gimnasios y estudios tab on Discover, where the tab
+   * itself is the heading. Defaults to true for any surface that shows this
+   * as a section among others.
+   */
+  showHeading?: boolean;
 }
 
-export default function GymsAndStudiosSection({ gyms }: Props) {
+export default function GymsAndStudiosSection({ gyms, showHeading = true }: Props) {
   const t = useTranslations('partner');
   // Hides itself rather than showing an empty heading.
   if (gyms.length === 0) return null;
 
   return (
-    <section className="mt-10">
+    <section className={showHeading ? 'mt-10' : undefined}>
       {/* Same weight as "Descubre Instructores", so this reads as a category
           rather than an afterthought. */}
-      <h2 className="text-xl font-bold text-theme-primary mb-4">{t('gymsAndStudios')}</h2>
+      {showHeading && <h2 className="text-xl font-bold text-theme-primary mb-4">{t('gymsAndStudios')}</h2>}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {gyms.map((gym) => {
