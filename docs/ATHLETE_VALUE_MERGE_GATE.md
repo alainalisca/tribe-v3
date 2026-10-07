@@ -116,6 +116,13 @@ refused by objects the catalog does not show.
 
 ## 6. Order of operations on the day: the merge-day runbook
 
+**Al's merge-day decisions, recorded 2026-10-06:**
+
+- **Merge day: 2026-10-06.**
+- **`ATHLETE_VALUE_FEATURES=athletes`.**
+- **Allowlist: two accounts**, Al and one test account Al controls. Not four:
+  Ana and the second test account are not on it.
+
 **Two phases, decided by Al 2026-10-06 (T-AV31).** Main's
 `migrationAppliedBeforeCode.test.ts` (the guard written after the 2026-09-21
 notification outage) refuses code that reads a column before the migration
@@ -347,16 +354,15 @@ stop there and do not continue to the next step.
    - **Find the UUIDs.** Supabase Dashboard, the production project,
      **Authentication > Users**: search each email and copy the **User UID**
      column. Or, in the SQL editor:
-     `select id, email from auth.users where email in ('<Al>', '<Ana>', '<test 1>', '<test 2>');`
+     `select id, email from auth.users where email in ('<Al>', '<test account>');`
      Al's email is the one Al signs in to Tribe with.
    - **Set them.** Vercel, the project's **Settings > Environment Variables**,
      **Production** environment only:
      `ATHLETE_VALUE_ENABLED` = `allowlist`;
-     `ATHLETE_VALUE_ALLOWLIST` = the four UUIDs, comma-separated (UUIDs, not
-     emails; Al's must be in it);
-     `ATHLETE_VALUE_FEATURES` = the value Al has chosen in writing (the two
-     valid names are in section 7, "Feature names"; recommended for the dark
-     phase: `athletes`). Do not leave `ATHLETE_VALUE_FEATURES` unset: unset
+     `ATHLETE_VALUE_ALLOWLIST` = the **two** UUIDs, Al's and the test
+     account's, comma-separated (UUIDs, not emails);
+     `ATHLETE_VALUE_FEATURES` = `athletes` (decided by Al 2026-10-06; the two
+     valid names are in section 7, "Feature names"). Do not leave `ATHLETE_VALUE_FEATURES` unset: unset
      means every feature. None of the three may be `NEXT_PUBLIC_`. No redeploy
      is needed now; the phase 2 push in step 11 is the deployment that picks
      them up.
@@ -407,7 +413,7 @@ stop there and do not continue to the next step.
       on. Switching a program on is therefore a public change for that
       partner's pass page; with D2 tabled, only the TEST partner (step 12) is
       ever switched on, and only during the section 7 test.
-    - **The four allowlisted accounts:** the feature named in
+    - **The two allowlisted accounts (Al and the test account):** the feature named in
       `ATHLETE_VALUE_FEATURES`, and nothing else.
     - **App admins:** every program surface, whatever the variables say (the
       admin rule above). Al is an app admin.
@@ -489,8 +495,8 @@ stop there and do not continue to the next step.
 
 ## 7. After the merge
 
-- [ ] `ATHLETE_VALUE_ENABLED=allowlist` in Vercel production, with Al, Ana and
-      the two named test accounts and nobody else.
+- [ ] `ATHLETE_VALUE_ENABLED=allowlist` in Vercel production, with Al and one
+      test account Al controls and nobody else (Al, 2026-10-06; runbook step 9).
 - [ ] Dark phase of **at least 7 days** in the real iOS and Android apps with
       the allowlist accounts.
 - [ ] **During the dark phase: the real voucher scan on production.** Steps in
@@ -575,8 +581,8 @@ the code:
   is a placeholder page. Not middleware-gated: when it is off, visitors get the
   ordinary not-found page.
 
-**Recommended for the dark phase: `ATHLETE_VALUE_FEATURES=athletes`.** It is
-the program under test; `pase` adds only an unfinished placeholder.
+**Decided by Al 2026-10-06: `ATHLETE_VALUE_FEATURES=athletes`.** It is the
+program under test; `pase` adds only an unfinished placeholder.
 
 ### Post-merge cleanup (not blocking the merge)
 
