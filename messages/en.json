@@ -465,6 +465,7 @@
   "discover": {
     "tabInstructors": "Instructors",
     "tabGyms": "Gyms & Studios",
+    "tabGymsShort": "Gyms",
     "titleGyms": "Discover Gyms",
     "gymsSearch": "Search by name, neighborhood or discipline...",
     "gymsLoadFailed": "We couldn't load gyms",

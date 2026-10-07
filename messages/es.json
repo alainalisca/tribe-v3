@@ -465,6 +465,7 @@
   "discover": {
     "tabInstructors": "Instructores",
     "tabGyms": "Gimnasios y estudios",
+    "tabGymsShort": "Gimnasios",
     "titleGyms": "Descubre Gimnasios",
     "gymsSearch": "Buscar por nombre, barrio o disciplina...",
     "gymsLoadFailed": "No pudimos cargar los gimnasios",

@@ -25,14 +25,24 @@ interface Props {
 
 export default function DiscoverTabs({ tab, onChange, instructorCount, gymCount }: Props) {
   const t = useTranslations('discover');
-  const options: { id: DiscoverTab; label: string; count: number; Icon: typeof Users }[] = [
-    { id: 'instructors', label: t('tabInstructors'), count: instructorCount, Icon: Users },
-    { id: 'gyms', label: t('tabGyms'), count: gymCount, Icon: Building2 },
+  // `short` is what a phone shows. Each tab is ~175px wide at 390px, and
+  // "Gimnasios y estudios" plus its icon and count badge needs ~200px, so it
+  // truncated to "Gimnasios y estu..." on a real iPhone (2026-10-06). The full
+  // label returns at sm and stays the accessible name everywhere.
+  const options: { id: DiscoverTab; label: string; short: string; count: number; Icon: typeof Users }[] = [
+    {
+      id: 'instructors',
+      label: t('tabInstructors'),
+      short: t('tabInstructors'),
+      count: instructorCount,
+      Icon: Users,
+    },
+    { id: 'gyms', label: t('tabGyms'), short: t('tabGymsShort'), count: gymCount, Icon: Building2 },
   ];
 
   return (
     <div role="tablist" className="grid grid-cols-2 gap-1 rounded-xl bg-stone-100 dark:bg-tribe-surface p-1">
-      {options.map(({ id, label, count, Icon }) => {
+      {options.map(({ id, label, short, count, Icon }) => {
         const active = tab === id;
         return (
           <button
@@ -40,6 +50,7 @@ export default function DiscoverTabs({ tab, onChange, instructorCount, gymCount 
             type="button"
             role="tab"
             aria-selected={active}
+            aria-label={`${label} (${count})`}
             data-testid={`discover-tab-${id}`}
             onClick={() => {
               if (!active) onChange(id);
@@ -53,7 +64,8 @@ export default function DiscoverTabs({ tab, onChange, instructorCount, gymCount 
             }`}
           >
             <Icon className={`w-4 h-4 shrink-0 ${active ? 'text-tribe-green-dark dark:text-tribe-green' : ''}`} />
-            <span className="truncate">{label}</span>
+            <span className="truncate sm:hidden">{short}</span>
+            <span className="hidden truncate sm:inline">{label}</span>
             <span
               className={`rounded-full px-1.5 text-xs font-bold ${
                 active

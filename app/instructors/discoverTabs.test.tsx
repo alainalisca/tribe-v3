@@ -112,7 +112,11 @@ describe('Discover tabs', () => {
     mount();
     expect(screen.getByTestId('discover-tab-instructors').textContent).toContain('1');
     expect(screen.getByTestId('discover-tab-gyms').textContent).toContain('2');
-    expect(screen.getByTestId('discover-tab-gyms').textContent).toContain('Gimnasios y estudios');
+    // Phones get the short label (the full one truncated on an iPhone); the
+    // full label stays the accessible name.
+    expect(screen.getByTestId('discover-tab-gyms').getAttribute('aria-label')).toBe('Gimnasios y estudios (2)');
+    const short = screen.getByTestId('discover-tab-gyms').querySelector('.sm\\:hidden');
+    expect(short?.textContent).toBe('Gimnasios');
   });
 
   it('switches to gyms: gym cards shown, instructors hidden, URL and analytics updated', () => {
