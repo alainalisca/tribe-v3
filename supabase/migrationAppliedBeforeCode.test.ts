@@ -113,8 +113,20 @@ function columnsFromUnappliedMigrations(): Array<{ column: string; migration: st
  *      mirror-sync commit after applying 190 must delete this line.
  */
 const KNOWN_NAME_COLLISIONS: Record<string, string> = {
-  // Empty. 190_community_soft_delete:deleted_at was listed here until 190 was
+  // 190_community_soft_delete:deleted_at was listed here until 190 was
   // applied (2026-09-24) and recorded; the rot test below forced its removal.
+  //
+  // T-AV31 phase 1 (the athlete migrations, merged with no code that reads
+  // them). Both lines must be deleted in the commit that records 201 and 204
+  // as applied; the rot test below fails until they are.
+  '201_t_av21_pass_leads_showup:attended_at':
+    'pass_leads.attended_at. Every current match is a different column of the same name: Tribe.OS attendance rows ' +
+    '(app/api/tribe-os/, app/my-coach/). Nothing merged with 201 reads pass_leads.attended_at; the athlete code that ' +
+    'does merges in phase 2, after 201 is applied and recorded.',
+  '204_t_av22_pass_leads_attribution:outcome':
+    'pass_leads.outcome. Every current match is the English word "outcome" in unrelated code and copy (cron reminders, ' +
+    'legal text, the PWA prompt, one-off sends). Nothing merged with 204 reads pass_leads.outcome; the athlete code that ' +
+    'does merges in phase 2, after 204 is applied and recorded.',
 };
 
 const ROOTS = ['app', 'components', 'lib', 'contexts', 'hooks'];
