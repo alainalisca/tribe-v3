@@ -122,6 +122,26 @@ refused by objects the catalog does not show.
 - **`ATHLETE_VALUE_FEATURES=athletes`.**
 - **Allowlist: two accounts**, Al and one test account Al controls. Not four:
   Ana and the second test account are not on it.
+- **`main` is frozen** from 2026-10-06 until phase 2 is through: Al merges
+  nothing into `main` and no other session pushes to it. If `origin/main` moves
+  anyway, stop and tell Al; do not merge it.
+- **Step 1 was run on 2026-10-06** and `origin/main` moved under it twice:
+  #189 (`de04d388`, the 199 record, the precondition) and #191 (`f9fcc745`,
+  the discover tab on `/instructors`). Both are merged into `athlete/main`
+  (`8795698f`, then `09c49b00`; #191 conflicted only in `messages/en.json` and
+  `messages/es.json`, resolved by keeping main's `discover` section and the
+  athlete sections whole, no key changed, both files valid JSON with identical
+  en/es key sets, 568 each). `athlete/merge-phase1` is rebuilt on `f9fcc745`
+  as `663700d9`.
+- **Mutation drivers last passed in full on the `de04d388` tree**
+  (`athlete/main` `8795698f`, phase 2 rehearsal `2a3366ef`, 2026-10-06): all
+  ten, every arm on its first run. **Not re-run on `f9fcc745`**, by Al's
+  decision: #191 changes only `app/instructors/`, `components/instructors/`,
+  `lib/discover/`, one line of `lib/analytics.ts` and the two translation
+  files, and no driver mutates or reads any of them (checked: no driver names
+  any of those paths). The scoped re-run on `f9fcc745` was tsc, eslint and
+  `test:complete` on all three trees, then `test:e2e:av` and every proof
+  t-av21 to t-av30 on the phase 2 rehearsal (`f1636c1e`): all green.
 
 **Two phases, decided by Al 2026-10-06 (T-AV31).** Main's
 `migrationAppliedBeforeCode.test.ts` (the guard written after the 2026-09-21
@@ -140,9 +160,9 @@ step before it. If any step does not produce the good result it describes,
 stop there and do not continue to the next step.
 
 1. **[CLAUDE CODE] Pre-flight, the morning of.** `git fetch origin`. Confirm
-   `origin/main` is still `cab6a2b4` (merged into `athlete/main` as `81a03e18`
-   on 2026-10-06; if it moved: merge it into `athlete/main` the same way,
-   rebuild `athlete/merge-phase1` on it, and re-run everything before going on).
+   `origin/main` is still `f9fcc745` (merged into `athlete/main` as `09c49b00`
+   on 2026-10-06). `main` is frozen (see the decisions above): if it moved,
+   stop and tell Al; do not merge it.
    Confirm none of 201 to 210 is taken on `origin/main` (if one is: stop and
    tell Al; nothing is renamed again without his decision). `npm run av:guard`.
    Report all of it to Al.
