@@ -84,10 +84,12 @@ const copy = {
 
 interface MemberRow {
   id: string;
+  external_id: string | null;
   name: string | null;
   phone: string | null;
   joined_on: string | null;
   tags: string[] | null;
+  plan_ends_on: string | null;
   score: number | null;
   level: string | null;
   reasons: string[];
@@ -97,6 +99,8 @@ interface MemberRow {
   visits_last_28d: number;
   computed_at: string | null;
   last_touch: { id: string; channel: string; created_at: string } | null;
+  last_visit_coach: string | null;
+  last_visit_class: string | null;
 }
 
 interface RetentionData {
@@ -511,6 +515,9 @@ export default function RetentionPage() {
                 lastActivityAt: draftTarget.member.last_activity_at,
                 lastTouchCreatedAt: draftTarget.member.last_touch?.created_at ?? null,
                 cameBack: draftTarget.cameBack,
+                coachName: draftTarget.member.last_visit_coach,
+                className: draftTarget.member.last_visit_class,
+                planEndsOn: draftTarget.member.plan_ends_on,
                 language,
               } satisfies DraftContext
             }

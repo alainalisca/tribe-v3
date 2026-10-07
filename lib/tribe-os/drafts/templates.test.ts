@@ -24,11 +24,7 @@ describe('selectCase', () => {
     expect(selectCase(ctx({ reasons: ['Su plan vence en 3 días / Plan expires in 3 days'] }))).toBe('plan_expiring');
   });
 
-  it('picks came_back when cameBack is true', () => {
-    expect(selectCase(ctx({ cameBack: true, reasons: ['14 días sin venir / 14 days absent'] }))).toBe('came_back');
-  });
-
-  it('plan_expired beats came_back', () => {
+  it('picks came_back_expired when cameBack + expired', () => {
     expect(
       selectCase(
         ctx({
@@ -36,7 +32,13 @@ describe('selectCase', () => {
           reasons: ['Su plan venció hace 5 días / Plan expired 5 days ago'],
         })
       )
-    ).toBe('plan_expired');
+    ).toBe('came_back_expired');
+  });
+
+  it('picks came_back_active when cameBack without expired', () => {
+    expect(selectCase(ctx({ cameBack: true, reasons: ['14 días sin venir / 14 days absent'] }))).toBe(
+      'came_back_active'
+    );
   });
 
   it('picks absent when days >= 14', () => {
@@ -87,21 +89,66 @@ describe('pickVariant', () => {
 });
 
 describe('renderDraft', () => {
-  it('substitutes {name} and {days} in plan_expired template', () => {
+  it('never includes digit-based day counts in output', () => {
+    const cases = [
+      ctx({ reasons: ['Su plan venció hace 8 días / Plan expired 8 days ago'], daysSinceLastActivity: 22 }),
+      ctx({ reasons: ['20 días sin venir / 20 days absent'], daysSinceLastActivity: 20 }),
+      ctx({ cameBack: true }),
+      ctx(),
+    ];
+    for (const c of cases) {
+      for (const v of [0, 1, 2]) {
+        const d = renderDraft({ ...c, language: 'es' }, v);
+        expect(d.text).not.toMatch(/\d+\s*días/);
+      }
+    }
+  });
+
+  it('every message ends with a question mark', () => {
+    const cases = [
+      ctx({ reasons: ['Su plan venció hace 8 días / Plan expired 8 days ago'], daysSinceLastActivity: 22 }),
+      ctx({ reasons: ['Su plan vence en 3 días / Plan expires in 3 days'], planEndsOn: '2026-10-09' }),
+      ctx({ cameBack: true, reasons: ['Su plan venció hace 5 días / Plan expired 5 days ago'] }),
+      ctx({ cameBack: true }),
+      ctx({ reasons: ['20 días sin venir / 20 days absent'], daysSinceLastActivity: 20 }),
+      ctx({ reasons: ['Viene 50% menos que su promedio / Visiting 50% less than average'], daysSinceLastActivity: 5 }),
+      ctx({ reasons: ['Nuevo y lleva 7 días sin venir / New and 7 days absent'], daysSinceLastActivity: 7 }),
+      ctx(),
+    ];
+    for (const c of cases) {
+      for (const v of [0, 1, 2]) {
+        for (const lang of ['es', 'en'] as const) {
+          const d = renderDraft({ ...c, language: lang }, v);
+          expect(d.text.trimEnd()).toMatch(/\?$/);
+        }
+      }
+    }
+  });
+
+  it('came_back splits: expired vs active', () => {
+    const expired = renderDraft(
+      ctx({ cameBack: true, reasons: ['Su plan venció hace 5 días / Plan expired 5 days ago'] }),
+      0
+    );
+    expect(expired.case).toBe('came_back_expired');
+
+    const active = renderDraft(ctx({ cameBack: true }), 0);
+    expect(active.case).toBe('came_back_active');
+  });
+
+  it('includes coach name when provided', () => {
     const d = renderDraft(
       ctx({
-        reasons: ['Su plan venció hace 8 días / Plan expired 8 days ago'],
-        daysSinceLastActivity: 22,
+        reasons: ['20 días sin venir / 20 days absent'],
+        daysSinceLastActivity: 20,
+        coachName: 'Ricardo',
       }),
       0
     );
-    expect(d.case).toBe('plan_expired');
-    expect(d.text).toContain('Natalia');
-    expect(d.text).not.toContain('{name}');
-    expect(d.text.length).toBeLessThanOrEqual(300);
+    expect(d.text).toContain('Ricardo');
   });
 
-  it('fills {days} for absent case', () => {
+  it('falls back cleanly without coach name', () => {
     const d = renderDraft(
       ctx({
         reasons: ['20 días sin venir / 20 days absent'],
@@ -109,21 +156,32 @@ describe('renderDraft', () => {
       }),
       0
     );
-    expect(d.case).toBe('absent');
-    expect(d.text).toContain('20');
-    expect(d.text).toContain('Natalia');
+    expect(d.text).not.toContain('preguntó');
+    expect(d.text).toMatch(/\?$/);
   });
 
-  it('renders English when language is en', () => {
+  it('includes class name when provided', () => {
     const d = renderDraft(
       ctx({
-        language: 'en',
-        reasons: ['Su plan venció hace 3 días / Plan expired 3 days ago'],
-        daysSinceLastActivity: 18,
+        reasons: ['Su plan venció hace 8 días / Plan expired 8 days ago'],
+        daysSinceLastActivity: 22,
+        className: 'las 6',
       }),
       0
     );
-    expect(d.text).toMatch(/Hey Natalia/);
+    expect(d.text).toContain('las 6');
+  });
+
+  it('falls back cleanly without class name', () => {
+    const d = renderDraft(
+      ctx({
+        reasons: ['Su plan venció hace 8 días / Plan expired 8 days ago'],
+        daysSinceLastActivity: 22,
+      }),
+      0
+    );
+    expect(d.text).not.toContain('{classRef}');
+    expect(d.text).toMatch(/\?$/);
   });
 
   it('uses first name only', () => {
@@ -138,13 +196,50 @@ describe('renderDraft', () => {
     expect(d.text).not.toContain('{name}');
   });
 
-  it('all templates are under 300 characters', () => {
+  it('renders English when language is en', () => {
+    const d = renderDraft(
+      ctx({
+        language: 'en',
+        reasons: ['Su plan venció hace 3 días / Plan expired 3 days ago'],
+        daysSinceLastActivity: 18,
+      }),
+      0
+    );
+    expect(d.text).toMatch(/Hey Natalia/);
+  });
+
+  it('plan_expiring shows weekday from planEndsOn', () => {
+    const d = renderDraft(
+      ctx({
+        reasons: ['Su plan vence en 3 días / Plan expires in 3 days'],
+        planEndsOn: '2026-10-09',
+      }),
+      0
+    );
+    expect(d.text).toContain('jueves');
+  });
+
+  it('all templates are under 280 characters', () => {
     const cases = [
-      ctx({ reasons: ['Su plan venció hace 8 días / Plan expired 8 days ago'], daysSinceLastActivity: 30 }),
-      ctx({ reasons: ['Su plan vence en 3 días / Plan expires in 3 days'] }),
-      ctx({ cameBack: true }),
-      ctx({ reasons: ['20 días sin venir / 20 days absent'], daysSinceLastActivity: 20 }),
-      ctx({ reasons: ['Viene 50% menos que su promedio / Visiting 50% less than average'], daysSinceLastActivity: 5 }),
+      ctx({
+        reasons: ['Su plan venció hace 8 días / Plan expired 8 days ago'],
+        daysSinceLastActivity: 30,
+        className: 'las 6 AM',
+      }),
+      ctx({ reasons: ['Su plan vence en 3 días / Plan expires in 3 days'], planEndsOn: '2026-10-09' }),
+      ctx({ cameBack: true, reasons: ['Su plan venció hace 5 días / Plan expired 5 days ago'] }),
+      ctx({ cameBack: true, lastActivityAt: '2026-10-04T10:00:00Z', className: 'las 6 AM' }),
+      ctx({
+        reasons: ['20 días sin venir / 20 days absent'],
+        daysSinceLastActivity: 20,
+        coachName: 'Ricardo',
+        className: 'las 6 AM',
+        lastActivityAt: '2026-09-16T10:00:00Z',
+      }),
+      ctx({
+        reasons: ['Viene 50% menos que su promedio / Visiting 50% less than average'],
+        daysSinceLastActivity: 5,
+      }),
       ctx({ reasons: ['Nuevo y lleva 7 días sin venir / New and 7 days absent'], daysSinceLastActivity: 7 }),
       ctx(),
     ];
@@ -152,7 +247,7 @@ describe('renderDraft', () => {
       for (const v of [0, 1, 2]) {
         for (const lang of ['es', 'en'] as const) {
           const d = renderDraft({ ...c, language: lang }, v);
-          expect(d.text.length).toBeLessThanOrEqual(300);
+          expect(d.text.length).toBeLessThanOrEqual(280);
         }
       }
     }

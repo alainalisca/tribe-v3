@@ -1,7 +1,8 @@
 export type DraftCase =
   | 'plan_expired'
   | 'plan_expiring'
-  | 'came_back'
+  | 'came_back_expired'
+  | 'came_back_active'
   | 'absent'
   | 'visiting_less'
   | 'new_not_coming'
@@ -16,7 +17,9 @@ export interface DraftContext {
   lastActivityAt: string | null;
   lastTouchCreatedAt: string | null;
   cameBack?: boolean;
-  coachName?: string;
+  coachName?: string | null;
+  className?: string | null;
+  planEndsOn?: string | null;
   language: 'en' | 'es';
 }
 
@@ -26,108 +29,119 @@ export interface Draft {
   variantIndex: number;
 }
 
-interface TemplateEntry {
-  es: string;
-  en: string;
-}
+type TemplateEntry = { es: string; en: string };
 
 const TEMPLATES: Record<DraftCase, TemplateEntry[]> = {
   plan_expired: [
     {
-      es: 'Hola {name}, vi que tu plan venció hace {days} días. ¿Te gustaría renovar? Puedo guardarte tu horario de siempre.',
-      en: 'Hey {name}, I noticed your plan expired {days} days ago. Want to renew? I can hold your usual schedule.',
+      es: '¡Hola {name}! ¿Cómo vas? Hace rato no te vemos{classRef}. Te guardo tu horario de siempre, ¿te renuevo el plan esta semana?',
+      en: "Hey {name}! How are you? We haven't seen you in a while{classRef}. I can hold your usual spot — want to renew your plan this week?",
     },
     {
-      es: 'Hola {name}, tu plan ya venció y no quiero que pierdas el ritmo. ¿Hablamos de la renovación esta semana?',
-      en: "Hey {name}, your plan expired and I don't want you to lose momentum. Can we talk about renewing this week?",
+      es: 'Hola {name}, te extrañamos{classRef}. Si quieres retomar, te dejo todo listo. ¿Hablamos de la renovación?',
+      en: "Hey {name}, we miss you{classRef}. If you want to pick back up, I'll get everything ready. Want to talk about renewing?",
     },
     {
-      es: 'Hola {name}, noté que tu plan venció. Si quieres seguir con nosotros, cuéntame y te ayudo con la renovación.',
-      en: 'Hey {name}, I saw your plan expired. If you want to keep going, let me know and I can help with the renewal.',
+      es: 'Hola {name}, ¿cómo estás? Hace rato no coincidimos{classRef}. ¿Qué te parece si renovamos tu plan y arrancamos de nuevo?',
+      en: "Hey {name}, how are you? It's been a while since we caught up{classRef}. How about we renew your plan and get going again?",
     },
   ],
   plan_expiring: [
     {
-      es: 'Hola {name}, tu plan vence pronto. ¿Quieres que te lo renueve para que no pierdas tu cupo?',
-      en: "Hey {name}, your plan is expiring soon. Want me to renew it so you don't lose your spot?",
+      es: 'Hola {name}, tu plan vence el {expiryDay}. Para que no pierdas el ritmo, ¿te lo dejo renovado de una vez?',
+      en: "Hey {name}, your plan expires on {expiryDay}. So you don't lose momentum, want me to renew it now?",
     },
     {
-      es: 'Hola {name}, te aviso que tu plan está por vencer. ¿Lo renovamos para que sigas sin parar?',
-      en: 'Hey {name}, heads up — your plan is about to expire. Shall we renew so you keep going?',
+      es: 'Hola {name}, se viene el vencimiento de tu plan el {expiryDay}. ¿Lo renovamos para que sigas sin parar?',
+      en: 'Hey {name}, your plan is up on {expiryDay}. Shall we renew so you keep going without a break?',
     },
     {
-      es: 'Hola {name}, se acerca el vencimiento de tu plan. ¿Hablamos de la renovación antes de que se pase?',
-      en: "Hey {name}, your plan's renewal date is coming up. Want to chat about it before it lapses?",
+      es: 'Hola {name}, tu plan se vence el {expiryDay}. No quiero que pierdas tu cupo, ¿te lo renuevo?',
+      en: "Hey {name}, your plan expires {expiryDay}. I don't want you to lose your spot — want me to renew it?",
     },
   ],
-  came_back: [
+  came_back_expired: [
     {
-      es: 'Hola {name}, qué bueno verte de vuelta. ¿Cómo te sentiste? Cualquier cosa que necesites, aquí estoy.',
-      en: "Hey {name}, great to see you back! How did it feel? Whatever you need, I'm here.",
+      es: '¡{name}, qué bueno tenerte de vuelta! Para que no se corte la racha, ¿te renuevo el plan esta semana?',
+      en: "{name}, great to have you back! So you don't lose the streak, want me to renew your plan this week?",
     },
     {
-      es: 'Hola {name}, me alegra que hayas vuelto. ¿Todo bien con la clase? Avísame si quieres ajustar algo en tu plan.',
-      en: 'Hey {name}, glad you came back. How was the class? Let me know if you want to adjust anything in your plan.',
+      es: '¡Hola {name}, qué alegría verte otra vez! Tu plan necesita renovación, ¿hablamos para dejarlo listo?',
+      en: 'Hey {name}, so happy to see you again! Your plan needs a renewal — want to sort it out?',
     },
     {
-      es: 'Hola {name}, genial que volviste. Espero que la hayas pasado bien. ¿Necesitas algo para esta semana?',
-      en: 'Hey {name}, awesome that you came back. Hope you enjoyed it. Need anything for this week?',
+      es: '¡{name}, qué bueno que volviste! ¿Te renuevo el plan para que sigas viniendo sin problema?',
+      en: '{name}, welcome back! Want me to renew your plan so you can keep coming?',
+    },
+  ],
+  came_back_active: [
+    {
+      es: '¡Qué bueno verte otra vez, {name}! ¿Cómo te sentiste? ¿Te vemos{nextClassRef}?',
+      en: 'Great to see you again, {name}! How did it feel? See you{nextClassRef}?',
+    },
+    {
+      es: '¡Hola {name}, me alegra que hayas vuelto! ¿Cómo te fue? ¿Te vemos{nextClassRef}?',
+      en: 'Hey {name}, glad you came back! How was it? See you{nextClassRef}?',
+    },
+    {
+      es: '¡{name}, genial que volviste! ¿Qué tal la clase? ¿Te animas a venir{nextClassRef}?',
+      en: "{name}, awesome you're back! How was the class? Coming back{nextClassRef}?",
     },
   ],
   absent: [
     {
-      es: 'Hola {name}, llevas {days} días sin venir y te extrañamos. ¿Todo bien? Me encantaría verte esta semana.',
-      en: "Hey {name}, it's been {days} days and we miss you. Everything okay? Would love to see you this week.",
+      es: 'Hola {name}, ¿todo bien? Hace rato no te vemos{coachRef}. ¿Te guardo cupo para{nextClassRef}?',
+      en: "Hey {name}, everything okay? We haven't seen you in a while{coachRef}. Want me to save you a spot{nextClassRef}?",
     },
     {
-      es: 'Hola {name}, hace {days} días que no te veo por el gym. ¿Estás bien? Cuéntame si puedo ayudarte con algo.',
-      en: "Hey {name}, haven't seen you in {days} days. You okay? Let me know if I can help with anything.",
+      es: 'Hola {name}, te hemos extrañado{coachRef}. ¿Cómo estás? ¿Qué día te queda bien para volver?',
+      en: "Hey {name}, we've missed you{coachRef}. How are you? What day works for you to come back?",
     },
     {
-      es: 'Hola {name}, noté que llevas {days} días sin visitarnos. ¿Pasó algo? Aquí te esperamos cuando puedas.',
-      en: "Hey {name}, I noticed it's been {days} days since your last visit. Everything alright? We're here whenever you're ready.",
+      es: 'Hola {name}, ¿cómo vas? Hace rato no coincidimos{coachRef}. ¿Te animas esta semana?',
+      en: "Hey {name}, how's it going? It's been a while{coachRef}. Want to come in this week?",
     },
   ],
   visiting_less: [
     {
-      es: 'Hola {name}, noté que has venido menos últimamente. ¿Todo bien? Si necesitas cambiar de horario, con gusto te ayudo.',
-      en: "Hey {name}, I noticed you've been coming less lately. Everything okay? If you need a schedule change, happy to help.",
+      es: 'Hola {name}, últimamente te hemos visto menos. ¿Cómo va todo? Si el horario se te complicó, ¿me cuentas y buscamos uno que te sirva?',
+      en: "Hey {name}, we've seen you less lately. How's everything? If the schedule got tricky, want me to help find one that works?",
     },
     {
-      es: 'Hola {name}, vi que tus visitas bajaron un poco. ¿Hay algo que pueda hacer para que sea más fácil venir?',
-      en: 'Hey {name}, I saw your visits dropped a bit. Is there anything I can do to make it easier for you to come?',
+      es: 'Hola {name}, noté que has venido menos. ¿Todo bien? Si necesitas cambiar de horario, ¿hablamos?',
+      en: "Hey {name}, I noticed you've been coming less. Everything okay? Need a schedule change?",
     },
     {
-      es: 'Hola {name}, te he visto menos por el gym. ¿Quieres que busquemos un horario que te funcione mejor?',
-      en: "Hey {name}, I've seen you less at the gym. Want me to find a schedule that works better for you?",
+      es: 'Hola {name}, ¿cómo estás? Te hemos visto menos últimamente. ¿Hay algo que pueda hacer para que sea más fácil venir?',
+      en: "Hey {name}, how are you? We've seen you less lately. Is there anything I can do to make it easier to come?",
     },
   ],
   new_not_coming: [
     {
-      es: 'Hola {name}, ¿cómo vas? Noté que no has podido venir mucho. Si tienes dudas sobre clases u horarios, pregúntame.',
-      en: "Hey {name}, how's it going? I noticed you haven't been able to come much. Any questions about classes or schedules, just ask.",
+      es: 'Hola {name}, ¿cómo te has sentido en tus primeras semanas? Es normal que cueste arrancar. ¿Qué día te queda mejor esta semana?',
+      en: "Hey {name}, how have your first weeks been? It's totally normal to take time to settle in. What day works best for you this week?",
     },
     {
-      es: 'Hola {name}, como eres nuevo quería saber cómo te va. ¿Necesitas ayuda para armar tu rutina o elegir clases?',
-      en: "Hey {name}, since you're new I wanted to check in. Need help setting up a routine or picking classes?",
+      es: 'Hola {name}, quería saber cómo te va. Si tienes dudas sobre clases u horarios, pregúntame. ¿Cuándo te animas a venir?',
+      en: 'Hey {name}, wanted to check how things are going. Any questions about classes or schedules, just ask. When are you coming in?',
     },
     {
-      es: 'Hola {name}, quería chequearte porque llevas poco tiempo con nosotros. ¿Hay algo que pueda hacer para que te sientas más cómodo?',
-      en: "Hey {name}, wanted to check on you since you're still new. Is there anything I can do to help you feel more comfortable?",
+      es: 'Hola {name}, ¿cómo vas? Acá te esperamos. Si necesitas ayuda para armar tu rutina, cuéntame. ¿Qué día te sirve?',
+      en: "Hey {name}, how are you? We're here for you. Need help building a routine? What day works?",
     },
   ],
   generic: [
     {
-      es: 'Hola {name}, pasaba a saludarte. ¿Cómo va todo? Cualquier cosa que necesites, aquí estoy.',
-      en: "Hey {name}, just checking in. How's everything going? Whatever you need, I'm here.",
+      es: 'Hola {name}, pasaba a saludarte. ¿Cómo va todo con el entrenamiento?',
+      en: "Hey {name}, just checking in. How's everything going with your training?",
     },
     {
-      es: 'Hola {name}, quería saber cómo vas. ¿Todo bien con el entrenamiento?',
-      en: "Hey {name}, wanted to see how you're doing. Everything good with your training?",
+      es: 'Hola {name}, ¿cómo estás? ¿Hay algo que necesites para sentirte mejor en tus clases?',
+      en: 'Hey {name}, how are you? Is there anything you need to feel better about your classes?',
     },
     {
-      es: 'Hola {name}, hace rato no hablamos. ¿Cómo estás? Cuéntame si necesitas algo.',
-      en: "Hey {name}, it's been a while since we talked. How are you? Let me know if you need anything.",
+      es: 'Hola {name}, quería saber cómo vas. ¿Todo bien por allá?',
+      en: "Hey {name}, wanted to see how you're doing. Everything good on your end?",
     },
   ],
 };
@@ -145,16 +159,38 @@ function firstName(name: string | null): string {
   return name.split(' ')[0];
 }
 
+const BOGOTA = 'America/Bogota';
+
+const ES_WEEKDAYS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+const EN_WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+function weekdayName(dateStr: string, lang: 'es' | 'en'): string {
+  const d = new Date(dateStr);
+  const bogotaDate = new Date(d.toLocaleString('en-US', { timeZone: BOGOTA }));
+  const dow = bogotaDate.getDay();
+  return lang === 'es' ? ES_WEEKDAYS[dow] : EN_WEEKDAYS[dow];
+}
+
+function nextVisitDay(lastActivityAt: string | null, lang: 'es' | 'en'): string | null {
+  if (!lastActivityAt) return null;
+  const lastDow = new Date(new Date(lastActivityAt).toLocaleString('en-US', { timeZone: BOGOTA })).getDay();
+  return lang === 'es' ? ES_WEEKDAYS[lastDow] : EN_WEEKDAYS[lastDow];
+}
+
 export function selectCase(ctx: DraftContext): DraftCase {
   const r = ctx.reasons;
 
   const hasExpired = r.some((x) => x.includes('plan venció') || x.includes('Plan expired'));
-  if (hasExpired) return 'plan_expired';
 
   const hasExpiring = r.some((x) => (x.includes('plan vence') || x.includes('Plan expires')) && !x.includes('venció'));
-  if (hasExpiring) return 'plan_expiring';
 
-  if (ctx.cameBack) return 'came_back';
+  if (ctx.cameBack) {
+    if (hasExpired) return 'came_back_expired';
+    return 'came_back_active';
+  }
+
+  if (hasExpired) return 'plan_expired';
+  if (hasExpiring) return 'plan_expiring';
 
   if (ctx.daysSinceLastActivity !== null && ctx.daysSinceLastActivity >= 14) return 'absent';
 
@@ -175,6 +211,36 @@ function substitute(template: string, vars: Record<string, string>): string {
   return template.replace(/\{(\w+)\}/g, (_, key) => vars[key] ?? '');
 }
 
+function buildClassRef(className: string | null | undefined, lang: 'es' | 'en'): string {
+  if (!className) return '';
+  return lang === 'es' ? ` en la de ${className}` : ` at the ${className} class`;
+}
+
+function buildNextClassRef(
+  lastActivityAt: string | null,
+  className: string | null | undefined,
+  lang: 'es' | 'en'
+): string {
+  const day = nextVisitDay(lastActivityAt, lang);
+  if (day && className) {
+    return lang === 'es' ? ` el ${day} en la de ${className}` : ` on ${day} at the ${className} class`;
+  }
+  if (day) {
+    return lang === 'es' ? ` el ${day}` : ` on ${day}`;
+  }
+  return lang === 'es' ? ' pronto' : ' soon';
+}
+
+function buildCoachRef(coachName: string | null | undefined, lang: 'es' | 'en'): string {
+  if (!coachName) return '';
+  return lang === 'es' ? ` y ${coachName} preguntó por ti` : ` and ${coachName} asked about you`;
+}
+
+function buildExpiryDay(planEndsOn: string | null | undefined, lang: 'es' | 'en'): string {
+  if (!planEndsOn) return lang === 'es' ? 'pronto' : 'soon';
+  return weekdayName(planEndsOn, lang);
+}
+
 export function renderDraft(ctx: DraftContext, variantOverride?: number): Draft {
   const draftCase = selectCase(ctx);
   const variantIndex = variantOverride ?? pickVariant(ctx.memberId);
@@ -183,8 +249,10 @@ export function renderDraft(ctx: DraftContext, variantOverride?: number): Draft 
 
   const vars: Record<string, string> = {
     name: firstName(ctx.memberName),
-    days: String(ctx.daysSinceLastActivity ?? ''),
-    coach: ctx.coachName ?? '',
+    classRef: buildClassRef(ctx.className, ctx.language),
+    nextClassRef: buildNextClassRef(ctx.lastActivityAt, ctx.className, ctx.language),
+    coachRef: buildCoachRef(ctx.coachName, ctx.language),
+    expiryDay: buildExpiryDay(ctx.planEndsOn, ctx.language),
   };
 
   return {

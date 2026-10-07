@@ -14,7 +14,7 @@ export async function GET(): Promise<NextResponse> {
   try {
     const { data: members, error: membersErr } = await supabase
       .from('clients')
-      .select('id, name, phone, joined_on, tags')
+      .select('id, name, phone, joined_on, tags, external_id, plan_ends_on')
       .eq('gym_id', gymId);
 
     if (membersErr) throw membersErr;
@@ -53,15 +53,22 @@ export async function GET(): Promise<NextResponse> {
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
     const { data: recentVisits } = await supabase
       .from('client_visits')
-      .select('client_id, visited_at')
+      .select('client_id, visited_at, coach_name, class_name')
       .eq('gym_id', gymId)
       .gte('visited_at', thirtyDaysAgo.toISOString())
       .order('visited_at', { ascending: false });
 
-    const latestVisitMap = new Map<string, string>();
+    const latestVisitMap = new Map<
+      string,
+      { visited_at: string; coach_name: string | null; class_name: string | null }
+    >();
     for (const v of recentVisits ?? []) {
       if (!latestVisitMap.has(v.client_id)) {
-        latestVisitMap.set(v.client_id, v.visited_at);
+        latestVisitMap.set(v.client_id, {
+          visited_at: v.visited_at,
+          coach_name: v.coach_name,
+          class_name: v.class_name,
+        });
       }
     }
 
@@ -74,8 +81,8 @@ export async function GET(): Promise<NextResponse> {
       let lastActivityAt: string | null = s?.signals?.last_activity_at ?? null;
       const latestVisit = latestVisitMap.get(m.id);
       if (latestVisit) {
-        if (!lastActivityAt || new Date(latestVisit) > new Date(lastActivityAt)) {
-          lastActivityAt = latestVisit;
+        if (!lastActivityAt || new Date(latestVisit.visited_at) > new Date(lastActivityAt)) {
+          lastActivityAt = latestVisit.visited_at;
         }
       }
       // Fallback: derive from computed_at - days_since_last_activity (approximate)
@@ -85,10 +92,12 @@ export async function GET(): Promise<NextResponse> {
 
       return {
         id: m.id,
+        external_id: m.external_id ?? null,
         name: m.name,
         phone: m.phone,
         joined_on: m.joined_on,
         tags: m.tags,
+        plan_ends_on: m.plan_ends_on ?? null,
         score: s?.score ?? null,
         level: s?.level ?? null,
         reasons: s?.reasons ?? [],
@@ -98,6 +107,8 @@ export async function GET(): Promise<NextResponse> {
         visits_last_28d: s?.signals?.visits_last_28d ?? 0,
         computed_at: s?.computed_at ?? null,
         last_touch: touch ?? null,
+        last_visit_coach: latestVisit?.coach_name ?? null,
+        last_visit_class: latestVisit?.class_name ?? null,
       };
     });
 

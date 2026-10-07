@@ -300,7 +300,7 @@ export default function ClientDetailPage() {
   const [state, setState] = useState<DetailState>({ kind: 'loading' });
   const [reloadKey, setReloadKey] = useState(0);
   const [showDelete, setShowDelete] = useState(false);
-  const [showDraft, setShowDraft] = useState(false);
+  const [draftCtx, setDraftCtx] = useState<DraftContext | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   // When true, the delete dialog's confirm button hits the hard-
@@ -393,6 +393,55 @@ export default function ClientDetailPage() {
     } catch {
       setDeleteError(s.deleteError);
       setDeleting(false);
+    }
+  }
+
+  async function handleOpenDraft() {
+    if (state.kind !== 'ready') return;
+    try {
+      const res = await fetch('/api/tribe-os/retention/scores');
+      const body = (await res.json().catch(() => ({}))) as {
+        success?: boolean;
+        data?: {
+          members: Array<{
+            id: string;
+            reasons: string[];
+            days_since_last_activity: number | null;
+            last_activity_at: string | null;
+            last_touch: { created_at: string } | null;
+            last_visit_coach: string | null;
+            last_visit_class: string | null;
+            plan_ends_on: string | null;
+          }>;
+        };
+      };
+      const match = body.data?.members.find((m) => m.id === clientId);
+      setDraftCtx({
+        memberId: state.client.id,
+        memberName: state.client.name,
+        phone: state.client.phone,
+        reasons: match?.reasons ?? [],
+        daysSinceLastActivity: match?.days_since_last_activity ?? null,
+        lastActivityAt: match?.last_activity_at ?? state.client.last_seen_at,
+        lastTouchCreatedAt: match?.last_touch?.created_at ?? null,
+        coachName: match?.last_visit_coach ?? null,
+        className: match?.last_visit_class ?? null,
+        planEndsOn: match?.plan_ends_on ?? null,
+        language,
+      });
+    } catch {
+      setDraftCtx({
+        memberId: state.client.id,
+        memberName: state.client.name,
+        phone: state.client.phone,
+        reasons: [],
+        daysSinceLastActivity: state.client.last_seen_at
+          ? Math.floor((Date.now() - new Date(state.client.last_seen_at).getTime()) / 86_400_000)
+          : null,
+        lastActivityAt: state.client.last_seen_at,
+        lastTouchCreatedAt: null,
+        language,
+      });
     }
   }
 
@@ -643,7 +692,7 @@ export default function ClientDetailPage() {
                             )}
                             <button
                               type="button"
-                              onClick={() => setShowDraft(true)}
+                              onClick={handleOpenDraft}
                               className="inline-flex items-center gap-1 px-2.5 py-1 bg-tribe-green/15 text-tribe-green text-[11px] font-bold rounded-full border border-tribe-green/30 hover:bg-tribe-green/25 transition-colors ml-1"
                             >
                               <PenLine className="w-3 h-3" />
@@ -866,31 +915,7 @@ export default function ClientDetailPage() {
         </DialogContent>
       </Dialog>
 
-      {state.kind === 'ready' && (
-        <DraftModal
-          open={showDraft}
-          onClose={() => setShowDraft(false)}
-          context={
-            {
-              memberId: state.client.id,
-              memberName: state.client.name,
-              phone: state.client.phone,
-              reasons:
-                state.client.health_status === 'AT_RISK'
-                  ? ['Miembro en riesgo / At-risk member']
-                  : state.client.health_status === 'WATCH'
-                    ? ['Miembro bajo observación / Member under watch']
-                    : [],
-              daysSinceLastActivity: state.client.last_seen_at
-                ? Math.floor((Date.now() - new Date(state.client.last_seen_at).getTime()) / 86_400_000)
-                : null,
-              lastActivityAt: state.client.last_seen_at,
-              lastTouchCreatedAt: null,
-              language,
-            } satisfies DraftContext
-          }
-        />
-      )}
+      {draftCtx && <DraftModal open={!!draftCtx} onClose={() => setDraftCtx(null)} context={draftCtx} />}
     </main>
   );
 }
