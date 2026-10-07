@@ -181,8 +181,12 @@ stop there and do not continue to the next step.
 2. **[AL] Take the production backup.** Supabase Dashboard, the production
    project, **Database > Backups** (the procedure in `docs/WEEK_1_MISSIONS.md`).
    Take a manual backup and copy the backup's identifier and timestamp exactly as
-   that page shows them into this line: **Backup ID and time:** `________`. If
-   the page offers no manual backup on our plan, record the newest daily
+   that page shows them into this line: **Backup ID and time:** `________`.
+   **Recorded 2026-10-07 (Al): Free plan, no dashboard backup. Own dump
+   `~/TribeBackups/tribe-prod_2026-10-07_0523_schema.sql` and
+   `~/TribeBackups/tribe-prod_2026-10-07_0523_data.sql`, taken 2026-10-07 05:23:
+   147 tables (`CREATE TABLE`), 145 `COPY` blocks, `pass_leads` present.**
+   If the page offers no manual backup on our plan, record the newest daily
    backup's timestamp instead and say so in this line, because that restore
    point is older than the morning's data.
    **Then, whatever the plan, a dump of your own, in your own Terminal (Claude
