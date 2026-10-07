@@ -403,6 +403,7 @@ export default function ClientDetailPage() {
       const body = (await res.json().catch(() => ({}))) as {
         success?: boolean;
         data?: {
+          coachDisplayName: string | null;
           members: Array<{
             id: string;
             reasons: string[];
@@ -411,6 +412,7 @@ export default function ClientDetailPage() {
             last_touch: { created_at: string } | null;
             last_visit_coach: string | null;
             last_visit_class: string | null;
+            last_visit_at: string | null;
             plan_ends_on: string | null;
           }>;
         };
@@ -426,7 +428,9 @@ export default function ClientDetailPage() {
         lastTouchCreatedAt: match?.last_touch?.created_at ?? null,
         coachName: match?.last_visit_coach ?? null,
         className: match?.last_visit_class ?? null,
+        classStartTime: match?.last_visit_at ?? null,
         planEndsOn: match?.plan_ends_on ?? null,
+        loggedInCoachName: body.data?.coachDisplayName ?? null,
         language,
       });
     } catch {

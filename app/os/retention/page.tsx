@@ -101,10 +101,12 @@ interface MemberRow {
   last_touch: { id: string; channel: string; created_at: string } | null;
   last_visit_coach: string | null;
   last_visit_class: string | null;
+  last_visit_at: string | null;
 }
 
 interface RetentionData {
   members: MemberRow[];
+  coachDisplayName: string | null;
   stats: { activeMembers: number; highRisk: number; recentVisitors: number };
 }
 
@@ -517,7 +519,9 @@ export default function RetentionPage() {
                 cameBack: draftTarget.cameBack,
                 coachName: draftTarget.member.last_visit_coach,
                 className: draftTarget.member.last_visit_class,
+                classStartTime: draftTarget.member.last_visit_at,
                 planEndsOn: draftTarget.member.plan_ends_on,
+                loggedInCoachName: data?.coachDisplayName ?? null,
                 language,
               } satisfies DraftContext
             }

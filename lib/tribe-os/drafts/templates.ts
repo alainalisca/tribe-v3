@@ -19,7 +19,9 @@ export interface DraftContext {
   cameBack?: boolean;
   coachName?: string | null;
   className?: string | null;
+  classStartTime?: string | null;
   planEndsOn?: string | null;
+  loggedInCoachName?: string | null;
   language: 'en' | 'es';
 }
 
@@ -28,6 +30,35 @@ export interface Draft {
   case: DraftCase;
   variantIndex: number;
 }
+
+export const COMPOUND_FIRST_NAMES = [
+  'Juan Esteban',
+  'Juan David',
+  'Juan Camilo',
+  'Juan Pablo',
+  'Juan José',
+  'Juan Sebastián',
+  'Juan Diego',
+  'Juan Felipe',
+  'Juan Manuel',
+  'Juan Carlos',
+  'Juan Andrés',
+  'María Fernanda',
+  'María José',
+  'María Camila',
+  'María Alejandra',
+  'María Paula',
+  'Ana María',
+  'Ana Sofía',
+  'Andrés Felipe',
+  'Luis Fernando',
+  'Luis Carlos',
+  'Carlos Andrés',
+  'Laura Camila',
+  'Laura Sofía',
+  'José Luis',
+  'Miguel Ángel',
+];
 
 type TemplateEntry = { es: string; en: string };
 
@@ -146,6 +177,8 @@ const TEMPLATES: Record<DraftCase, TemplateEntry[]> = {
   ],
 };
 
+// ── Helpers ────────────────────────────────────────────────────
+
 function hashCode(s: string): number {
   let h = 0;
   for (let i = 0; i < s.length; i++) {
@@ -154,9 +187,15 @@ function hashCode(s: string): number {
   return Math.abs(h);
 }
 
-function firstName(name: string | null): string {
-  if (!name) return '';
-  return name.split(' ')[0];
+export function compoundFirstName(fullName: string | null): string {
+  if (!fullName) return '';
+  const norm = fullName.trim();
+  for (const compound of COMPOUND_FIRST_NAMES) {
+    if (norm.startsWith(compound + ' ') || norm === compound) {
+      return compound;
+    }
+  }
+  return norm.split(' ')[0];
 }
 
 const BOGOTA = 'America/Bogota';
@@ -176,6 +215,100 @@ function nextVisitDay(lastActivityAt: string | null, lang: 'es' | 'en'): string 
   const lastDow = new Date(new Date(lastActivityAt).toLocaleString('en-US', { timeZone: BOGOTA })).getDay();
   return lang === 'es' ? ES_WEEKDAYS[lastDow] : EN_WEEKDAYS[lastDow];
 }
+
+function bogotaHour(isoTime: string): number {
+  const bogota = new Date(new Date(isoTime).toLocaleString('en-US', { timeZone: BOGOTA }));
+  return bogota.getHours();
+}
+
+function formatClassHour(hour: number, lang: 'es' | 'en'): string {
+  const h12 = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+  if (lang === 'en') {
+    return `the ${h12} ${hour < 12 ? 'AM' : 'PM'} class`;
+  }
+  return h12 === 1 ? `la de la ${h12}` : `la de las ${h12}`;
+}
+
+// ── Coach name processing ──────────────────────────────────────
+
+function stripCoachPrefix(name: string): string {
+  return name.replace(/^(?:Coach|Profe)\s+/i, '');
+}
+
+function normalizeForComparison(s: string): string {
+  return s
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/^(?:coach|profe)\s+/i, '')
+    .trim();
+}
+
+function isCoachSelf(coachName: string | null | undefined, loggedIn: string | null | undefined): boolean {
+  if (!coachName || !loggedIn) return false;
+  const a = normalizeForComparison(coachName).split(' ')[0];
+  const b = normalizeForComparison(loggedIn).split(' ')[0];
+  return a === b;
+}
+
+// ── Template variable builders ──────────────────────────────────
+
+function buildClassRef(
+  classStartTime: string | null | undefined,
+  className: string | null | undefined,
+  lang: 'es' | 'en'
+): string {
+  if (classStartTime) {
+    const hour = bogotaHour(classStartTime);
+    const ref = formatClassHour(hour, lang);
+    return lang === 'es' ? ` en ${ref}` : ` at ${ref}`;
+  }
+  if (className) {
+    return lang === 'es' ? ` en ${className}` : ` at ${className}`;
+  }
+  return '';
+}
+
+function buildNextClassRef(
+  lastActivityAt: string | null,
+  classStartTime: string | null | undefined,
+  className: string | null | undefined,
+  lang: 'es' | 'en'
+): string {
+  const day = nextVisitDay(lastActivityAt, lang);
+  if (day && classStartTime) {
+    const hour = bogotaHour(classStartTime);
+    const ref = formatClassHour(hour, lang);
+    return lang === 'es' ? ` el ${day} en ${ref}` : ` on ${day} at ${ref}`;
+  }
+  if (day && className) {
+    return lang === 'es' ? ` el ${day} en ${className}` : ` on ${day} at ${className}`;
+  }
+  if (day) {
+    return lang === 'es' ? ` el ${day}` : ` on ${day}`;
+  }
+  return lang === 'es' ? ' pronto' : ' soon';
+}
+
+function buildCoachRef(
+  coachName: string | null | undefined,
+  loggedInCoachName: string | null | undefined,
+  lang: 'es' | 'en'
+): string {
+  if (!coachName) return '';
+  if (isCoachSelf(coachName, loggedInCoachName)) {
+    return lang === 'es' ? ' y me preguntaba cómo estabas' : ' and I was wondering how you were doing';
+  }
+  const clean = stripCoachPrefix(coachName);
+  return lang === 'es' ? ` y ${clean} preguntó por ti` : ` and ${clean} asked about you`;
+}
+
+function buildExpiryDay(planEndsOn: string | null | undefined, lang: 'es' | 'en'): string {
+  if (!planEndsOn) return lang === 'es' ? 'pronto' : 'soon';
+  return weekdayName(planEndsOn, lang);
+}
+
+// ── Public API ──────────────────────────────────────────────────
 
 export function selectCase(ctx: DraftContext): DraftCase {
   const r = ctx.reasons;
@@ -211,36 +344,6 @@ function substitute(template: string, vars: Record<string, string>): string {
   return template.replace(/\{(\w+)\}/g, (_, key) => vars[key] ?? '');
 }
 
-function buildClassRef(className: string | null | undefined, lang: 'es' | 'en'): string {
-  if (!className) return '';
-  return lang === 'es' ? ` en la de ${className}` : ` at the ${className} class`;
-}
-
-function buildNextClassRef(
-  lastActivityAt: string | null,
-  className: string | null | undefined,
-  lang: 'es' | 'en'
-): string {
-  const day = nextVisitDay(lastActivityAt, lang);
-  if (day && className) {
-    return lang === 'es' ? ` el ${day} en la de ${className}` : ` on ${day} at the ${className} class`;
-  }
-  if (day) {
-    return lang === 'es' ? ` el ${day}` : ` on ${day}`;
-  }
-  return lang === 'es' ? ' pronto' : ' soon';
-}
-
-function buildCoachRef(coachName: string | null | undefined, lang: 'es' | 'en'): string {
-  if (!coachName) return '';
-  return lang === 'es' ? ` y ${coachName} preguntó por ti` : ` and ${coachName} asked about you`;
-}
-
-function buildExpiryDay(planEndsOn: string | null | undefined, lang: 'es' | 'en'): string {
-  if (!planEndsOn) return lang === 'es' ? 'pronto' : 'soon';
-  return weekdayName(planEndsOn, lang);
-}
-
 export function renderDraft(ctx: DraftContext, variantOverride?: number): Draft {
   const draftCase = selectCase(ctx);
   const variantIndex = variantOverride ?? pickVariant(ctx.memberId);
@@ -248,10 +351,10 @@ export function renderDraft(ctx: DraftContext, variantOverride?: number): Draft 
   const raw = ctx.language === 'es' ? entry.es : entry.en;
 
   const vars: Record<string, string> = {
-    name: firstName(ctx.memberName),
-    classRef: buildClassRef(ctx.className, ctx.language),
-    nextClassRef: buildNextClassRef(ctx.lastActivityAt, ctx.className, ctx.language),
-    coachRef: buildCoachRef(ctx.coachName, ctx.language),
+    name: compoundFirstName(ctx.memberName),
+    classRef: buildClassRef(ctx.classStartTime, ctx.className, ctx.language),
+    nextClassRef: buildNextClassRef(ctx.lastActivityAt, ctx.classStartTime, ctx.className, ctx.language),
+    coachRef: buildCoachRef(ctx.coachName, ctx.loggedInCoachName, ctx.language),
     expiryDay: buildExpiryDay(ctx.planEndsOn, ctx.language),
   };
 

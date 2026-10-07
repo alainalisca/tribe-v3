@@ -102,7 +102,9 @@ async function main() {
       cameBack,
       coachName: v?.coach_name ?? null,
       className: v?.class_name ?? null,
+      classStartTime: v?.visited_at ?? null,
       planEndsOn: c.plan_ends_on ?? null,
+      loggedInCoachName: 'Leo',
       language: 'es',
     };
 
@@ -129,12 +131,17 @@ async function main() {
   const visitingLess = rows.find((r) => r.case === 'visiting_less');
   const newNotComing = rows.find((r) => r.case === 'new_not_coming');
 
+  const coachSelf = rows.find(
+    (r) => r.coachName !== null && r.coachName.toLowerCase().includes('leo') && r !== natalia
+  );
+
   const targets = [
     { label: 'Natalia (MIRA-0001)', row: natalia },
     { label: 'Plan expired (not back)', row: planExpired },
     { label: 'Absent 14+ days', row: absent },
     { label: 'Visiting less', row: visitingLess },
     { label: 'New not coming', row: newNotComing },
+    { label: 'Coach = logged-in user (Leo)', row: coachSelf },
   ];
 
   for (const { label, row } of targets) {
@@ -160,7 +167,9 @@ async function main() {
       cameBack: row.cameBack,
       coachName: row.coachName,
       className: row.className,
+      classStartTime: row.lastActivityAt,
       planEndsOn: row.plan_ends_on,
+      loggedInCoachName: 'Leo',
       language: 'es',
     };
 

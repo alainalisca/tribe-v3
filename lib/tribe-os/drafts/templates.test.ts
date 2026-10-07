@@ -1,5 +1,13 @@
 import { describe, it, expect } from 'vitest';
-import { selectCase, pickVariant, renderDraft, cycleVariant, type DraftContext } from './templates';
+import {
+  selectCase,
+  pickVariant,
+  renderDraft,
+  cycleVariant,
+  compoundFirstName,
+  COMPOUND_FIRST_NAMES,
+  type DraftContext,
+} from './templates';
 
 function ctx(overrides: Partial<DraftContext> = {}): DraftContext {
   return {
@@ -25,14 +33,9 @@ describe('selectCase', () => {
   });
 
   it('picks came_back_expired when cameBack + expired', () => {
-    expect(
-      selectCase(
-        ctx({
-          cameBack: true,
-          reasons: ['Su plan venció hace 5 días / Plan expired 5 days ago'],
-        })
-      )
-    ).toBe('came_back_expired');
+    expect(selectCase(ctx({ cameBack: true, reasons: ['Su plan venció hace 5 días / Plan expired 5 days ago'] }))).toBe(
+      'came_back_expired'
+    );
   });
 
   it('picks came_back_active when cameBack without expired', () => {
@@ -60,17 +63,40 @@ describe('selectCase', () => {
 
   it('picks new_not_coming for new members absent 5+ days', () => {
     expect(
-      selectCase(
-        ctx({
-          daysSinceLastActivity: 7,
-          reasons: ['Nuevo y lleva 7 días sin venir / New and 7 days absent'],
-        })
-      )
+      selectCase(ctx({ daysSinceLastActivity: 7, reasons: ['Nuevo y lleva 7 días sin venir / New and 7 days absent'] }))
     ).toBe('new_not_coming');
   });
 
   it('falls back to generic', () => {
     expect(selectCase(ctx({ reasons: ['Asistencia estable / Stable attendance'] }))).toBe('generic');
+  });
+});
+
+describe('compoundFirstName', () => {
+  it('returns both words for compound names', () => {
+    expect(compoundFirstName('Juan Esteban Giraldo')).toBe('Juan Esteban');
+    expect(compoundFirstName('María José Fernández')).toBe('María José');
+    expect(compoundFirstName('Ana María López')).toBe('Ana María');
+    expect(compoundFirstName('Miguel Ángel Rodríguez')).toBe('Miguel Ángel');
+  });
+
+  it('returns first word for non-compound names', () => {
+    expect(compoundFirstName('Natalia Gómez')).toBe('Natalia');
+    expect(compoundFirstName('Carlos Restrepo')).toBe('Carlos');
+  });
+
+  it('handles null and empty', () => {
+    expect(compoundFirstName(null)).toBe('');
+    expect(compoundFirstName('')).toBe('');
+  });
+
+  it('handles compound name with no surname', () => {
+    expect(compoundFirstName('Juan Esteban')).toBe('Juan Esteban');
+  });
+
+  it('COMPOUND_FIRST_NAMES is exported and non-empty', () => {
+    expect(Array.isArray(COMPOUND_FIRST_NAMES)).toBe(true);
+    expect(COMPOUND_FIRST_NAMES.length).toBeGreaterThan(20);
   });
 });
 
@@ -136,43 +162,135 @@ describe('renderDraft', () => {
     expect(active.case).toBe('came_back_active');
   });
 
-  it('includes coach name when provided', () => {
+  // ── Coach self-reference ──────────────────────────────────
+
+  it('uses "me preguntaba" when coach matches logged-in user', () => {
     const d = renderDraft(
       ctx({
         reasons: ['20 días sin venir / 20 days absent'],
         daysSinceLastActivity: 20,
-        coachName: 'Ricardo',
+        coachName: 'Coach Leo',
+        loggedInCoachName: 'Leo García',
       }),
       0
     );
-    expect(d.text).toContain('Ricardo');
+    expect(d.text).toContain('me preguntaba');
+    expect(d.text).not.toContain('Leo');
+  });
+
+  it('uses coach name (stripped prefix) when not self', () => {
+    const d = renderDraft(
+      ctx({
+        reasons: ['20 días sin venir / 20 days absent'],
+        daysSinceLastActivity: 20,
+        coachName: 'Coach Ricardo',
+        loggedInCoachName: 'Leo García',
+      }),
+      0
+    );
+    expect(d.text).toContain('Ricardo preguntó');
+    expect(d.text).not.toContain('Coach Ricardo');
+  });
+
+  it('strips "Profe " prefix from coach name', () => {
+    const d = renderDraft(
+      ctx({
+        reasons: ['20 días sin venir / 20 days absent'],
+        daysSinceLastActivity: 20,
+        coachName: 'Profe Mafe',
+      }),
+      0
+    );
+    expect(d.text).toContain('Mafe preguntó');
+    expect(d.text).not.toContain('Profe');
+  });
+
+  it('self-match ignores accents', () => {
+    const d = renderDraft(
+      ctx({
+        reasons: ['20 días sin venir / 20 days absent'],
+        daysSinceLastActivity: 20,
+        coachName: 'Coach María',
+        loggedInCoachName: 'Maria García',
+      }),
+      0
+    );
+    expect(d.text).toContain('me preguntaba');
   });
 
   it('falls back cleanly without coach name', () => {
-    const d = renderDraft(
-      ctx({
-        reasons: ['20 días sin venir / 20 days absent'],
-        daysSinceLastActivity: 20,
-      }),
-      0
-    );
+    const d = renderDraft(ctx({ reasons: ['20 días sin venir / 20 days absent'], daysSinceLastActivity: 20 }), 0);
     expect(d.text).not.toContain('preguntó');
+    expect(d.text).not.toContain('preguntaba');
     expect(d.text).toMatch(/\?$/);
   });
 
-  it('includes class name when provided', () => {
+  // ── Compound first names ──────────────────────────────────
+
+  it('uses compound first name "Juan Esteban"', () => {
+    const d = renderDraft(ctx({ memberName: 'Juan Esteban Giraldo' }), 0);
+    expect(d.text).toContain('Juan Esteban');
+    expect(d.text).not.toContain('Giraldo');
+  });
+
+  it('uses compound first name "María José"', () => {
+    const d = renderDraft(ctx({ memberName: 'María José Fernández' }), 0);
+    expect(d.text).toContain('María José');
+    expect(d.text).not.toContain('Fernández');
+  });
+
+  it('uses single first name for non-compound', () => {
+    const d = renderDraft(ctx({ memberName: 'Valentina Restrepo' }), 0);
+    expect(d.text).toContain('Valentina');
+    expect(d.text).not.toContain('Restrepo');
+  });
+
+  it('handles null name gracefully', () => {
+    const d = renderDraft(ctx({ memberName: null }), 0);
+    expect(d.text).toContain('Hola ');
+    expect(d.text).not.toContain('{name}');
+  });
+
+  // ── Class reference with time ─────────────────────────────
+
+  it('uses "la de las {h}" when classStartTime is provided', () => {
     const d = renderDraft(
       ctx({
         reasons: ['Su plan venció hace 8 días / Plan expired 8 days ago'],
         daysSinceLastActivity: 22,
-        className: 'las 6',
+        classStartTime: '2026-10-04T11:00:00Z', // 6 AM Bogota (UTC-5)
       }),
       0
     );
-    expect(d.text).toContain('las 6');
+    expect(d.text).toContain('la de las 6');
   });
 
-  it('falls back cleanly without class name', () => {
+  it('uses "la de la 1" for 1 PM/AM (singular article)', () => {
+    const d = renderDraft(
+      ctx({
+        reasons: ['Su plan venció hace 8 días / Plan expired 8 days ago'],
+        daysSinceLastActivity: 22,
+        classStartTime: '2026-10-04T18:00:00Z', // 1 PM Bogota
+      }),
+      0
+    );
+    expect(d.text).toContain('la de la 1');
+  });
+
+  it('uses "en {className}" when no classStartTime', () => {
+    const d = renderDraft(
+      ctx({
+        reasons: ['Su plan venció hace 8 días / Plan expired 8 days ago'],
+        daysSinceLastActivity: 22,
+        className: 'CrossFit',
+      }),
+      0
+    );
+    expect(d.text).toContain('en CrossFit');
+    expect(d.text).not.toContain('en la de CrossFit');
+  });
+
+  it('falls back cleanly without class data', () => {
     const d = renderDraft(
       ctx({
         reasons: ['Su plan venció hace 8 días / Plan expired 8 days ago'],
@@ -184,17 +302,7 @@ describe('renderDraft', () => {
     expect(d.text).toMatch(/\?$/);
   });
 
-  it('uses first name only', () => {
-    const d = renderDraft(ctx({ memberName: 'María José Fernández' }), 0);
-    expect(d.text).toContain('María');
-    expect(d.text).not.toContain('Fernández');
-  });
-
-  it('handles null name gracefully', () => {
-    const d = renderDraft(ctx({ memberName: null }), 0);
-    expect(d.text).toContain('Hola ');
-    expect(d.text).not.toContain('{name}');
-  });
+  // ── Other ─────────────────────────────────────────────────
 
   it('renders English when language is en', () => {
     const d = renderDraft(
@@ -210,10 +318,7 @@ describe('renderDraft', () => {
 
   it('plan_expiring shows weekday from planEndsOn', () => {
     const d = renderDraft(
-      ctx({
-        reasons: ['Su plan vence en 3 días / Plan expires in 3 days'],
-        planEndsOn: '2026-10-09',
-      }),
+      ctx({ reasons: ['Su plan vence en 3 días / Plan expires in 3 days'], planEndsOn: '2026-10-09' }),
       0
     );
     expect(d.text).toContain('jueves');
@@ -224,16 +329,20 @@ describe('renderDraft', () => {
       ctx({
         reasons: ['Su plan venció hace 8 días / Plan expired 8 days ago'],
         daysSinceLastActivity: 30,
-        className: 'las 6 AM',
+        classStartTime: '2026-10-04T11:00:00Z',
       }),
       ctx({ reasons: ['Su plan vence en 3 días / Plan expires in 3 days'], planEndsOn: '2026-10-09' }),
       ctx({ cameBack: true, reasons: ['Su plan venció hace 5 días / Plan expired 5 days ago'] }),
-      ctx({ cameBack: true, lastActivityAt: '2026-10-04T10:00:00Z', className: 'las 6 AM' }),
+      ctx({
+        cameBack: true,
+        lastActivityAt: '2026-10-04T10:00:00Z',
+        classStartTime: '2026-10-04T11:00:00Z',
+      }),
       ctx({
         reasons: ['20 días sin venir / 20 days absent'],
         daysSinceLastActivity: 20,
-        coachName: 'Ricardo',
-        className: 'las 6 AM',
+        coachName: 'Ricardo Vélez',
+        classStartTime: '2026-09-16T11:00:00Z',
         lastActivityAt: '2026-09-16T10:00:00Z',
       }),
       ctx({

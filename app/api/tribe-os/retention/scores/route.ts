@@ -11,6 +11,11 @@ export async function GET(): Promise<NextResponse> {
     return NextResponse.json({ success: false, error: 'gym_required' }, { status: 400 });
   }
 
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const coachDisplayName: string | null = (user?.user_metadata?.name as string) ?? null;
+
   try {
     const { data: members, error: membersErr } = await supabase
       .from('clients')
@@ -109,6 +114,7 @@ export async function GET(): Promise<NextResponse> {
         last_touch: touch ?? null,
         last_visit_coach: latestVisit?.coach_name ?? null,
         last_visit_class: latestVisit?.class_name ?? null,
+        last_visit_at: latestVisit?.visited_at ?? null,
       };
     });
 
@@ -126,6 +132,7 @@ export async function GET(): Promise<NextResponse> {
       success: true,
       data: {
         members: hasActivity,
+        coachDisplayName,
         stats: { activeMembers, highRisk, recentVisitors },
       },
     });
