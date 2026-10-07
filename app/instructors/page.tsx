@@ -29,6 +29,7 @@ import { fetchGymsAndStudios, type GymDirectoryEntry } from '@/lib/dal/gymDirect
 import { logError } from '@/lib/logger';
 import InstructorsPageClient from './InstructorsPageClient';
 import { resolveFetchOutcome } from './fetchOutcome';
+import { DISCOVER_TAB_PARAM, parseDiscoverTab } from '@/lib/discover/discoverTab';
 
 // THIS ROUTE IS DYNAMIC, NOT CACHED. It used to carry `export const
 // revalidate = 60` and a comment claiming ~98% cache hits. There is no cache:
@@ -52,7 +53,14 @@ import { resolveFetchOutcome } from './fetchOutcome';
 // app/profile/[userId]/useVisibilityTier.ts before moving anything viewer-
 // specific into the cached render.
 
-export default async function InstructorsPage() {
+interface PageProps {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}
+
+export default async function InstructorsPage({ searchParams }: PageProps) {
+  // ?ver=gimnasios opens Discover on the gyms tab (shareable link). Read here
+  // rather than with useSearchParams so the first paint is already correct.
+  const initialTab = parseDiscoverTab((await searchParams)[DISCOVER_TAB_PARAM]);
   let initialInstructors: InstructorProfile[] = [];
   let gyms: GymDirectoryEntry[] = [];
   // An empty list is NOT evidence that the directory is empty. These flags are
@@ -99,6 +107,7 @@ export default async function InstructorsPage() {
       instructorsFailed={instructorsFailed}
       gyms={gyms}
       gymsFailed={gymsFailed}
+      initialTab={initialTab}
     />
   );
 }

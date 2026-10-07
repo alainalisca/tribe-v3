@@ -244,6 +244,7 @@ type EventName =
   | 'venue_request_declined' // gym declined one
   | 'gym_storefront_viewed' // a gym storefront opened; `source` says where from
   | 'gym_tile_tapped' // a gym tile tapped in Gimnasios y estudios on /instructors
+  | 'discover_tab_changed' // Instructores / Gimnasios y estudios switch on /instructors; `tab` says which
 
   // Digital pass (T-LEAD1 / T-LEAD2)
   | 'pass_entry_tapped' // an in-app entry point into /pase tapped; `surface` and `code` say which one

@@ -620,5 +620,21 @@
     "active": "Programa activo",
     "setSponsored": "Marcar como patrocinado",
     "empty": "Todavía no hay programas."
+  },
+  "discover": {
+    "tabInstructors": "Instructores",
+    "tabGyms": "Gimnasios y estudios",
+    "tabGymsShort": "Gimnasios",
+    "titleGyms": "Descubre Gimnasios",
+    "gymsSearch": "Buscar por nombre, barrio o disciplina...",
+    "gymsLoadFailed": "No pudimos cargar los gimnasios",
+    "gymsLoadFailedDesc": "Es un problema de nuestro lado, no de tu búsqueda.",
+    "retry": "Intentar de nuevo",
+    "retrying": "Intentando...",
+    "gymsNoneYet": "Aún no hay gimnasios",
+    "gymsNoneYetDesc": "Los gimnasios y estudios aliados aparecen aquí.",
+    "gymsNoMatch": "No se encontraron gimnasios",
+    "gymsNoMatchDesc": "Intenta con otro nombre o barrio",
+    "clearSearch": "Limpiar búsqueda"
   }
 }
