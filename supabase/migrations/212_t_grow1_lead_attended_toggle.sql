@@ -306,8 +306,24 @@ BEGIN
     RAISE EXCEPTION '212 guard: the UPDATE assigns to [%], expected attended_at, attended_marked_by, attended_method', setters;
   END IF;
 
-  -- No policy was added or changed. 211 left five; five is still right. This
-  -- file adds a function and nothing else, and that claim is cheap to assert.
+  -- No policy was added or changed. This file adds a function and nothing else,
+  -- and that claim is cheap to assert -- but the expected TOTAL depends on 211,
+  -- so 211 is named as a precondition rather than being assumed.
+  --
+  -- The first version of this guard asserted `= 5` with a comment saying "211
+  -- left five". That is true in the apply order and it made 212 silently
+  -- undeployable on its own: run against a database where 211 had not been
+  -- pasted, it would abort with "pass_leads has 4 policies, expected 5", which
+  -- names the symptom and not the cause, and the operator's next move would be
+  -- to go looking for a missing policy rather than to apply 211. An ordering
+  -- requirement that is real should say so in the error.
+  IF NOT EXISTS (SELECT 1 FROM pg_policies
+                  WHERE schemaname = 'public' AND tablename = 'pass_leads'
+                    AND policyname = 'Attribution columns are server only') THEN
+    RAISE EXCEPTION '212 guard: 211 has not been applied (the attribution policy is absent). '
+                    'Apply 211_t_grow1_lead_attribution first; this file is 2 of 3 in T-GROW1 '
+                    'and the three are applied in order.';
+  END IF;
   IF (SELECT count(*) FROM pg_policies WHERE schemaname = 'public' AND tablename = 'pass_leads') <> 5 THEN
     RAISE EXCEPTION '212 guard: pass_leads has % policies, expected 5 -- 212 adds none',
       (SELECT count(*) FROM pg_policies WHERE schemaname = 'public' AND tablename = 'pass_leads');
