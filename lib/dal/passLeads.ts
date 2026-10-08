@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { logError } from '@/lib/logger';
 import { ORGANIZATION_TYPES } from '@/lib/dal/gymVenue';
+import type { Attribution } from '@/lib/attribution';
 
 /**
  * Data access for the digital pass. SERVICE-ROLE ONLY.
@@ -145,6 +146,27 @@ export interface NewPassLead {
   pass_code: string;
   consent_text: string;
   user_agent: string | null;
+  /**
+   * T-GROW1 part B (migration 211). All optional, because the ONLY writer is
+   * /api/pase and it sends them unconditionally -- but a test fixture built
+   * before this existed is still a valid lead, and making them required would
+   * have forced every such fixture to name seven nulls it does not care about.
+   *
+   * `attr_ref` holds the ?ref= value. The parameter is `ref` and the column is
+   * `attr_ref`; migration 211's header has the full reason, and the short one is
+   * that migrationAppliedBeforeCode.test.ts matches a column name as a substring
+   * of source text and "ref" appears in 708 source files.
+   */
+  attr_ref?: string | null;
+  utm_source?: string | null;
+  utm_medium?: string | null;
+  utm_campaign?: string | null;
+  utm_content?: string | null;
+  landing_path?: string | null;
+  /** The whole first-touch object, bounded and revalidated by the route. */
+  first_touch?: Attribution | null;
+  /** T-AV23. Written only for an attributed lead; see lib/pase/athleteAttribution.ts. */
+  referred_by_athlete_id?: string | null;
 }
 
 export type InsertResult =
