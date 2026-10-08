@@ -115,14 +115,22 @@ CREATE TABLE IF NOT EXISTS public.featured_partners (
   min_rating             numeric(2,1) DEFAULT 4.0,
   created_at             timestamptz DEFAULT now(),
   updated_at             timestamptz DEFAULT now(),
-  slug                   text,
+  -- 163: NOT NULL, and a CHECK on shape and length. Both were missing from the
+  -- first version of this harness, so a clone with an upper-case or over-long
+  -- slug would have passed locally and failed live.
+  slug                   text NOT NULL,
   pass_headline          text,
   pass_sub               text,
   pass_options           jsonb,
+  -- 172.
   pass_active            boolean NOT NULL DEFAULT false,
   lead_whatsapp          text,
-  auto_approve_roster    boolean DEFAULT false,
-  display_order          int
+  -- 158 and 161: both NOT NULL with a default, which the first version had as
+  -- plain nullable columns.
+  auto_approve_roster    boolean NOT NULL DEFAULT true,
+  display_order          integer NOT NULL DEFAULT 0,
+  CONSTRAINT featured_partners_slug_check
+    CHECK (char_length(slug) BETWEEN 1 AND 80 AND slug ~ '^[a-z0-9-]+$')
 );
 CREATE UNIQUE INDEX IF NOT EXISTS featured_partners_slug_key ON public.featured_partners (slug);
 
@@ -161,7 +169,7 @@ CREATE TABLE IF NOT EXISTS public.pass_leads (
   code               text,
   pass_code          text NOT NULL UNIQUE,
   consent_text       text NOT NULL,
-  consent_at         timestamptz DEFAULT now(),
+  consent_at         timestamptz NOT NULL DEFAULT now(),
   user_agent         text,
   notified_at        timestamptz,
   contacted_at       timestamptz,
@@ -181,10 +189,63 @@ CREATE TABLE IF NOT EXISTS public.pass_leads (
   bonus_settled_at       timestamptz,
   bonus_settled_by       uuid REFERENCES public.users(id) ON DELETE SET NULL
 );
+-- ══════════════════════════════════════════════════════════════════════════
+-- 173's EIGHT CHECK CONSTRAINTS, which the first version of this harness had
+-- NONE of. That omission is the whole reason 211's live run failed where the
+-- local run passed.
+--
+-- WHAT IT COST: five arms in 211 (B1, B5, B7, C2, C4) insert a lead, and every
+-- rehearsal pass_code was shaped 'REHB1' / 'REH212A' -- which violates
+-- pass_leads_pass_code, `^[A-Z]{2}-[A-Z2-9]{4}$`. Live, all five failed 23514.
+--
+-- AND WHY THE NEGATIVE ARMS HID IT. Postgres evaluates CHECKs in NAME ORDER, and
+-- pass_leads_attr_tag_bounds, _first_touch_bounds and _landing_path_bounds all
+-- sort before pass_leads_pass_code -- so every arm that EXPECTED a violation got
+-- the one it was looking for and reported PASS over a row that was invalid for a
+-- second, unnoticed reason. Only the arms expecting SUCCESS could see it, and
+-- they are the arms this harness existed to protect.
+--
+-- The ordering is not contractual, and the arms do not rely on it: each asserts
+-- the constraint NAME out of SQLERRM, so a different firing order makes them FAIL
+-- rather than pass wrongly. That is the safe direction, and it is why a reader
+-- could not spot this by eye.
+-- ══════════════════════════════════════════════════════════════════════════
+ALTER TABLE public.pass_leads DROP CONSTRAINT IF EXISTS pass_leads_name_len;
+ALTER TABLE public.pass_leads ADD CONSTRAINT pass_leads_name_len
+  CHECK (char_length(name) BETWEEN 2 AND 80);
+ALTER TABLE public.pass_leads DROP CONSTRAINT IF EXISTS pass_leads_email_shape;
+ALTER TABLE public.pass_leads ADD CONSTRAINT pass_leads_email_shape
+  CHECK (email ~ '^[^[:space:]@]+@[^[:space:]@]+\.[^[:space:]@]+$');
+ALTER TABLE public.pass_leads DROP CONSTRAINT IF EXISTS pass_leads_email_len;
+ALTER TABLE public.pass_leads ADD CONSTRAINT pass_leads_email_len
+  CHECK (char_length(email) <= 255);
+ALTER TABLE public.pass_leads DROP CONSTRAINT IF EXISTS pass_leads_whatsapp_e164;
+ALTER TABLE public.pass_leads ADD CONSTRAINT pass_leads_whatsapp_e164
+  CHECK (whatsapp ~ '^\+[1-9][0-9]{7,14}$');
+ALTER TABLE public.pass_leads DROP CONSTRAINT IF EXISTS pass_leads_consent_text;
+ALTER TABLE public.pass_leads ADD CONSTRAINT pass_leads_consent_text
+  CHECK (char_length(consent_text) BETWEEN 20 AND 500);
+ALTER TABLE public.pass_leads DROP CONSTRAINT IF EXISTS pass_leads_pass_code;
+ALTER TABLE public.pass_leads ADD CONSTRAINT pass_leads_pass_code
+  CHECK (pass_code ~ '^[A-Z]{2}-[A-Z2-9]{4}$');
+ALTER TABLE public.pass_leads DROP CONSTRAINT IF EXISTS pass_leads_src_shape;
+ALTER TABLE public.pass_leads ADD CONSTRAINT pass_leads_src_shape
+  CHECK (src IS NULL OR src ~ '^[A-Za-z0-9_-]{1,40}$');
+ALTER TABLE public.pass_leads DROP CONSTRAINT IF EXISTS pass_leads_code_shape;
+ALTER TABLE public.pass_leads ADD CONSTRAINT pass_leads_code_shape
+  CHECK (code IS NULL OR code ~ '^[A-Za-z0-9_-]{1,40}$');
+
+-- 201.
 ALTER TABLE public.pass_leads DROP CONSTRAINT IF EXISTS pass_leads_attended_method_check;
 ALTER TABLE public.pass_leads
   ADD CONSTRAINT pass_leads_attended_method_check
   CHECK (attended_method IS NULL OR attended_method IN ('toggle','scan','code'));
+
+-- 204. The columns were already here; its CHECK was not.
+ALTER TABLE public.pass_leads DROP CONSTRAINT IF EXISTS pass_leads_outcome_check;
+ALTER TABLE public.pass_leads
+  ADD CONSTRAINT pass_leads_outcome_check
+  CHECK (outcome IS NULL OR outcome IN ('joined','follow_up','not_now','already_member'));
 
 -- 184. 211 to 213 each record themselves just before COMMIT; the rehearsals omit
 -- that statement, but 211's Part G reads the table.
@@ -304,6 +365,9 @@ WHERE NOT EXISTS (SELECT 1 FROM public.featured_partners WHERE slug = 'harness-g
 
 INSERT INTO public.pass_leads (slug, partner_id, name, whatsapp, email, pass_code, consent_text, src, code)
 SELECT 'harness-gym', (SELECT id FROM public.featured_partners WHERE slug = 'harness-gym'),
-       'Harness Lead', '+573001112233', 'lead@harness.local', 'HR-0001',
+       -- HR-SEED, not HR-0001: the tail charset is [A-Z2-9], so 0 and 1 are
+       -- forbidden. The first version of this harness used HR-0001 and could
+       -- not have noticed, because it had no pass_code CHECK to violate.
+       'Harness Lead', '+573001112233', 'lead@harness.local', 'HR-SEED',
        'Autorizo el tratamiento de mis datos para esta clase de prueba.', NULL, NULL
-WHERE NOT EXISTS (SELECT 1 FROM public.pass_leads WHERE pass_code = 'HR-0001');
+WHERE NOT EXISTS (SELECT 1 FROM public.pass_leads WHERE pass_code = 'HR-SEED');

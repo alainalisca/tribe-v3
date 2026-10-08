@@ -771,13 +771,13 @@ BEGIN
     (slug, partner_id, name, whatsapp, email, pass_code, consent_text,
      src, code, utm_campaign, attr_ref, created_at, contacted_at, attended_at)
   VALUES
-    (k_slug, k_partner, 'Reh Tagged', '+573001234567', 'reh213-a@example.com', 'REH213A',
+    (k_slug, k_partner, 'Reh Tagged', '+573001234567', 'reh213-a@example.com', 'RH-TAGD',
      'Autorizo el tratamiento de mis datos para esta clase de prueba.',
      'runclub', 'RUNCLUB-SAT0927', 'hyrox-oct', NULL, now(), now(), now()),
-    (k_slug, k_partner, 'Reh Untagged', '+573001234568', 'reh213-b@example.com', 'REH213B',
+    (k_slug, k_partner, 'Reh Untagged', '+573001234568', 'reh213-b@example.com', 'RH-UNTG',
      'Autorizo el tratamiento de mis datos para esta clase de prueba.',
      NULL, NULL, NULL, NULL, now(), NULL, NULL),
-    (k_slug, k_partner, 'Reh Old', '+573001234569', 'reh213-c@example.com', 'REH213C',
+    (k_slug, k_partner, 'Reh Old', '+573001234569', 'reh213-c@example.com', 'RH-OLDD',
      'Autorizo el tratamiento de mis datos para esta clase de prueba.',
      NULL, NULL, NULL, NULL, k_old, NULL, NULL);
 

@@ -769,14 +769,14 @@ BEGIN
   -- same path the service role takes and bypasses RLS, so no pass config is
   -- needed and the claim policy is not involved.
   INSERT INTO public.pass_leads (slug, partner_id, name, whatsapp, email, pass_code, consent_text)
-  VALUES (k_slug, k_partner, 'Reh Guest', '+573001234567', 'reh212-a@example.com', 'REH212A',
+  VALUES (k_slug, k_partner, 'Reh Guest', '+573001234567', 'reh212-a@example.com', 'RH-LEAD',
           'Autorizo el tratamiento de mis datos para esta clase de prueba.')
   RETURNING id INTO k_lead;
 
   -- partner_id NULL is the ON DELETE SET NULL state: a lead whose gym's row was
   -- deleted. av_can_work_door cannot reach it for anybody.
   INSERT INTO public.pass_leads (slug, partner_id, name, whatsapp, email, pass_code, consent_text)
-  VALUES (k_slug, NULL, 'Reh Orphan', '+573001234568', 'reh212-b@example.com', 'REH212B',
+  VALUES (k_slug, NULL, 'Reh Orphan', '+573001234568', 'reh212-b@example.com', 'RH-ORPH',
           'Autorizo el tratamiento de mis datos para esta clase de prueba.')
   RETURNING id INTO k_orphan;
 

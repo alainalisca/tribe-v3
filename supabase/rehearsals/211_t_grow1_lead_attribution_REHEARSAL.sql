@@ -600,7 +600,7 @@ BEGIN
   BEGIN
     INSERT INTO public.pass_leads (slug, partner_id, name, whatsapp, email, pass_code,
                                    consent_text, utm_source, attr_ref)
-    VALUES (k_slug, k_partner, 'Reh Boundary', '+573001234567', 'reh-b1@example.com', 'REHB1',
+    VALUES (k_slug, k_partner, 'Reh Boundary', '+573001234567', 'reh-b1@example.com', 'RH-BONE',
             'Autorizo el tratamiento de mis datos para esta clase de prueba.',
             repeat('a', 40), repeat('B', 40))
     RETURNING id INTO v_id;
@@ -622,7 +622,7 @@ BEGIN
   BEGIN
     INSERT INTO public.pass_leads (slug, partner_id, name, whatsapp, email, pass_code,
                                    consent_text, utm_source)
-    VALUES (k_slug, k_partner, 'Reh Over', '+573001234567', 'reh-b2@example.com', 'REHB2',
+    VALUES (k_slug, k_partner, 'Reh Over', '+573001234567', 'reh-b2@example.com', 'RH-BTWO',
             'Autorizo el tratamiento de mis datos para esta clase de prueba.', repeat('a', 41));
     b2_state := 'SUCCEEDED on a 41 char utm_source -- the size bound does nothing';
     b2_ok := false;
@@ -644,7 +644,7 @@ BEGIN
   BEGIN
     INSERT INTO public.pass_leads (slug, partner_id, name, whatsapp, email, pass_code,
                                    consent_text, utm_campaign)
-    VALUES (k_slug, k_partner, 'Reh Empty', '+573001234567', 'reh-b3@example.com', 'REHB3',
+    VALUES (k_slug, k_partner, 'Reh Empty', '+573001234567', 'reh-b3@example.com', 'RH-BTRE',
             'Autorizo el tratamiento de mis datos para esta clase de prueba.', '');
     b3_state := 'SUCCEEDED on an empty utm_campaign -- NULL and '''' are now two channels';
     b3_ok := false;
@@ -665,7 +665,7 @@ BEGIN
   BEGIN
     INSERT INTO public.pass_leads (slug, partner_id, name, whatsapp, email, pass_code,
                                    consent_text, first_touch)
-    VALUES (k_slug, k_partner, 'Reh Array', '+573001234567', 'reh-b4@example.com', 'REHB4',
+    VALUES (k_slug, k_partner, 'Reh Array', '+573001234567', 'reh-b4@example.com', 'RH-BFOR',
             'Autorizo el tratamiento de mis datos para esta clase de prueba.',
             '[1,2,3]'::jsonb);
     b4_state := 'SUCCEEDED on a jsonb array -- first_touch is not pinned to an object';
@@ -688,7 +688,7 @@ BEGIN
   BEGIN
     INSERT INTO public.pass_leads (slug, partner_id, name, whatsapp, email, pass_code,
                                    consent_text, first_touch, landing_path)
-    VALUES (k_slug, k_partner, 'Reh Real', '+573001234567', 'reh-b5@example.com', 'REHB5',
+    VALUES (k_slug, k_partner, 'Reh Real', '+573001234567', 'reh-b5@example.com', 'RH-BFIV',
             'Autorizo el tratamiento de mis datos para esta clase de prueba.',
             k_first_touch, '/pase/bullbox/')
     RETURNING id INTO v_id;
@@ -713,7 +713,7 @@ BEGIN
   BEGIN
     INSERT INTO public.pass_leads (slug, partner_id, name, whatsapp, email, pass_code,
                                    consent_text, first_touch)
-    VALUES (k_slug, k_partner, 'Reh Big', '+573001234567', 'reh-b6@example.com', 'REHB6',
+    VALUES (k_slug, k_partner, 'Reh Big', '+573001234567', 'reh-b6@example.com', 'RH-BSIX',
             'Autorizo el tratamiento de mis datos para esta clase de prueba.',
             jsonb_build_object('payload', repeat('x', 3000)));
     b6_state := 'SUCCEEDED on a 3000 char payload -- first_touch is unbounded';
@@ -736,7 +736,7 @@ BEGIN
   BEGIN
     INSERT INTO public.pass_leads (slug, partner_id, name, whatsapp, email, pass_code,
                                    consent_text, landing_path)
-    VALUES (k_slug, k_partner, 'Reh Path', '+573001234567', 'reh-b7@example.com', 'REHB7',
+    VALUES (k_slug, k_partner, 'Reh Path', '+573001234567', 'reh-b7@example.com', 'RH-BSVN',
             'Autorizo el tratamiento de mis datos para esta clase de prueba.',
             '/' || repeat('p', 199))
     RETURNING id INTO v_id;
@@ -761,7 +761,7 @@ BEGIN
   BEGIN
     INSERT INTO public.pass_leads (slug, partner_id, name, whatsapp, email, pass_code,
                                    consent_text, landing_path)
-    VALUES (k_slug, k_partner, 'Reh Path2', '+573001234567', 'reh-b8@example.com', 'REHB8',
+    VALUES (k_slug, k_partner, 'Reh Path2', '+573001234567', 'reh-b8@example.com', 'RH-BEGT',
             'Autorizo el tratamiento de mis datos para esta clase de prueba.',
             '/' || repeat('p', 200));
     b8_state := 'SUCCEEDED on a 201 char landing_path';
@@ -802,7 +802,7 @@ BEGIN
   BEGIN
     INSERT INTO public.pass_leads (slug, partner_id, name, whatsapp, email, pass_code,
                                    consent_text, utm_campaign)
-    VALUES (k_slug, k_partner, 'Reh Anon Tagged', '+573001234567', 'reh-c1@example.com', 'REHC1',
+    VALUES (k_slug, k_partner, 'Reh Anon Tagged', '+573001234567', 'reh-c1@example.com', 'RH-CONE',
             'Autorizo el tratamiento de mis datos para esta clase de prueba.', 'forged-campaign');
     c1_state := 'SUCCEEDED -- anon forged a utm_campaign on a lead';
     c1_ok := false;
@@ -825,7 +825,7 @@ BEGIN
   BEGIN
     INSERT INTO public.pass_leads (slug, partner_id, name, whatsapp, email, pass_code,
                                    consent_text)
-    VALUES (k_slug, k_partner, 'Reh Anon Plain', '+573001234567', 'reh-c2@example.com', 'REHC2',
+    VALUES (k_slug, k_partner, 'Reh Anon Plain', '+573001234567', 'reh-c2@example.com', 'RH-CTWO',
             'Autorizo el tratamiento de mis datos para esta clase de prueba.');
     c2_state := 'anon inserted a plain lead, as the live pass form does';
     c2_ok := true;
@@ -851,7 +851,7 @@ BEGIN
   BEGIN
     INSERT INTO public.pass_leads (slug, partner_id, name, whatsapp, email, pass_code,
                                    consent_text, attr_ref)
-    VALUES (k_slug, k_partner, 'Reh Admin Tagged', '+573001234567', 'reh-c3@example.com', 'REHC3',
+    VALUES (k_slug, k_partner, 'Reh Admin Tagged', '+573001234567', 'reh-c3@example.com', 'RH-CTRE',
             'Autorizo el tratamiento de mis datos para esta clase de prueba.', 'FORGED');
     c3_state := 'SUCCEEDED -- an ADMIN forged an attr_ref; the policy is not restrictive enough';
     c3_ok := false;
@@ -877,7 +877,7 @@ BEGIN
     INSERT INTO public.pass_leads (slug, partner_id, name, whatsapp, email, pass_code,
                                    consent_text, attr_ref, utm_source, utm_medium,
                                    utm_campaign, utm_content, landing_path, first_touch)
-    VALUES (k_slug, k_partner, 'Reh Service All', '+573001234567', 'reh-c4@example.com', 'REHC4',
+    VALUES (k_slug, k_partner, 'Reh Service All', '+573001234567', 'reh-c4@example.com', 'RH-CFOR',
             'Autorizo el tratamiento de mis datos para esta clase de prueba.',
             'A7K2QX', 'instagram', 'social', 'hyrox-oct', 'reel-01', '/', k_first_touch)
     RETURNING id INTO v_id;
