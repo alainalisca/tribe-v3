@@ -112,8 +112,10 @@ export default function TrackedLinkBuilder() {
    * poster is one that needs three attempts to scan. 1024 is large enough to
    * print at A4 and small enough to be an instant canvas draw.
    *
-   * imageRendering = 'pixelated' keeps the module edges hard through the scale,
-   * which is the same reason renderQrSvg sets shape-rendering="crispEdges".
+   * imageSmoothingEnabled = false keeps the module edges hard through the scale
+   * up, which is the same reason renderQrSvg sets shape-rendering="crispEdges".
+   * Smoothing a QR is how you get grey module borders that a scanner has to
+   * threshold, and thresholding is where a scan takes three attempts.
    */
   const downloadQr = useCallback(async () => {
     if (!link || busy) return;
