@@ -33,7 +33,13 @@ import { sendPartnerLeadNotification, sendLeadPassEmail } from '@/lib/email/pass
 import { claimLeadNotification } from '@/lib/dal/athleteNotify';
 import { publicOrigin } from '@/lib/http/publicOrigin';
 import { deliverNotifications } from '@/lib/atletas/athleteNotifications';
-import { sanitizeTag, sanitizeLandingPath, sanitizeAttributionObject } from '@/lib/attribution';
+import {
+  sanitizeTag,
+  sanitizeLandingPath,
+  sanitizeAttributionObject,
+  isCapturablePath,
+  isAuthPath,
+} from '@/lib/attribution';
 
 const RATE_LIMIT_MAX = 5;
 const RATE_LIMIT_WINDOW_MS = 600_000;
@@ -211,12 +217,28 @@ export async function POST(request: NextRequest) {
      * without the shape and size check it is an unbounded write target reachable
      * from a public endpoint.
      */
+    /**
+     * RULE A AND B, SERVER SIDE. See lib/attribution.ts for the incident.
+     *
+     * A lead's landing_path of /auth/callback/ is dropped rather than refused,
+     * which is the opposite of /api/attr's choice and deliberate: there, the
+     * whole row is the visit and a bad landing page makes it meaningless, while
+     * here the row is a PERSON WHO LEFT THEIR PHONE NUMBER. 173's rule holds --
+     * never lose a lead over a query-string problem -- so the field goes to NULL
+     * and the lead is saved.
+     */
+    const rawLanding = sanitizeLandingPath(raw.landing_path);
+    const landingPath = isCapturablePath(rawLanding) ? rawLanding : null;
+    const onAuth = isAuthPath(landingPath);
+
     const attrRef = sanitizeTag(raw.ref, 'ref');
     const utmSource = sanitizeTag(raw.utm_source, 'utm_source');
     const utmMedium = sanitizeTag(raw.utm_medium, 'utm_medium');
     const utmCampaign = sanitizeTag(raw.utm_campaign, 'utm_campaign');
     const utmContent = sanitizeTag(raw.utm_content, 'utm_content');
-    const landingPath = sanitizeLandingPath(raw.landing_path);
+    // sanitizeAttributionObject applies the same two rules to the nested object,
+    // so a first_touch captured on the callback is refused whole. That is the
+    // blob TR-C3LU carried into production.
     const firstTouch = sanitizeAttributionObject(raw.first_touch);
 
     const userAgent = (request.headers.get('user-agent') ?? '').slice(0, MAX_UA_LEN) || null;
@@ -247,7 +269,7 @@ export async function POST(request: NextRequest) {
         choice_1: choice1,
         choice_2: choice2,
         src,
-        code,
+        code: onAuth ? null : code,
         pass_code: passCode,
         consent_text: consentText,
         user_agent: userAgent,

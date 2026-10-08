@@ -49,6 +49,75 @@
  */
 
 /**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * THE AUTH CALLBACK IS NOT A CAMPAIGN, AND ?code= THERE IS A SECRET
+ * ═══════════════════════════════════════════════════════════════════════════
+ *
+ * Found on the preview, 2026-10-08, in the first real end-to-end test. Google
+ * sign-in lands on `/auth/callback/?code=<one-time PKCE auth code>`, this module
+ * read `?code=` as a campaign code, and the result reached production:
+ *
+ *   attribution_events b3c0c0eb: code=FF275D19-D6B0-40DD-9C19-695C59BDC0C9,
+ *                                landing_path=/auth/callback/
+ *   pass lead TR-C3LU  first_touch carrying the same value
+ *
+ * That is not a wrong number, it is an AUTHORIZATION CODE written to two tables
+ * and into a jsonb blob. Single-use and already redeemed by the time it landed,
+ * so the practical blast radius is small -- but a credential in an analytics row
+ * is the wrong kind of mistake to measure the blast radius of, and the same shape
+ * would catch a magic-link token on a different flow.
+ *
+ * THREE RULES, and they are deliberately layered rather than one clever check:
+ *
+ *   A. On the OAuth CALLBACK path, capture nothing at all. Not a filtered
+ *      subset -- nothing. No parameter on that URL was put there by a human.
+ *   B. On any other /auth path, never capture `code`. `/auth/?ref=CODE` is a
+ *      REAL printed link shape (lib/share.ts:73) so `ref` must keep working
+ *      there, and nothing legitimately puts a campaign code on /auth: the link
+ *      builder's destinations are pase, storefront, session and home.
+ *   C. A UUID-shaped value is never a tag, on any path, in any field. This one
+ *      is in sanitizeTag, so the client, /api/attr and /api/pase all get it from
+ *      one place and a bad client cannot write one either.
+ *
+ * Rule A is the fix. Rule C is the backstop for the next flow nobody thought of,
+ * and it is the only one of the three that survives a caller that lies about its
+ * path.
+ */
+
+/**
+ * The OAuth callback, where the one-time code lands. Nothing is captured here.
+ *
+ * Anchored and allowing a deeper segment, so `/auth/callback` and
+ * `/auth/callback/` and anything under it are all covered, and a path that
+ * merely CONTAINS the word is not.
+ */
+export const ATTR_CALLBACK_PATH_RE = /^\/auth\/callback(\/|$)/;
+
+/** Any auth route. `ref` is legitimate here; `code` never is. */
+export const ATTR_AUTH_PATH_RE = /^\/auth(\/|$)/;
+
+/**
+ * A UUID, in any case, with or without braces.
+ *
+ * No campaign code a human types looks like this, and every machine-generated
+ * identifier that could leak into a query string does. 36 characters fits inside
+ * ATTR_MAX_LEN and the charset is a subset of the tag charset, which is exactly
+ * why the OAuth code sailed through the original sanitizer.
+ */
+export const ATTR_UUID_RE = /^\{?[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\}?$/i;
+
+/** Capture nothing at all on this path? */
+export function isCapturablePath(pathname: unknown): boolean {
+  if (typeof pathname !== 'string') return true;
+  return !ATTR_CALLBACK_PATH_RE.test(pathname);
+}
+
+/** Is this an auth route, where `code` must be dropped? */
+export function isAuthPath(pathname: unknown): boolean {
+  return typeof pathname === 'string' && ATTR_AUTH_PATH_RE.test(pathname);
+}
+
+/**
  * 40 characters, and the same 40 as pass_leads_attr_tag_bounds and
  * attribution_events_tag_bounds. See the header: these are one number.
  */
@@ -128,6 +197,11 @@ export function sanitizeTag(value: unknown, field?: AttrTagField): string | null
   const trimmed = value.trim();
   if (trimmed === '' || trimmed.length > ATTR_MAX_LEN) return null;
   if (!/^[A-Za-z0-9_-]+$/.test(trimmed)) return null;
+  // RULE C. Here rather than at the three call sites, so the client, /api/attr
+  // and /api/pase cannot disagree about it -- and so a caller that lies about
+  // its pathname still cannot write one. The OAuth code that reached production
+  // was exactly this shape and passed every other rule in this function.
+  if (ATTR_UUID_RE.test(trimmed)) return null;
   if (field && UPPERCASE_FIELDS.has(field)) return trimmed.toUpperCase();
   return trimmed.toLowerCase();
 }
@@ -175,7 +249,30 @@ export function readAttributionFromUrl(search: string, pathname: string, now: nu
     // to, but a caller passing a non-string would. Costs one branch.
     params = new URLSearchParams();
   }
-  const read = (field: AttrTagField) => sanitizeTag(params.get(field), field);
+
+  // RULE A. The OAuth callback: the query string is a redeemed credential and a
+  // provider's bookkeeping, and not one character of it was typed by a person.
+  // The landing_path is dropped too -- /auth/callback/ as a landing page is
+  // noise that also reveals the visitor signed in with a provider.
+  if (!isCapturablePath(pathname)) {
+    return {
+      src: null,
+      code: null,
+      ref: null,
+      utm_source: null,
+      utm_medium: null,
+      utm_campaign: null,
+      utm_content: null,
+      landing_path: null,
+      ts: now,
+    };
+  }
+
+  // RULE B. `ref` stays, because /auth/?ref=CODE is a printed link shape; `code`
+  // goes, because nothing legitimately puts a campaign code on an auth route and
+  // a PKCE code can land on more than just the callback.
+  const onAuth = isAuthPath(pathname);
+  const read = (field: AttrTagField) => (onAuth && field === 'code' ? null : sanitizeTag(params.get(field), field));
   return {
     src: read('src'),
     code: read('code'),
@@ -231,6 +328,14 @@ export function sanitizeAttributionObject(value: unknown): Attribution | null {
     landing_path: sanitizeLandingPath(o.landing_path),
     ts: o.ts,
   };
+  // RULE A, SERVER SIDE. A first_touch whose landing_path is the OAuth callback
+  // did not come from a campaign, whatever its other fields say. /api/pase
+  // receives this object in an unauthenticated POST body, so refusing it here is
+  // what stops a client -- ours, after a stale deploy, or anybody's -- from
+  // writing the shape that reached production.
+  if (!isCapturablePath(out.landing_path)) return null;
+  if (isAuthPath(out.landing_path)) out.code = null;
+
   // A record with every tag now invalid is not attribution, it is noise.
   if (!isTagged(out)) return null;
 

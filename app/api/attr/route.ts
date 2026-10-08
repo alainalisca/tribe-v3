@@ -66,7 +66,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { logError } from '@/lib/logger';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { getServiceRoleClient } from '@/lib/supabase/admin';
-import { sanitizeTag, sanitizeLandingPath, isTagged, type Attribution } from '@/lib/attribution';
+import {
+  sanitizeTag,
+  sanitizeLandingPath,
+  isTagged,
+  isCapturablePath,
+  isAuthPath,
+  type Attribution,
+} from '@/lib/attribution';
 import { insertAttributionEvent, isAttrEventType } from '@/lib/dal/attributionEvents';
 
 /** The spec's number: 10 per minute per IP. */
@@ -119,18 +126,38 @@ export async function POST(request: NextRequest) {
     const sessionKey = typeof raw.session_key === 'string' ? raw.session_key : '';
     if (!SESSION_KEY_RE.test(sessionKey)) return badRequest();
 
+    /**
+     * RULE A, SERVER SIDE: the OAuth callback is never a visit.
+     *
+     * The client no longer posts one, but the client is not the authority on this
+     * route -- it is an unauthenticated POST and the body is whatever the sender
+     * chose. Refused with 400 rather than stripped, because a visit event whose
+     * landing page is an auth callback is not a visit with a bad field, it is not
+     * a visit.
+     *
+     * This is what reached production on 2026-10-08: a visit row with
+     * code=FF275D19-... and landing_path=/auth/callback/, where the code was a
+     * redeemed Google PKCE authorization code.
+     */
+    const landingPath = sanitizeLandingPath(raw.landing_path);
+    if (!isCapturablePath(landingPath)) return badRequest();
+
     // The tags, through the SHARED sanitizers. Not a second copy: lib/attribution
     // owns the charset, the casing and the 40, and migrations 211 and 213 bound the
     // columns at that same 40. lib/attribution.limits.test.ts fails if they drift.
+    //
+    // RULE B: `code` is dropped on any auth route. `ref` is not -- /auth/?ref=CODE
+    // is a printed link shape and making it sticky is T-GROW2's whole premise.
+    const onAuth = isAuthPath(landingPath);
     const attribution: Attribution = {
       src: sanitizeTag(raw.src, 'src'),
-      code: sanitizeTag(raw.code, 'code'),
+      code: onAuth ? null : sanitizeTag(raw.code, 'code'),
       ref: sanitizeTag(raw.ref, 'ref'),
       utm_source: sanitizeTag(raw.utm_source, 'utm_source'),
       utm_medium: sanitizeTag(raw.utm_medium, 'utm_medium'),
       utm_campaign: sanitizeTag(raw.utm_campaign, 'utm_campaign'),
       utm_content: sanitizeTag(raw.utm_content, 'utm_content'),
-      landing_path: sanitizeLandingPath(raw.landing_path),
+      landing_path: landingPath,
       ts: Date.now(),
     };
 

@@ -228,4 +228,64 @@ describe('POST /api/attr', () => {
     expect(JSON.stringify(arg)).not.toContain('9.9.9.9');
     expect(JSON.stringify(arg)).not.toContain('curl');
   });
+
+  /**
+   * THE OAUTH CALLBACK INCIDENT, server side.
+   *
+   * The real URL and the real code. attribution_events row b3c0c0eb reached
+   * production as event_type=visit, code=FF275D19-D6B0-40DD-9C19-695C59BDC0C9,
+   * landing_path=/auth/callback/ -- a redeemed Google PKCE authorization code in
+   * an analytics table.
+   *
+   * These arms exist because the client fix is not the whole fix: this is an
+   * unauthenticated POST and the body is whatever the sender chose, so a stale
+   * deploy or any other client could write the shape again.
+   */
+  it('REFUSES a visit whose landing path is the OAuth callback', async () => {
+    const res = await POST(
+      request({ ...VISIT, code: 'FF275D19-D6B0-40DD-9C19-695C59BDC0C9', landing_path: '/auth/callback/' })
+    );
+    // 400 and not a strip: a visit event whose landing page is an auth callback
+    // is not a visit with a bad field, it is not a visit.
+    expect(res.status).toBe(400);
+    expect(insertAttributionEvent).not.toHaveBeenCalled();
+  });
+
+  it('refuses the bare and nested callback paths too', async () => {
+    for (const landing_path of ['/auth/callback', '/auth/callback/', '/auth/callback/google/']) {
+      vi.clearAllMocks();
+      vi.mocked(getServiceRoleClient).mockReturnValue({} as never);
+      vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true, remaining: 9, resetAt: new Date() });
+      const res = await POST(request({ ...VISIT, landing_path }));
+      expect(res.status, landing_path).toBe(400);
+      expect(insertAttributionEvent, landing_path).not.toHaveBeenCalled();
+    }
+  });
+
+  it('drops code but keeps ref on a non-callback auth path', async () => {
+    // /auth/?ref=CODE is a printed link shape (lib/share.ts), so ref must still
+    // land. Nothing legitimately puts a campaign code on an auth route.
+    await POST(request({ ...VISIT, code: 'IG-REEL-01', landing_path: '/auth/' }));
+    const a = sent().attribution;
+    expect(a.code).toBeNull();
+    expect(a.ref).toBe('A7K2QX');
+    expect(a.landing_path).toBe('/auth/');
+  });
+
+  it('refuses a UUID in any tag field even on an ordinary path', async () => {
+    // The backstop, and the only rule that survives a caller lying about its
+    // path. Dropped to null rather than refusing the event, because a UUID in a
+    // tag is a bad field and the rest of the row may still be real.
+    await POST(
+      request({
+        ...VISIT,
+        code: 'FF275D19-D6B0-40DD-9C19-695C59BDC0C9',
+        src: 'FF275D19-D6B0-40DD-9C19-695C59BDC0C9'.toLowerCase(),
+      })
+    );
+    const a = sent().attribution;
+    expect(a.code).toBeNull();
+    expect(a.src).toBeNull();
+    expect(a.utm_campaign).toBe('hyrox-oct');
+  });
 });

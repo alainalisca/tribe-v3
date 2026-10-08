@@ -260,4 +260,61 @@ describe('POST /api/pase persists T-GROW1 attribution', () => {
     expect(params.code).toBe('RUNCLUB-SAT0927');
     expect(params.utmCampaign).toBe('hyrox-oct');
   });
+
+  /**
+   * THE OAUTH CALLBACK INCIDENT, lead side.
+   *
+   * Lead TR-C3LU reached production with first_touch carrying
+   * code=FF275D19-D6B0-40DD-9C19-695C59BDC0C9 and landing_path=/auth/callback/.
+   *
+   * THE CHOICE HERE IS THE OPPOSITE OF /api/attr's, deliberately. There the whole
+   * row is the visit, so a callback landing page makes it meaningless and it is
+   * refused. Here the row is a PERSON WHO LEFT THEIR PHONE NUMBER, and 173's rule
+   * holds: never lose a lead over a query-string problem. The field goes to NULL
+   * and the lead is saved.
+   */
+  it('nulls a callback landing path and STILL SAVES THE LEAD', async () => {
+    const res = await POST(
+      request({ src: 'runclub', code: 'FF275D19-D6B0-40DD-9C19-695C59BDC0C9', landing_path: '/auth/callback/' })
+    );
+    expect(res.status).toBe(200);
+    expect(insertPassLead).toHaveBeenCalledTimes(1);
+    const row = inserted();
+    expect(row.landing_path).toBeNull();
+    // The UUID code is gone by the value rule, and the real src survives.
+    expect(row.code).toBeNull();
+    expect(row.src).toBe('runclub');
+  });
+
+  it('refuses a first_touch captured on the callback, whole', async () => {
+    await POST(
+      request({
+        src: 'runclub',
+        first_touch: {
+          code: 'FF275D19-D6B0-40DD-9C19-695C59BDC0C9',
+          landing_path: '/auth/callback/',
+          ts: 1_760_000_000_000,
+        },
+      })
+    );
+    // This is the blob TR-C3LU carried. Refused entirely rather than filtered:
+    // the landing page is what makes the whole record not a campaign.
+    expect(inserted().first_touch).toBeNull();
+    expect(inserted().src).toBe('runclub');
+  });
+
+  it('drops code but keeps ref on a non-callback auth path', async () => {
+    await POST(request({ ref: 'A7K2QX', code: 'IG-REEL-01', landing_path: '/auth/' }));
+    const row = inserted();
+    expect(row.code).toBeNull();
+    expect(row.attr_ref).toBe('A7K2QX');
+  });
+
+  it('refuses a UUID as a code on an ordinary path', async () => {
+    await POST(
+      request({ src: 'runclub', code: 'FF275D19-D6B0-40DD-9C19-695C59BDC0C9', landing_path: '/pase/bullbox/' })
+    );
+    expect(inserted().code).toBeNull();
+    expect(inserted().landing_path).toBe('/pase/bullbox/');
+  });
 });

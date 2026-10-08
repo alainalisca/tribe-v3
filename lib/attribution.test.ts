@@ -27,8 +27,10 @@ import {
   attributionForSubmit,
   captureAttribution,
   getSessionKey,
+  isCapturablePath,
   isTagged,
   readAttributionFromUrl,
+  sanitizeAttributionObject,
   readFirstTouch,
   readLastTouch,
   sanitizeLandingPath,
@@ -388,5 +390,130 @@ describe('getSessionKey', () => {
     installStorage('sessionStorage', makeStorage());
     getSessionKey();
     expect(spy).toHaveBeenCalled();
+  });
+});
+
+/**
+ * THE OAUTH CALLBACK INCIDENT, 2026-10-08.
+ *
+ * Google sign-in lands on `/auth/callback/?code=<one-time PKCE code>`. This
+ * module read `?code=` as a campaign code and the value reached production:
+ *
+ *   attribution_events b3c0c0eb: code=FF275D19-D6B0-40DD-9C19-695C59BDC0C9,
+ *                                landing_path=/auth/callback/
+ *   pass lead TR-C3LU  first_touch carrying the same value
+ *
+ * The URL below is the real one, with the real code. Every arm here uses it,
+ * because CLAUDE.md's rule for a guard written against a specific bug is that
+ * the first mutation is reverting THAT bug -- not a similar one.
+ */
+describe('the OAuth callback is never captured', () => {
+  const CODE = 'FF275D19-D6B0-40DD-9C19-695C59BDC0C9';
+  const CALLBACK = `?code=${CODE}`;
+
+  it('captures NOTHING on /auth/callback/, including the landing path', () => {
+    const a = readAttributionFromUrl(CALLBACK, '/auth/callback/', NOW);
+    expect(a.code).toBeNull();
+    expect(isTagged(a)).toBe(false);
+    // The path goes too: /auth/callback/ as a landing page is noise, and it
+    // reveals that the visitor signed in with a provider.
+    expect(a.landing_path).toBeNull();
+  });
+
+  it('writes NEITHER storage key on the callback', () => {
+    captureAttribution(CALLBACK, '/auth/callback/', NOW);
+    expect(local.data.size).toBe(0);
+    expect(readFirstTouch(NOW)).toBeNull();
+    expect(readLastTouch(NOW)).toBeNull();
+  });
+
+  it('covers the bare path and anything under it', () => {
+    for (const path of ['/auth/callback', '/auth/callback/', '/auth/callback/google/']) {
+      expect(isTagged(readAttributionFromUrl(CALLBACK, path, NOW)), path).toBe(false);
+    }
+    // ...and does not swallow a path that merely contains the word.
+    expect(isCapturablePath('/sessions/auth/callback-notes')).toBe(true);
+  });
+
+  it('AN AUTH REDIRECT CANNOT OVERWRITE AN EXISTING FIRST TOUCH', () => {
+    // The sequence that matters, in order: arrive tagged, then sign in. Before
+    // the fix the callback was a tagged visit, so it rewrote LAST touch and --
+    // on a browser with no first touch yet -- became the FIRST one.
+    captureAttribution('?src=runclub&code=RH-PHONE1&utm_campaign=hyrox-oct', '/', NOW);
+    expect(readFirstTouch(NOW)?.code).toBe('RH-PHONE1');
+
+    captureAttribution(CALLBACK, '/auth/callback/', NOW + 60_000);
+
+    expect(readFirstTouch(NOW + 60_000)?.code).toBe('RH-PHONE1');
+    expect(readFirstTouch(NOW + 60_000)?.landing_path).toBe('/');
+    // Last touch is untouched too, which is the subtler half: an untagged
+    // navigation must not clear it, and the callback is now untagged.
+    expect(readLastTouch(NOW + 60_000)?.code).toBe('RH-PHONE1');
+  });
+
+  it('leaves first touch EMPTY when the callback is the very first visit', () => {
+    // The exact production case: a brand new browser signing in before ever
+    // landing on a tagged link. There is nothing to preserve, and the fix means
+    // there is nothing to invent either.
+    captureAttribution(CALLBACK, '/auth/callback/', NOW);
+    expect(readFirstTouch(NOW)).toBeNull();
+    // A later tagged arrival then becomes the real first touch.
+    captureAttribution('?src=runclub&code=RH-PHONE1', '/', NOW + 60_000);
+    expect(readFirstTouch(NOW + 60_000)?.code).toBe('RH-PHONE1');
+  });
+
+  it('keeps /auth/?ref=CODE working, because it is a printed link shape', () => {
+    // lib/share.ts:73 builds exactly this. Blanket-blocking /auth would have
+    // broken every referral link already in the wild, and T-GROW2's premise is
+    // making this ref sticky.
+    const a = readAttributionFromUrl('?ref=A7K2QX', '/auth/', NOW);
+    expect(a.ref).toBe('A7K2QX');
+    expect(isTagged(a)).toBe(true);
+  });
+
+  it('drops ?code= on /auth/ even though it keeps ?ref=', () => {
+    // A PKCE code can land on more than the callback depending on redirect
+    // config, and nothing legitimately puts a campaign code on an auth route:
+    // the link builder's destinations are pase, storefront, session and home.
+    //
+    // A NON-UUID CODE ON PURPOSE. The first version of this arm used the real
+    // OAuth code, and a mutation deleting the auth-path rule left it GREEN --
+    // because the UUID rule caught the value anyway. The arm could not tell the
+    // two rules apart, so it was testing neither of them specifically. A
+    // perfectly ordinary campaign code is the only input that isolates rule B.
+    const a = readAttributionFromUrl('?ref=A7K2QX&code=IG-REEL-01', '/auth/', NOW);
+    expect(a.ref).toBe('A7K2QX');
+    expect(a.code).toBeNull();
+    // And the same code on an ordinary path is kept, so this is about the PATH
+    // and not about the value.
+    expect(readAttributionFromUrl('?code=IG-REEL-01', '/pase/bullbox/', NOW).code).toBe('IG-REEL-01');
+  });
+
+  it('refuses a UUID as a tag on ANY path, in ANY field', () => {
+    // The backstop, and the only rule that survives a caller lying about its
+    // path. 36 characters fits inside the 40 limit and the charset is a subset
+    // of the tag charset, which is exactly why the original sanitizer passed it.
+    for (const field of ['src', 'code', 'ref', 'utm_source', 'utm_campaign'] as const) {
+      expect(sanitizeTag(CODE, field), field).toBeNull();
+    }
+    expect(sanitizeTag(CODE.toLowerCase(), 'code')).toBeNull();
+    expect(sanitizeTag(`{${CODE}}`, 'code')).toBeNull();
+    // And a real code of similar length still passes, so the rule is not simply
+    // "reject anything long".
+    expect(sanitizeTag('RUNCLUB-SAT0927-EAFIT-TABLE-01', 'code')).toBe('RUNCLUB-SAT0927-EAFIT-TABLE-01');
+  });
+
+  it('refuses a stored or posted first_touch captured on the callback', () => {
+    // This is the blob TR-C3LU carried. /api/pase receives it in an
+    // unauthenticated POST body, so the object sanitizer is what stops a client
+    // writing the shape again after a stale deploy.
+    expect(sanitizeAttributionObject({ code: CODE, landing_path: '/auth/callback/', ts: NOW })).toBeNull();
+    // Even with an otherwise-good tag beside it: the landing page is what makes
+    // the whole record not a campaign.
+    expect(sanitizeAttributionObject({ src: 'runclub', landing_path: '/auth/callback/', ts: NOW })).toBeNull();
+    // And on /auth/ the code is stripped while the rest survives.
+    const onAuth = sanitizeAttributionObject({ ref: 'A7K2QX', code: CODE, landing_path: '/auth/', ts: NOW });
+    expect(onAuth?.ref).toBe('A7K2QX');
+    expect(onAuth?.code).toBeNull();
   });
 });
