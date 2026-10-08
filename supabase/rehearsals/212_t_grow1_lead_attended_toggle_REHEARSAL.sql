@@ -673,6 +673,7 @@ DECLARE
   v_row    record;
   v_setters text;
   v_n      int;
+  v_uniques text := '(never read)';
 BEGIN
 
 -- ══════════════════════════════════════════════════════════════════════════
@@ -711,12 +712,55 @@ BEGIN
    WHERE fp.user_id IS NOT NULL AND fp.slug NOT LIKE 'reh%' LIMIT 1;
 
   SELECT gen_random_uuid() INTO k_partner;
+  /*
+   * THE CLONE.
+   *
+   * CROSS JOIN LATERAL, not `SELECT * FROM f(...) FROM t`, which is TWO FROM
+   * clauses and a 42601. That is what it was, and it failed in the SQL editor on
+   * the first real run -- INSIDE a DO block, which is why nothing caught it
+   * earlier: plpgsql compiles the block's structure but defers parsing the SQL of
+   * each statement until that statement first EXECUTES. A parse of this file
+   * cannot see it. supabase/recon/t-grow1-rehearsal-parse.LOCAL.sh executes it
+   * against a throwaway cluster instead, which can.
+   *
+   * jsonb_populate_record returns one composite value, so in FROM it is a
+   * single-row table whose columns are featured_partners' columns; `r.*` expands
+   * to them in table order, which is what INSERT without a column list needs.
+   *
+   * Preferred over `(jsonb_populate_record(...)).*`, which is also valid and
+   * re-evaluates the function once PER COLUMN -- 30-odd calls per row.
+   *
+   * WHY A CLONE AT ALL: featured_partners has 30-odd columns and a hand-written
+   * INSERT list would be a second place to keep in sync with a table this file
+   * does not own.
+   *
+   * EVERY UNIQUE CONSTRAINT IS OVERRIDDEN. featured_partners has exactly three --
+   * id (PK), user_id (018), and featured_partners_slug_key (163) -- and all three
+   * are replaced below. A7/A10 asserts that list is still complete rather than
+   * trusting it, so a fourth unique index applied by hand to production fails the
+   * scaffolding arm by NAME instead of making this insert fail confusingly.
+   */
   INSERT INTO public.featured_partners
-  SELECT * FROM jsonb_populate_record(
-    NULL::public.featured_partners,
-    to_jsonb(fp.*) || jsonb_build_object('id', k_partner, 'slug', k_slug,
-                                         'user_id', k_owner, 'pass_active', true))
-  FROM public.featured_partners fp ORDER BY fp.created_at NULLS LAST LIMIT 1;
+  SELECT r.*
+    FROM public.featured_partners fp
+    CROSS JOIN LATERAL jsonb_populate_record(
+      NULL::public.featured_partners,
+      to_jsonb(fp.*) || jsonb_build_object(
+        'id', k_partner,
+        'slug', k_slug,
+        'user_id', k_owner,
+        'pass_active', true,
+        -- Not required by any constraint, and set anyway. If a clone ever
+        -- escaped a rolled-back transaction, these two are what make it
+        -- identifiable and harmless: the name says what it is, and 'paused'
+        -- keeps it off every public surface. pass_is_active reads pass_active
+        -- alone, so paused costs the arms nothing.
+        'business_name', 'REHEARSAL THROWAWAY (roll back)',
+        'status', 'paused'
+      )
+    ) AS r
+   ORDER BY fp.created_at NULLS LAST
+   LIMIT 1;
 
   INSERT INTO public.partner_instructors (partner_id, instructor_id, is_active)
   VALUES (k_partner, k_coach, true), (k_partner, k_inactive, false);
@@ -736,7 +780,38 @@ BEGIN
           'Autorizo el tratamiento de mis datos para esta clase de prueba.')
   RETURNING id INTO k_orphan;
 
-  a7_state := 'partner=' || coalesce(k_partner::text, 'NULL')
+
+  /*
+   * THE CLONE'S ASSUMPTION, CHECKED RATHER THAN TRUSTED.
+   *
+   * The clone overrides id, user_id and slug because those are the three unique
+   * constraints featured_partners has. That list came from reading migrations
+   * 018 and 163, and CLAUDE.md is explicit that the repo is not authoritative
+   * about production in either direction -- protect_verified_instructor is live
+   * and appears in no migration here.
+   *
+   * So the list is resolved from pg_index at RUN TIME. A fourth unique index
+   * applied by hand fails THIS arm, by name, instead of making the INSERT above
+   * fail with a 23505 that reads as a bug in the rehearsal.
+   *
+   * pg_index over indrelid, not information_schema: a UNIQUE CONSTRAINT and a
+   * bare UNIQUE INDEX are the same object here and only one of them has a row in
+   * table_constraints. featured_partners_slug_key (163) is the second kind.
+   */
+  SELECT coalesce(string_agg(i.relname || '(' || c.cols || ')', ', ' ORDER BY i.relname), '(none)')
+    INTO v_uniques
+    FROM pg_index x
+    JOIN pg_class i ON i.oid = x.indexrelid
+    CROSS JOIN LATERAL (
+      SELECT string_agg(a.attname, '+' ORDER BY a.attnum) AS cols
+        FROM unnest(x.indkey::int[]) k(attnum)
+        JOIN pg_attribute a ON a.attrelid = x.indrelid AND a.attnum = k.attnum
+    ) c
+   WHERE x.indrelid = 'public.featured_partners'::regclass
+     AND x.indisunique
+     AND c.cols NOT IN ('id', 'user_id', 'slug');
+
+  a7_state := 'unexpected_uniques=' || v_uniques || ' partner=' || coalesce(k_partner::text, 'NULL')
            || ' owner=' || coalesce(k_owner::text, 'NULL')
            || ' coach=' || coalesce(k_coach::text, 'NULL')
            || ' inactive_coach=' || coalesce(k_inactive::text, 'NULL')
@@ -752,7 +827,9 @@ BEGIN
        -- if owner and coach resolved to the same person, B3 and B4 would be one
        -- arm reported twice and the coach path would be untested.
        AND k_owner <> k_coach AND k_owner <> k_inactive AND k_coach <> k_inactive
-       AND k_other <> k_owner AND k_athlete NOT IN (k_owner, k_coach, k_inactive);
+       AND k_other <> k_owner AND k_athlete NOT IN (k_owner, k_coach, k_inactive)
+       -- Every unique constraint the clone must dodge is one it overrides.
+       AND v_uniques = '(none)';
 EXCEPTION WHEN OTHERS THEN
   a7_state := 'scaffolding failed: ' || SQLSTATE || ' ' || SQLERRM; a7_ok := false;
 END;
@@ -1075,14 +1152,25 @@ BEGIN
   SET LOCAL ROLE authenticated;
   BEGIN
     v_stamp := public.set_pass_lead_attended(k_orphan, true);
-    b12_state := 'returned ' || coalesce(v_stamp::text, 'NULL')
-              || '; av_can_work_door(NULL) = ' || coalesce(public.av_can_work_door(NULL)::text, 'NULL');
+    b12_state := 'returned ' || coalesce(v_stamp::text, 'NULL');
     b12_ok := v_stamp IS NOT NULL;
   EXCEPTION WHEN OTHERS THEN
     b12_state := SQLSTATE || ' ' || SQLERRM; b12_ok := false;
   END;
   RESET ROLE;
   PERFORM set_config('request.jwt.claims', NULL, true);
+
+  -- av_can_work_door(NULL) is read AFTER the role is restored, and that is not
+  -- tidiness. 201 revokes EXECUTE on it from authenticated -- F3 in this very
+  -- file asserts exactly that -- so reading it inside the role switch raised
+  -- 42501 and the arm reported a refusal of the DETAIL STRING as a refusal of
+  -- the toggle. Found by running the file; the arm looked right.
+  --
+  -- It is in the detail because it is the whole point of B12: the helper returns
+  -- false for everybody on a NULL partner id, so an admin reaching this lead
+  -- proves the is_app_admin() OR in front of it is load bearing.
+  b12_state := b12_state || '; av_can_work_door(NULL) = '
+            || coalesce(public.av_can_work_door(NULL)::text, 'NULL');
   RAISE EXCEPTION 'REH_UNWIND_B12';
 EXCEPTION WHEN OTHERS THEN
   IF SQLERRM <> 'REH_UNWIND_B12' AND b12_state = '(never ran)' THEN

@@ -630,16 +630,30 @@ FROM (VALUES
               AND NOT has_function_privilege('authenticated', oid, 'EXECUTE')
               AND has_function_privilege('service_role', oid, 'EXECUTE')
          FROM pg_proc WHERE oid = to_regprocedure('public.admin_attribution_summary(timestamptz)'))),
-  (7, 'A6 the summary joins with IS NOT DISTINCT FROM and not bare equality',
-      (SELECT 'is_not_distinct_from occurrences=' ||
-              (length(pg_get_functiondef(oid)) - length(replace(pg_get_functiondef(oid), 'IS NOT DISTINCT FROM', '')))
-              / length('IS NOT DISTINCT FROM')
+  (7, 'A6 the summary joins with IS NOT DISTINCT FROM and not bare equality, on all EIGHT conditions',
+      (SELECT 'null-safe join conditions=' ||
+              (length(pg_get_functiondef(oid)) - length(replace(pg_get_functiondef(oid), 'IS NOT DISTINCT FROM k.', '')))
+              / length('IS NOT DISTINCT FROM k.')
          FROM pg_proc WHERE oid = to_regprocedure('public.admin_attribution_summary(timestamptz)')),
-      -- Eight: four dimensions on each of the two LEFT JOINs. Counted rather
-      -- than merely detected, because one join reverted to `=` while the other
-      -- kept the NULL-safe form would still contain the phrase.
-      (SELECT (length(pg_get_functiondef(oid)) - length(replace(pg_get_functiondef(oid), 'IS NOT DISTINCT FROM', '')))
-              / length('IS NOT DISTINCT FROM') = 8
+      -- Eight: four dimensions on each of the two LEFT JOINs. COUNTED, not
+      -- merely detected, because one join reverted to `=` while the other kept
+      -- the NULL-safe form would still contain the phrase.
+      --
+      -- ANCHORED ON `k.`, which is the alias every join condition compares
+      -- against. Counting the bare phrase found NINE, because the function
+      -- body's own comment EXPLAINS the choice and says "IS NOT DISTINCT FROM,
+      -- NOT =" -- pg_get_functiondef returns the body verbatim, comments
+      -- included. That is the sixth instance in this repo of a check matching
+      -- prose that describes the thing it checks, and it was found by running
+      -- the file rather than by reading it.
+      --
+      -- The alias anchor is migration 165's fix applied here: anchor on
+      -- something only the real construct can produce, not on a phrase prose can
+      -- contain. Stripping comments would also work and is weaker -- a naive
+      -- `--` stripper truncates at a `--` inside a string literal, which this
+      -- repo has paid for already.
+      (SELECT (length(pg_get_functiondef(oid)) - length(replace(pg_get_functiondef(oid), 'IS NOT DISTINCT FROM k.', '')))
+              / length('IS NOT DISTINCT FROM k.') = 8
          FROM pg_proc WHERE oid = to_regprocedure('public.admin_attribution_summary(timestamptz)')))
 ) AS t(seq, check_name, detail, passed);
 
@@ -681,6 +695,7 @@ DECLARE
   f2_state text := '(never ran)'; f2_ok boolean := false;
 
   v_n        int;
+  v_uniques text := '(never read)';
   v_visits   bigint;
   v_leads    bigint;
   v_cont     bigint;
@@ -702,12 +717,55 @@ BEGIN
 -- ══════════════════════════════════════════════════════════════════════════
 BEGIN
   SELECT gen_random_uuid() INTO k_partner;
+  /*
+   * THE CLONE.
+   *
+   * CROSS JOIN LATERAL, not `SELECT * FROM f(...) FROM t`, which is TWO FROM
+   * clauses and a 42601. That is what it was, and it failed in the SQL editor on
+   * the first real run -- INSIDE a DO block, which is why nothing caught it
+   * earlier: plpgsql compiles the block's structure but defers parsing the SQL of
+   * each statement until that statement first EXECUTES. A parse of this file
+   * cannot see it. supabase/recon/t-grow1-rehearsal-parse.LOCAL.sh executes it
+   * against a throwaway cluster instead, which can.
+   *
+   * jsonb_populate_record returns one composite value, so in FROM it is a
+   * single-row table whose columns are featured_partners' columns; `r.*` expands
+   * to them in table order, which is what INSERT without a column list needs.
+   *
+   * Preferred over `(jsonb_populate_record(...)).*`, which is also valid and
+   * re-evaluates the function once PER COLUMN -- 30-odd calls per row.
+   *
+   * WHY A CLONE AT ALL: featured_partners has 30-odd columns and a hand-written
+   * INSERT list would be a second place to keep in sync with a table this file
+   * does not own.
+   *
+   * EVERY UNIQUE CONSTRAINT IS OVERRIDDEN. featured_partners has exactly three --
+   * id (PK), user_id (018), and featured_partners_slug_key (163) -- and all three
+   * are replaced below. A7/A10 asserts that list is still complete rather than
+   * trusting it, so a fourth unique index applied by hand to production fails the
+   * scaffolding arm by NAME instead of making this insert fail confusingly.
+   */
   INSERT INTO public.featured_partners
-  SELECT * FROM jsonb_populate_record(
-    NULL::public.featured_partners,
-    to_jsonb(fp.*) || jsonb_build_object('id', k_partner, 'slug', k_slug,
-                                         'user_id', NULL, 'pass_active', true))
-  FROM public.featured_partners fp ORDER BY fp.created_at NULLS LAST LIMIT 1;
+  SELECT r.*
+    FROM public.featured_partners fp
+    CROSS JOIN LATERAL jsonb_populate_record(
+      NULL::public.featured_partners,
+      to_jsonb(fp.*) || jsonb_build_object(
+        'id', k_partner,
+        'slug', k_slug,
+        'user_id', NULL,
+        'pass_active', true,
+        -- Not required by any constraint, and set anyway. If a clone ever
+        -- escaped a rolled-back transaction, these two are what make it
+        -- identifiable and harmless: the name says what it is, and 'paused'
+        -- keeps it off every public surface. pass_is_active reads pass_active
+        -- alone, so paused costs the arms nothing.
+        'business_name', 'REHEARSAL THROWAWAY (roll back)',
+        'status', 'paused'
+      )
+    ) AS r
+   ORDER BY fp.created_at NULLS LAST
+   LIMIT 1;
 
   INSERT INTO public.pass_leads
     (slug, partner_id, name, whatsapp, email, pass_code, consent_text,
@@ -733,12 +791,45 @@ BEGIN
   INSERT INTO public.attribution_events (event_type, session_key, created_at)
   VALUES ('visit', 'rehsess0000000000000003', k_old);
 
-  a7_state := 'partner=' || coalesce(k_partner::text, 'NULL')
+
+  /*
+   * THE CLONE'S ASSUMPTION, CHECKED RATHER THAN TRUSTED.
+   *
+   * The clone overrides id, user_id and slug because those are the three unique
+   * constraints featured_partners has. That list came from reading migrations
+   * 018 and 163, and CLAUDE.md is explicit that the repo is not authoritative
+   * about production in either direction -- protect_verified_instructor is live
+   * and appears in no migration here.
+   *
+   * So the list is resolved from pg_index at RUN TIME. A fourth unique index
+   * applied by hand fails THIS arm, by name, instead of making the INSERT above
+   * fail with a 23505 that reads as a bug in the rehearsal.
+   *
+   * pg_index over indrelid, not information_schema: a UNIQUE CONSTRAINT and a
+   * bare UNIQUE INDEX are the same object here and only one of them has a row in
+   * table_constraints. featured_partners_slug_key (163) is the second kind.
+   */
+  SELECT coalesce(string_agg(i.relname || '(' || c.cols || ')', ', ' ORDER BY i.relname), '(none)')
+    INTO v_uniques
+    FROM pg_index x
+    JOIN pg_class i ON i.oid = x.indexrelid
+    CROSS JOIN LATERAL (
+      SELECT string_agg(a.attname, '+' ORDER BY a.attnum) AS cols
+        FROM unnest(x.indkey::int[]) k(attnum)
+        JOIN pg_attribute a ON a.attrelid = x.indrelid AND a.attnum = k.attnum
+    ) c
+   WHERE x.indrelid = 'public.featured_partners'::regclass
+     AND x.indisunique
+     AND c.cols NOT IN ('id', 'user_id', 'slug');
+
+  a7_state := 'unexpected_uniques=' || v_uniques || ' partner=' || coalesce(k_partner::text, 'NULL')
            || ' reh leads=' || (SELECT count(*) FROM public.pass_leads WHERE slug = k_slug)
            || ' reh events=' || (SELECT count(*) FROM public.attribution_events WHERE session_key LIKE 'rehsess%');
   a7_ok := k_partner IS NOT NULL
        AND (SELECT count(*) FROM public.pass_leads WHERE slug = k_slug) = 3
-       AND (SELECT count(*) FROM public.attribution_events WHERE session_key LIKE 'rehsess%') = 4;
+       AND (SELECT count(*) FROM public.attribution_events WHERE session_key LIKE 'rehsess%') = 4
+       -- Every unique constraint the clone must dodge is one it overrides.
+       AND v_uniques = '(none)';
 EXCEPTION WHEN OTHERS THEN
   a7_state := 'scaffolding failed: ' || SQLSTATE || ' ' || SQLERRM; a7_ok := false;
 END;
@@ -1150,9 +1241,27 @@ BEGIN  -- D8: THE READ-STEP GUARD. The summary returns nothing at all.
   --
   -- The arm that matters most in Part D, and the reason 213's last guard compares
   -- sum(leads) against count(pass_leads) instead of merely calling the function.
-  -- D7 has just replaced it with a body that returns ZERO ROWS and is otherwise
-  -- perfectly well formed: it satisfies every catalog assertion in the migration.
-  -- A guard that only called it, or that asserted "no error", would pass.
+  -- The replacement below is well formed and returns ZERO ROWS, so it satisfies
+  -- every catalog assertion in the migration. A guard that only called the
+  -- function, or asserted "no error", would pass over it.
+  --
+  -- IT BUILDS ITS OWN BROKEN FUNCTION RATHER THAN REUSING D7'S, and that is a
+  -- correction. This arm first said "D7 has just replaced it" and reported
+  -- GUARD_DID_NOT_FIRE: a plpgsql BEGIN ... EXCEPTION block is a SUBTRANSACTION,
+  -- so when D7's guard raised and D7 caught it, D7's CREATE OR REPLACE was
+  -- ROLLED BACK with everything else in that block. By the time D8 ran, the real
+  -- function was back and sum(leads) matched. Every D arm in these files is
+  -- therefore independent whether or not it was written that way -- which is
+  -- what keeps them from contaminating each other, and is also why none of them
+  -- may depend on another's mutation surviving.
+  EXECUTE $m$
+    CREATE OR REPLACE FUNCTION public.admin_attribution_summary(p_since timestamptz)
+    RETURNS TABLE (src text, code text, utm_campaign text, attr_ref text,
+                   visits bigint, leads bigint, contacted bigint, attended bigint)
+    LANGUAGE sql STABLE SET search_path = public, pg_catalog
+    AS $b$ SELECT NULL::text, NULL::text, NULL::text, NULL::text,
+                  0::bigint, 0::bigint, 0::bigint, 0::bigint WHERE false; $b$;
+  $m$;
   SELECT coalesce(sum(s.leads), 0) INTO v_leads FROM public.admin_attribution_summary(NULL) s;
   SELECT count(*) INTO v_rows FROM public.pass_leads;
   IF v_leads <> v_rows THEN

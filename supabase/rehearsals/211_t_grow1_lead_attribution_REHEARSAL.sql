@@ -455,6 +455,7 @@ DECLARE
   f4_state text := '(never ran)'; f4_ok boolean := false;
 
   v_n     int;
+  v_uniques text := '(never read)';
   v_txt   text;
   v_id    uuid;
 BEGIN
@@ -478,19 +479,89 @@ BEGIN
      AND NOT EXISTS (SELECT 1 FROM public.featured_partners fp WHERE fp.user_id = u.id)
    LIMIT 1;
 
-  -- The clone. New id, reh- slug, no owner (018 made user_id UNIQUE), pass live.
-  -- jsonb_populate_record rather than a column list: featured_partners is not
-  -- this file's table and a hand-written list is a second thing to keep in sync.
   SELECT gen_random_uuid() INTO k_partner;
+  /*
+   * THE CLONE.
+   *
+   * CROSS JOIN LATERAL, not `SELECT * FROM f(...) FROM t`, which is TWO FROM
+   * clauses and a 42601. That is what it was, and it failed in the SQL editor on
+   * the first real run -- INSIDE a DO block, which is why nothing caught it
+   * earlier: plpgsql compiles the block's structure but defers parsing the SQL of
+   * each statement until that statement first EXECUTES. A parse of this file
+   * cannot see it. supabase/recon/t-grow1-rehearsal-parse.LOCAL.sh executes it
+   * against a throwaway cluster instead, which can.
+   *
+   * jsonb_populate_record returns one composite value, so in FROM it is a
+   * single-row table whose columns are featured_partners' columns; `r.*` expands
+   * to them in table order, which is what INSERT without a column list needs.
+   *
+   * Preferred over `(jsonb_populate_record(...)).*`, which is also valid and
+   * re-evaluates the function once PER COLUMN -- 30-odd calls per row.
+   *
+   * WHY A CLONE AT ALL: featured_partners has 30-odd columns and a hand-written
+   * INSERT list would be a second place to keep in sync with a table this file
+   * does not own.
+   *
+   * EVERY UNIQUE CONSTRAINT IS OVERRIDDEN. featured_partners has exactly three --
+   * id (PK), user_id (018), and featured_partners_slug_key (163) -- and all three
+   * are replaced below. A7/A10 asserts that list is still complete rather than
+   * trusting it, so a fourth unique index applied by hand to production fails the
+   * scaffolding arm by NAME instead of making this insert fail confusingly.
+   */
   INSERT INTO public.featured_partners
-  SELECT * FROM jsonb_populate_record(
-    NULL::public.featured_partners,
-    to_jsonb(fp.*) || jsonb_build_object('id', k_partner, 'slug', k_slug,
-                                         'user_id', NULL, 'pass_active', true))
-  FROM public.featured_partners fp
-  ORDER BY fp.created_at NULLS LAST LIMIT 1;
+  SELECT r.*
+    FROM public.featured_partners fp
+    CROSS JOIN LATERAL jsonb_populate_record(
+      NULL::public.featured_partners,
+      to_jsonb(fp.*) || jsonb_build_object(
+        'id', k_partner,
+        'slug', k_slug,
+        'user_id', NULL,
+        'pass_active', true,
+        -- Not required by any constraint, and set anyway. If a clone ever
+        -- escaped a rolled-back transaction, these two are what make it
+        -- identifiable and harmless: the name says what it is, and 'paused'
+        -- keeps it off every public surface. pass_is_active reads pass_active
+        -- alone, so paused costs the arms nothing.
+        'business_name', 'REHEARSAL THROWAWAY (roll back)',
+        'status', 'paused'
+      )
+    ) AS r
+   ORDER BY fp.created_at NULLS LAST
+   LIMIT 1;
 
-  a10_state := 'partner=' || coalesce(k_partner::text, 'NULL')
+
+  /*
+   * THE CLONE'S ASSUMPTION, CHECKED RATHER THAN TRUSTED.
+   *
+   * The clone overrides id, user_id and slug because those are the three unique
+   * constraints featured_partners has. That list came from reading migrations
+   * 018 and 163, and CLAUDE.md is explicit that the repo is not authoritative
+   * about production in either direction -- protect_verified_instructor is live
+   * and in no migration here.
+   *
+   * So the list is resolved from pg_index at run time. A fourth unique index
+   * applied by hand fails THIS arm, by name, instead of making the INSERT above
+   * fail with a 23505 that reads as a bug in the rehearsal.
+   *
+   * pg_index over indrelid, not information_schema: a UNIQUE CONSTRAINT and a
+   * bare UNIQUE INDEX are the same object here and only one of them has a row in
+   * table_constraints. featured_partners_slug_key (163) is the second kind.
+   */
+  SELECT coalesce(string_agg(i.relname || '(' || c.cols || ')', ', ' ORDER BY i.relname), '(none)')
+    INTO v_uniques
+    FROM pg_index x
+    JOIN pg_class i ON i.oid = x.indexrelid
+    CROSS JOIN LATERAL (
+      SELECT string_agg(a.attname, '+' ORDER BY a.attnum) AS cols
+        FROM unnest(x.indkey::int[]) k(attnum)
+        JOIN pg_attribute a ON a.attrelid = x.indrelid AND a.attnum = k.attnum
+    ) c
+   WHERE x.indrelid = 'public.featured_partners'::regclass
+     AND x.indisunique
+     AND c.cols NOT IN ('id', 'user_id', 'slug');
+
+  a10_state := 'unexpected_uniques=' || v_uniques || ' partner=' || coalesce(k_partner::text, 'NULL')
             || ' slug=' || k_slug
             || ' admin=' || coalesce(k_admin::text, 'NULL')
             || ' athlete=' || coalesce(k_athlete::text, 'NULL')
@@ -498,7 +569,9 @@ BEGIN
   -- pass_is_active is the one that matters: without it every insert arm below
   -- fails on the claim policy and says nothing about the restrictive one.
   a10_ok := k_partner IS NOT NULL AND k_admin IS NOT NULL AND k_athlete IS NOT NULL
-        AND public.pass_is_active(k_partner, k_slug);
+        AND public.pass_is_active(k_partner, k_slug)
+       -- Every unique constraint the clone must dodge is one it overrides.
+       AND v_uniques = '(none)';
 EXCEPTION WHEN OTHERS THEN
   a10_state := 'scaffolding failed: ' || SQLSTATE || ' ' || SQLERRM; a10_ok := false;
 END;
@@ -851,7 +924,11 @@ INSERT INTO reh_probe VALUES
 -- ══════════════════════════════════════════════════════════════════════════
 
 BEGIN  -- D1: a column is missing
-  ALTER TABLE public.pass_leads DROP COLUMN utm_content;
+  -- CASCADE, because 211's own restrictive policy references this column:
+  -- a bare DROP COLUMN raises 2BP01 ("other objects depend on it") and this
+  -- arm would then be catching a dependency error rather than the guard. The
+  -- policy comes back with the rest when the subtransaction unwinds.
+  ALTER TABLE public.pass_leads DROP COLUMN utm_content CASCADE;
   IF NOT EXISTS (SELECT 1 FROM pg_attribute
                   WHERE attrelid = 'public.pass_leads'::regclass
                     AND attname = 'utm_content' AND NOT attisdropped
@@ -864,7 +941,7 @@ EXCEPTION WHEN OTHERS THEN
 END;
 
 BEGIN  -- D2: first_touch is the wrong type
-  ALTER TABLE public.pass_leads DROP COLUMN first_touch;
+  ALTER TABLE public.pass_leads DROP COLUMN first_touch CASCADE;
   ALTER TABLE public.pass_leads ADD COLUMN first_touch text;
   IF NOT EXISTS (SELECT 1 FROM pg_attribute
                   WHERE attrelid = 'public.pass_leads'::regclass
@@ -968,7 +1045,13 @@ BEGIN  -- D7: this file recreated the claim policy and dropped 204's clauses
   END IF;
   RAISE EXCEPTION 'GUARD_DID_NOT_FIRE';
 EXCEPTION WHEN OTHERS THEN
-  d7m := SQLERRM; d7 := SQLERRM LIKE '211 ABORTED: the claim policy lost 204''''s clauses%';
+  d7m := SQLERRM;
+  -- TWO quotes, not four. The raised message contains 204's with one
+  -- apostrophe, so the LIKE pattern needs it escaped once. At four the pattern
+  -- could never match and this arm reported FAIL over a guard that had fired
+  -- correctly -- the harness run is what showed the message and the verdict
+  -- disagreeing.
+  d7 := SQLERRM LIKE '211 ABORTED: the claim policy lost 204''s clauses%';
 END;
 
 BEGIN  -- D8: authenticated loses SELECT on one new column
@@ -978,7 +1061,23 @@ BEGIN  -- D8: authenticated loses SELECT on one new column
   -- so a REVOKE of one column is the realistic way this breaks: the partner
   -- leads view would 42501 on a column it renders, and a table-level check would
   -- stay green because the other columns are still granted.
-  REVOKE SELECT (utm_medium) ON public.pass_leads FROM authenticated;
+  -- TABLE LEVEL FIRST, THEN THE COLUMNS BACK. This is the asymmetry CLAUDE.md
+  -- records from the other direction: 173 granted SELECT at TABLE level, and a
+  -- REVOKE of ONE COLUMN against a table-level grant IS A NO-OP. The first
+  -- version of this arm did exactly that and reported GUARD_DID_NOT_FIRE -- it
+  -- was not testing the guard, it was failing to create the condition. Found by
+  -- running it, not by reading it.
+  --
+  -- So: drop the table-level grant, then hand back every column EXCEPT
+  -- utm_medium, which is the only way to put `authenticated` in the state a
+  -- later migration could really leave it in.
+  REVOKE SELECT ON public.pass_leads FROM authenticated;
+  GRANT SELECT (id, created_at, slug, partner_id, instructor_id, name, whatsapp, email,
+                choice_1, choice_2, src, code, pass_code, consent_text, consent_at,
+                user_agent, notified_at, contacted_at, tribe_user_id,
+                attended_at, attended_marked_by, attended_method,
+                attr_ref, utm_source, utm_campaign, utm_content, landing_path, first_touch)
+    ON public.pass_leads TO authenticated;
   IF NOT has_column_privilege('authenticated', 'public.pass_leads', 'utm_medium', 'SELECT') THEN
     RAISE EXCEPTION '211 ABORTED: authenticated cannot SELECT pass_leads.%; the partner leads view would 42501.', 'utm_medium';
   END IF;
