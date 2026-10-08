@@ -383,6 +383,18 @@ ROLLBACK;
 --  WHERE first_touch ->> 'landing_path' LIKE '/auth/callback%'
 --     OR first_touch ->> 'code' ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$';
 --
+-- -- AND ONE ROW I PUT THERE MYSELF, declared rather than left for Al to find.
+-- --
+-- -- Verifying the fix on the deployed preview meant POSTing to /api/attr, and the
+-- -- preview uses the PRODUCTION Supabase project -- so the request that proved a
+-- -- real tagged visit is still accepted (204) wrote a real row. src=deploycheck
+-- -- was chosen so it is identifiable rather than indistinguishable from a
+-- -- visitor, which is the only thing that makes it removable.
+-- --
+-- -- It is one visit on a channel that does not exist, so it inflates the Origen
+-- -- tab's "deploycheck" row and nothing else. Harmless and still mine to clean.
+-- DELETE FROM public.attribution_events WHERE src = 'deploycheck';
+--
 -- COMMIT;
 
 -- ══════════════════════════════════════════════════════════════════════════
@@ -403,4 +415,5 @@ SELECT
        OR first_touch ->> 'code' ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$') AS leads_left,
   (SELECT src || ' / ' || code || ' / ' || coalesce(utm_campaign, 'NULL')
      FROM public.pass_leads WHERE pass_code = 'TR-C3LU') AS tr_c3lu_last_touch_preserved,
+  (SELECT count(*) FROM public.attribution_events WHERE src = 'deploycheck') AS deploycheck_left,
   (SELECT count(*) FROM public.attribution_events) AS events_remaining;
