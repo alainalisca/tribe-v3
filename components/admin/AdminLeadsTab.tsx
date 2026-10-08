@@ -41,6 +41,9 @@ export default function AdminLeadsTab({ supabase }: { supabase: SupabaseClient }
     toggleError: t('toggleError'),
     markedContacted: t('markedContacted'),
     markedPending: t('markedPending'),
+    attendedError: t('attendedError'),
+    markedAttended: t('markedAttended'),
+    markedNotAttended: t('markedNotAttended'),
   });
 
   const { page } = leads;
@@ -91,6 +94,7 @@ export default function AdminLeadsTab({ supabase }: { supabase: SupabaseClient }
         showAccount
         togglingId={leads.togglingId}
         onToggleContacted={leads.toggleContacted}
+        onToggleAttended={leads.toggleAttended}
       />
 
       {/* The range is always shown, even on a single page. "1-2 de 2" is what

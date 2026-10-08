@@ -39,6 +39,14 @@ export interface PartnerLeadEmailParams {
   passCode: string;
   src: string | null;
   code: string | null;
+  /**
+   * T-GROW1 part B. Joined into the existing "Llegó por" line rather than given
+   * a line of its own, which is a copy decision as much as a layout one: a new
+   * labelled line is new user-facing Spanish and needs Al's approval, while one
+   * more value in a list that already reads "instagram · IG-REEL-01" needs none.
+   * Optional so every existing caller and fixture is unchanged.
+   */
+  utmCampaign?: string | null;
   createdAt: Date;
   /**
    * T-AV27b. Set ONLY for a lead a Tribe athlete invited (flag on, attributed):
@@ -82,7 +90,11 @@ export async function sendPartnerLeadNotification(params: PartnerLeadEmailParams
   const resend = getResendClient('passLead');
   const wa = waMeDigits(params.whatsapp);
   const interes = [params.choice1, params.choice2].filter(Boolean).join(' · ') || 'sin especificar';
-  const llego = [params.src, params.code].filter(Boolean).join(' · ') || 'sin datos de origen';
+  // src · code · campaign, blanks omitted, so one value renders as "instagram"
+  // rather than "instagram ·  · ". The fallback sentence is unchanged, and it is
+  // the line T-GROW exists to stop seeing: 2 of the 3 live leads on 2026-10-08
+  // produced exactly it.
+  const llego = [params.src, params.code, params.utmCampaign].filter(Boolean).join(' · ') || 'sin datos de origen';
   const invitation = invitationLines(params);
 
   const text = [

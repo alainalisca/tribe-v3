@@ -14,6 +14,8 @@ import {
   type AdminUserSort,
 } from '@/lib/dal/admin';
 import { fetchAdminLeads, ADMIN_LEADS_ALL_PARTNERS, ADMIN_LEADS_PAGE_SIZE } from '@/lib/dal/adminLeads';
+import { fetchAttributionSummary } from '@/lib/dal/attributionSummary';
+import { isOriginRange, originRangeSince, type OriginRange } from '@/lib/growth/originGrouping';
 
 /**
  * @description Service-role admin list data (users, reports, feedback, bugs,
@@ -23,7 +25,8 @@ import { fetchAdminLeads, ADMIN_LEADS_ALL_PARTNERS, ADMIN_LEADS_PAGE_SIZE } from
  * @method GET
  * @auth Admin only. requireApiAdmin() verifies is_app_admin() and fails closed
  *   (403) on missing auth / non-admin / error BEFORE any data is read.
- * @query tab - one of: stats | users | reports | feedback | bugs | messages | leads
+ * @query tab - one of: stats | users | reports | feedback | bugs | messages | leads | origen
+ * @query days - origen only: 7 | 30 | 90 | all
  * @query partner - leads only: a featured_partners id, or "all"
  * @query offset - leads only: row offset, 50 per page
  */
@@ -91,6 +94,54 @@ export async function GET(request: NextRequest) {
           partnerId: partner && partner !== ADMIN_LEADS_ALL_PARTNERS ? partner : ADMIN_LEADS_ALL_PARTNERS,
           offset: Math.floor(offset / ADMIN_LEADS_PAGE_SIZE) * ADMIN_LEADS_PAGE_SIZE,
         });
+        break;
+      }
+      case 'origen': {
+        /**
+         * T-GROW1 part F.
+         *
+         * HERE AND NOT ON THE BROWSER CLIENT, and for a harder reason than the
+         * leads tab's. Migration 213 grants admin_attribution_summary to
+         * service_role ALONE and revokes it from anon and authenticated, so an
+         * admin's own client cannot call it at all -- the function returns every
+         * lead and attendance count in the app, and an EXECUTE grant to
+         * `authenticated` would make those readable by anybody with an account.
+         *
+         * THE WINDOW IS COMPUTED SERVER SIDE, from a validated range rather than
+         * from a timestamp the caller sends. A client-supplied `since` would be a
+         * caller-controlled predicate on a cross-partner aggregate, and there is
+         * no reason to accept one when the four options are a closed set.
+         *
+         * A malformed `days` falls back to 30 rather than erroring, the same rule
+         * the users and leads tabs apply: a bad querystring must not blank the
+         * admin's screen.
+         */
+        /**
+         * A CLOSED-SET LOOKUP, NOT Number.parseInt.
+         *
+         * parseInt is lenient in ways that matter here: parseInt('7.5') is 7 and
+         * parseInt('7abc') is 7, so a malformed range was being accepted as a
+         * real window rather than falling back. Caught by its own test arm. The
+         * four options are a fixed set the UI chooses from, so matching the exact
+         * spelling is both simpler and strictly correct.
+         *
+         * A Map rather than an object: `'constructor' in {}` is TRUE because `in`
+         * walks the prototype chain, so an object literal plus `in` would admit
+         * `?days=constructor` and hand back undefined.
+         */
+        const RANGES = new Map<string, OriginRange>([
+          ['7', 7],
+          ['30', 30],
+          ['90', 90],
+          ['all', null],
+        ]);
+        const raw = request.nextUrl.searchParams.get('days');
+        const matched = raw !== null && RANGES.has(raw) ? RANGES.get(raw)! : 30;
+        // isOriginRange is belt and braces on a value the Map already constrains,
+        // and it is what keeps the two definitions of "a valid range" from
+        // drifting: the Map's keys and ORIGIN_RANGES have to agree.
+        const range: OriginRange = isOriginRange(matched) ? matched : 30;
+        result = await fetchAttributionSummary(service, originRangeSince(range, Date.now()));
         break;
       }
       default:

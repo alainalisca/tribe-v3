@@ -85,6 +85,25 @@ describe('existing public surfaces survive the change', () => {
     // unrelated to anything real.
   });
 
+  it('keeps the T-GROW1 attribution beacon reachable by a signed-out stranger', () => {
+    // FOUND ON THE PREVIEW, NOT HERE, which is the fourth entry in this file's
+    // running theme: middleware's cookie gate runs before the handler, so a route
+    // that authenticates itself is still 307'd to /auth unless it is listed.
+    //
+    // This one is the quietest of the four. /api/attr answers 204 and the client
+    // fires it with keepalive and never reads the response, so a redirect and a
+    // successful write are indistinguishable from the browser. The visit log
+    // would have recorded NOTHING for exactly the signed-out population T-GROW1
+    // exists to measure, the Origen tab would have shown zero visits forever, and
+    // no error would have appeared anywhere.
+    //
+    // Both forms: the client posts the trailing-slash version, because
+    // trailingSlash: true makes the bare path a 308 and that costs a round trip
+    // on gym wifi.
+    expect(isPublicPath('/api/attr')).toBe(true);
+    expect(isPublicPath('/api/attr/')).toBe(true);
+  });
+
   it('keeps the one-off outreach route reachable by its cron caller', () => {
     // Found by the dry run, not by review: the route checks CRON_SECRET itself,
     // but middleware's cookie gate runs first and 307s it to /auth. The

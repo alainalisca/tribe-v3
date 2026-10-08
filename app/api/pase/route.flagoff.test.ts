@@ -166,6 +166,24 @@ describe('POST /api/pase with the athletes flag off is identical to before T-AV2
           pass_code: 'BB-4F7K',
           consent_text: CONSENT,
           user_agent: 'vitest',
+          // T-GROW1 part B. The row grew by seven columns and this fixture grew
+          // with it, DELIBERATELY still toStrictEqual rather than loosened to a
+          // subset match.
+          //
+          // What this test is for is unchanged: the ATHLETES FLAG must not alter
+          // the row. These seven keys are present and null in all three flag
+          // states and both link cases, so that property is exactly as covered as
+          // it was. Relaxing the matcher to objectContaining would have been the
+          // quick way to green and would have thrown away the only assertion that
+          // can catch a column appearing only when the flag is on -- which is
+          // T-AV23's hard line 8 and the reason this file exists.
+          attr_ref: null,
+          utm_source: null,
+          utm_medium: null,
+          utm_campaign: null,
+          utm_content: null,
+          landing_path: null,
+          first_touch: null,
         });
 
         expect(sendPartnerLeadNotification).toHaveBeenCalledTimes(1);
@@ -181,6 +199,9 @@ describe('POST /api/pase with the athletes flag off is identical to before T-AV2
           passCode: 'BB-4F7K',
           src: c.src,
           code: c.code,
+          // T-GROW1 part B: joined into the existing "Llegó por" line, not given a
+          // line of its own, so no new Spanish copy ships without approval.
+          utmCampaign: null,
           createdAt: expect.any(Date),
         });
         expect(sendLeadPassEmail).toHaveBeenCalledTimes(1);

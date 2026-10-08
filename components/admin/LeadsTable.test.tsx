@@ -23,6 +23,7 @@ vi.mock('@/lib/i18n/useTranslations', () => ({
       colSource: 'Llegó por',
       colNotified: 'Email enviado',
       colContacted: 'Contactado',
+      colAttended: 'Asistió',
       colAccount: 'Cuenta',
       noSource: 'sin datos de origen',
       notSent: 'no se envió',
@@ -44,16 +45,24 @@ const ROW: LeadRow = {
   code: 'BULLBOX-01',
   notified_at: '2026-09-18T18:42:05.000Z',
   contacted_at: null,
+  attended_at: null,
   partnerName: 'CrossFit BullBox',
   hasTribeAccount: false,
 };
 
 function renderTable(row: Partial<LeadRow> = {}, props: Partial<React.ComponentProps<typeof LeadsTable>> = {}) {
   const onToggleContacted = vi.fn();
+  const onToggleAttended = vi.fn();
   const utils = render(
-    <LeadsTable rows={[{ ...ROW, ...row }]} togglingId={null} onToggleContacted={onToggleContacted} {...props} />
+    <LeadsTable
+      rows={[{ ...ROW, ...row }]}
+      togglingId={null}
+      onToggleContacted={onToggleContacted}
+      onToggleAttended={onToggleAttended}
+      {...props}
+    />
   );
-  return { ...utils, onToggleContacted };
+  return { ...utils, onToggleContacted, onToggleAttended };
 }
 
 describe('LeadsTable cells', () => {
@@ -131,33 +140,114 @@ describe('LeadsTable cells', () => {
 describe('LeadsTable contacted toggle', () => {
   it('reports the state the row is in', () => {
     const { rerender, onToggleContacted } = renderTable();
-    expect(screen.getByRole('switch').getAttribute('aria-checked')).toBe('false');
+    expect(screen.getByRole('switch', { name: 'Contactado' }).getAttribute('aria-checked')).toBe('false');
     rerender(
       <LeadsTable
         rows={[{ ...ROW, contacted_at: '2026-09-19T10:00:00.000Z' }]}
         togglingId={null}
+        onToggleAttended={vi.fn()}
         onToggleContacted={onToggleContacted}
       />
     );
-    expect(screen.getByRole('switch').getAttribute('aria-checked')).toBe('true');
+    expect(screen.getByRole('switch', { name: 'Contactado' }).getAttribute('aria-checked')).toBe('true');
   });
 
   it('asks for the OPPOSITE of the current state, so a toggle toggles', () => {
     const { onToggleContacted } = renderTable();
-    fireEvent.click(screen.getByRole('switch'));
+    fireEvent.click(screen.getByRole('switch', { name: 'Contactado' }));
     expect(onToggleContacted).toHaveBeenCalledWith('lead-1', true);
   });
 
   it('asks to clear a lead that is already contacted', () => {
     const { onToggleContacted } = renderTable({ contacted_at: '2026-09-19T10:00:00.000Z' });
-    fireEvent.click(screen.getByRole('switch'));
+    fireEvent.click(screen.getByRole('switch', { name: 'Contactado' }));
     expect(onToggleContacted).toHaveBeenCalledWith('lead-1', false);
   });
 
   it('cannot be fired twice while the first write is in flight', () => {
     const onToggleContacted = vi.fn();
-    render(<LeadsTable rows={[ROW]} togglingId="lead-1" onToggleContacted={onToggleContacted} />);
-    fireEvent.click(screen.getByRole('switch'));
+    render(
+      <LeadsTable rows={[ROW]} togglingId="lead-1" onToggleAttended={vi.fn()} onToggleContacted={onToggleContacted} />
+    );
+    fireEvent.click(screen.getByRole('switch', { name: 'Contactado' }));
+    expect(onToggleContacted).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * T-GROW1 part E.
+ *
+ * The first three arms mirror Contactado's, because they are the same questions
+ * and a column that answered them differently would be a bug. The last two are
+ * the ones that only exist because there are now TWO switches, and they are the
+ * reason this block is not just a copy:
+ *
+ *   - the two switches must be TOLD APART, which is what the accessible name is
+ *     for. Without it a gym owner using a screen reader hears "switch, switch"
+ *     on every row and has to count columns.
+ *   - the row lock covers BOTH, so one in-flight write cannot be raced by the
+ *     other switch on the same row.
+ */
+describe('LeadsTable attended toggle', () => {
+  it('reports the state the row is in', () => {
+    const { rerender, onToggleContacted, onToggleAttended } = renderTable();
+    expect(screen.getByRole('switch', { name: 'Asistió' }).getAttribute('aria-checked')).toBe('false');
+    rerender(
+      <LeadsTable
+        rows={[{ ...ROW, attended_at: '2026-09-19T19:00:00.000Z' }]}
+        togglingId={null}
+        onToggleContacted={onToggleContacted}
+        onToggleAttended={onToggleAttended}
+      />
+    );
+    expect(screen.getByRole('switch', { name: 'Asistió' }).getAttribute('aria-checked')).toBe('true');
+  });
+
+  it('asks for the OPPOSITE of the current state, so a toggle toggles', () => {
+    const { onToggleAttended } = renderTable();
+    fireEvent.click(screen.getByRole('switch', { name: 'Asistió' }));
+    expect(onToggleAttended).toHaveBeenCalledWith('lead-1', true);
+  });
+
+  it('asks to clear a lead that is already marked attended', () => {
+    // Reversible on purpose: migration 212 exists as a second function rather
+    // than reusing the door's av_confirm_pass_attendance precisely because that
+    // one is set-only, which makes a mis-tap permanent.
+    const { onToggleAttended } = renderTable({ attended_at: '2026-09-19T19:00:00.000Z' });
+    fireEvent.click(screen.getByRole('switch', { name: 'Asistió' }));
+    expect(onToggleAttended).toHaveBeenCalledWith('lead-1', false);
+  });
+
+  it('is a DIFFERENT control from Contactado, and each calls only its own handler', () => {
+    // The arm that would catch the copy-paste mistake: two switches wired to one
+    // handler, or both reading the same column. Both would look right on screen
+    // and mark the wrong thing.
+    const { onToggleContacted, onToggleAttended } = renderTable();
+    fireEvent.click(screen.getByRole('switch', { name: 'Asistió' }));
+    expect(onToggleAttended).toHaveBeenCalledTimes(1);
+    expect(onToggleContacted).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('switch', { name: 'Contactado' }));
+    expect(onToggleContacted).toHaveBeenCalledTimes(1);
+    expect(onToggleAttended).toHaveBeenCalledTimes(1);
+  });
+
+  it('is disabled by the SAME row lock, so the two switches cannot race', () => {
+    const onToggleContacted = vi.fn();
+    const onToggleAttended = vi.fn();
+    render(
+      <LeadsTable
+        rows={[ROW]}
+        togglingId="lead-1"
+        onToggleContacted={onToggleContacted}
+        onToggleAttended={onToggleAttended}
+      />
+    );
+    fireEvent.click(screen.getByRole('switch', { name: 'Asistió' }));
+    fireEvent.click(screen.getByRole('switch', { name: 'Contactado' }));
+    // One row, one write at a time. Two in-flight writes to one row is how the
+    // rendered state ends up disagreeing with the database.
+    expect(onToggleAttended).not.toHaveBeenCalled();
     expect(onToggleContacted).not.toHaveBeenCalled();
   });
 });
@@ -170,7 +260,7 @@ describe('LeadsTable columns by audience', () => {
    * be a column that silently always says "not a member").
    */
   it('hides Aliado and Cuenta unless asked for them', () => {
-    render(<LeadsTable rows={[ROW]} togglingId={null} onToggleContacted={vi.fn()} />);
+    render(<LeadsTable rows={[ROW]} togglingId={null} onToggleAttended={vi.fn()} onToggleContacted={vi.fn()} />);
     const header = within(screen.getAllByRole('row')[0]);
     expect(header.queryByText('Aliado')).toBeNull();
     expect(header.queryByText('Cuenta')).toBeNull();
@@ -180,7 +270,16 @@ describe('LeadsTable columns by audience', () => {
   });
 
   it('shows Aliado and Cuenta for the admin', () => {
-    render(<LeadsTable rows={[ROW]} showPartner showAccount togglingId={null} onToggleContacted={vi.fn()} />);
+    render(
+      <LeadsTable
+        rows={[ROW]}
+        showPartner
+        showAccount
+        togglingId={null}
+        onToggleAttended={vi.fn()}
+        onToggleContacted={vi.fn()}
+      />
+    );
     const header = within(screen.getAllByRole('row')[0]);
     expect(header.getByText('Aliado')).toBeTruthy();
     expect(header.getByText('Cuenta')).toBeTruthy();
@@ -196,6 +295,7 @@ describe('LeadsTable columns by audience', () => {
           showPartner={admin}
           showAccount={admin}
           togglingId={null}
+          onToggleAttended={vi.fn()}
           onToggleContacted={vi.fn()}
         />
       );
@@ -206,7 +306,7 @@ describe('LeadsTable columns by audience', () => {
   });
 
   it('says the list is empty rather than rendering a headless table', () => {
-    render(<LeadsTable rows={[]} togglingId={null} onToggleContacted={vi.fn()} />);
+    render(<LeadsTable rows={[]} togglingId={null} onToggleAttended={vi.fn()} onToggleContacted={vi.fn()} />);
     expect(screen.getByText('Todavía no hay leads.')).toBeTruthy();
     expect(screen.queryByRole('table')).toBeNull();
   });

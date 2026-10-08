@@ -7,6 +7,7 @@ import BackButtonHandler from '@/components/BackButtonHandler';
 import InAppNotificationToast from '@/components/InAppNotificationToast';
 import { LanguageProvider } from '@/lib/LanguageContext';
 import { PostHogProvider } from '@/components/PostHogProvider';
+import AttributionCapture from '@/components/AttributionCapture';
 import FeedbackWidget from '@/components/FeedbackWidget';
 import PageTransition from '@/components/PageTransition';
 import ReducedMotionProvider from '@/components/ReducedMotionProvider';
@@ -150,6 +151,24 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body>
         <PostHogProvider>
+          {/*
+            T-GROW1 part A. Renders nothing; reads ?src/?code/?ref/?utm_* off the
+            URL once per page load and remembers them.
+
+            MOUNTED HERE, ABOVE EVERYTHING, because the spec requires capture to
+            happen before any auth redirect: /storefront and /instructors redirect
+            a signed-out visitor outright, and a page-level capture on those routes
+            would run after the URL had already been replaced. A layout's effects
+            commit before its children's, so this reads the parameters while they
+            still exist.
+
+            It is a CLIENT component and that is what keeps the build static. This
+            layout must never read headers() or cookies(): 740475b did, to serve the
+            right lang in the first frame, and took the build from 79 static routes
+            to 2, because reading a request in the ROOT layout opts in every route
+            beneath it. A client child does not.
+          */}
+          <AttributionCapture />
           <ReducedMotionProvider>
             <ThemeProvider>
               <LanguageProvider>

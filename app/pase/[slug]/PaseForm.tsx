@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import VoucherQr from './VoucherQr';
+import { captureAttribution, attributionForSubmit, type Attribution } from '@/lib/attribution';
 
 /**
  * The pass form and, after a successful claim, the pass itself.
@@ -82,16 +83,46 @@ export default function PaseForm({ slug, partnerName, options, consentText, cons
 
   /** Set once on mount; the server rejects anything under two seconds. */
   const mountedAt = useRef<number>(0);
-  const attribution = useRef<{ src: string | null; code: string | null }>({ src: null, code: null });
+  /**
+   * T-GROW1 part B. What this lead will be credited to, and the first touch.
+   *
+   * `submit` is the URL's attribution when this page load carried any, and
+   * otherwise LAST TOUCH out of localStorage -- which is the whole point of the
+   * ticket. Before it, a person who landed on `/?src=runclub&code=RUNCLUB-SAT0927`,
+   * browsed, and then opened the pass arrived here with no parameters and was
+   * recorded as having come from nowhere: 2 of the 3 live leads on 2026-10-08.
+   *
+   * `first` is separate and is never merged into `submit`. It answers a different
+   * question -- how did this person first hear of Tribe, up to 90 days ago -- and
+   * it goes into its own jsonb column.
+   */
+  const attribution = useRef<{ submit: Attribution | null; first: Attribution | null }>({
+    submit: null,
+    first: null,
+  });
 
   const groups = useMemo(() => Object.entries(options).slice(0, 2), [options]);
 
   useEffect(() => {
     mountedAt.current = Date.now();
-    const params = new URLSearchParams(window.location.search);
-    // Sent as typed. The server sanitizes and drops anything malformed to
-    // null rather than rejecting the lead over a typo on a poster.
-    attribution.current = { src: params.get('src'), code: params.get('code') };
+
+    /**
+     * captureAttribution rather than reading the parameters directly.
+     *
+     * AttributionCapture in the root layout has already run for this page load,
+     * so this call is reading storage that is written rather than writing it --
+     * but calling capture instead of a reader is deliberate and not sloppiness.
+     * The two are idempotent together (first touch is never overwritten, last
+     * touch is rewritten with the same value), and routing both paths through one
+     * function means the pass form can never disagree with the layout about what
+     * this visit was. A separate read path here is how the two would drift.
+     *
+     * The server sanitizes everything again regardless. Nothing below is trusted
+     * on arrival; a malformed value is dropped to null and the lead survives,
+     * which is the trade 173 settled and 211's CHECKs are sized to preserve.
+     */
+    const { visit, first, last } = captureAttribution(window.location.search, window.location.pathname);
+    attribution.current = { submit: attributionForSubmit(visit, last), first };
     setClaimed(readStoredPass(slug));
   }, [slug]);
 
@@ -203,8 +234,18 @@ export default function PaseForm({ slug, partnerName, options, consentText, cons
           email: email.trim(),
           choice_1: group1 ? (choices[group1[0]] ?? null) : null,
           choice_2: group2 ? (choices[group2[0]] ?? null) : null,
-          src: attribution.current.src,
-          code: attribution.current.code,
+          // T-GROW1 part B. Named individually so the payload is a contract
+          // rather than whatever shape a ref happens to hold, and so adding a
+          // field to Attribution cannot silently start sending it.
+          src: attribution.current.submit?.src ?? null,
+          code: attribution.current.submit?.code ?? null,
+          ref: attribution.current.submit?.ref ?? null,
+          utm_source: attribution.current.submit?.utm_source ?? null,
+          utm_medium: attribution.current.submit?.utm_medium ?? null,
+          utm_campaign: attribution.current.submit?.utm_campaign ?? null,
+          utm_content: attribution.current.submit?.utm_content ?? null,
+          landing_path: attribution.current.submit?.landing_path ?? null,
+          first_touch: attribution.current.first,
           consent,
           website: honeypot,
           t: mountedAt.current,

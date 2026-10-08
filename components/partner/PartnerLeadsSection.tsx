@@ -35,6 +35,12 @@ interface Props {
   loading: boolean;
   togglingId: string | null;
   onToggleContacted: (leadId: string, contacted: boolean) => void;
+  /**
+   * T-GROW1 part E. Leo marks this after class, and it is the number that turns
+   * "we sent you N leads" into "and M showed up" -- which is the whole sentence
+   * the programme exists to make true.
+   */
+  onToggleAttended: (leadId: string, attended: boolean) => void;
   from: number;
   to: number;
   hasPrev: boolean;
@@ -61,6 +67,7 @@ export default function PartnerLeadsSection({
   loading,
   togglingId,
   onToggleContacted,
+  onToggleAttended,
   from,
   to,
   hasPrev,
@@ -109,7 +116,12 @@ export default function PartnerLeadsSection({
       {loading && page.rows.length === 0 ? (
         <div className="h-16 rounded-xl bg-theme-inset animate-pulse" />
       ) : (
-        <LeadsTable rows={page.rows} togglingId={togglingId} onToggleContacted={onToggleContacted} />
+        <LeadsTable
+          rows={page.rows}
+          togglingId={togglingId}
+          onToggleContacted={onToggleContacted}
+          onToggleAttended={onToggleAttended}
+        />
       )}
 
       {/* The range is shown whenever there is anything to count, even on a

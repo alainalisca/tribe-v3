@@ -143,6 +143,13 @@ describe('POST /api/pase, athletes flag on', () => {
       'passCode',
       'src',
       'to',
+      // T-GROW1 part B. Sent for EVERY lead, attributed or not, so it does not
+      // weaken what this test is actually asserting: that ATTRIBUTION adds
+      // exactly invitedBy and doorUrl and nothing else. Still an exact key-set
+      // match rather than a relaxed one, because the exactness is the point --
+      // route.flagoff.test.ts proves the same key set on an unattributed lead,
+      // and the pair of them is what pins "adds exactly two".
+      'utmCampaign',
       'whatsapp',
     ]);
     expect(partner.invitedBy).toBe('Ana');

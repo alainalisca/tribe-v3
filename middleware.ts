@@ -75,6 +75,20 @@ const publicApiPaths = [
   '/api/health', // LR-02: monitoring probes don't carry session cookies
   '/api/tribe-os-waitlist', // Public marketing form on the landing page; rate-limited by IP in the handler.
   '/api/pase', // T-LEAD1 pass claim; unauthenticated by design, rate-limited by IP plus honeypot and time-on-page in the handler.
+  // T-GROW1 part D attribution beacon. Unauthenticated BY NECESSITY, not by
+  // convenience: the event it records is a STRANGER ARRIVING off a printed QR,
+  // so it is usually the first HTTP call a person ever makes to Tribe and nobody
+  // has a session yet. The handler is service-role, rate-limited 10/min per IP,
+  // and refuses an untagged event; attribution_events has no client grant at all.
+  //
+  // FOUND ON THE PREVIEW, NOT IN A TEST, and it is worth saying how. Without this
+  // line middleware answered 307 to /auth for every beacon, so the visit log
+  // recorded nothing for exactly the signed-out population T-GROW1 exists to
+  // measure -- and nothing anywhere would have said so. The route returns 204 on
+  // success and the client fires it with keepalive and ignores the response, so a
+  // redirect is indistinguishable from a write. The Origen tab would simply have
+  // shown zero visits forever.
+  '/api/attr',
   '/api/og', // OG preview images for share cards; link scrapers (WhatsApp, etc.) carry no session cookie.
   // Internal server-to-server endpoints invoked via fetch() with an
   // `Authorization: Bearer ${CRON_SECRET}` header (NOT a cookie). Without

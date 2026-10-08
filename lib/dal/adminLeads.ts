@@ -42,7 +42,7 @@ export const ADMIN_LEADS_ALL_PARTNERS = 'all';
  * paragraph of legal copy per row over the wire.
  */
 const LEAD_COLUMNS =
-  'id, created_at, partner_id, name, whatsapp, email, choice_1, choice_2, pass_code, src, code, notified_at, contacted_at';
+  'id, created_at, partner_id, name, whatsapp, email, choice_1, choice_2, pass_code, src, code, notified_at, contacted_at, attended_at';
 
 export interface AdminLead {
   id: string;
@@ -60,6 +60,13 @@ export interface AdminLead {
   code: string | null;
   notified_at: string | null;
   contacted_at: string | null;
+  /**
+   * T-GROW1 part E. Added by migration 201, written only through
+   * set_pass_lead_attended (212). A lead with interest and no attendance is the
+   * gap the whole programme exists to close: leads without show-up data only
+   * measure interest.
+   */
+  attended_at: string | null;
   /** True when a live users row has this exact email, lowercased. */
   hasTribeAccount: boolean;
 }

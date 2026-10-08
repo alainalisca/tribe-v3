@@ -1895,7 +1895,10 @@ select 'GUARD_184_mirror_matches_applied_table',
     ('207_t_av22_athletes_reads'),
     ('208_t_av22_program_columns_server_only'),
     ('209_t_av26_athletes_search'),
-    ('210_t_av27b_notifications')
+    ('210_t_av27b_notifications'),
+    ('211_t_grow1_lead_attribution'),
+    ('212_t_grow1_lead_attended_toggle'),
+    ('213_t_grow1_attribution_events')
     -- <<<END_MIRROR_LIST>>>
            ) as mirror(migration)
            where not exists (select 1 from public.migrations_applied a
@@ -1938,7 +1941,10 @@ select 'GUARD_184_mirror_matches_applied_table',
     ('207_t_av22_athletes_reads'),
     ('208_t_av22_program_columns_server_only'),
     ('209_t_av26_athletes_search'),
-    ('210_t_av27b_notifications')
+    ('210_t_av27b_notifications'),
+    ('211_t_grow1_lead_attribution'),
+    ('212_t_grow1_lead_attended_toggle'),
+    ('213_t_grow1_attribution_events')
     -- <<<END_MIRROR_LIST>>>
            ))
            then 'MISSING -- this database has recorded a migration the JSON mirror omits; re-sync it'
@@ -2670,6 +2676,140 @@ select '210_t_av27b_notifications',
          when not exists (select 1 from pg_indexes where schemaname = 'public'
                            and indexname = 'av_notification_log_once_per_lead')
            then 'MISSING -- the once-per-lead-and-event index is gone; an event can notify twice'
+         else 'applied'
+       end
+
+union all
+
+-- T-GROW1. The seven attribution columns are on pass_leads with their size
+-- bounds VALIDATED, the restrictive INSERT policy closes all seven to every
+-- client role including admin, and 204's clauses are still on the claim policy
+-- (which is how we know nothing recreated it).
+--
+-- pass_leads itself is main's own table, so a literal cast on it resolves at
+-- parse time on any database this runs against. The attribution objects are
+-- resolved with to_regclass / to_regprocedure in the probes below, per T-AV30.
+select '211_t_grow1_lead_attribution',
+       case
+         when exists (select 1 from unnest(array['attr_ref', 'utm_source', 'utm_medium', 'utm_campaign',
+                                                 'utm_content', 'landing_path', 'first_touch']) c(col)
+                       where not exists (select 1 from pg_attribute
+                                          where attrelid = 'public.pass_leads'::regclass
+                                            and attname = c.col and attnum > 0 and not attisdropped))
+           then 'MISSING -- pass_leads is missing one of the seven attribution columns'
+         -- format_type and not atttypid <> 'jsonb'::regtype, so this probe adds
+         -- no literal reg* cast for the T-AV30 guard to have to exempt.
+         when (select format_type(atttypid, atttypmod) from pg_attribute
+                where attrelid = 'public.pass_leads'::regclass and attname = 'first_touch'
+                  and attnum > 0 and not attisdropped) <> 'jsonb'
+           then 'MISSING -- pass_leads.first_touch is not jsonb; every ->> on it returns nothing'
+         when exists (select 1 from unnest(array['pass_leads_attr_tag_bounds',
+                                                 'pass_leads_landing_path_bounds',
+                                                 'pass_leads_first_touch_bounds']) c(con)
+                       where not exists (select 1 from pg_constraint
+                                          where conrelid = 'public.pass_leads'::regclass
+                                            and conname = c.con and contype = 'c' and convalidated))
+           then 'MISSING -- a size-bound CHECK is absent or was added NOT VALID'
+         when not exists (select 1 from pg_policies
+                           where schemaname = 'public' and tablename = 'pass_leads'
+                             and policyname = 'Attribution columns are server only'
+                             and permissive = 'RESTRICTIVE' and cmd = 'INSERT' and roles = '{public}')
+           then 'MISSING -- the restrictive attribution policy is absent or no longer binds every role; an admin can insert a forged utm_campaign'
+         when exists (select 1 from unnest(array['attr_ref', 'utm_source', 'utm_medium', 'utm_campaign',
+                                                 'utm_content', 'landing_path', 'first_touch']) c(col)
+                       where not exists (select 1 from pg_policies
+                                          where schemaname = 'public' and tablename = 'pass_leads'
+                                            and policyname = 'Attribution columns are server only'
+                                            and position(c.col || ' IS NULL' in with_check) > 0))
+           then 'MISSING -- the restrictive attribution policy lost an IS NULL clause'
+         when position('referred_by_athlete_id IS NULL' in
+                       coalesce((select with_check from pg_policies
+                                  where schemaname = 'public' and tablename = 'pass_leads'
+                                    and policyname = 'Anyone can claim a pass'), '')) = 0
+           then 'MISSING -- the claim policy lost 204''s clauses, so something recreated it'
+         -- The partner leads view renders these columns on the browser client.
+         -- 173 granted SELECT at table level so they are covered; a later
+         -- column-level regrant would not be, and the view would 42501.
+         when exists (select 1 from unnest(array['attr_ref', 'utm_source', 'utm_medium', 'utm_campaign',
+                                                 'utm_content', 'landing_path', 'first_touch']) c(col)
+                       where not has_column_privilege('authenticated', 'public.pass_leads', c.col, 'SELECT'))
+           then 'MISSING -- authenticated cannot SELECT an attribution column; the partner leads view fails'
+         when has_any_column_privilege('anon', 'public.pass_leads', 'SELECT')
+           then 'MISSING -- anon can SELECT pass_leads'
+         else 'applied'
+       end
+
+union all
+
+-- T-GROW1 part E. The Asistio toggle exists as a definer with a pinned
+-- search_path, is callable by authenticated and not by anon, still names all
+-- three attendance columns, and pass_leads still has no client UPDATE grant --
+-- which is the property that makes the function the only write path.
+select '212_t_grow1_lead_attended_toggle',
+       case
+         when to_regprocedure('public.set_pass_lead_attended(uuid,boolean)') is null
+           then 'MISSING -- set_pass_lead_attended is absent; neither leads view can mark Asistio'
+         when to_regprocedure('public.av_can_work_door(uuid)') is null
+           then 'MISSING -- av_can_work_door is absent, so the toggle has no authorisation rule to call (201 not applied)'
+         when exists (select 1 from pg_proc
+                       where oid = to_regprocedure('public.set_pass_lead_attended(uuid,boolean)')
+                         and (not prosecdef or proconfig is null
+                              or has_function_privilege('anon', oid, 'EXECUTE')
+                              or not has_function_privilege('authenticated', oid, 'EXECUTE')))
+           then 'MISSING -- set_pass_lead_attended lost SECURITY DEFINER, its pinned search_path, or its grants'
+         when exists (select 1 from unnest(array['attended_at', 'attended_marked_by', 'attended_method']) c(col)
+                       where position(c.col in pg_get_functiondef(
+                               to_regprocedure('public.set_pass_lead_attended(uuid,boolean)'))) = 0)
+           then 'MISSING -- set_pass_lead_attended no longer names all three attendance columns'
+         when has_any_column_privilege('authenticated', 'public.pass_leads', 'UPDATE')
+           or has_any_column_privilege('anon', 'public.pass_leads', 'UPDATE')
+           then 'MISSING -- a client role holds UPDATE on pass_leads; the three-column write surface is gone'
+         else 'applied'
+       end
+
+union all
+
+-- T-GROW1 parts D and F. The visit log exists, has RLS on with ZERO policies
+-- and no client privilege of any kind, and the Origen read is service-role only
+-- and NOT a definer.
+select '213_t_grow1_attribution_events',
+       case
+         when to_regclass('public.attribution_events') is null
+           then 'MISSING -- attribution_events is absent; /api/attr has nowhere to write'
+         when not (select relrowsecurity from pg_class where oid = to_regclass('public.attribution_events'))
+           then 'MISSING -- attribution_events lost RLS, and with zero policies that means an open table'
+         when (select count(*) from pg_policies
+                where schemaname = 'public' and tablename = 'attribution_events') <> 0
+           then 'MISSING -- attribution_events has a policy; every read and write is meant to go through the service role'
+         when has_any_column_privilege('anon', to_regclass('public.attribution_events'), 'SELECT')
+           or has_any_column_privilege('anon', to_regclass('public.attribution_events'), 'INSERT')
+           or has_any_column_privilege('authenticated', to_regclass('public.attribution_events'), 'SELECT')
+           or has_any_column_privilege('authenticated', to_regclass('public.attribution_events'), 'INSERT')
+           or has_any_column_privilege('authenticated', to_regclass('public.attribution_events'), 'UPDATE')
+           then 'MISSING -- a client role can read or write attribution_events'
+         when not has_table_privilege('service_role', to_regclass('public.attribution_events'), 'INSERT')
+           then 'MISSING -- service_role cannot INSERT attribution_events; /api/attr 500s on every visit'
+         -- Partial on purpose. A plain unique index on session_key would make a
+         -- share click collide with the visit before it and be silently dropped.
+         when not exists (select 1 from pg_indexes
+                           where schemaname = 'public' and tablename = 'attribution_events'
+                             and indexname = 'attribution_events_one_visit_per_session'
+                             and indexdef ilike '%UNIQUE%'
+                             and indexdef ilike '%event_type = ''visit''%')
+           then 'MISSING -- the once-per-session visit index is absent, not unique, or not partial'
+         when not exists (select 1 from pg_indexes
+                           where schemaname = 'public' and tablename = 'attribution_events'
+                             and indexname = 'attribution_events_created_idx')
+           then 'MISSING -- attribution_events_created_idx is gone; the Origen date window seq scans'
+         when to_regprocedure('public.admin_attribution_summary(timestamptz)') is null
+           then 'MISSING -- admin_attribution_summary is absent; the Origen tab has no read'
+         when exists (select 1 from pg_proc
+                       where oid = to_regprocedure('public.admin_attribution_summary(timestamptz)')
+                         and (prosecdef
+                              or has_function_privilege('anon', oid, 'EXECUTE')
+                              or has_function_privilege('authenticated', oid, 'EXECUTE')
+                              or not has_function_privilege('service_role', oid, 'EXECUTE')))
+           then 'MISSING -- admin_attribution_summary became a definer, or a client role can execute it, or service_role cannot'
          else 'applied'
        end
 
