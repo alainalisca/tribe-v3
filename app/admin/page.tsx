@@ -18,6 +18,7 @@ import {
   MessageList,
   SessionManagement,
   AdminLeadsTab,
+  AdminOrigenTab,
 } from '@/components/admin';
 import { SkeletonCard } from '@/components/Skeleton';
 import { AdminRevenueTab } from '@/components/admin/AdminRevenueTab';
@@ -159,6 +160,8 @@ export default function AdminPage() {
     { id: 'revenue', label: language === 'es' ? 'Ingresos' : 'Revenue' },
     // "Leads" in both languages on purpose: it is the word Leo and Al both use.
     { id: 'leads', label: 'Leads' },
+    // "Origen" likewise, and for the same reason. T-GROW1 part F.
+    { id: 'origen', label: 'Origen' },
   ];
 
   return (
@@ -352,6 +355,10 @@ export default function AdminPage() {
         {/* Mounted only while selected, so its four queries do not run on
             every admin page load for a tab nobody opened. */}
         {activeTab === 'leads' && <AdminLeadsTab supabase={supabase} />}
+        {/* No supabase prop: this tab's read is service-role only (migration 213
+            grants admin_attribution_summary to service_role alone), so it goes
+            through /api/admin/data and has nothing to do with the browser client. */}
+        {activeTab === 'origen' && <AdminOrigenTab />}
       </div>
 
       <ConfirmDialog
