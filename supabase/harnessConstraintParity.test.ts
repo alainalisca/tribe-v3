@@ -114,9 +114,44 @@ function creates(sql: string, name: string): boolean {
 /** Applied = below 184's backfill floor, or listed in the mirror. */
 function isApplied(migrationFile: string): boolean {
   const stem = migrationFile.replace(/\.sql$/, '');
-  const n = parseInt(stem.slice(0, 3), 10);
-  if (Number.isFinite(n) && n < FLOOR) return true;
+  const n = numberOf(migrationFile);
+  if (n !== null && n < FLOOR) return true;
   return APPLIED.has(stem);
+}
+
+function numberOf(migrationFile: string): number | null {
+  const m = /^(\d{3})_/.exec(migrationFile);
+  return m ? parseInt(m[1], 10) : null;
+}
+
+/**
+ * THE SCHEMA STATE THE HARNESS CLAIMS TO MODEL, read out of the harness itself.
+ *
+ * `-- HARNESS_ASSUMES_APPLIED_THROUGH: NNN`. Not a constant here, because then
+ * there would be two copies of the number and the file that has to be right
+ * would not be the one anybody reads.
+ *
+ * WHY THE PIN EXISTS. The first version of this test required every APPLIED
+ * constraint, full stop. That was right until 211 to 213 were applied, at which
+ * point it demanded the harness carry the very constraints 211's rehearsal
+ * exists to prove 211 creates -- a harness that already had them would make
+ * Part A assert over something the migration did not do. A rehearsal needs the
+ * database as it was BEFORE its migration, so the harness is pinned to a point
+ * in time rather than to "now".
+ */
+function assumesAppliedThrough(harnessSql: string): number {
+  // The RAW file, not the comment-stripped one: the pin IS a comment, and
+  // stripping comments before reading it would read nothing. Every other read in
+  // this file strips first, for the opposite reason, which is why this says so.
+  const m = /HARNESS_ASSUMES_APPLIED_THROUGH:\s*(\d{3})/.exec(harnessSql);
+  if (!m) {
+    throw new Error(
+      'The harness does not declare HARNESS_ASSUMES_APPLIED_THROUGH: NNN, so this ' +
+        'test cannot tell which constraints it owes. Add the line to ' +
+        'supabase/recon/t-grow1-harness.LOCAL.sql.'
+    );
+  }
+  return parseInt(m[1], 10);
 }
 
 /**
@@ -168,12 +203,15 @@ describe('the T-GROW1 local harness enforces what the migrations declare', () =>
     expect(declared.size).toBeGreaterThan(8);
   });
 
-  it('the harness CREATES every APPLIED constraint on the tables it models', () => {
-    const harness = sqlWithoutComments(readFileSync(HARNESS, 'utf8'));
+  it('the harness CREATES every applied constraint at or below the state it models', () => {
+    const raw = readFileSync(HARNESS, 'utf8');
+    const through = assumesAppliedThrough(raw);
+    const harness = sqlWithoutComments(raw);
     const missing = [...declaredConstraints().entries()]
       .filter(([, file]) => isApplied(file))
+      .filter(([, file]) => (numberOf(file) ?? 0) <= through)
       .filter(([name]) => !creates(harness, name))
-      .map(([name, file]) => `${name}  (declared in ${file}, which IS applied)`)
+      .map(([name, file]) => `${name}  (declared in ${file}, applied and at or below ${through})`)
       .sort();
 
     expect(
@@ -196,20 +234,41 @@ describe('the T-GROW1 local harness enforces what the migrations declare', () =>
    * constraint exists would pass without the migration having created it -- an
    * arm measuring the harness and reporting it as the migration.
    */
-  it('the harness does NOT pre-create a constraint from an unapplied migration', () => {
-    const harness = sqlWithoutComments(readFileSync(HARNESS, 'utf8'));
+  it('the harness does NOT pre-create a constraint from above the state it models', () => {
+    const raw = readFileSync(HARNESS, 'utf8');
+    const through = assumesAppliedThrough(raw);
+    const harness = sqlWithoutComments(raw);
     const premature = [...declaredConstraints().entries()]
-      .filter(([, file]) => !isApplied(file))
+      .filter(([, file]) => (numberOf(file) ?? 0) > through)
       .filter(([name]) => creates(harness, name))
-      .map(([name, file]) => `${name}  (from unapplied ${file})`)
+      .map(([name, file]) => `${name}  (from ${file}, above the modelled state ${through})`)
       .sort();
 
     expect(
       premature,
-      'The harness already has these, so the rehearsal cannot show that the ' +
-        'MIGRATION creates them. Remove them from the harness; they arrive when ' +
-        "the migration's own body runs, which is the thing being rehearsed."
+      'The harness already has these, so a rehearsal of that migration cannot ' +
+        'show that the MIGRATION creates them -- Part A would assert over the ' +
+        'harness and report it as the migration. Remove them, or raise ' +
+        'HARNESS_ASSUMES_APPLIED_THROUGH and retire the rehearsals that predate it.'
     ).toEqual([]);
+  });
+
+  /**
+   * The pin must not drift above what is actually applied.
+   *
+   * A pin of 999 would make the first test require constraints from migrations
+   * nobody has run, and the second forbid nothing -- the loud-then-useless
+   * failure mode. This keeps it inside reality.
+   */
+  it('the modelled state is at or below the highest applied migration', () => {
+    const through = assumesAppliedThrough(readFileSync(HARNESS, 'utf8'));
+    const highestApplied = Math.max(
+      ...readdirSync(MIGRATIONS)
+        .filter((f) => /^\d{3}_.*\.sql$/.test(f))
+        .filter((f) => isApplied(f))
+        .map((f) => numberOf(f) ?? 0)
+    );
+    expect(through).toBeLessThanOrEqual(highestApplied);
   });
 
   /**

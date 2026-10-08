@@ -1895,7 +1895,10 @@ select 'GUARD_184_mirror_matches_applied_table',
     ('207_t_av22_athletes_reads'),
     ('208_t_av22_program_columns_server_only'),
     ('209_t_av26_athletes_search'),
-    ('210_t_av27b_notifications')
+    ('210_t_av27b_notifications'),
+    ('211_t_grow1_lead_attribution'),
+    ('212_t_grow1_lead_attended_toggle'),
+    ('213_t_grow1_attribution_events')
     -- <<<END_MIRROR_LIST>>>
            ) as mirror(migration)
            where not exists (select 1 from public.migrations_applied a
@@ -1938,7 +1941,10 @@ select 'GUARD_184_mirror_matches_applied_table',
     ('207_t_av22_athletes_reads'),
     ('208_t_av22_program_columns_server_only'),
     ('209_t_av26_athletes_search'),
-    ('210_t_av27b_notifications')
+    ('210_t_av27b_notifications'),
+    ('211_t_grow1_lead_attribution'),
+    ('212_t_grow1_lead_attended_toggle'),
+    ('213_t_grow1_attribution_events')
     -- <<<END_MIRROR_LIST>>>
            ))
            then 'MISSING -- this database has recorded a migration the JSON mirror omits; re-sync it'

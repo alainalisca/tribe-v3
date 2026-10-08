@@ -3,6 +3,25 @@
 -- A MINIMAL LOCAL SCHEMA FOR PARSE-CHECKING THE T-GROW1 REHEARSALS. Not a
 -- migration, never applied anywhere, and deliberately NOT a copy of production.
 --
+-- HARNESS_ASSUMES_APPLIED_THROUGH: 210
+--
+-- THAT LINE IS LOAD BEARING AND IS READ BY A TEST. It says which production
+-- state this file models: everything up to and including migration 210, and
+-- nothing after. supabase/harnessConstraintParity.test.ts requires every
+-- constraint from an applied migration AT OR BELOW it, and FORBIDS every
+-- constraint from a migration above it.
+--
+-- Why a pin rather than "whatever is applied now": a rehearsal proves a
+-- migration does something, so the harness must be the database BEFORE that
+-- migration ran. 211, 212 and 213 were applied to production on 2026-10-08, and
+-- this file still has to predate them or their rehearsals would be asserting
+-- over a schema that already contained the answer.
+--
+-- So this harness, like the three rehearsals it was built for, is a record of a
+-- verification that has happened. To rehearse a migration ABOVE 213, bump the
+-- line and add 211 to 213's columns, CHECKs and policy here -- the parity test
+-- will name exactly what is missing, in both directions.
+--
 -- ═══════════════════════════════════════════════════════════════════════════
 -- WHY THIS EXISTS, AND WHY A PARSE WOULD NOT HAVE DONE
 -- ═══════════════════════════════════════════════════════════════════════════
