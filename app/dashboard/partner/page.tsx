@@ -43,6 +43,9 @@ export default function PartnerDashboardPage() {
       toggleError: tLeads('toggleError'),
       markedContacted: tLeads('markedContacted'),
       markedPending: tLeads('markedPending'),
+      attendedError: tLeads('attendedError'),
+      markedAttended: tLeads('markedAttended'),
+      markedNotAttended: tLeads('markedNotAttended'),
     },
   });
   const [stats, setStats] = useState<PartnerStats | null>(null);
@@ -138,6 +141,7 @@ export default function PartnerDashboardPage() {
           loading={leads.loading}
           togglingId={leads.togglingId}
           onToggleContacted={(id, contacted) => void leads.toggleContacted(id, contacted)}
+          onToggleAttended={(id, attended) => void leads.toggleAttended(id, attended)}
           from={leads.from}
           to={leads.to}
           hasPrev={leads.hasPrev}

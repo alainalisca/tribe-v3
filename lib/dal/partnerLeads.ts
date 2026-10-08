@@ -46,7 +46,7 @@ export const PARTNER_LEADS_PAGE_SIZE = 50;
  * partner they are, and it is the one column here that is purely a join key.
  */
 const PARTNER_LEAD_COLUMNS =
-  'id, created_at, name, whatsapp, email, choice_1, choice_2, pass_code, src, code, notified_at, contacted_at';
+  'id, created_at, name, whatsapp, email, choice_1, choice_2, pass_code, src, code, notified_at, contacted_at, attended_at';
 
 export interface PartnerLead {
   id: string;
@@ -61,6 +61,8 @@ export interface PartnerLead {
   code: string | null;
   notified_at: string | null;
   contacted_at: string | null;
+  /** T-GROW1 part E. Leo marks this after class; see lib/dal/leadAttendance.ts. */
+  attended_at: string | null;
 }
 
 export interface PartnerLeadTiles {

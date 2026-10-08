@@ -17,6 +17,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { setPassLeadContacted } from '@/lib/dal/leadContact';
+import { setPassLeadAttended } from '@/lib/dal/leadAttendance';
 import { fetchPartnerLeads, PARTNER_LEADS_PAGE_SIZE, type PartnerLeadsPage } from '@/lib/dal/partnerLeads';
 import { showError, showSuccess } from '@/lib/toast';
 import { logError } from '@/lib/logger';
@@ -28,6 +29,9 @@ interface Messages {
   toggleError: string;
   markedContacted: string;
   markedPending: string;
+  attendedError: string;
+  markedAttended: string;
+  markedNotAttended: string;
 }
 
 interface Args {
@@ -101,6 +105,41 @@ export function usePartnerLeads({ supabase, partnerId, messages }: Args) {
     [supabase]
   );
 
+  /**
+   * T-GROW1 part E. The same shape as toggleContacted, through its own RPC.
+   *
+   * NO TILE MOVES HERE, unlike Contactado, and that is not an omission: the three
+   * tiles count leads, last-7 and uncontacted, and attendance changes none of
+   * them. Incrementing something on a guess is how a tile ends up disagreeing
+   * with the table under it.
+   */
+  const toggleAttended = useCallback(
+    async (leadId: string, attended: boolean) => {
+      setTogglingId(leadId);
+      try {
+        const result = await setPassLeadAttended(supabase, leadId, attended);
+        if (!result.success) {
+          showError(messages.attendedError);
+          return;
+        }
+        // Render what the DATABASE returned, never the value asked for. This
+        // function PRESERVES an existing attended_at rather than moving it, so a
+        // second tap returns the ORIGINAL time -- and a UI that rendered
+        // new Date() here would show a time the row does not hold.
+        setPage((prev) => ({
+          ...prev,
+          rows: prev.rows.map((row) => (row.id === leadId ? { ...row, attended_at: result.data ?? null } : row)),
+        }));
+        showSuccess(attended ? messages.markedAttended : messages.markedNotAttended);
+      } finally {
+        setTogglingId(null);
+      }
+    },
+    // Same reasoning as load(): messages is display-only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [supabase]
+  );
+
   const from = page.total === 0 ? 0 : offset + 1;
   const to = Math.min(offset + PARTNER_LEADS_PAGE_SIZE, page.total);
 
@@ -115,6 +154,7 @@ export function usePartnerLeads({ supabase, partnerId, messages }: Args) {
     loading,
     togglingId,
     toggleContacted,
+    toggleAttended,
     reload: load,
   };
 }
