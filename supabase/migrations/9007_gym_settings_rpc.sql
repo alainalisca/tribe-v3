@@ -1,3 +1,4 @@
+-- CLASS: A
 -- 9007_gym_settings_rpc.sql
 -- Class A additive migration: SECURITY DEFINER function for gym settings.
 --
@@ -20,7 +21,7 @@
 --
 -- The tier/stripe/grant columns stay on the existing service-role path.
 
-CREATE OR REPLACE FUNCTION public.update_gym_settings(
+CREATE FUNCTION public.update_gym_settings(
   p_gym_id uuid,
   p_name text DEFAULT NULL,
   p_timezone text DEFAULT NULL,
