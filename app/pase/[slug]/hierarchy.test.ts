@@ -79,11 +79,25 @@ describe('the logo survives any shape it is given', () => {
 });
 
 describe('the white is deliberate, not accidental', () => {
-  it('an organization logo sits on a white card with even padding', () => {
-    // BullBox's file is an opaque JPEG with white baked in. Without a card it
-    // lands on the dark page as a stray tile ending at an edge nobody chose.
-    expect(SRC).toMatch(/bg-white shadow-lg shadow-black\/30/);
+  // T-GROW3b, 2026-10-08. THE PREMISE OF THIS ARM EXPIRED WITH THE PAGE.
+  // It read: "BullBox's file is an opaque JPEG with white baked in. Without a
+  // card it lands on the DARK page as a stray tile ending at an edge nobody
+  // chose." That was true and the white card was the right answer to it. The
+  // page is white now, so the tile has nothing to stand out against and the
+  // card's own black drop shadow became the stray mark instead.
+  //
+  // What the arm was really protecting is the PADDING -- a mark pressed to the
+  // edge of its container, on any ground -- so that is what it asserts now.
+  it('an organization logo keeps its even padding', () => {
     expect(SRC).toMatch(/padding: HERO_CARD_PAD_PX/);
+  });
+
+  // And the thing that replaced it, asserted so the revert is visible: the
+  // dark-page scaffolding must not come back under a white page, where it
+  // renders as a smudge behind the logo.
+  it('no dark-page scaffolding survives on the white page', () => {
+    expect(SRC).not.toMatch(/shadow-black\//);
+    expect(SRC).not.toMatch(/bg-tribe-dark px-4 py-8/);
   });
 
   it('the padding is one constant, like the size', () => {
@@ -96,11 +110,15 @@ describe('the white is deliberate, not accidental', () => {
     expect(SRC).not.toMatch(/padding(?:Top|Right|Bottom|Left|X|Y):/);
   });
 
-  it('a PERSON keeps the headshot treatment, with no white card', () => {
-    // A headshot inset inside a padded white circle reads as a mistake. The
-    // same isOrganizationPartner call that picks square-vs-circle picks this.
-    expect(SRC).toMatch(/isOrganizationPartner\(config\)\s*\?[\s\S]{0,160}bg-white shadow/);
-    expect(SRC).toMatch(/:\s*`inline-flex[^`]*bg-white\/5`/);
+  // The STRUCTURAL property, which is what this arm always meant and is
+  // unchanged by the repaint: ONE isOrganizationPartner call decides the
+  // treatment, so a gym and a person can never drift onto the same one. Only
+  // the branches' contents changed -- an organization's mark now sits directly
+  // on the page and a person's headshot keeps a filled, clipped circle,
+  // because a headshot needs a boundary and a logo does not.
+  it('a PERSON keeps the headshot treatment, decided by the same call', () => {
+    expect(SRC).toMatch(/isOrganizationPartner\(config\)\s*\?[\s\S]{0,200}:\s*`inline-flex[^`]*overflow-hidden/);
+    expect(SRC).toMatch(/:\s*`inline-flex[^`]*\$\{shape\} bg-stone-100`/);
   });
 
   it('the card still hugs the image, so the mark is not boxed', () => {

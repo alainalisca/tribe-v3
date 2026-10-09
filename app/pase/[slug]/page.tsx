@@ -164,11 +164,18 @@ function PartnerHero({ config }: { config: PassConfig }) {
         // The card hugs the image rather than boxing it, so the padding stays
         // even on all four sides whatever the mark's aspect: a wordmark gets a
         // wordmark-shaped card, a square logo gets a square one.
+        // T-GROW3b: the page ground is WHITE now, so the organization's
+        // white card and its black drop shadow have nothing to separate from
+        // and read as a smudge behind the mark. The logo sits directly on the
+        // page, which is also what its share card does -- the pass page and
+        // the preview a visitor saw before tapping are now the same object.
+        // A person's headshot keeps its clipped circle; a headshot needs a
+        // boundary, a logo does not.
         <div
           className={
             isOrganizationPartner(config)
-              ? `inline-flex items-center justify-center ${shape} bg-white shadow-lg shadow-black/30`
-              : `inline-flex items-center justify-center overflow-hidden ${shape} bg-white/5`
+              ? `inline-flex items-center justify-center ${shape}`
+              : `inline-flex items-center justify-center overflow-hidden ${shape} bg-stone-100`
           }
           style={isOrganizationPartner(config) ? { padding: HERO_CARD_PAD_PX } : undefined}
         >
@@ -190,7 +197,7 @@ function PartnerHero({ config }: { config: PassConfig }) {
         </div>
       ) : (
         <div
-          className={`flex shrink-0 items-center justify-center overflow-hidden ${shape} bg-white/10 text-2xl font-bold text-white ring-2 ring-tribe-green`}
+          className={`flex shrink-0 items-center justify-center overflow-hidden ${shape} bg-tribe-green/20 text-2xl font-bold text-tribe-dark`}
           style={{ height: HERO_PX, width: HERO_PX }}
         >
           {initials}
@@ -198,7 +205,7 @@ function PartnerHero({ config }: { config: PassConfig }) {
       )}
       {/* The name only. pass_sub already renders under the h1 below, and
           repeating it here would say the same line twice on one screen. */}
-      <p className="text-xl font-bold leading-tight text-white">{config.partnerName}</p>
+      <p className="text-xl font-bold leading-tight text-tribe-dark">{config.partnerName}</p>
     </div>
   );
 }
@@ -214,7 +221,9 @@ function Wordmark({ size = 'full' }: { size?: 'full' | 'credit' }) {
   const credit = size === 'credit';
   return (
     <Image
-      src="/tribe-wordmark.png"
+      // The DARK cut. /tribe-wordmark.png is white-on-dark and is invisible on
+      // this page now -- the same asset swap the share cards made.
+      src="/tribe-wordmark-dark.png"
       alt="Tribe"
       width={96}
       height={28}
@@ -230,12 +239,12 @@ function Wordmark({ size = 'full' }: { size?: 'full' | 'credit' }) {
  */
 function InactivePass() {
   return (
-    <main className="min-h-screen bg-tribe-dark px-4 py-8">
+    <main className="min-h-screen bg-white px-4 py-8">
       <div className="mx-auto w-full max-w-[430px]">
         <header className="mb-10">
           <Wordmark />
         </header>
-        <div className="rounded-2xl bg-white p-6 text-center">
+        <div className="rounded-2xl border border-stone-200 bg-white p-6 text-center">
           <h1 className="text-xl font-bold text-tribe-dark">Este pase todavía no está activo</h1>
           <p className="mt-3 text-sm text-stone-600">
             Vuelve a intentarlo más tarde o escríbenos si crees que es un error.
@@ -260,18 +269,18 @@ export default async function PasePage({ params, searchParams }: PageProps) {
   const invite = await consentForPassPage(getServiceRoleClient(), config.partnerId, config.partnerName, searchParams);
 
   return (
-    <main className="min-h-screen bg-tribe-dark px-4 py-8">
+    <main className="min-h-screen bg-white px-4 py-8">
       <div className="mx-auto w-full max-w-[430px]">
         {/* No header. The partner is the first thing on the page; the Tribe
             wordmark is in the footer below, where it reads as the host. */}
         <PartnerHero config={config} />
 
         <div className="mb-6 text-center">
-          <h1 className="text-3xl font-extrabold leading-tight text-white">
+          <h1 className="text-3xl font-extrabold leading-tight text-tribe-dark">
             {config.headline ?? 'Tu primera clase gratis'}
           </h1>
-          {config.sub ? <p className="mt-2 text-base text-white/70">{config.sub}</p> : null}
-          <p className="mt-4 text-sm text-white/60">
+          {config.sub ? <p className="mt-2 text-base text-stone-600">{config.sub}</p> : null}
+          <p className="mt-4 text-sm text-stone-500">
             Deja tus datos y {config.partnerName} te escribe para agendar tu clase. Sin costo.
           </p>
         </div>
@@ -288,7 +297,7 @@ export default async function PasePage({ params, searchParams }: PageProps) {
 
         {/* Tribe as the host, not the headline. Small, last, and below the
             form so it never competes with the partner above it. */}
-        <footer className="mt-8 flex items-center justify-center gap-2 text-white/50">
+        <footer className="mt-8 flex items-center justify-center gap-2 text-stone-500">
           <span className="text-sm">en</span>
           <Wordmark size="credit" />
         </footer>

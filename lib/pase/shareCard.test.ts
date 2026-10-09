@@ -41,12 +41,33 @@ describe('passShareCard', () => {
     expect(card.twitter?.title).toBe(card.openGraph?.title);
   });
 
-  it("puts the partner's logo and name on the image", () => {
+  // T-GROW3b: the OFFER is the star, not the partner's name -- the logo beside
+  // it already says who this is. This asserts the EMPHASIS, which is the thing
+  // that changed: the headline is what gets the display size, and the partner
+  // name must NOT be competing for it. The previous version of this test
+  // asserted title === partnerName, which pinned the old emphasis as the
+  // contract and would have had to be deleted either way.
+  it('makes the OFFER the headline and carries the logo beside it', () => {
     const params = imageParams(passShareCard(bullbox));
-    expect(params.get('type')).toBe('gym');
-    expect(params.get('title')).toBe('CrossFit BullBox');
+    expect(params.get('type')).toBe('pass');
+    expect(params.get('title')).toBe('Tu primera clase gratis');
+    expect(params.get('title')).not.toBe(bullbox.partnerName);
     expect(params.get('avatar')).toBe(bullbox.logoUrl);
-    expect(params.get('subtitle')).toBe('Tu primera clase gratis');
+  });
+
+  it('puts what the partner does, then where they are, under the offer', () => {
+    const params = imageParams(passShareCard({ ...bullbox, sub: 'CrossFit y HYROX', address: 'Ciudad del Río' }));
+    expect(params.get('subtitle')).toBe('CrossFit y HYROX');
+    expect(params.get('sub2')).toBe('Ciudad del Río');
+  });
+
+  // The partner name is still reachable -- it just moved off the image, where
+  // the logo carries it, and into the text metadata. Without this the test
+  // above could be satisfied by dropping the name entirely.
+  it('keeps the partner name in the text metadata even though it left the image', () => {
+    const card = passShareCard(bullbox);
+    expect(card.openGraph?.title).toContain('CrossFit BullBox');
+    expect(card.openGraph?.siteName).toBe('CrossFit BullBox');
   });
 
   it('declares BOTH openGraph and twitter, because Next merges metadata shallowly', () => {

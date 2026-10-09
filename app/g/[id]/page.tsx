@@ -53,8 +53,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   // Filed as GYM-03; it needs a Next-side answer, not another guess.
   if (!partner) {
     return {
-      title: 'Not Found | Tribe',
-      description: 'This page is not available on Tribe.',
+      title: 'Página no disponible | Tribe',
+      description: 'Esta página no está disponible en Tribe.',
     };
   }
 
@@ -77,6 +77,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     type: 'gym',
     title: partner.business_name,
     subtitle,
+    // The address is the second line on the split card (mock_B_split.png).
+    // Spanish needs no translation here -- it is a place name.
+    sub2: partner.address ?? '',
     // The view's COALESCE(logo_url, account avatar). Every live partner has
     // logo_url NULL, so without it this is the initials card.
     avatar: partner.logo_image_url || '',
@@ -97,7 +100,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     description,
     alternates: { canonical },
     openGraph: {
-      title: `${partner.business_name} on Tribe`,
+      title: `${partner.business_name} en Tribe`,
       description,
       type: 'website',
       siteName: 'Tribe - Never Train Alone',
@@ -106,7 +109,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     },
     twitter: {
       card: 'summary_large_image',
-      title: `${partner.business_name} on Tribe`,
+      title: `${partner.business_name} en Tribe`,
       description,
       images: [ogImageUrl],
     },
