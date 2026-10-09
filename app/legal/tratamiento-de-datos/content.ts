@@ -34,15 +34,15 @@
  * dropped sentence now fails a test rather than nothing.
  *
  * THE EFFECTIVE DATE IS THE MERGE DATE, NOT THE APPROVAL DATE (Al, 2026-10-09).
- * It stays a placeholder on the branch and content.v1_1.test.ts FAILS while it
- * does, so the policy cannot ship announcing "pending" as its effective date.
- * Set both strings below on the day the PR merges.
+ * It was a placeholder on the branch, and content.v1_1.test.ts failed while it
+ * was, so the policy could not ship announcing "pending" as its effective date.
+ * Set to 2026-10-09, the day Al merges PR #199.
  */
 
-/** Set at merge. See the header: a test fails while either says PENDIENTE. */
+/** The merge date of PR #199 (Al, 2026-10-09). A test fails if either says PENDIENTE. */
 export const EFFECTIVE_DATE = {
-  es: '[PENDIENTE: fecha de merge]',
-  en: '[PENDIENTE: merge date]',
+  es: '9 de octubre de 2026',
+  en: 'October 9, 2026',
 } as const;
 
 /** A paragraph, or a bullet list. The source interleaves them inside a section. */
