@@ -1035,7 +1035,13 @@ where a.attrelid = 'public.users'::regclass
     -- 115: precise home coordinates
     'location_lat', 'location_lng',
     -- 118: email
-    'email'
+    'email',
+    -- 214: how the account arrived and who invited it. Every signed-in user can
+    -- read every granted users column, so a grant would publish this to all of
+    -- them. Admin reads it with the service role.
+    'signup_src', 'signup_code', 'signup_ref', 'signup_utm_source',
+    'signup_utm_medium', 'signup_utm_campaign', 'signup_utm_content',
+    'signup_landing_path', 'signup_first_touch', 'signup_attributed_at'
   )
   and not has_column_privilege('authenticated', a.attrelid, a.attnum, 'SELECT')
 union all
@@ -1058,7 +1064,10 @@ from (values
     ('is_admin'), ('payout_method'), ('stripe_account_id'), ('wompi_merchant_id'),
     ('total_earnings_cents'),
     ('location_lat'), ('location_lng'),
-    ('email')
+    ('email'),
+    ('signup_src'), ('signup_code'), ('signup_ref'), ('signup_utm_source'),
+    ('signup_utm_medium'), ('signup_utm_campaign'), ('signup_utm_content'),
+    ('signup_landing_path'), ('signup_first_touch'), ('signup_attributed_at')
 ) as r(column_name)
 where exists (
         select 1 from information_schema.columns c
@@ -2810,6 +2819,40 @@ select '213_t_grow1_attribution_events',
                               or has_function_privilege('authenticated', oid, 'EXECUTE')
                               or not has_function_privilege('service_role', oid, 'EXECUTE')))
            then 'MISSING -- admin_attribution_summary became a definer, or a client role can execute it, or service_role cannot'
+         else 'applied'
+       end
+
+union all
+
+-- T-GROW1 part C. The ten signup columns exist, no client role can read them,
+-- the write-once guard trigger is attached and enabled, and the service role
+-- can still write (otherwise /api/attr/signup fails on every new account).
+select '214_t_grow1_signup_attribution',
+       case
+         when (select count(*) from pg_attribute
+                where attrelid = 'public.users'::regclass and attnum > 0 and not attisdropped
+                  and attname in ('signup_src', 'signup_code', 'signup_ref', 'signup_utm_source',
+                                  'signup_utm_medium', 'signup_utm_campaign', 'signup_utm_content',
+                                  'signup_landing_path', 'signup_first_touch', 'signup_attributed_at')) <> 10
+           then 'MISSING -- not all ten users.signup_* columns exist'
+         when exists (select 1 from pg_attribute a
+                       where a.attrelid = 'public.users'::regclass and a.attnum > 0 and not a.attisdropped
+                         and a.attname like 'signup\_%'
+                         and (has_column_privilege('anon', a.attrelid, a.attnum, 'SELECT')
+                              or has_column_privilege('authenticated', a.attrelid, a.attnum, 'SELECT')))
+           then 'MISSING -- a client role can read a signup_* column; how each person arrived would be public'
+         when not exists (select 1 from pg_trigger t
+                           where t.tgrelid = 'public.users'::regclass
+                             and t.tgname = 'users_signup_attribution_guard'
+                             and not t.tgisinternal and t.tgenabled = 'O'
+                             and (t.tgtype & 2) <> 0 and (t.tgtype & 4) <> 0 and (t.tgtype & 16) <> 0)
+           then 'MISSING -- users_signup_attribution_guard is absent, disabled, or not BEFORE INSERT OR UPDATE; authenticated holds table-level UPDATE on users, so the columns are client-writable without it'
+         when not exists (select 1 from pg_constraint
+                           where conrelid = 'public.users'::regclass and conname = 'users_signup_attr_stamped'
+                             and contype = 'c' and convalidated)
+           then 'MISSING -- users_signup_attr_stamped is gone; attribution could exist with no stamp and bypass write-once'
+         when not has_column_privilege('service_role', 'public.users', 'signup_attributed_at', 'UPDATE')
+           then 'MISSING -- service_role cannot write users.signup_attributed_at; /api/attr/signup fails'
          else 'applied'
        end
 

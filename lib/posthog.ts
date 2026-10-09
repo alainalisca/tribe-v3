@@ -77,6 +77,11 @@ export function getPostHog(): PostHog | null {
  * campaign dimensions a measurement purpose already covers and nothing that
  * makes the profile richer than that.
  *
+ * 2026-10-09: policy v1.1 names PostHog as a processor and covers recording
+ * arrival on an account, so both reasons above are now satisfied. The payload
+ * is deliberately NOT widened by that: v1.1 makes these properties permitted,
+ * and nothing here needed more than it already sends.
+ *
  * ═══════════════════════════════════════════════════════════════════════════
  * ONE THING TO VERIFY IN THE DASHBOARD, STATED RATHER THAN ASSUMED
  * ═══════════════════════════════════════════════════════════════════════════

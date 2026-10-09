@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/client';
 import { log, logError } from '@/lib/logger';
 import { upsertUser, fetchUserProfileMaybe } from '@/lib/dal';
 import { upgradeProviderAvatarUrl } from '@/lib/providerAvatar';
+import { sendSignupAttribution } from '@/lib/signupAttributionClient';
 
 interface UpsertResult {
   isNewUser: boolean;
@@ -57,6 +58,11 @@ export async function upsertUserProfile(user: User, displayName?: string): Promi
     if (!upsertResult.success) {
       logError(new Error(upsertResult.error), { action: 'upsertUserProfile', userId: user.id });
     }
+
+    // T-GROW1 part C. On every completed sign-in, NOT gated on isNewUser below:
+    // that test is a 60 second heuristic an OTP typed a minute late fails, and
+    // the server decides whether the account is new enough to credit.
+    sendSignupAttribution(user.id);
 
     // Detect new user: no existing profile or account created within last 60s
     isNewUser = !existingProfile || Date.now() - new Date(user.created_at).getTime() < 60_000;
