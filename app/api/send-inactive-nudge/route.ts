@@ -12,8 +12,7 @@ import { shouldSendNotification } from '@/lib/dal/notificationPreferences';
 import { isEmailSuppressed, unsubUrlFor, unsubHeaders } from '@/lib/dal/emailUnsubscribe';
 import { bogotaDateOffset } from '@/lib/time/bogotaDate';
 import { isValidCronAuth } from '@/lib/auth/cron';
-
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://tribe-v3.vercel.app';
+import { SITE_URL } from '@/lib/http/siteUrl';
 
 /**
  * @description Sends re-engagement emails to users who have been inactive for 14+ days, encouraging them to return and browse sessions.

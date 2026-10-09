@@ -2,8 +2,9 @@ import type { Metadata } from 'next';
 import { createClient } from '@/lib/supabase/server';
 import { translateSport } from '@/lib/sportTranslationData';
 import InstructorShareClient from './InstructorShareClient';
+import { SITE_URL } from '@/lib/http/siteUrl';
 
-const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://tribe-v3.vercel.app';
+const BASE_URL = SITE_URL;
 
 interface PageProps {
   params: Promise<{ id: string }>;

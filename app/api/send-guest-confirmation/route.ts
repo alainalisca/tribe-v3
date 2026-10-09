@@ -4,6 +4,7 @@ import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { logError } from '@/lib/logger';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { fetchGuestParticipant } from '@/lib/dal/participants';
+import { SITE_URL } from '@/lib/http/siteUrl';
 
 /** Minimal HTML-entity escape for values interpolated into the email body. */
 function esc(s: string): string {
@@ -12,8 +13,6 @@ function esc(s: string): string {
     (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] as string
   );
 }
-
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://tribe-v3.vercel.app';
 
 interface GuestConfirmationBody {
   email: string;

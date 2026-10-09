@@ -28,6 +28,7 @@ import { isValidCronAuth } from '@/lib/auth/cron';
 import { log, logError } from '@/lib/logger';
 import { runIntelligenceForGym, type IntelligenceRunSummary } from '@/lib/ai/run-intelligence';
 import { maybeSendDigestForGym } from '@/lib/ai/digest-sender';
+import { SITE_URL } from '@/lib/http/siteUrl';
 
 const MAX_GYMS_PER_RUN = 50;
 
@@ -38,7 +39,7 @@ const MAX_GYMS_PER_RUN = 50;
  * the email is still readable, the deep-links just point at staging.
  */
 function siteUrl(): string {
-  return process.env.NEXT_PUBLIC_SITE_URL ?? 'https://tribe-v3.vercel.app';
+  return SITE_URL;
 }
 
 export async function GET(request: Request): Promise<NextResponse> {

@@ -33,6 +33,7 @@ import { log, logError } from '@/lib/logger';
 import { escapeLikePattern } from '@/lib/emailMatch';
 import { sendCoachAddedYouWelcome } from './coachAddedYouWelcome';
 import { sendSignUpInvite } from './signUpInvite';
+import { SITE_URL } from '@/lib/http/siteUrl';
 
 export interface NotifyParams {
   /** The newly-created client row. */
@@ -56,7 +57,7 @@ function buildServiceClient(): SupabaseClient | null {
 }
 
 function siteUrl(): string {
-  return process.env.NEXT_PUBLIC_SITE_URL ?? 'https://tribe-v3.vercel.app';
+  return SITE_URL;
 }
 
 /**

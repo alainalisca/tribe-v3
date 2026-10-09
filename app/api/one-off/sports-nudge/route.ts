@@ -7,6 +7,7 @@ import { shouldSendNotification } from '@/lib/dal/notificationPreferences';
 import { claimOneOffSend, recordOneOffOutcome, releaseOneOffClaim, type OneOffChannel } from '@/lib/dal/oneOffSends';
 import { isEmailSuppressed, unsubUrlFor, unsubHeaders } from '@/lib/dal/emailUnsubscribe';
 import { bilingual, type BilingualCopy } from '@/lib/oneOff/sportsNudgeCopy';
+import { SITE_URL } from '@/lib/http/siteUrl';
 
 /**
  * @description One-off nudge to athletes with no sports: push to those with a token, email to all of them.
@@ -88,7 +89,6 @@ import { bilingual, type BilingualCopy } from '@/lib/oneOff/sportsNudgeCopy';
  */
 const CAMPAIGN = 'sports_nudge_2026_09';
 const NOTIFICATION_TYPE = 'comeback'; // training_nudges category; push default_on
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://tribe-v3.vercel.app';
 // The verified Resend sender, identical to every other email this app sends.
 // tribeapp.co is not a domain Resend holds for this account, so a plausible
 // address on it would have had every one of these 34 emails rejected at the

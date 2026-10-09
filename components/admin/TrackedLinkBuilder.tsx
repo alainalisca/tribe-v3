@@ -46,6 +46,7 @@ import { useTranslations } from '@/lib/i18n/useTranslations';
 import { showError } from '@/lib/toast';
 import { logError } from '@/lib/logger';
 import { buildTrackedLink, judgeCode, type LinkDestination } from '@/lib/growth/trackedLink';
+import { SITE_URL } from '@/lib/http/siteUrl';
 
 const FIELD =
   'w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm text-tribe-dark placeholder:text-stone-400 dark:border-tribe-mid dark:bg-tribe-surface dark:text-white dark:placeholder:text-gray-500';
@@ -71,15 +72,32 @@ export default function TrackedLinkBuilder() {
   const copiedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   /**
-   * window.location.origin, read at render rather than from an env var.
+   * The CANONICAL origin, not `window.location.origin`.
    *
-   * NEXT_PUBLIC_SITE_URL is localhost in this repo's .env and its production
-   * value was flagged as unconfirmed in the T-GROW0 recon. A link built from a
-   * wrong origin and printed on a poster is unrecoverable, whereas the origin the
-   * admin is currently looking at is correct by construction -- if they are on
-   * the preview they get a preview link, which is what they want while testing.
+   * ── WHY THIS CHANGED (T-DOMAIN1, 2026-10-09) ──
+   *
+   * It used to read the browser's origin, and the reasoning written here was
+   * sound at the time: "NEXT_PUBLIC_SITE_URL is localhost in this repo's .env
+   * and its production value was flagged as UNCONFIRMED in the T-GROW0 recon."
+   * Both halves of that have since been settled — the production value was
+   * measured against the Vercel project and is now `https://tribelatam.com` in
+   * Production and Preview — so the premise the old behaviour rested on is
+   * gone.
+   *
+   * What stays true is the sentence that mattered: a link printed on a poster
+   * is unrecoverable. The old code drew the wrong conclusion from it. An admin
+   * building a link while looking at a Vercel PREVIEW got a preview origin,
+   * and a preview URL stops resolving the moment that deployment is pruned —
+   * so the construction chosen to avoid an unrecoverable wrong link was itself
+   * the most likely way to print one.
+   *
+   * SITE_URL is also what `publicOrigin()` returns first, so the link this
+   * builds and the origin /api/admin/qr validates against agree by
+   * construction rather than by coincidence — that route rejects a foreign
+   * origin outright, and two independent notions of "our origin" would have
+   * made the QR button fail for reasons nobody could see from the UI.
    */
-  const origin = typeof window === 'undefined' ? '' : window.location.origin;
+  const origin = SITE_URL;
 
   const link = useMemo(
     () => buildTrackedLink(origin, { destination, target, src, code, utmCampaign: campaign }),

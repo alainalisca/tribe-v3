@@ -25,11 +25,12 @@ import { NextResponse } from 'next/server';
 import { isValidCronAuth } from '@/lib/auth/cron';
 import { log, logError } from '@/lib/logger';
 import { maybeSendWeeklySummary } from '@/lib/email/weeklySummarySender';
+import { SITE_URL } from '@/lib/http/siteUrl';
 
 const MAX_GYMS_PER_RUN = 100;
 
 function siteUrl(): string {
-  return process.env.NEXT_PUBLIC_SITE_URL ?? 'https://tribe-v3.vercel.app';
+  return SITE_URL;
 }
 
 export async function GET(request: Request): Promise<NextResponse> {

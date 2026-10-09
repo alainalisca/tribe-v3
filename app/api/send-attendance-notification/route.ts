@@ -8,8 +8,7 @@ import { fetchSessionFields, fetchUserProfileMaybe, checkExistingParticipation }
 import { formatSessionLocation } from '@/lib/sessionLocation';
 import { shouldSendNotification } from '@/lib/dal/notificationPreferences';
 import { isEmailSuppressed, unsubUrlFor, unsubHeaders } from '@/lib/dal/emailUnsubscribe';
-
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://tribe-v3.vercel.app';
+import { SITE_URL } from '@/lib/http/siteUrl';
 
 /**
  * @description Sends a post-session attendance notification email prompting the user to upload photos from their training session.
