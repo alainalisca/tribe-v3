@@ -17,18 +17,31 @@ const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://tribe-v3.vercel.app
  * replaces the root's blocks entirely. Omitting either one lets that platform
  * fall back to the Tribe card again.
  *
- * The image is the SAME /api/og gym card /g/[id] uses, so a partner's pass
- * and their public page preview identically and there is one card template to
- * maintain. Title = partner name, subtitle = the pass headline, square = logo.
+ * The image is the /api/og SPLIT card — the same construction /g/[id] uses,
+ * with one deliberate difference in what is the star.
+ *
+ * T-GROW3b: THE PASS LEADS WITH THE OFFER, THE GYM PAGE LEADS WITH THE NAME.
+ * Until 2026-10-08 this sent type=gym with title = partner name and the
+ * headline demoted to a subtitle, so the biggest words on a pass preview were
+ * the gym's name — which the logo beside them already says — and the reason to
+ * tap ("Tu primera clase gratis") was set small underneath. The split card
+ * carries the logo, so the name is never missing; the headline takes the
+ * display size and gets the accent rule under it. type=pass is what selects
+ * that emphasis. See _og_review/mock_B_split.png.
+ *
  * robots noindex stays: link-preview scrapers ignore it, search engines obey.
  */
 export function passShareCard(config: PassConfig): Pick<Metadata, 'openGraph' | 'twitter'> {
   const headline = config.headline ?? 'Tu primera clase gratis';
   const description = passShareDescription(config);
   const ogParams = new URLSearchParams({
-    type: 'gym',
-    title: config.partnerName,
-    subtitle: headline,
+    type: 'pass',
+    title: headline,
+    // What the partner does, then where they are — the two supporting lines in
+    // the mock. `sub` is the partner's own sentence, so it is trimmed to a
+    // length that still sets on one or two lines at card size.
+    subtitle: (config.sub ?? '').slice(0, 60),
+    sub2: config.address ?? '',
     avatar: config.logoUrl ?? '',
   });
   // Trailing slashes match next.config trailingSlash:true so a scraper that

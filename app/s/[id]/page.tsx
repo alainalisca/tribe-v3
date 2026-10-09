@@ -1,6 +1,15 @@
 import type { Metadata } from 'next';
 import { createClient } from '@/lib/supabase/server';
 import { detectNeighborhood, getNearestNeighborhood } from '@/lib/city-config';
+import {
+  cardDateTimeLabel,
+  cardHeadline,
+  cardPriceLabel,
+  cardSpotsLabel,
+  cardVenueLabel,
+  sessionCardDescription,
+  sessionCardTitle,
+} from '@/lib/share/cardCopy';
 import SessionShareClient, { type InitialSession } from './SessionShareClient';
 
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://tribe-v3.vercel.app';
@@ -27,7 +36,7 @@ async function fetchSession(id: string) {
   const { data, error } = await supabase
     .from('sessions_public')
     .select(
-      'id, title, sport, date, start_time, location, location_lat, location_lng, price_cents, currency, max_participants, photos, creator_id, creator_name, creator_avatar_url, creator_average_rating'
+      'id, title, sport, date, start_time, location, location_lat, location_lng, price_cents, currency, max_participants, current_participants, photos, creator_id, creator_name, creator_avatar_url, creator_average_rating'
     )
     .eq('id', id)
     .maybeSingle();
@@ -59,8 +68,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   if (!session) {
     return {
-      title: 'Session Not Found | Tribe',
-      description: 'This session is no longer available on Tribe.',
+      title: 'Entrenamiento no disponible | Tribe',
+      description: 'Este entrenamiento ya no está disponible en Tribe.',
     };
   }
 
@@ -75,48 +84,57 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     neighborhoodName = hood?.name ?? null;
   }
 
-  // Price display
-  const isFree = !session.price_cents;
-  const priceDisplay = isFree
-    ? 'Free'
-    : `$${((session.price_cents ?? 0) / 100).toLocaleString()} ${session.currency || 'COP'}`;
+  const row = session as unknown as {
+    photos?: string[] | null;
+    location?: string | null;
+    start_time?: string | null;
+    max_participants?: number | null;
+    current_participants?: number | null;
+  };
 
-  // Date display
-  const dateDisplay = new Date(session.date + 'T12:00:00').toLocaleDateString('en-US', {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
+  // The host's first session photo becomes the share-card hero when present;
+  // the OG route validates it loads and falls back to the coach's avatar.
+  const sessionImage = Array.isArray(row.photos) && row.photos[0] ? row.photos[0] : '';
+
+  // ONE headline, resolved once. This is the HYROX HYROX fix: the card used to
+  // be handed `title` AND `sport` as separate params and drew both, so a
+  // session whose title IS its sport printed the word twice. cardHeadline owns
+  // that choice now and `sport` is no longer sent at all.
+  const displayTitle = cardHeadline({ title: session.title, sport: session.sport });
+
+  // Spanish throughout: a scraper sends no session and no language we act on,
+  // and this app's market is Colombia. Same reasoning as /g/[id]'s subtitle.
+  const priceDisplay = cardPriceLabel(session.price_cents, session.currency);
+  const dateDisplay = cardDateTimeLabel(session.date, row.start_time);
+  const venueDisplay = cardVenueLabel(row.location, neighborhoodName);
+  const spotsDisplay = cardSpotsLabel(row.max_participants, row.current_participants);
+
+  const description = sessionCardDescription({
+    title: session.title,
+    sport: session.sport,
+    date: session.date,
+    priceCents: session.price_cents,
+    currency: session.currency,
+    instructorName: creator?.name,
+    venue: row.location,
+    neighborhood: neighborhoodName,
+  });
+  const ogTitle = sessionCardTitle({
+    title: session.title,
+    sport: session.sport,
+    instructorName: creator?.name,
   });
 
-  const description = [
-    session.sport,
-    creator?.name ? `with ${creator.name}` : null,
-    neighborhoodName ? `in ${neighborhoodName}` : null,
-    dateDisplay,
-    priceDisplay,
-  ]
-    .filter(Boolean)
-    .join(' · ');
-
-  // The host's first session photo becomes the share-card background when
-  // present; the OG route validates it loads and falls back gracefully.
-  const photos = (session as { photos?: string[] | null }).photos;
-  const sessionImage = Array.isArray(photos) && photos[0] ? photos[0] : '';
-
-  // title is nullable in the schema; fall back to sport so OG/share cards
-  // never render the literal string "null".
-  const displayTitle = session.title || session.sport;
-
-  // OG image URL
+  // OG image URL. No `sport` param: see the headline note above.
   const ogParams = new URLSearchParams({
     type: 'session',
     title: displayTitle,
-    sport: session.sport || '',
     date: dateDisplay,
     price: priceDisplay,
+    spots: spotsDisplay,
+    venue: venueDisplay,
     instructor: creator?.name || '',
     avatar: creator?.avatar_url || '',
-    neighborhood: neighborhoodName || '',
     image: sessionImage,
   });
 
@@ -125,19 +143,19 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const ogImageUrl = `${BASE_URL}/api/og/?${ogParams.toString()}`;
 
   return {
-    title: `${displayTitle} | Tribe`,
+    title: `${ogTitle} | Tribe`,
     description,
     openGraph: {
-      title: displayTitle,
+      title: ogTitle,
       description,
       type: 'website',
       siteName: 'Tribe - Never Train Alone',
       url: `${BASE_URL}/s/${id}/`,
-      images: [{ url: ogImageUrl, width: 1200, height: 630, alt: displayTitle }],
+      images: [{ url: ogImageUrl, width: 1200, height: 630, alt: ogTitle }],
     },
     twitter: {
       card: 'summary_large_image',
-      title: displayTitle,
+      title: ogTitle,
       description,
       images: [ogImageUrl],
     },

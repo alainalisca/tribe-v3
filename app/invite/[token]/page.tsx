@@ -10,7 +10,7 @@
 import type { Metadata } from 'next';
 import { createClient } from '@/lib/supabase/server';
 import { detectNeighborhood, getNearestNeighborhood } from '@/lib/city-config';
-import { formatTime12Hour } from '@/lib/utils';
+import { cardDateTimeLabel, cardHeadline } from '@/lib/share/cardCopy';
 import InviteClient, { type InitialInvite } from './InviteClient';
 
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://tribe-v3.vercel.app';
@@ -101,24 +101,20 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     neighborhoodName = hood?.name ?? null;
   }
 
-  const dateDisplay = new Date(session.date + 'T12:00:00').toLocaleDateString('en-US', {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
-  });
-  const timeDisplay = session.start_time ? formatTime12Hour(session.start_time) : '';
-  const dateTimeDisplay = timeDisplay ? `${dateDisplay} · ${timeDisplay}` : dateDisplay;
+  // Spanish, like every other share card: a scraper sends no session and no
+  // language we act on, and the market is Colombia.
+  const dateTimeDisplay = cardDateTimeLabel(session.date, session.start_time);
 
   // title is nullable; fall back to sport so cards never render "null".
-  const displayTitle = session.title || session.sport;
+  const displayTitle = cardHeadline({ title: session.title, sport: session.sport });
   const inviterName = invite.inviter?.name || null;
 
   // Lead with the INVITER (created_by), not the instructor — the personal
-  // "X invited you" is the hook on this route.
+  // "X te invitó" is the hook on this route.
   const description = [
-    inviterName ? `${inviterName} invited you` : 'You are invited',
-    session.sport,
-    neighborhoodName ? `in ${neighborhoodName}` : null,
+    inviterName ? `${inviterName} te invitó a entrenar` : 'Te invitaron a entrenar',
+    displayTitle,
+    neighborhoodName ? `en ${neighborhoodName}` : null,
     dateTimeDisplay,
   ]
     .filter(Boolean)
@@ -131,10 +127,13 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const ogImageParams = new URLSearchParams({
     type: 'session',
     title: displayTitle,
-    sport: session.sport || '',
     date: dateTimeDisplay,
     instructor: inviterName || '',
     avatar: invite.inviter?.avatar_url || '',
+    // `venue` is deliberately NOT sent on this route: session.location is the
+    // precise street address and must never reach a query string (scraper
+    // caches and edge logs keep OG image URLs). The neighborhood — already
+    // rounded to ~110 m by the RPC — is the only location this card gets.
     neighborhood: neighborhoodName || '',
     image: sessionImage,
   });

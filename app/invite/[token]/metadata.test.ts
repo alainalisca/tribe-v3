@@ -77,7 +77,14 @@ describe('/invite/[token] generateMetadata', () => {
     const md = await metadataFor(TOKEN);
 
     expect(md.title).toBe('Running | Tribe'); // title null → sport fallback
-    expect(md.description?.startsWith('Ana invited you')).toBe(true);
+    // Spanish, like every other share card: a scraper sends no language we act
+    // on and the market is Colombia. Asserted as "names the inviter and does
+    // NOT fall back to the English verb" rather than pinning the exact
+    // sentence -- a literal from user-facing copy makes the test an assertion
+    // that the copy is correct, which is how `salio` ended up with two tests
+    // defending a misspelling.
+    expect(md.description).toContain('Ana');
+    expect(md.description).not.toContain('invited');
     expect(md.description).toContain('Running');
 
     const ogImage = (md.openGraph?.images as Array<{ url: string }>)[0].url;
