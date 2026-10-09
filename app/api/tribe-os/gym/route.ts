@@ -22,7 +22,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ZodError } from 'zod';
 import { logError } from '@/lib/logger';
 import { requireTribeOSPremium } from '@/lib/auth/premium';
-import { getGym, getGymForUser, updateGym } from '@/lib/dal/gyms';
+import { getGym, getGymForUser } from '@/lib/dal/gyms';
+import type { GymRow } from '@/lib/dal/gyms';
 import { writeAuditEntry } from '@/lib/dal/auditLog';
 import { UpdateGymInputSchema } from '@/lib/validations/gym';
 
@@ -144,7 +145,7 @@ export async function PATCH(request: NextRequest): Promise<NextResponse> {
       throw error;
     }
 
-    // Resolve gym + verify the caller is the owner.
+    // Resolve gym for the pre-update audit snapshot.
     const resolveRes = gymId ? await getGym(supabase, gymId) : await getGymForUser(supabase, userId);
     if (!resolveRes.success) {
       logError(new Error(resolveRes.error ?? 'unknown'), { action: 'gym.patch.resolve', userId, gymId });
@@ -154,35 +155,40 @@ export async function PATCH(request: NextRequest): Promise<NextResponse> {
     if (!gym) {
       return NextResponse.json({ success: false, error: 'no_gym' }, { status: 404 });
     }
-    if (gym.owner_user_id !== userId) {
-      return NextResponse.json({ success: false, error: 'owner_only' }, { status: 403 });
-    }
 
-    // Snapshot the pre-update field values BEFORE the mutation so the
-    // audit diff captures the real before-state, not whatever DB
-    // values existed after the round trip (which would be identical
-    // to the after-state).
     const diff = buildGymUpdateDiff(gym, parsed);
 
-    const updateRes = await updateGym(supabase, gym.id, {
-      name: parsed.name,
-      timezone: parsed.timezone,
-      defaultCurrency: parsed.default_currency,
-      intelligenceEmailEnabled: parsed.intelligence_email_enabled,
+    const { data: rpcRows, error: rpcError } = await supabase.rpc('update_gym_settings', {
+      p_gym_id: gym.id,
+      p_name: parsed.name ?? null,
+      p_timezone: parsed.timezone ?? null,
+      p_default_currency: parsed.default_currency ?? null,
+      p_intelligence_email_enabled: parsed.intelligence_email_enabled ?? null,
     });
-    if (!updateRes.success) {
-      logError(new Error(updateRes.error ?? 'unknown'), {
-        action: 'gym.patch.update',
-        userId,
-        gymId: gym.id,
-      });
-      const status = updateRes.error === 'no_updates' ? 400 : 500;
-      return NextResponse.json({ success: false, error: updateRes.error ?? 'update_failed' }, { status });
+
+    if (rpcError) {
+      const msg = rpcError.message ?? '';
+      if (msg.includes('owner_only')) {
+        return NextResponse.json({ success: false, error: 'owner_only' }, { status: 403 });
+      }
+      if (msg.includes('gym_not_found')) {
+        return NextResponse.json({ success: false, error: 'gym_not_found' }, { status: 404 });
+      }
+      if (msg.includes('invalid_name')) {
+        return NextResponse.json({ success: false, error: 'invalid_name' }, { status: 400 });
+      }
+      if (msg.includes('invalid_currency')) {
+        return NextResponse.json({ success: false, error: 'invalid_currency: must be USD or COP' }, { status: 400 });
+      }
+      if (msg.includes('invalid_timezone')) {
+        return NextResponse.json({ success: false, error: msg }, { status: 400 });
+      }
+      logError(rpcError, { action: 'gym.patch.rpc', userId, gymId: gym.id });
+      return NextResponse.json({ success: false, error: 'update_failed' }, { status: 500 });
     }
 
-    // Forensic record — only writes when something actually changed.
-    // A no-op PATCH (caller sent the same values that were already
-    // stored) skips the audit so we don't pollute the log with noise.
+    const updated = (Array.isArray(rpcRows) ? rpcRows[0] : rpcRows) as GymRow | undefined;
+
     if (diff) {
       await writeAuditEntry(supabase, {
         gymId: gym.id,
@@ -194,7 +200,7 @@ export async function PATCH(request: NextRequest): Promise<NextResponse> {
       });
     }
 
-    return NextResponse.json({ success: true, data: updateRes.data });
+    return NextResponse.json({ success: true, data: updated ?? gym });
   } catch (error) {
     logError(error, { route: 'PATCH /api/tribe-os/gym' });
     return NextResponse.json({ success: false, error: 'internal_error' }, { status: 500 });
