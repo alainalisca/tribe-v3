@@ -301,7 +301,7 @@ export default function PaseForm({ slug, partnerName, options, consentText, cons
 
   if (claimed) {
     return (
-      <section className="rounded-2xl bg-white p-6" aria-live="polite">
+      <section className="rounded-2xl border border-stone-200 bg-white p-6" aria-live="polite">
         <p className="text-sm font-medium text-stone-600">Tu pase</p>
         {claimed.qrSvg ? <VoucherQr svg={claimed.qrSvg} /> : null}
         <p className="mt-1 text-4xl font-extrabold tracking-widest text-tribe-dark">{claimed.passCode}</p>
@@ -338,7 +338,7 @@ export default function PaseForm({ slug, partnerName, options, consentText, cons
   }
 
   return (
-    <form onSubmit={handleSubmit} noValidate className="rounded-2xl bg-white p-6">
+    <form onSubmit={handleSubmit} noValidate className="rounded-2xl border border-stone-200 bg-white p-6">
       {banner ? (
         <div role="alert" className="mb-4 rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-800">
           {banner}
