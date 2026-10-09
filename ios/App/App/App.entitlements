@@ -20,6 +20,7 @@
 	-->
 	<key>com.apple.developer.associated-domains</key>
 	<array>
+		<string>applinks:tribelatam.com</string>
 		<string>applinks:tribe-v3.vercel.app</string>
 	</array>
 </dict>

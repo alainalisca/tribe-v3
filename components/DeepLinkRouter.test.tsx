@@ -26,7 +26,7 @@ vi.mock('@capacitor/app', () => ({
   },
 }));
 
-import DeepLinkRouter from './DeepLinkRouter';
+import DeepLinkRouter, { deepLinkPath } from './DeepLinkRouter';
 
 const ORIGIN = 'https://tribe-v3.vercel.app';
 const fire = (url: string) => listeners.forEach((l) => l({ url }));
@@ -109,5 +109,43 @@ describe('an incoming link routes to the path it names', () => {
     await waitFor(() => expect(listeners).toHaveLength(1));
     unmount();
     await waitFor(() => expect(remove).toHaveBeenCalled());
+  });
+});
+
+describe('tribelatam.com links (T-DOMAIN1) route inside the app', () => {
+  // The app shell runs on tribe-v3.vercel.app, but every link shared since
+  // T-DOMAIN1 says tribelatam.com. This is the exact case Ana hit: the app
+  // opened and landed on the feed.
+  it('the HYROX share link opens the session, not the feed', async () => {
+    render(<DeepLinkRouter />);
+    await waitFor(() => expect(listeners).toHaveLength(1));
+    fire('https://tribelatam.com/s/bcb8df71-b59f-4a69-9809-09f479b6acf3/');
+    expect(push).toHaveBeenCalledWith('/s/bcb8df71-b59f-4a69-9809-09f479b6acf3/');
+  });
+
+  it('www.tribelatam.com routes too', () => {
+    expect(deepLinkPath('https://www.tribelatam.com/s/x1/', ORIGIN)).toBe('/s/x1/');
+  });
+
+  it('tracked-link attribution survives (src and code are not dropped)', () => {
+    expect(deepLinkPath('https://tribelatam.com/pase/bullbox/?src=instagram&code=IG-DM-AL-01', ORIGIN)).toBe(
+      '/pase/bullbox/?src=instagram&code=IG-DM-AL-01',
+    );
+  });
+
+  it('old printed tribe-v3.vercel.app links still route', () => {
+    expect(deepLinkPath('https://tribe-v3.vercel.app/s/x1/', 'http://localhost')).toBe('/s/x1/');
+  });
+
+  it('look-alike and non-https hosts are refused', () => {
+    expect(deepLinkPath('https://tribelatam.com.evil.com/s/x1/', ORIGIN)).toBeNull();
+    expect(deepLinkPath('https://eviltribelatam.com/s/x1/', ORIGIN)).toBeNull();
+    expect(deepLinkPath('http://tribelatam.com/s/x1/', ORIGIN)).toBeNull();
+    expect(deepLinkPath('https://tribelatam.com:8443/s/x1/', ORIGIN)).toBeNull();
+    expect(deepLinkPath('tribe://s/x1', ORIGIN)).toBeNull();
+  });
+
+  it('the backslash smuggle is refused on the new host as well', () => {
+    expect(deepLinkPath('https://tribelatam.com/\\evil.com', ORIGIN)).toBeNull();
   });
 });

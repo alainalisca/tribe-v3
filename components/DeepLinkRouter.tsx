@@ -6,6 +6,39 @@ import { sanitizeReturnTo } from '@/lib/pendingReturnTo';
 import { logError } from '@/lib/logger';
 
 /**
+ * Every host a shared Tribe link can carry. The native shell loads
+ * tribe-v3.vercel.app (capacitor.config server.url), but links in the wild say
+ * tribelatam.com since T-DOMAIN1, and printed shirts and flyers still say
+ * tribe-v3.vercel.app. Comparing against window.location.origin alone silently
+ * dropped every tribelatam.com link: the OS opened the app (entitlement match)
+ * and then this router threw the path away, landing the athlete on the feed.
+ *
+ * Must stay in sync with the applinks: entries in App.entitlements and the
+ * intent-filter hosts in AndroidManifest.xml.
+ */
+export const DEEP_LINK_HOSTS = ['tribelatam.com', 'www.tribelatam.com', 'tribe-v3.vercel.app'] as const;
+
+/** The in-app path an incoming link should open, or null to do nothing. */
+export function deepLinkPath(url: string | null | undefined, currentOrigin: string): string | null {
+  if (!url) return null;
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return null; // not a URL we can reason about; ignore rather than guess
+  }
+  const known =
+    parsed.origin === currentOrigin ||
+    (parsed.protocol === 'https:' && (DEEP_LINK_HOSTS as readonly string[]).includes(parsed.hostname) && !parsed.port);
+  if (!known) return null;
+  const path = sanitizeReturnTo(parsed.pathname + parsed.search);
+  // '/' is a valid destination but means "the app opened normally",
+  // and pushing it would discard wherever the user already was.
+  if (!path || path === '/') return null;
+  return path;
+}
+
+/**
  * Routes an incoming universal link / App Link to the path it names.
  *
  * ═══════════════════════════════════════════════════════════════════════════
@@ -30,7 +63,7 @@ import { logError } from '@/lib/logger';
  * ═══════════════════════════════════════════════════════════════════════════
  *
  * An incoming URL is attacker-supplied: anything can send the app a link. The
- * origin is checked against the site, and the path goes through
+ * host is checked against DEEP_LINK_HOSTS (https only), and the path goes through
  * sanitizeReturnTo -- the same function the auth flow and the sports step use.
  * A second copy of that rule is the one that would miss "/\evil.com".
  *
@@ -51,21 +84,8 @@ export default function DeepLinkRouter() {
         const { App } = await import('@capacitor/app');
 
         const go = (url: string | null | undefined) => {
-          if (!url) return;
-          let parsed: URL;
-          try {
-            parsed = new URL(url);
-          } catch {
-            return; // not a URL we can reason about; ignore rather than guess
-          }
-          // Only links to our own site. A universal link cannot arrive from
-          // another origin, but getLaunchUrl also returns custom schemes.
-          if (parsed.origin !== window.location.origin) return;
-          const path = sanitizeReturnTo(parsed.pathname + parsed.search);
-          // '/' is a valid destination but means "the app opened normally",
-          // and pushing it would discard wherever the user already was.
-          if (!path || path === '/') return;
-          router.push(path);
+          const path = deepLinkPath(url, window.location.origin);
+          if (path) router.push(path);
         };
 
         const launch = await App.getLaunchUrl();
