@@ -67,11 +67,57 @@ const CACHE_CONTROL = 'public, no-transform, max-age=3600, s-maxage=31536000, st
 // binary asset from an edge route; the bundler inlines it, so there is no
 // network fetch at render time. The promises are created ONCE at module scope
 // and awaited per request, so an isolate decodes each font a single time.
-const fontMedium = fetch(new URL('./fonts/PlusJakartaSans-Medium.ttf', import.meta.url)).then((r) => r.arrayBuffer());
-const fontBold = fetch(new URL('./fonts/PlusJakartaSans-Bold.ttf', import.meta.url)).then((r) => r.arrayBuffer());
-const fontExtraBold = fetch(new URL('./fonts/PlusJakartaSans-ExtraBold.ttf', import.meta.url)).then((r) =>
-  r.arrayBuffer()
-);
+//
+// ⚠ THE `.catch` ON EACH PROMISE IS LOAD-BEARING AND MUST NOT BE HOISTED INTO
+// loadFonts. These promises are created when the MODULE IS IMPORTED, which is
+// earlier than any call to loadFonts and may be the only thing that ever
+// happens to them. A try/catch around the later `await` does not make a
+// promise handled at the moment it rejects — so when the first version of this
+// code rejected (outside a Next bundle `import.meta.url` is a file:// or
+// localhost URL that nothing serves), Node saw three UNHANDLED REJECTIONS.
+//
+// What that cost is the part worth remembering: CI reported
+// "333 files passed, 3053 tests passed, 0 failed, 3 errors" and exited 1. A
+// green suite and a red build, with nothing in the test output pointing here.
+// Three fonts, three errors was the only tell. In production the same shape is
+// worse than noisy — an unhandled rejection can take down the isolate rather
+// than degrading to the fallback face this code was written to degrade to.
+//
+// So each promise is made self-handling AT CREATION, and resolves to null
+// rather than rejecting. `loadFonts` then decides what a null means.
+function selfHandlingFetch(make: () => Promise<Response>): Promise<ArrayBuffer | null> {
+  try {
+    return make()
+      .then((r) => r.arrayBuffer())
+      .catch(() => null);
+  } catch {
+    // `new URL` itself can throw on a base this runtime will not accept, and a
+    // synchronous throw at module scope takes the whole route down with it.
+    return Promise.resolve(null);
+  }
+}
+
+// ⚠ THE PATH MUST BE A STRING LITERAL, RIGHT HERE, BESIDE `import.meta.url`.
+//
+// The first attempt at the rejection fix passed the path into the helper as a
+// PARAMETER — `loadFontAsset('./fonts/PlusJakartaSans-Bold.ttf')` calling
+// `new URL(path, import.meta.url)` inside. It typechecked, the entire suite
+// went green, the unhandled rejections were gone, and EVERY CARD RETURNED 500.
+//
+// The bundler detects this construct SYNTACTICALLY. With a variable argument
+// it cannot know which file is meant, so no asset is emitted, the URL points
+// at nothing, the fetch rejects, and the brand-new `.catch` swallows it into
+// `null` — leaving next/og with no fonts, which it does not tolerate (see
+// loadFonts). The error handling added that morning is what turned a loud
+// failure into a silent one.
+//
+// The thunk keeps the literal where the bundler can see it while still letting
+// the helper own the error handling. The detector for THIS defect is
+// `npm run build` plus the emitted asset list, not the test suite — the suite
+// was green through all of it.
+const fontMedium = selfHandlingFetch(() => fetch(new URL('./fonts/PlusJakartaSans-Medium.ttf', import.meta.url)));
+const fontBold = selfHandlingFetch(() => fetch(new URL('./fonts/PlusJakartaSans-Bold.ttf', import.meta.url)));
+const fontExtraBold = selfHandlingFetch(() => fetch(new URL('./fonts/PlusJakartaSans-ExtraBold.ttf', import.meta.url)));
 
 const FAMILY = 'Plus Jakarta Sans';
 
@@ -80,30 +126,49 @@ const FAMILY = 'Plus Jakarta Sans';
  * the nearest declared weight for a given `fontWeight`, so 600 resolves to the
  * 700 cut rather than failing.
  *
- * Returns [] if a font fails to load, which makes the card fall back to the
- * renderer's default face instead of throwing the whole render. A card in the
- * wrong typeface is a bad card; a card that 500s is no card at all, and the
- * scraper caches the failure.
+ * A font that did not load is DROPPED rather than passed through as null — a
+ * null `data` reaches Satori as a parse error and takes the whole card with it.
  */
 async function loadFonts() {
-  try {
-    const [medium, bold, extraBold] = await Promise.all([fontMedium, fontBold, fontExtraBold]);
-    return [
-      { name: FAMILY, data: medium, weight: 500 as const, style: 'normal' as const },
-      { name: FAMILY, data: bold, weight: 700 as const, style: 'normal' as const },
-      { name: FAMILY, data: extraBold, weight: 800 as const, style: 'normal' as const },
-    ];
-  } catch {
-    return [];
-  }
+  const [medium, bold, extraBold] = await Promise.all([fontMedium, fontBold, fontExtraBold]);
+  const weights = [
+    [medium, 500],
+    [bold, 700],
+    [extraBold, 800],
+  ] as const;
+  return weights
+    .filter((entry): entry is readonly [ArrayBuffer, 500 | 700 | 800] => entry[0] !== null)
+    .map(([data, weight]) => ({ name: FAMILY, data, weight, style: 'normal' as const }));
 }
 
-/** Shared ImageResponse options: fixed 1200x630 card, fonts, cache header. */
+/**
+ * Shared ImageResponse options: fixed 1200x630 card, fonts, cache header.
+ *
+ * ⚠ `fonts: []` IS NOT A FALLBACK. IT IS A 500.
+ *
+ * An earlier version of this file said, in a comment, that an empty list makes
+ * next/og "fall back to the noto-sans it bundles" — the renderer does ship
+ * that face, it is right there in the emitted edge assets, and the inference
+ * was wrong. MEASURED 2026-10-09 by rendering with no fonts loaded:
+ *
+ *     Error: No fonts are loaded. At least one font is required to
+ *     calculate the layout.
+ *
+ * Every card, 500, every type. So the key is OMITTED rather than set empty,
+ * which is what actually lets next/og use its own default — and the whole
+ * point of the degradation path is that a card in the wrong typeface beats no
+ * card at all, because the scraper caches the failure.
+ *
+ * This is the file's second unmeasured claim about a tool to be falsified by
+ * running it; the first was `background-size: cover`. Both were plausible,
+ * both were written in confident prose, and neither was ever checked.
+ */
 async function ogOptions() {
+  const fonts = await loadFonts();
   return {
     width: 1200,
     height: 630,
-    fonts: await loadFonts(),
+    ...(fonts.length > 0 ? { fonts } : {}),
     headers: { 'Cache-Control': CACHE_CONTROL },
   };
 }
