@@ -18,7 +18,7 @@ import { useEffect } from 'react';
 import { logError } from '@/lib/logger';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/lib/LanguageContext';
-import { getPostHog } from '@/lib/posthog';
+import { withPostHog } from '@/lib/posthog';
 
 export default function Error({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   const { t } = useLanguage();
@@ -31,12 +31,13 @@ export default function Error({ error, reset }: { error: Error & { digest?: stri
     // `capture_exceptions: true` option catches window.onerror +
     // unhandledrejection, but NOT errors thrown inside React render.
     try {
-      const ph = getPostHog();
-      ph?.captureException(error, {
-        error_digest: error.digest,
-        source: 'react_error_boundary',
-        route: 'app/error',
-      });
+      withPostHog((ph) =>
+        ph.captureException(error, {
+          error_digest: error.digest,
+          source: 'react_error_boundary',
+          route: 'app/error',
+        })
+      );
     } catch {
       // Never throw from an error boundary.
     }

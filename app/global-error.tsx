@@ -13,18 +13,19 @@
 
 import { useEffect } from 'react';
 import { logError } from '@/lib/logger';
-import { getPostHog } from '@/lib/posthog';
+import { withPostHog } from '@/lib/posthog';
 
 export default function GlobalError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   useEffect(() => {
     logError(error, { action: 'error_boundary', route: 'app/global-error', digest: error.digest });
     try {
-      const ph = getPostHog();
-      ph?.captureException(error, {
-        error_digest: error.digest,
-        source: 'react_global_error_boundary',
-        route: 'app/global-error',
-      });
+      withPostHog((ph) =>
+        ph.captureException(error, {
+          error_digest: error.digest,
+          source: 'react_global_error_boundary',
+          route: 'app/global-error',
+        })
+      );
     } catch {
       // Never throw from an error boundary.
     }

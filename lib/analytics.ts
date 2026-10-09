@@ -5,7 +5,7 @@
  * This makes it easy to swap providers or add multiple ones later.
  */
 
-import { getPostHog } from '@/lib/posthog';
+import { getPostHog, withPostHog } from '@/lib/posthog';
 
 // ═══════════════════════════════════════════
 // USER IDENTIFICATION
@@ -53,9 +53,7 @@ export function identifyUser(profile: UserProfile): void {
  * Ensures the next user on the device isn't linked to the previous one.
  */
 export function resetUser(): void {
-  const ph = getPostHog();
-  if (!ph) return;
-  ph.reset();
+  withPostHog((ph) => ph.reset());
 }
 
 // ═══════════════════════════════════════════
@@ -258,13 +256,19 @@ type EventName =
  * This is the main function components call.
  */
 export function trackEvent(event: EventName, properties?: Record<string, unknown>): void {
-  const ph = getPostHog();
-  if (!ph) return;
-
-  ph.capture(event, {
-    ...properties,
-    timestamp: new Date().toISOString(),
-    platform: typeof window !== 'undefined' && 'Capacitor' in window ? 'mobile' : 'web',
+  // Read the clock at the call, not when PostHog gets round to it: an event
+  // queued behind the SDK load must keep the time it actually happened.
+  const at = new Date();
+  withPostHog((ph) => {
+    ph.capture(
+      event,
+      {
+        ...properties,
+        timestamp: at.toISOString(),
+        platform: typeof window !== 'undefined' && 'Capacitor' in window ? 'mobile' : 'web',
+      },
+      { timestamp: at }
+    );
   });
 }
 
@@ -293,9 +297,7 @@ export function startTimedEvent(event: EventName, properties?: Record<string, un
  * E.g., when they complete a session, update sessions_completed.
  */
 export function updateUserProperty(key: string, value: string | number | boolean): void {
-  const ph = getPostHog();
-  if (!ph) return;
-  ph.people?.set({ [key]: value });
+  withPostHog((ph) => ph.setPersonProperties({ [key]: value }));
 }
 
 // ═══════════════════════════════════════════
@@ -307,7 +309,5 @@ export function updateUserProperty(key: string, value: string | number | boolean
  * Call when context changes (e.g., user selects a neighborhood filter).
  */
 export function setSessionContext(context: Record<string, unknown>): void {
-  const ph = getPostHog();
-  if (!ph) return;
-  ph.register(context);
+  withPostHog((ph) => ph.register(context));
 }

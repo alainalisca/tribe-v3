@@ -3,7 +3,32 @@ import type { Attribution } from './attribution';
 import { ATTR_TAG_FIELDS } from './attribution';
 
 let posthogInstance: PostHog | null = null;
-let initPromise: Promise<PostHog> | null = null;
+let initPromise: Promise<PostHog | null> | null = null;
+
+/**
+ * T-ANALYTICS1. Calls made before posthog-js has loaded, replayed in order once
+ * it has.
+ *
+ * The SDK is a dynamic import, so for the first few hundred milliseconds of
+ * every page load there is no instance. Every helper used to read
+ * getPostHog(), get null, and return -- so whatever fired in that window was
+ * dropped without a trace. That window is exactly where the landing pageview,
+ * an identify() for a returning user and the first event on a share link all
+ * live. The cap is a backstop for a page where the SDK never loads (an ad
+ * blocker on the chunk, a failed deploy): the queue must not grow forever.
+ */
+type PostHogCall = (ph: PostHog) => void;
+const MAX_PENDING_CALLS = 200;
+const pendingCalls: PostHogCall[] = [];
+
+function runCall(ph: PostHog, call: PostHogCall): void {
+  try {
+    call(ph);
+  } catch {
+    // Analytics is never allowed to surface. Deliberately not logError():
+    // logger forwards errors to analytics, which would loop back here.
+  }
+}
 
 /**
  * Lazily loads and initializes PostHog.
@@ -15,22 +40,47 @@ export async function initPostHog(): Promise<PostHog | null> {
   if (posthogInstance) return posthogInstance;
 
   if (!initPromise) {
-    initPromise = import('posthog-js').then((mod) => {
-      const ph = mod.default;
-      ph.init(process.env.NEXT_PUBLIC_POSTHOG_KEY!, {
-        api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST,
-        loaded: (posthog) => {
-          if (process.env.NODE_ENV === 'development') posthog.debug();
-        },
-        capture_pageview: false, // We'll capture manually
-        // LR-01 (revised): auto-capture browser exceptions into PostHog's
-        // Activity → Exceptions view. Pairs with lib/captureError.ts on
-        // the server side. No separate Sentry vendor required.
-        capture_exceptions: true,
+    initPromise = import('posthog-js')
+      .then((mod) => {
+        const ph = mod.default;
+        ph.init(process.env.NEXT_PUBLIC_POSTHOG_KEY!, {
+          api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST,
+          loaded: (posthog) => {
+            if (process.env.NODE_ENV === 'development') posthog.debug();
+          },
+          // T-ANALYTICS1 part A. The SDK captures the initial pageview and one
+          // per pathname change (it patches pushState/replaceState, which is
+          // how the App Router navigates). This replaced a usePathname effect in
+          // PostHogProvider that dropped the landing pageview to the init race.
+          //
+          // Set explicitly rather than through `defaults: '<date>'`: every
+          // defaults date after 2025-05-24 also changes session replay
+          // behaviour (streamNetworkBody, captureJsonLd, the minimum duration
+          // gate), and replay configuration is out of scope for this ticket.
+          capture_pageview: 'history_change',
+          // Rides on capture_pageview: the SDK sends $pageleave on unload only
+          // when capture_pageview is truthy. With it off, as it was, PostHog
+          // never received one. Spelled out so the dependency is visible.
+          capture_pageleave: 'if_capture_pageview',
+          // The library default, pinned: anonymous visitors stay eventless on
+          // the person side and only identify() creates a profile.
+          person_profiles: 'identified_only',
+          // LR-01 (revised): auto-capture browser exceptions into PostHog's
+          // Activity → Exceptions view. Pairs with lib/captureError.ts on
+          // the server side. No separate Sentry vendor required.
+          capture_exceptions: true,
+        });
+        posthogInstance = ph;
+        for (const call of pendingCalls.splice(0)) runCall(ph, call);
+        return ph;
+      })
+      .catch(() => {
+        // The chunk failed to load. Nothing queued can ever be sent, so drop it,
+        // and clear the promise so a later call can try again.
+        pendingCalls.length = 0;
+        initPromise = null;
+        return null;
       });
-      posthogInstance = ph;
-      return ph;
-    });
   }
 
   return initPromise;
@@ -39,10 +89,31 @@ export async function initPostHog(): Promise<PostHog | null> {
 /**
  * Returns the PostHog instance if already initialized, or null.
  * Use this for synchronous access (e.g., capturing events after init).
- * For guaranteed access, use initPostHog() instead.
+ * For anything that must not be lost to the init race, use withPostHog().
  */
 export function getPostHog(): PostHog | null {
   return posthogInstance;
+}
+
+/**
+ * Run `call` against PostHog now if it is loaded, otherwise once it is.
+ * Starts the load if nothing has yet. A no-op on the server.
+ */
+export function withPostHog(call: PostHogCall): void {
+  if (typeof window === 'undefined') return;
+  if (posthogInstance) {
+    runCall(posthogInstance, call);
+    return;
+  }
+  if (pendingCalls.length < MAX_PENDING_CALLS) pendingCalls.push(call);
+  void initPostHog();
+}
+
+/** Test-only: forget the loaded instance and anything queued. */
+export function __resetPostHogForTests(): void {
+  posthogInstance = null;
+  initPromise = null;
+  pendingCalls.length = 0;
 }
 
 /**
