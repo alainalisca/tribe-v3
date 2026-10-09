@@ -178,7 +178,11 @@ describe('notificationCopy', () => {
         date: '2026-07-10',
       });
       expect(body).not.toContain('invited');
-      expect(body).toContain('te invito');
+      // Owner of this string: lib/notification-i18n.ts session_invite.es. It read
+      // "te invito" ("I invite") until 2026-10-09; the subject is {{name}}, so
+      // the verb is invitó. The accent guard caught it once policy v1.1 put the
+      // accented form into the corpus.
+      expect(body).toContain('te invitó');
       expect(body).toContain('Ana');
     });
   });
