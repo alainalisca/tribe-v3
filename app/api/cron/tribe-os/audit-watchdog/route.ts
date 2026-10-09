@@ -31,11 +31,12 @@ import { isValidCronAuth } from '@/lib/auth/cron';
 import { log, logError } from '@/lib/logger';
 import { evaluateGymAuditThresholds, type TriggeredAlert } from '@/lib/dal/auditWatchdog';
 import { sendAuditAlertEmail, type AuditAlertItem } from '@/lib/email/auditAlertEmail';
+import { SITE_URL } from '@/lib/http/siteUrl';
 
 const MAX_GYMS_PER_RUN = 100;
 
 function siteUrl(): string {
-  return process.env.NEXT_PUBLIC_SITE_URL ?? 'https://tribe-v3.vercel.app';
+  return SITE_URL;
 }
 
 interface ActorRow {

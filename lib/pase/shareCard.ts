@@ -1,7 +1,9 @@
 import type { Metadata } from 'next';
 import type { PassConfig } from '@/lib/dal/passLeads';
 
-const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://tribe-v3.vercel.app';
+import { SITE_URL } from '@/lib/http/siteUrl';
+
+const BASE_URL = SITE_URL;
 
 /**
  * The link-preview card for a pass, i.e. what WhatsApp, iMessage and Instagram

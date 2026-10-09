@@ -9,8 +9,7 @@ import { shouldSendNotification } from '@/lib/dal/notificationPreferences';
 import { isEmailSuppressed, unsubUrlFor, unsubHeaders } from '@/lib/dal/emailUnsubscribe';
 import { bogotaDateOffset } from '@/lib/time/bogotaDate';
 import { dateLocale } from '@/lib/dateLocale';
-
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://tribe-v3.vercel.app';
+import { SITE_URL } from '@/lib/http/siteUrl';
 
 /**
  * @description Sends weekly recap emails to all users who participated in or hosted sessions during the past week, summarizing their activity.

@@ -12,8 +12,9 @@ import { createClient } from '@/lib/supabase/server';
 import { detectNeighborhood, getNearestNeighborhood } from '@/lib/city-config';
 import { cardDateTimeLabel, cardHeadline } from '@/lib/share/cardCopy';
 import InviteClient, { type InitialInvite } from './InviteClient';
+import { SITE_URL } from '@/lib/http/siteUrl';
 
-const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://tribe-v3.vercel.app';
+const BASE_URL = SITE_URL;
 
 interface PageProps {
   params: Promise<{ token: string }>;

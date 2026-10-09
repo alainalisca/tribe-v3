@@ -6,6 +6,7 @@
  */
 
 import { trackEvent } from '@/lib/analytics';
+import { SITE_URL } from '@/lib/http/siteUrl';
 
 // ═══════════════════════════════════════════
 // TYPES
@@ -47,10 +48,16 @@ export interface AchievementShareData {
 // URL BUILDERS
 // ═══════════════════════════════════════════
 
-const BASE_URL =
-  typeof window !== 'undefined'
-    ? window.location.origin
-    : process.env.NEXT_PUBLIC_APP_URL || 'https://tribe-v3.vercel.app';
+// T-DOMAIN1: the CANONICAL origin, never the browser's current one.
+//
+// Reading the sharer's own origin meant a share link carried whatever host
+// they happened to be on. An admin or tester on a Vercel PREVIEW shared a
+// preview URL -- one that stops resolving when the deployment is pruned -- and
+// inside the native app that origin is the Capacitor host, which is not an
+// address anyone else can open. Both produce a link that works for the person
+// who made it and for nobody they send it to, which is the one failure a share
+// feature cannot have.
+const BASE_URL = SITE_URL;
 
 // NOTE: every self-referencing URL carries a TRAILING SLASH. next.config.ts
 // sets `trailingSlash: true`, so a slash-less path 308-redirects to the slashed

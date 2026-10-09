@@ -30,7 +30,29 @@ vi.mock('@/lib/logger', () => ({ logError: vi.fn(), log: vi.fn() }));
 import TrackedLinkBuilder from './TrackedLinkBuilder';
 import { showError } from '@/lib/toast';
 
-const ORIGIN = 'https://tribe-v3.vercel.app';
+/**
+ * The origin every built link MUST carry: the product's canonical address.
+ *
+ * Written as a LITERAL rather than imported from lib/http/siteUrl, on purpose.
+ * Importing SITE_URL would make every assertion below tautological -- the test
+ * would agree with the module whatever the module said, including if someone
+ * set the canonical domain to a typo. A literal is the only thing here that
+ * can disagree.
+ */
+const ORIGIN = 'https://tribelatam.com';
+
+/**
+ * A DECOY browser origin, stubbed into window.location on every test.
+ *
+ * T-DOMAIN1: the component used to read `window.location.origin`, so an admin
+ * building a link while looking at a Vercel preview got a preview URL -- one
+ * that stops resolving when that deployment is pruned -- and printed it on a
+ * poster. The decoy is what makes these tests able to SEE that: with the stub
+ * set to the real canonical domain they would pass either way, which is how
+ * the old behaviour went unnoticed. Every assertion on ORIGIN below is now
+ * also an assertion that the browser's origin was ignored.
+ */
+const DECOY_BROWSER_ORIGIN = 'https://tribe-v3-git-some-preview-branch.vercel.app';
 
 function type(label: string, value: string) {
   fireEvent.change(screen.getByLabelText(label), { target: { value } });
@@ -38,10 +60,9 @@ function type(label: string, value: string) {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  // jsdom's default origin is localhost; the component reads window.location.
   Object.defineProperty(window, 'location', {
     configurable: true,
-    value: { origin: ORIGIN } as Location,
+    value: { origin: DECOY_BROWSER_ORIGIN } as Location,
   });
 });
 

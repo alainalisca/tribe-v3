@@ -11,8 +11,9 @@ import {
   sessionCardTitle,
 } from '@/lib/share/cardCopy';
 import SessionShareClient, { type InitialSession } from './SessionShareClient';
+import { SITE_URL } from '@/lib/http/siteUrl';
 
-const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://tribe-v3.vercel.app';
+const BASE_URL = SITE_URL;
 
 interface PageProps {
   params: Promise<{ id: string }>;

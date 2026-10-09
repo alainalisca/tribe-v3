@@ -1,6 +1,7 @@
 import { getResendClient } from '@/lib/email/resendClient';
 import { waMeDigits } from '@/lib/pase/phone';
 import { translate } from '@/lib/i18n/translate';
+import { SITE_URL } from '@/lib/http/siteUrl';
 
 /**
  * The two emails a claimed pass sends: one to the partner with the lead, one
@@ -12,7 +13,6 @@ import { translate } from '@/lib/i18n/translate';
  */
 
 const FROM = 'Tribe <tribe@aplusfitnessllc.com>';
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://tribe-v3.vercel.app';
 
 function escapeHtml(value: string): string {
   return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');

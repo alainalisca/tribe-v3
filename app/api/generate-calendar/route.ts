@@ -5,8 +5,7 @@ import { log, logError } from '@/lib/logger';
 import { fetchSessionFields } from '@/lib/dal';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { getServiceRoleClient } from '@/lib/supabase/admin';
-
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://tribe-v3.vercel.app';
+import { SITE_URL } from '@/lib/http/siteUrl';
 
 /**
  * @description Generates a downloadable ICS calendar file for a given training session, including sport, location, time, and organizer details.

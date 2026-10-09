@@ -1,8 +1,10 @@
 import { MetadataRoute } from 'next';
+import { SITE_URL } from '@/lib/http/siteUrl';
 
 export default function robots(): MetadataRoute.Robots {
   return {
     rules: { userAgent: '*', allow: '/', disallow: ['/api/', '/admin/'] },
-    sitemap: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://tribe.fitness'}/sitemap.xml`,
+    // See sitemap.ts: tribe.fitness is not ours.
+    sitemap: `${SITE_URL}/sitemap.xml`,
   };
 }
