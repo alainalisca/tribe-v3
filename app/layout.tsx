@@ -12,6 +12,7 @@ import FeedbackWidget from '@/components/FeedbackWidget';
 import PageTransition from '@/components/PageTransition';
 import ReducedMotionProvider from '@/components/ReducedMotionProvider';
 import { ConfirmProvider } from '@/components/ConfirmProvider';
+import DeepLinkRouter from '@/components/DeepLinkRouter';
 import './globals.css';
 import type { Metadata, Viewport } from 'next';
 
@@ -186,6 +187,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <ServiceWorkerRegistration />
                 <AppStoreBanner />
                 <BackButtonHandler />
+                <DeepLinkRouter />
                 <InAppNotificationToast />
                 <ConfirmProvider>
                   <PageTransition>{children}</PageTransition>

@@ -1078,6 +1078,49 @@ copy — this repo has now paid for that specific lesson in
 [[SPORTS_LIST in five modules]], [[two translation maps for the same 23 keys]],
 [[three hand-kept copies of the applied-migration list]] and here.
 
+**A DISABLED BUTTON NEVER FIRES ITS HANDLER, SO CLICKING IT PROVES NOTHING ABOUT THE GUARD BEHIND IT.**
+
+The sports step saves by overwriting `users.sports`, so it must refuse to save
+before the existing list has loaded. That refusal exists in two places: the
+button's `disabled`, and a `if (baseline !== 'ready') return;` at the top of the
+handler. A test clicked the button while the read was still in flight and
+asserted nothing was written. It passed.
+
+**It passed with the handler guard deleted.** React does not dispatch `onClick`
+on a disabled button, so `fireEvent.click` on it is a no-op — the assertion is
+satisfied by the button alone, and the handler is unreachable from the DOM in
+exactly the state you are trying to test. The behaviour test can only ever
+prove the courtesy layer.
+
+**This is the read-path-only shape wearing test clothes.** The repo already
+knows that a requirement held by a disabled control is not held at all — it is
+why `complete_athlete_setup` raises rather than trusting the button, and why
+`join_session` has to check what `validate_invite_token` checks. The same
+argument applies to the test: asserting on the control does not assert on the
+write.
+
+**So when a guard is duplicated on a control and in a handler, the handler's
+copy needs a source assertion**, in the shape this repo already uses for
+call-site guards. Two lines, and they fail when the guard is deleted:
+
+```js
+expect(code(SCREEN)).toMatch(/if \(baseline !== 'ready'\) return;/);
+expect(code(SCREEN)).toContain("baseline !== 'ready'"); // and on the control
+```
+
+**Generalise past buttons.** Any affordance that removes itself makes the code
+behind it untestable through the UI: a hidden menu item, a route guard that
+redirects before the component mounts, a form that will not submit, a feature
+flag that unmounts the whole tree. In each case the test that "nothing
+happened" is true for the wrong reason, and the reason is the one you were not
+checking. **Ask what would still be true if the inner guard were deleted.** If
+the answer is "the test", the test is about the affordance.
+
+**Found by mutation, on a guard written the same hour.** The behaviour tests
+were written first and all eight arms passed; the mutation that deleted the
+handler's line was the one that came back green, and that green is the whole
+finding.
+
 **A DRY RUN THAT RETURNS BEFORE THE EXPENSIVE PART CANNOT TEST THE EXPENSIVE PART. THE FIRST REAL SEND FOUND TWO BUGS IN THIRTY SECONDS THAT A GREEN DRY RUN AND 30 PASSING TESTS HAD BOTH MISSED.**
 
 The one-off nudge's dry run claims each recipient, releases the claim, and
