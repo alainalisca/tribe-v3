@@ -288,7 +288,9 @@ export function trackEvent(event: EventName, properties?: Record<string, unknown
       {
         ...properties,
         timestamp: at.toISOString(),
-        platform: typeof window !== 'undefined' && 'Capacitor' in window ? 'mobile' : 'web',
+        // `platform` is not set here any more: it is a super property
+        // (ios | android | web) registered at init in lib/posthog.ts. Setting
+        // it per event would overwrite that with the old 'mobile' | 'web'.
       },
       { timestamp: at }
     );

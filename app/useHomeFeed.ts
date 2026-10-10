@@ -332,7 +332,9 @@ export function useHomeFeed() {
       user_role: userProfile.is_instructor ? 'instructor' : 'athlete',
       user_city: 'Medellín',
       user_language: language || 'en',
-      platform: typeof window !== 'undefined' && 'Capacitor' in window ? 'mobile' : 'web',
+      // No `platform` here (T-ANALYTICS1 part C): it is registered once at init
+      // as ios | android | web, and registering 'mobile' | 'web' here would
+      // overwrite it for the rest of the session.
     });
 
     trackEvent('app_opened', {

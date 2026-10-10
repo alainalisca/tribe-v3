@@ -27,6 +27,12 @@ const nextConfig: NextConfig = {
       { protocol: 'https', hostname: 'images.unsplash.com' },
     ],
   },
+  // T-ANALYTICS1 part C: the build's short commit SHA, inlined into the client
+  // bundle as PostHog's `app_version` super property. VERCEL_GIT_COMMIT_SHA is
+  // set at build time on every Vercel deployment; a local build reports 'local'.
+  env: {
+    NEXT_PUBLIC_APP_VERSION: (process.env.VERCEL_GIT_COMMIT_SHA ?? 'local').slice(0, 7),
+  },
   trailingSlash: true,
   // Security headers (CSP, HSTS, X-Frame-Options, etc.) live in middleware.ts
   // so every response goes through one codepath. See middleware.ts docblock.

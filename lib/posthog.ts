@@ -30,6 +30,43 @@ function runCall(ph: PostHog, call: PostHogCall): void {
   }
 }
 
+export type AnalyticsPlatform = 'ios' | 'android' | 'web';
+
+/** Capacitor.getPlatform() folded to the three values PostHog sees. */
+export function platformOf(capacitorPlatform: string | undefined | null): AnalyticsPlatform {
+  return capacitorPlatform === 'ios' || capacitorPlatform === 'android' ? capacitorPlatform : 'web';
+}
+
+/**
+ * The web build this page came from: the short commit SHA, injected at build
+ * time by next.config.ts from VERCEL_GIT_COMMIT_SHA. The native apps load the
+ * remote site (capacitor.config server.url), so this is also what an iOS or
+ * Android user is running; the store version only changes the shell.
+ */
+export function appVersion(): string {
+  return process.env.NEXT_PUBLIC_APP_VERSION || 'unknown';
+}
+
+/**
+ * T-ANALYTICS1 part C. Super properties, attached to every event. Registered
+ * inside `loaded`, which posthog-js calls synchronously inside init() BEFORE it
+ * schedules the landing $pageview (setTimeout after loaded, verified in the
+ * installed 1.434.14 source), so the first pageview carries them too.
+ */
+export function superPropertiesFor(capacitorPlatform: string | undefined | null) {
+  return { platform: platformOf(capacitorPlatform), app_version: appVersion() };
+}
+
+async function capacitorPlatform(): Promise<string | null> {
+  try {
+    const { Capacitor } = await import('@capacitor/core');
+    return Capacitor.getPlatform();
+  } catch {
+    // No Capacitor bridge: a plain browser. 'web' is the right answer.
+    return null;
+  }
+}
+
 /**
  * Lazily loads and initializes PostHog.
  * The posthog-js SDK (~45KB) is dynamically imported so it doesn't
@@ -40,12 +77,13 @@ export async function initPostHog(): Promise<PostHog | null> {
   if (posthogInstance) return posthogInstance;
 
   if (!initPromise) {
-    initPromise = import('posthog-js')
-      .then((mod) => {
+    initPromise = Promise.all([import('posthog-js'), capacitorPlatform()])
+      .then(([mod, platform]) => {
         const ph = mod.default;
         ph.init(process.env.NEXT_PUBLIC_POSTHOG_KEY!, {
           api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST,
           loaded: (posthog) => {
+            posthog.register(superPropertiesFor(platform));
             if (process.env.NODE_ENV === 'development') posthog.debug();
           },
           // T-ANALYTICS1 part A. The SDK captures the initial pageview and one
