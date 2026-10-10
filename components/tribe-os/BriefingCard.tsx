@@ -75,7 +75,7 @@ export default function BriefingCard() {
   const { language } = useLanguage();
   const [state, setState] = useState<WidgetState>({ kind: 'loading' });
   const [draftCtx, setDraftCtx] = useState<DraftContext | null>(null);
-  const [forecastLine, setForecastLine] = useState<{ atRisk: number; recovered: number; currency: Currency } | null>(null);
+  const [forecastLine, setForecastLine] = useState<{ atRisk: number; recoveredCents: number; currency: Currency } | null>(null);
 
   const fetchData = useCallback(async () => {
     try {
@@ -95,9 +95,9 @@ export default function BriefingCard() {
       .then((r) => r.json())
       .then((j) => {
         if (j.success && j.data) {
-          const d = j.data as { at_risk_total: number; recovered_count: number; currency: string };
-          if (d.at_risk_total > 0 || d.recovered_count > 0) {
-            setForecastLine({ atRisk: d.at_risk_total, recovered: d.recovered_count, currency: (d.currency ?? 'COP') as Currency });
+          const d = j.data as { at_risk_total: number; recovered_total: number; currency: string };
+          if (d.at_risk_total > 0 || d.recovered_total > 0) {
+            setForecastLine({ atRisk: d.at_risk_total, recoveredCents: d.recovered_total, currency: (d.currency ?? 'COP') as Currency });
           }
         }
       })
@@ -142,8 +142,8 @@ export default function BriefingCard() {
                 href="/os/forecast"
                 className="block text-xs text-gray-500 mt-1 hover:text-tribe-green transition-colors"
               >
-                {formatCents(forecastLine.atRisk, forecastLine.currency, language)} en riesgo este mes
-                {forecastLine.recovered > 0 && <> · {forecastLine.recovered} recuperado{forecastLine.recovered > 1 ? 's' : ''}</>}
+                {formatCents(forecastLine.atRisk, forecastLine.currency, language)} en riesgo
+                {forecastLine.recoveredCents > 0 && <> · {formatCents(forecastLine.recoveredCents, forecastLine.currency, language)} recuperado</>}
                 {' →'}
               </Link>
             )}

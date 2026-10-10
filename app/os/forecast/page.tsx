@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { AlertCircle, MessageCircle, TrendingUp, ShieldAlert, Sparkles } from 'lucide-react';
+import { AlertCircle, MessageCircle, TrendingUp, ShieldAlert, Sparkles, Skull } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
 import { useTribeOSPremiumGate } from '@/hooks/useTribeOSPremiumGate';
 import { formatCents, type Currency } from '@/lib/format/currency';
@@ -21,18 +21,19 @@ const copy = {
     atRisk: 'Money at risk',
     atRiskOf: 'of income',
     recovered: 'Recovered this month',
+    recoveredPeople: (n: number) => `${n} ${n === 1 ? 'person' : 'people'}`,
+    probablyLost: 'Probably lost',
+    probablyLostPeople: (n: number) => `${n} ${n === 1 ? 'person' : 'people'}`,
+    probablyLostLink: 'Go to Recover',
     riskTableTitle: 'Where is the risk',
     riskTableEmpty: 'No members at risk right now.',
     recoveredTitle: 'Recovered',
     recoveredEmpty: 'No recoveries this month yet.',
-    name: 'Name',
-    plan: 'Plan',
-    value: 'Value/mo',
-    reason: 'Reason',
     whatsapp: 'WhatsApp',
     unpricedFooter: (n: number) => `${n} member${n > 1 ? 's' : ''} without a price`,
     unpricedLink: 'Set prices',
     badge: 'Came back',
+    perMonth: '/mo',
   },
   es: {
     title: 'Pronóstico',
@@ -44,22 +45,23 @@ const copy = {
     atRisk: 'Dinero en riesgo',
     atRiskOf: 'del ingreso',
     recovered: 'Recuperado este mes',
+    recoveredPeople: (n: number) => `${n} persona${n > 1 ? 's' : ''}`,
+    probablyLost: 'Probablemente perdidos',
+    probablyLostPeople: (n: number) => `${n} persona${n > 1 ? 's' : ''}`,
+    probablyLostLink: 'Ir a Recuperar',
     riskTableTitle: 'Dónde está el riesgo',
     riskTableEmpty: 'Ningún miembro en riesgo en este momento.',
     recoveredTitle: 'Recuperados',
     recoveredEmpty: 'Sin recuperaciones este mes aún.',
-    name: 'Nombre',
-    plan: 'Plan',
-    value: 'Valor/mes',
-    reason: 'Razón',
     whatsapp: 'WhatsApp',
     unpricedFooter: (n: number) => `${n} miembro${n > 1 ? 's' : ''} sin precio`,
     unpricedLink: 'Poner precios',
     badge: 'Volvió',
+    perMonth: '/mes',
   },
 } as const;
 
-interface AtRiskRow {
+interface RiskRow {
   id: string;
   name: string | null;
   phone: string | null;
@@ -77,14 +79,19 @@ interface AtRiskRow {
 interface RecoveredRow {
   id: string;
   name: string | null;
+  monthlyValueCents: number | null;
 }
 
 interface ForecastData {
   monthly_income: number;
   at_risk_total: number;
   at_risk_count: number;
-  at_risk: AtRiskRow[];
+  at_risk: RiskRow[];
+  probably_lost_total: number;
+  probably_lost_count: number;
+  probably_lost: RiskRow[];
   recovered_count: number;
+  recovered_total: number;
   recovered: RecoveredRow[];
   unpriced_count: number;
   currency: string;
@@ -192,10 +199,32 @@ export default function ForecastPage() {
               <div className="rounded-xl bg-white border border-tribe-green/30 p-4 sm:p-5">
                 <p className="text-xs uppercase tracking-[0.08em] text-tribe-green-dark font-semibold">{s.recovered}</p>
                 <p className="text-2xl font-black text-tribe-green-dark mt-1 tabular-nums">
-                  {data.recovered_count}
+                  {formatCents(data.recovered_total, cur, language)}{s.perMonth}
+                </p>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  {s.recoveredPeople(data.recovered_count)}
                 </p>
               </div>
             </div>
+
+            {/* Probably lost banner */}
+            {data.probably_lost_count > 0 && (
+              <Link
+                href="/os/retention"
+                className="flex items-center gap-3 py-3 px-4 rounded-xl bg-gray-100 border border-gray-200 hover:border-gray-300 transition-colors group"
+              >
+                <Skull className="w-5 h-5 text-gray-400 shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-gray-700">
+                    {s.probablyLost}: {formatCents(data.probably_lost_total, cur, language)}{s.perMonth}
+                  </p>
+                  <p className="text-xs text-gray-500">{s.probablyLostPeople(data.probably_lost_count)}</p>
+                </div>
+                <span className="text-xs font-semibold text-tribe-green group-hover:underline shrink-0">
+                  {s.probablyLostLink} →
+                </span>
+              </Link>
+            )}
 
             {/* At-risk table */}
             <section>
@@ -219,7 +248,7 @@ export default function ForecastPage() {
                         <span className="text-xs text-gray-500 block truncate">
                           {row.plan ?? '—'}
                           {row.monthly_value !== null && (
-                            <> · {formatCents(row.monthly_value, cur, language)}/{language === 'es' ? 'mes' : 'mo'}</>
+                            <> · {formatCents(row.monthly_value, cur, language)}{s.perMonth}</>
                           )}
                         </span>
                         <span className="text-[10px] text-red-500 block">

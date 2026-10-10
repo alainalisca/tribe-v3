@@ -1,9 +1,15 @@
 /**
  * Pure helpers for revenue forecast calculations.
  *
- * All amounts in cents (bigint-safe integers). Currency must match
- * the gym's default_currency; members whose plan currency differs
- * are excluded and counted via `currencyMismatchCount`.
+ * Two risk buckets:
+ *   - "En riesgo": days 7–30 absent, OR plan expires within 7 days,
+ *     OR plan expired within last 7 days. Uses the same 7–30 day window
+ *     as the contact filter in Retención.
+ *   - "Probablemente perdidos": 30+ days absent. Separate bucket, not
+ *     included in Dinero en riesgo.
+ *
+ * Reasons are the specific retention reasons from client_retention_v2,
+ * in the owner's language (ES half of the bilingual string).
  */
 
 export interface PlanPrice {
@@ -28,7 +34,7 @@ export interface MemberForForecast {
   last_touch_created_at: string | null;
 }
 
-export interface AtRiskMember {
+export interface ForecastMember {
   id: string;
   name: string | null;
   phone: string | null;
@@ -46,13 +52,17 @@ export interface AtRiskMember {
 export interface RecoveredMember {
   id: string;
   name: string | null;
+  monthlyValueCents: number | null;
 }
 
 export interface ForecastResult {
   monthlyIncomeCents: number;
   atRiskTotalCents: number;
-  atRiskMembers: AtRiskMember[];
+  atRiskMembers: ForecastMember[];
+  probablyLostTotalCents: number;
+  probablyLostMembers: ForecastMember[];
   recoveredThisMonth: RecoveredMember[];
+  recoveredTotalCents: number;
   unpricedCount: number;
   currency: string;
 }
@@ -86,7 +96,6 @@ function planStatus(
 
 function isCurrentMember(
   m: MemberForForecast,
-  today: string,
   sevenDaysAgo: string,
   twentyEightDaysAgo: string,
 ): boolean {
@@ -97,30 +106,43 @@ function isCurrentMember(
   return false;
 }
 
-function atRiskReasons(
-  m: MemberForForecast,
-  status: 'active' | 'expiring' | 'expired' | 'no_plan',
-): string[] {
-  const out: string[] = [];
-  const seen = new Set<string>();
+export function ownerReason(bilingual: string, language: 'en' | 'es'): string {
+  const parts = bilingual.split(' / ');
+  if (parts.length < 2) return bilingual;
+  return language === 'es' ? parts[0] : parts[1];
+}
 
-  if (m.retention_level === 'high' && !seen.has('retention')) {
-    out.push('Riesgo alto de abandono');
-    seen.add('retention');
+function buildReasons(m: MemberForForecast, status: string, language: 'en' | 'es'): string[] {
+  const out: string[] = [];
+  for (const r of m.reasons) {
+    const localized = ownerReason(r, language);
+    if (localized.includes('Asistencia estable') || localized.includes('Stable attendance')) continue;
+    if (localized.includes('Miembro nuevo') || localized.includes('New member')) continue;
+    out.push(localized);
   }
-  if (m.retention_level === 'medium' && !seen.has('retention')) {
-    out.push('Riesgo medio de abandono');
-    seen.add('retention');
-  }
-  if (status === 'expiring' && !seen.has('plan')) {
-    out.push('Plan vence pronto');
-    seen.add('plan');
-  }
-  if (status === 'expired' && !seen.has('plan')) {
-    out.push('Plan vencido');
-    seen.add('plan');
+  if (out.length === 0) {
+    if (status === 'expiring') out.push(language === 'es' ? 'Plan vence pronto' : 'Plan expiring soon');
+    else if (status === 'expired') out.push(language === 'es' ? 'Plan vencido' : 'Plan expired');
+    else if (m.days_since_last_activity !== null && m.days_since_last_activity > 30) {
+      out.push(
+        language === 'es'
+          ? `${m.days_since_last_activity} días sin venir`
+          : `${m.days_since_last_activity} days absent`,
+      );
+    }
   }
   return out;
+}
+
+function sortAtRisk(a: ForecastMember, b: ForecastMember): number {
+  const statusOrder: Record<string, number> = { expired: 0, expiring: 1, active: 2, no_plan: 3 };
+  const sa = statusOrder[a.planStatus] ?? 3;
+  const sb = statusOrder[b.planStatus] ?? 3;
+  if (sa !== sb) return sa - sb;
+  const da = a.daysSinceLastActivity ?? 0;
+  const db = b.daysSinceLastActivity ?? 0;
+  if (da !== db) return db - da;
+  return (b.monthlyValueCents ?? 0) - (a.monthlyValueCents ?? 0);
 }
 
 export function computeForecast(
@@ -129,6 +151,7 @@ export function computeForecast(
   gymCurrency: string,
   today: string,
   bogotaMonthStart: string,
+  language: 'en' | 'es' = 'es',
 ): ForecastResult {
   const sevenDaysFromNow = addDaysSimple(today, 7);
   const sevenDaysAgo = addDaysSimple(today, -7);
@@ -136,13 +159,14 @@ export function computeForecast(
 
   let monthlyIncomeCents = 0;
   let unpricedCount = 0;
-  const atRiskMembers: AtRiskMember[] = [];
+  const atRiskMembers: ForecastMember[] = [];
+  const probablyLostMembers: ForecastMember[] = [];
   const recoveredThisMonth: RecoveredMember[] = [];
-  const seenAtRisk = new Set<string>();
+  const seen = new Set<string>();
 
   for (const m of members) {
     const mv = monthlyValueCents(m.membership_plan, plans, gymCurrency);
-    const current = isCurrentMember(m, today, sevenDaysAgo, twentyEightDaysAgo);
+    const current = isCurrentMember(m, sevenDaysAgo, twentyEightDaysAgo);
 
     if (current && m.membership_plan && mv === null) {
       const matchExists = plans.some(
@@ -156,47 +180,58 @@ export function computeForecast(
     }
 
     const status = planStatus(m.plan_ends_on, today, sevenDaysFromNow, sevenDaysAgo);
+    const days = m.days_since_last_activity;
 
+    const isProbablyLost = days !== null && days > 30;
     const isAtRisk =
-      m.retention_level === 'high' ||
-      m.retention_level === 'medium' ||
-      status === 'expiring' ||
-      status === 'expired';
+      !isProbablyLost &&
+      current &&
+      ((days !== null && days >= 7 && days <= 30) || status === 'expiring' || status === 'expired');
 
-    if (isAtRisk && current && !seenAtRisk.has(m.id)) {
-      seenAtRisk.add(m.id);
-      const reasons = atRiskReasons(m, status);
-      atRiskMembers.push({
-        id: m.id,
-        name: m.name,
-        phone: m.phone,
-        plan: m.membership_plan,
-        monthlyValueCents: mv,
-        reasons,
-        riskLevel: m.retention_level,
-        planStatus: status,
-        daysSinceLastActivity: m.days_since_last_activity,
-        lastActivityAt: m.last_activity_at,
-        lastTouchCreatedAt: m.last_touch_created_at,
-        planEndsOn: m.plan_ends_on,
-      });
+    if (seen.has(m.id)) continue;
+
+    const entry: ForecastMember = {
+      id: m.id,
+      name: m.name,
+      phone: m.phone,
+      plan: m.membership_plan,
+      monthlyValueCents: mv,
+      reasons: buildReasons(m, status, language),
+      riskLevel: m.retention_level,
+      planStatus: status,
+      daysSinceLastActivity: days,
+      lastActivityAt: m.last_activity_at,
+      lastTouchCreatedAt: m.last_touch_created_at,
+      planEndsOn: m.plan_ends_on,
+    };
+
+    if (isProbablyLost) {
+      seen.add(m.id);
+      probablyLostMembers.push(entry);
+    } else if (isAtRisk) {
+      seen.add(m.id);
+      atRiskMembers.push(entry);
     }
 
     if (m.has_touch_then_visit && m.visit_after_touch_at) {
       const visitDate = m.visit_after_touch_at.slice(0, 10);
       if (visitDate >= bogotaMonthStart && visitDate <= today) {
-        recoveredThisMonth.push({ id: m.id, name: m.name });
+        recoveredThisMonth.push({ id: m.id, name: m.name, monthlyValueCents: mv });
       }
     }
   }
 
-  atRiskMembers.sort((a, b) => (b.monthlyValueCents ?? 0) - (a.monthlyValueCents ?? 0));
+  atRiskMembers.sort(sortAtRisk);
+  probablyLostMembers.sort((a, b) => (b.monthlyValueCents ?? 0) - (a.monthlyValueCents ?? 0));
 
   return {
     monthlyIncomeCents,
     atRiskTotalCents: atRiskMembers.reduce((sum, m) => sum + (m.monthlyValueCents ?? 0), 0),
     atRiskMembers,
+    probablyLostTotalCents: probablyLostMembers.reduce((sum, m) => sum + (m.monthlyValueCents ?? 0), 0),
+    probablyLostMembers,
     recoveredThisMonth,
+    recoveredTotalCents: recoveredThisMonth.reduce((sum, m) => sum + (m.monthlyValueCents ?? 0), 0),
     unpricedCount,
     currency: gymCurrency,
   };

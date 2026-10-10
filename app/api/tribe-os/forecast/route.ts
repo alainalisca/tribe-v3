@@ -14,6 +14,7 @@ import {
   computeForecast,
   type MemberForForecast,
   type PlanPrice,
+  type ForecastMember,
 } from '@/lib/tribe-os/forecast';
 
 export async function GET(): Promise<NextResponse> {
@@ -130,27 +131,35 @@ export async function GET(): Promise<NextResponse> {
 
     const result = computeForecast(members, plans, gymCurrency, today, monthStart);
 
+    function serializeMember(m: ForecastMember) {
+      return {
+        id: m.id,
+        name: m.name,
+        phone: m.phone,
+        plan: m.plan,
+        monthly_value: m.monthlyValueCents,
+        reasons: m.reasons,
+        risk_level: m.riskLevel,
+        plan_status: m.planStatus,
+        days_since_last_activity: m.daysSinceLastActivity,
+        last_activity_at: m.lastActivityAt,
+        last_touch_created_at: m.lastTouchCreatedAt,
+        plan_ends_on: m.planEndsOn,
+      };
+    }
+
     return NextResponse.json({
       success: true,
       data: {
         monthly_income: result.monthlyIncomeCents,
         at_risk_total: result.atRiskTotalCents,
         at_risk_count: result.atRiskMembers.length,
-        at_risk: result.atRiskMembers.map((m) => ({
-          id: m.id,
-          name: m.name,
-          phone: m.phone,
-          plan: m.plan,
-          monthly_value: m.monthlyValueCents,
-          reasons: m.reasons,
-          risk_level: m.riskLevel,
-          plan_status: m.planStatus,
-          days_since_last_activity: m.daysSinceLastActivity,
-          last_activity_at: m.lastActivityAt,
-          last_touch_created_at: m.lastTouchCreatedAt,
-          plan_ends_on: m.planEndsOn,
-        })),
+        at_risk: result.atRiskMembers.map(serializeMember),
+        probably_lost_total: result.probablyLostTotalCents,
+        probably_lost_count: result.probablyLostMembers.length,
+        probably_lost: result.probablyLostMembers.map(serializeMember),
         recovered_count: result.recoveredThisMonth.length,
+        recovered_total: result.recoveredTotalCents,
         recovered: result.recoveredThisMonth,
         unpriced_count: result.unpricedCount,
         currency: result.currency,
