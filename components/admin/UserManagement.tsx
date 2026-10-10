@@ -58,6 +58,7 @@ interface UserManagementProps {
   actionLoading: string | null;
   onBan: (userId: string) => void;
   onUnban: (userId: string) => void;
+  onDelete: (user: { id: string; name: string | null; email: string | null }) => void;
 }
 
 export default function UserManagement({
@@ -72,6 +73,7 @@ export default function UserManagement({
   actionLoading,
   onBan,
   onUnban,
+  onDelete,
 }: UserManagementProps) {
   const { language } = useLanguage();
   const isEs = language === 'es';
@@ -267,14 +269,20 @@ export default function UserManagement({
                         {actionLoading === u.id ? (isEs ? 'Espera...' : 'Wait...') : isEs ? 'Banear' : 'Ban'}
                       </button>
                     )}
-                    {/* Delete is NOT here. It gates on ADMIN_EMAILS while /admin
-                        gates on is_app_admin(), so it 403s silently for a DB
-                        admin who is not on the list. Removing it from the list
-                        is the interim mitigation until SEC-03; it returns in the
-                        detail view (ADMIN-02) behind a confirmation. */}
-                    <span className="text-[11px] text-tribe-dark-80 dark:text-tribe-dark-60">
-                      {isEs ? 'Eliminar se mueve a la vista de detalle' : 'Delete moves to the detail view'}
-                    </span>
+                    {/* Delete is back (2026-10-10). It was pulled because the
+                        route gated on ADMIN_EMAILS while /admin gates on
+                        is_app_admin(); the route now uses requireApiAdmin(), the
+                        same check. Admin rows get no button: the route refuses
+                        them, so offering it would only produce an error. */}
+                    {!u.is_admin && (
+                      <button
+                        onClick={() => onDelete({ id: u.id, name: u.name, email: u.email })}
+                        disabled={actionLoading === u.id}
+                        className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-red-700 text-white hover:bg-red-800 disabled:opacity-50 transition"
+                      >
+                        {isEs ? 'Eliminar cuenta' : 'Delete account'}
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
