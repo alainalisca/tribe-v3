@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server';
 import { fetchPublicPartner, partnerDescription, type PublicPartner } from '@/lib/partnerPublic';
 import GymShareClient from './GymShareClient';
 import { SITE_URL } from '@/lib/http/siteUrl';
+import { partnerJsonLd, serializeJsonLd } from '@/lib/seo/jsonLd';
 
 const BASE_URL = SITE_URL;
 
@@ -125,5 +126,23 @@ export default async function PublicGymPage({ params }: PageProps) {
   // "not found" panel rendered inside a 200.
   if (!partner) notFound();
 
-  return <GymShareClient partner={partner} />;
+  // T-GROW5a: schema.org SportsActivityLocation, from the same partners_public
+  // row the page renders. The slug URL, as for og:url, so both forms of the
+  // link describe one place.
+  const jsonLd = partnerJsonLd({
+    url: `${BASE_URL}/g/${partner.slug}/`,
+    business_name: partner.business_name,
+    description: partnerDescription(partner, 'es'),
+    address: partner.address,
+    lat: partner.lat,
+    lng: partner.lng,
+    image: partner.logo_image_url,
+  });
+
+  return (
+    <>
+      {jsonLd && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }} />}
+      <GymShareClient partner={partner} />
+    </>
+  );
 }
