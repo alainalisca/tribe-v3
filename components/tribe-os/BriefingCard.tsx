@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { MessageCircle, ChevronRight, Calendar, CreditCard, ArrowRight } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
+import { formatCents, type Currency } from '@/lib/format/currency';
 import { Card, CardContent } from '@/components/tribe-os/ui';
 import DraftModal from '@/components/tribe-os/DraftModal';
 import type { DraftContext } from '@/lib/tribe-os/drafts/templates';
@@ -74,6 +75,7 @@ export default function BriefingCard() {
   const { language } = useLanguage();
   const [state, setState] = useState<WidgetState>({ kind: 'loading' });
   const [draftCtx, setDraftCtx] = useState<DraftContext | null>(null);
+  const [forecastLine, setForecastLine] = useState<{ atRisk: number; recovered: number; currency: Currency } | null>(null);
 
   const fetchData = useCallback(async () => {
     try {
@@ -89,6 +91,17 @@ export default function BriefingCard() {
 
   useEffect(() => {
     fetchData();
+    fetch('/api/tribe-os/forecast')
+      .then((r) => r.json())
+      .then((j) => {
+        if (j.success && j.data) {
+          const d = j.data as { at_risk_total: number; recovered_count: number; currency: string };
+          if (d.at_risk_total > 0 || d.recovered_count > 0) {
+            setForecastLine({ atRisk: d.at_risk_total, recovered: d.recovered_count, currency: (d.currency ?? 'COP') as Currency });
+          }
+        }
+      })
+      .catch(() => {});
   }, [fetchData]);
 
   if (state.kind === 'loading') {
@@ -124,6 +137,16 @@ export default function BriefingCard() {
           <div>
             <h2 className="text-base sm:text-lg font-black text-gray-900">{data.headerDate}</h2>
             <p className="text-sm text-gray-600 mt-0.5">{data.summary}</p>
+            {forecastLine && (
+              <Link
+                href="/os/forecast"
+                className="block text-xs text-gray-500 mt-1 hover:text-tribe-green transition-colors"
+              >
+                {formatCents(forecastLine.atRisk, forecastLine.currency, language)} en riesgo este mes
+                {forecastLine.recovered > 0 && <> · {forecastLine.recovered} recuperado{forecastLine.recovered > 1 ? 's' : ''}</>}
+                {' →'}
+              </Link>
+            )}
           </div>
 
           {isEmpty && <p className="text-sm text-gray-500 italic">Todo en orden hoy. Nadie en riesgo alto.</p>}

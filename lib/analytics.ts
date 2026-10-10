@@ -228,6 +228,8 @@ type EventName =
   | 'tribe_os_coaches_viewed' // /os/coaches page rendered (coach roster surface)
   | 'tribe_os_gym_settings_viewed' // /os/gym page rendered
   | 'tribe_os_gym_settings_saved' // PATCH /api/tribe-os/gym success
+  | 'tribe_os_forecast_viewed' // /os/forecast page rendered
+  | 'tribe_os_forecast_whatsapp_clicked' // WhatsApp button clicked on forecast at-risk row
   | 'tribe_os_checkout_started' // user clicked the checkout button
   | 'tribe_os_checkout_succeeded' // Stripe checkout returned ?subscribed=true
   | 'tribe_os_portal_opened' // user clicked manage subscription -> Stripe portal

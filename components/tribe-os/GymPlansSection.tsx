@@ -125,7 +125,7 @@ export default function GymPlansSection({ rows, gymCurrency, canEdit, saving, on
 
           return (
             <div key={row.name} className="p-2.5 rounded-lg bg-white border border-gray-100 space-y-1">
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <div className="min-w-0 flex-1">
                   <span className="text-sm font-semibold text-gray-900 block truncate">
                     {row.name}
@@ -166,7 +166,7 @@ export default function GymPlansSection({ rows, gymCurrency, canEdit, saving, on
                       onRowChange(i, { durationMonths: parseInt(e.target.value, 10), dirty: true })
                     }
                     disabled={!canEdit || saving}
-                    className="w-20 py-1.5 px-1 text-sm bg-white border border-gray-200 rounded focus:border-tribe-green focus:outline-none disabled:opacity-50"
+                    className="w-[6.5rem] py-1.5 px-1.5 text-sm bg-white border border-gray-200 rounded focus:border-tribe-green focus:outline-none disabled:opacity-50"
                   >
                     {DURATION_OPTIONS.map((m) => (
                       <option key={m} value={m}>
