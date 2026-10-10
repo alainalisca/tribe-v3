@@ -19,6 +19,8 @@ import TribeWordmark from '@/components/TribeWordmark';
 import ImageCropModal from '@/components/ImageCropModal';
 import PartnerDashboardEntryCard from '@/components/partner/PartnerDashboardEntryCard';
 import AthletesEntryCard from '@/components/atletas/AthletesEntryCard';
+import BringAFriendCard from '@/components/referral/BringAFriendCard';
+import { useMyReferralCode } from '@/hooks/useMyReferralCode';
 export default function ProfilePage() {
   const { language, t } = useLanguage();
   const {
@@ -43,6 +45,8 @@ export default function ProfilePage() {
     getProfileCompleteness,
     router,
   } = useProfile(language);
+  // T-GROW2: before the early returns, so the hook order never changes.
+  const myRefCode = useMyReferralCode(profile?.id);
 
   const cover = profile?.cover_image_url || null;
 
@@ -212,6 +216,11 @@ export default function ProfilePage() {
             <div className="mt-6">
               <AchievementBadges userId={profile.id} isOwnProfile={true} />
             </div>
+          )}
+
+          {/* T-GROW2 share moment 3: the persistent entry point. */}
+          {profile?.id && myRefCode && (
+            <BringAFriendCard context={{ kind: 'profile' }} code={myRefCode} language={language === 'es' ? 'es' : 'en'} />
           )}
 
           {/* Tribe.OS entry point — surfaces for everyone. Premium

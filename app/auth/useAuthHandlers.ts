@@ -9,7 +9,6 @@ import { showError, showSuccess } from '@/lib/toast';
 import { getErrorMessage } from '@/lib/errorMessages';
 import { logError } from '@/lib/logger';
 import { trackEvent } from '@/lib/analytics';
-import { applyReferralCode } from '@/lib/dal/referrals';
 import { haptic } from '@/lib/haptics';
 import { decodeReturnToParam, sanitizeReturnTo, storePendingReturnTo } from '@/lib/pendingReturnTo';
 import { getAuthTranslations } from './translations';
@@ -293,12 +292,8 @@ export function useAuthHandlers(language: 'en' | 'es') {
       if (data.user) {
         const { isNewUser } = await upsertUserProfile(data.user);
         trackEvent('signup_email_verified', { user_id: data.user.id });
-        const refCode = localStorage.getItem('tribe_referral_code');
-        if (refCode) {
-          await applyReferralCode(supabase, refCode, data.user.id);
-          localStorage.removeItem('tribe_referral_code');
-          trackEvent('referral_sent', { referral_code: refCode, referred_user_id: data.user.id });
-        }
+        // T-GROW2: referral credit is server side now (/api/attr/signup, from the
+        // captured ?ref=). The client applyReferralCode call here never succeeded.
         await haptic('success');
         // T-C1 Gate 2: same as the native Google path — a new user's returnTo
         // is parked for the final onboarding step instead of being dropped.

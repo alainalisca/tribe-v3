@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import BringAFriendCard from '@/components/referral/BringAFriendCard';
 import VoucherQr from './VoucherQr';
 import { captureAttribution, attributionForSubmit, type Attribution } from '@/lib/attribution';
 
@@ -27,6 +28,12 @@ interface ClaimedPass {
   email: string;
   /** T-AV23: present only when the athletes flag is on for this partner. */
   qrSvg?: string;
+  /**
+   * T-GROW2: the code this lead shares. Optional because a pass stored in
+   * sessionStorage before this shipped has none, and that pass simply shows no
+   * "Trae a un amigo" card rather than a broken one.
+   */
+  refCode?: string;
 }
 
 type ErrorField = 'name' | 'whatsapp' | 'email' | 'consent';
@@ -282,6 +289,7 @@ export default function PaseForm({ slug, partnerName, options, consentText, cons
         whatsapp_url: string | null;
         storefront_url: string | null;
         qr_svg?: string;
+        ref_code?: string;
       };
       const pass: ClaimedPass = {
         passCode: data.pass_code,
@@ -289,6 +297,7 @@ export default function PaseForm({ slug, partnerName, options, consentText, cons
         storefrontUrl: data.storefront_url,
         email: email.trim(),
         ...(data.qr_svg ? { qrSvg: data.qr_svg } : {}),
+        ...(data.ref_code ? { refCode: data.ref_code } : {}),
       };
       storePass(slug, pass);
       setClaimed(pass);
@@ -333,6 +342,10 @@ export default function PaseForm({ slug, partnerName, options, consentText, cons
         ) : null}
 
         <p className="mt-4 text-xs text-stone-500">También te enviamos el pase a {claimed.email}.</p>
+        {/* T-GROW2 share moment 1. Spanish, like the rest of /pase. */}
+        {claimed.refCode ? (
+          <BringAFriendCard context={{ kind: 'pass', slug, partnerName }} code={claimed.refCode} language="es" />
+        ) : null}
       </section>
     );
   }
