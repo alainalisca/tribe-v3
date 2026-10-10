@@ -1,10 +1,12 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { usePathname } from 'next/navigation';
 import { initPostHog } from '@/lib/posthog';
 import { createClient } from '@/lib/supabase/client';
 import { resetUserIfIdentified } from '@/lib/analytics';
 import { identifyCurrentUser } from '@/lib/analyticsIdentity';
+import { recordNavigation } from '@/lib/navigationSource';
 
 /** Auth events after which the signed-in user should be (re)identified. */
 const IDENTIFY_EVENTS = new Set(['INITIAL_SESSION', 'SIGNED_IN', 'USER_UPDATED']);
@@ -31,6 +33,14 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
   // listener; and who PostHog was last told about.
   const currentUserId = useRef<string | null>(null);
   const identifiedUserId = useRef<string | null>(null);
+
+  // Part D: remember each in-app route so session_viewed can say where the
+  // person came from (lib/navigationSource.ts, whose reader does not depend on
+  // whether this effect or the page's runs first).
+  const pathname = usePathname();
+  useEffect(() => {
+    recordNavigation(pathname);
+  }, [pathname]);
 
   useEffect(() => {
     // Load PostHog asynchronously — doesn't block initial render. Idempotent,

@@ -326,6 +326,7 @@ function CreateSessionPageInner() {
         price_cents: formData.is_paid ? Math.round(parseFloat(formData.price_display) * 100) : 0,
         currency: formData.currency,
         sport: formData.sport,
+        is_recurring: recurringValue.is_recurring,
         max_participants: formData.max_participants,
       });
       showSuccess(t('sessionCreated'));

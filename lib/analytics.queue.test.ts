@@ -26,10 +26,10 @@ afterEach(() => {
 
 describe('analytics helpers before the SDK has loaded', () => {
   it('trackEvent is delivered after the load, not dropped', async () => {
-    trackEvent('session_viewed', { session_id: 's1' });
+    trackEvent('app_opened', { session_id: 's1' });
     await initPostHog();
     expect(capture).toHaveBeenCalledOnce();
-    expect(capture.mock.calls[0][0]).toBe('session_viewed');
+    expect(capture.mock.calls[0][0]).toBe('app_opened');
     expect(capture.mock.calls[0][1]).toMatchObject({ session_id: 's1' });
   });
 

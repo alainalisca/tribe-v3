@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import VoucherQr from './VoucherQr';
 import { captureAttribution, attributionForSubmit, type Attribution } from '@/lib/attribution';
+import { trackEvent } from '@/lib/analytics';
 
 /**
  * The pass form and, after a successful claim, the pass itself.
@@ -292,6 +293,13 @@ export default function PaseForm({ slug, partnerName, options, consentText, cons
       };
       storePass(slug, pass);
       setClaimed(pass);
+      // T-ANALYTICS1 part D: the server accepted the lead. src and code are the
+      // campaign tags already sent above; nothing the person typed goes here.
+      trackEvent('pass_claimed', {
+        partner_slug: slug,
+        src: attribution.current.submit?.src ?? null,
+        code: attribution.current.submit?.code ?? null,
+      });
     } catch {
       setBanner('No pudimos procesar tu solicitud. Revisa tu conexión e intenta de nuevo.');
     } finally {

@@ -5,6 +5,7 @@ import { showSuccess, showError, showInfo } from '@/lib/toast';
 import { getErrorMessage } from '@/lib/errorMessages';
 import { celebrateJoin } from '@/lib/confetti';
 import { trackEvent } from '@/lib/analytics';
+import { trackSessionJoined, trackSessionLeft } from '@/lib/sessionAnalytics';
 import { joinSession } from '@/lib/sessions';
 import { needsAthleteSetup } from '@/lib/dal/athleteSetup';
 import { haptic } from '@/lib/haptics';
@@ -111,11 +112,8 @@ export function useSessionActions({
         // LR-04 funnel: dual-emit the legacy `session_joined` and the
         // canonical `session_join_succeeded` so the funnel has clean
         // naming while pre-existing dashboards keep reading.
-        trackEvent('session_joined', {
-          session_id: session.id,
-          session_type: 'free',
-          sport: session.sport,
-        });
+        // T-ANALYTICS1 part D: adds is_paid, instructor_id, is_first_join.
+        void trackSessionJoined(supabase, session, user.id);
         trackEvent('session_join_succeeded', {
           session_id: session.id,
           sport: session.sport,
@@ -211,6 +209,7 @@ export function useSessionActions({
       if (!removed) return;
       setGuestHasJoined(false);
       setGuestParticipantId(null);
+      trackSessionLeft(session.id);
       // Signal the home feed to refetch on return (BUG-207 — same pattern as
       // doLeave for authenticated users).
       if (typeof sessionStorage !== 'undefined') {
@@ -238,6 +237,7 @@ export function useSessionActions({
     if (!user) return;
     try {
       await removeUserFromSession(supabase, session, user.id);
+      trackSessionLeft(session.id);
       // T-NOTIF1: notify the host that this athlete left (mirrors the join
       // notification). Fire-and-forget, only after the delete confirmed above.
       notifyHostOfLeave(session, user.user_metadata?.name || user.email || 'Someone');

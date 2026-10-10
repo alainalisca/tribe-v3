@@ -5,7 +5,7 @@
  * for sessions, instructors, and achievements.
  */
 
-import { trackEvent } from '@/lib/analytics';
+import { channelFor, trackEvent, type EventPropertyMap } from '@/lib/analytics';
 import { SITE_URL } from '@/lib/http/siteUrl';
 
 // ═══════════════════════════════════════════
@@ -216,24 +216,31 @@ export async function copyToClipboard(text: string): Promise<boolean> {
 // HIGH-LEVEL SHARERS
 // ═══════════════════════════════════════════
 
+/** What a sharer says about its content; executeShare adds the channel. */
+type ShareEventContent = Omit<EventPropertyMap['share_link_created'], 'channel' | 'method'>;
+
 async function executeShare(
   text: string,
   url: string,
   title: string,
-  preferredMethod?: ShareMethod,
-  eventProps?: Record<string, unknown>
+  preferredMethod: ShareMethod | undefined,
+  content: ShareEventContent
 ): Promise<ShareMethod> {
   const method = preferredMethod ?? 'native';
+  // T-ANALYTICS1 part D: channel is the dashboard-facing value (whatsapp /
+  // copy / native / ...); method is kept as it was for older dashboards.
+  const track = (used: ShareMethod) =>
+    trackEvent('share_link_created', { ...content, channel: channelFor(used), method: used });
 
   if (method === 'whatsapp') {
     shareViaWhatsApp(text, url);
-    trackEvent('share_link_created', { method: 'whatsapp', ...eventProps });
+    track('whatsapp');
     return 'whatsapp';
   }
 
   if (method === 'twitter') {
     shareViaTwitter(text, url);
-    trackEvent('share_link_created', { method: 'twitter', ...eventProps });
+    track('twitter');
     return 'twitter';
   }
 
@@ -242,13 +249,13 @@ async function executeShare(
     const shared = method === 'native' ? await shareViaNative(title, text, url) : false;
 
     if (shared) {
-      trackEvent('share_link_created', { method: 'native', ...eventProps });
+      track('native');
       return 'native';
     }
 
     const copied = await copyToClipboard(`${text}\n${url}`);
     if (copied) {
-      trackEvent('share_link_created', { method: 'clipboard', ...eventProps });
+      track('clipboard');
       return 'clipboard';
     }
   }
@@ -265,9 +272,15 @@ export async function shareSession(
   const url = getSessionShareUrl(data.id);
   const result = await executeShare(text, url, data.title, preferredMethod, {
     content_type: 'session',
+    content_id: data.id,
     session_id: data.id,
   });
-  trackEvent('session_shared', { session_id: data.id, method: result });
+  trackEvent('session_shared', {
+    session_id: data.id,
+    content_type: 'session',
+    channel: channelFor(result),
+    method: result,
+  });
   return result;
 }
 
@@ -280,6 +293,7 @@ export async function shareInstructor(
   const url = getInstructorShareUrl(data.id);
   return executeShare(text, url, data.name, preferredMethod, {
     content_type: 'instructor',
+    content_id: data.id,
     instructor_id: data.id,
   });
 }
@@ -294,6 +308,7 @@ export async function shareAchievement(
   const url = BASE_URL;
   return executeShare(text, url, 'Tribe', preferredMethod, {
     content_type: 'achievement',
+    content_id: data.type,
     achievement_type: data.type,
   });
 }

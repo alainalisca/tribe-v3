@@ -26,7 +26,12 @@ export default function InviteModal({ language, inviteLink, session, onClose }: 
   }
 
   function shareInviteLink() {
-    trackEvent('session_shared', { session_id: session.id, method: 'native' });
+    trackEvent('session_shared', {
+      session_id: session.id,
+      content_type: 'session',
+      channel: 'native',
+      method: 'native',
+    });
     if (navigator.share) {
       navigator
         .share({

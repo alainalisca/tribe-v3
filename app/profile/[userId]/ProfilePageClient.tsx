@@ -142,10 +142,22 @@ export default function ProfilePageClient({ userId, initialProfile, statsSlot }:
       language === 'es' ? `${profile?.name} — Instructor en Tribe` : `${profile?.name} — Instructor on Tribe`;
     if (navigator.share) {
       await navigator.share({ title: shareText, url: shareUrl });
-      trackEvent('share_link_created', { type: 'instructor', instructor_id: userId });
+      trackEvent('share_link_created', {
+        content_type: 'instructor',
+        content_id: userId,
+        channel: 'native',
+        type: 'instructor',
+        instructor_id: userId,
+      });
     } else {
       await navigator.clipboard.writeText(shareUrl);
-      trackEvent('share_link_created', { type: 'instructor', instructor_id: userId });
+      trackEvent('share_link_created', {
+        content_type: 'instructor',
+        content_id: userId,
+        channel: 'copy',
+        type: 'instructor',
+        instructor_id: userId,
+      });
       showSuccess(language === 'es' ? '¡Enlace copiado!' : 'Link copied!');
     }
   }

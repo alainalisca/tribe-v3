@@ -83,7 +83,7 @@ export function resetUserIfIdentified(): void {
 // EVENT TRACKING
 // ═══════════════════════════════════════════
 
-type EventName =
+export type EventName =
   // Onboarding
   | 'signup_started'
   | 'signup_email_submitted' // LR-04: fires when email signup form is POSTed
@@ -269,16 +269,112 @@ type EventName =
 
   // Digital pass (T-LEAD1 / T-LEAD2)
   | 'pass_entry_tapped' // an in-app entry point into /pase tapped; `surface` and `code` say which one
+  | 'pass_claimed' // T-ANALYTICS1: /pase lead accepted by the server (not on tap)
 
   // Errors
   | 'error_occurred'
   | 'api_error';
 
+// ═══════════════════════════════════════════
+// TYPED PROPERTIES (T-ANALYTICS1 part D)
+// ═══════════════════════════════════════════
+//
+// The core product events have a declared property shape, so a missing or
+// misspelled property is a compile error at the call site instead of a hole
+// in a funnel. Every other event keeps the loose Record<string, unknown>.
+//
+// No PII in any of these: IDs, enums and booleans only, never names, emails
+// or phone numbers. Fields marked "legacy" predate this ticket and are kept so
+// existing dashboards keep reading; their values are unchanged.
+
+export type ShareContentType = 'session' | 'instructor' | 'gym' | 'pass' | 'referral' | 'achievement';
+/** Where a share went. 'copy' is the clipboard; 'twitter' predates this list and is kept. */
+export type ShareChannel = 'whatsapp' | 'instagram' | 'copy' | 'native' | 'twitter';
 /**
- * Track a named event with optional properties.
- * This is the main function components call.
+ * How someone reached a session. 'public_share' is the /s/[id] share page
+ * (kept, not renamed: continuity with existing data). 'direct' is a session
+ * opened as the first page of a visit; 'other' is any in-app route not below.
+ * 'map' is declared for the spec but nothing emits it: no session map exists.
  */
-export function trackEvent(event: EventName, properties?: Record<string, unknown>): void {
+export type SessionViewSource = 'feed' | 'share_link' | 'profile' | 'map' | 'public_share' | 'direct' | 'other';
+
+export interface EventPropertyMap {
+  signup_completed: { method: 'google' | 'apple' | 'email'; role: Exclude<AnalyticsRole, 'admin'> };
+  onboarding_completed: { role: 'athlete' | 'instructor' };
+  session_viewed: {
+    session_id: string;
+    source: SessionViewSource;
+    sport: string | null;
+    is_paid: boolean;
+    instructor_id: string | null;
+    session_type?: 'paid' | 'free'; // legacy
+    price_cents?: number | null; // legacy
+    currency?: string | null; // legacy
+  };
+  session_joined: {
+    session_id: string;
+    sport: string | null;
+    is_paid: boolean;
+    instructor_id: string | null;
+    /** null when the count could not be read, rather than a guess. */
+    is_first_join: boolean | null;
+    session_type?: 'paid' | 'free'; // legacy
+  };
+  session_left: { session_id: string };
+  session_created: {
+    session_id: string | undefined;
+    sport: string;
+    is_paid: boolean;
+    is_recurring: boolean;
+    price_cents?: number; // legacy
+    currency?: string; // legacy
+    max_participants?: number; // legacy
+  };
+  instructor_profile_viewed: { instructor_id: string; source: string };
+  pass_claimed: { partner_slug: string; src: string | null; code: string | null };
+  session_shared: {
+    session_id: string;
+    content_type: 'session';
+    channel: ShareChannel;
+    method?: string; // legacy: the raw share method
+    sport?: string; // legacy (WhatsApp button)
+    is_creator?: boolean; // legacy (WhatsApp button)
+    language?: string; // legacy (WhatsApp button)
+  };
+  share_link_created: {
+    content_type: ShareContentType;
+    content_id: string;
+    channel: ShareChannel;
+    method?: string; // legacy: the raw share method
+    type?: string; // legacy (profile share)
+    session_id?: string; // legacy
+    instructor_id?: string; // legacy
+    achievement_type?: string; // legacy
+  };
+}
+
+/** Properties trackEvent accepts for `E`: the declared shape, or anything for an untyped event. */
+export type TrackEventArgs<E extends EventName> = E extends keyof EventPropertyMap
+  ? [properties: EventPropertyMap[E]]
+  : [properties?: Record<string, unknown>];
+
+/** Share method (lib/share.ts ShareMethod and friends) to the channel the dashboards group by. */
+export function channelFor(method: string): ShareChannel {
+  if (method === 'clipboard' || method === 'copy') return 'copy';
+  if (method === 'whatsapp' || method === 'instagram' || method === 'twitter') return method;
+  return 'native';
+}
+
+/**
+ * Track a named event. The name must be an EventName (anything else is a
+ * compile error), and the core product events must carry their declared
+ * properties (EventPropertyMap).
+ */
+export function trackEvent<E extends EventName>(event: E, ...args: TrackEventArgs<E>): void {
+  captureEvent(event, args[0] as Record<string, unknown> | undefined);
+}
+
+function captureEvent(event: EventName, properties?: Record<string, unknown>): void {
   // Read the clock at the call, not when PostHog gets round to it: an event
   // queued behind the SDK load must keep the time it actually happened.
   const at = new Date();
@@ -305,7 +401,7 @@ export function startTimedEvent(event: EventName, properties?: Record<string, un
   const startTime = Date.now();
   return () => {
     const durationMs = Date.now() - startTime;
-    trackEvent(event, {
+    captureEvent(event, {
       ...properties,
       duration_ms: durationMs,
       duration_seconds: Math.round(durationMs / 1000),
