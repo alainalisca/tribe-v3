@@ -21,6 +21,7 @@ import { useTribeOSPremiumGate } from '@/hooks/useTribeOSPremiumGate';
 import { createClient } from '@/lib/supabase/client';
 import { trackEvent } from '@/lib/analytics';
 import SampleDataSeedButton from '@/components/tribe-os/SampleDataSeedButton';
+import GymPlansSection from '@/components/tribe-os/GymPlansSection';
 import type { GymRow } from '@/lib/dal/gyms';
 
 type LoadState =
@@ -392,6 +393,8 @@ function GymForm({
           </span>
         </label>
       </div>
+
+      <GymPlansSection canEdit={canEdit} />
 
       {error ? (
         <div
