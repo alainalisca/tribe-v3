@@ -121,6 +121,11 @@ vi.mock('./useAuthHandlers', () => ({
   },
 }));
 
+const mockFetchInviter = vi.fn();
+vi.mock('@/lib/referralInviterClient', () => ({
+  fetchInviterFirstName: (code: string) => mockFetchInviter(code),
+}));
+
 import AuthPage from './page';
 
 describe('AuthPage', () => {
@@ -250,5 +255,33 @@ describe('AuthPage', () => {
     // OAuth buttons and login/signup toggle are hidden
     expect(screen.queryByText("Don't have an account? Sign up")).not.toBeInTheDocument();
     expect(screen.queryByText('Already have an account? Sign in')).not.toBeInTheDocument();
+  });
+
+  describe('"Invitado por X" banner (/auth/?ref=CODE)', () => {
+    it("looks up the ref code and greets the visitor by the inviter's first name", async () => {
+      mockLanguage = 'es';
+      mockIsLogin = false;
+      mockSearchParams = new URLSearchParams('ref=TRIBE-AB2CD');
+      mockFetchInviter.mockResolvedValue('Ana');
+      render(<AuthPage />);
+      expect(await screen.findByText('🎉 Invitado por Ana')).toBeInTheDocument();
+      expect(mockFetchInviter).toHaveBeenCalledWith('TRIBE-AB2CD');
+    });
+
+    it('shows no banner and makes no lookup without a ref', async () => {
+      render(<AuthPage />);
+      await act(async () => {});
+      expect(mockFetchInviter).not.toHaveBeenCalled();
+      expect(screen.queryByText(/Invited by|Invitado por/)).not.toBeInTheDocument();
+    });
+
+    it('shows no banner when the code resolves to nobody', async () => {
+      mockSearchParams = new URLSearchParams('ref=TRIBE-ZZZZZ');
+      mockFetchInviter.mockResolvedValue(null);
+      render(<AuthPage />);
+      await act(async () => {});
+      expect(mockFetchInviter).toHaveBeenCalledWith('TRIBE-ZZZZZ');
+      expect(screen.queryByText(/Invited by|Invitado por/)).not.toBeInTheDocument();
+    });
   });
 });
