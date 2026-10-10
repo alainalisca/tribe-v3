@@ -50,6 +50,13 @@
  * ten minutes inside public.rate_limits and nowhere else; a permanent column
  * would turn a counter into a location history. See migration 213's header.
  *
+ * 2026-10-09: policy v1.1 now covers recording arrival on an account, and
+ * T-GROW1 part C does that on the users row (signup_* columns, migration 214,
+ * written by /api/attr/signup). THIS ROUTE IS UNCHANGED BY IT: a visit row
+ * still holds no user id, and nothing joins it to one. v1.1 permits recording
+ * how a person arrived; it does not oblige turning the visit log into a
+ * per-person history, and that line is still held here on purpose.
+ *
  * ═══════════════════════════════════════════════════════════════════════════
  * IT ANSWERS 204 AND THE CALLER IGNORES IT
  * ═══════════════════════════════════════════════════════════════════════════

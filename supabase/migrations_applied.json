@@ -34,6 +34,7 @@
     "210_t_av27b_notifications",
     "211_t_grow1_lead_attribution",
     "212_t_grow1_lead_attended_toggle",
-    "213_t_grow1_attribution_events"
+    "213_t_grow1_attribution_events",
+    "214_t_grow1_signup_attribution"
   ]
 }

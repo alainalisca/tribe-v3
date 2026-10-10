@@ -25,7 +25,10 @@ vi.mock('@/lib/logger', () => ({
   logError: vi.fn(),
 }));
 
+vi.mock('@/lib/signupAttributionClient', () => ({ sendSignupAttribution: vi.fn() }));
+
 import { upsertUserProfile } from './auth-helpers';
+import { sendSignupAttribution } from '@/lib/signupAttributionClient';
 
 function createMockUser(overrides: Partial<User> = {}): User {
   return {
@@ -232,4 +235,18 @@ describe('upsertUserProfile', () => {
     // Should still return result even on error
     expect(result).toHaveProperty('isNewUser');
   });
+
+  /**
+   * T-GROW1 part C. The send is NOT gated on isNewUser: that test is a 60
+   * second heuristic, and an email signup that types its OTP a minute late
+   * reads as an existing user. The server decides; the client always sends.
+   * This arm is the one that fails if the call is moved inside `if (isNewUser)`.
+   */
+  it('sends signup attribution even when the 60 second heuristic says "not new"', async () => {
+    mockMaybeSingle.mockResolvedValue({ data: { id: 'user-123', avatar_url: null, created_at: 'x' }, error: null });
+    const result = await upsertUserProfile(createMockUser()); // created 2 min ago, profile exists
+    expect(result.isNewUser).toBe(false);
+    expect(sendSignupAttribution).toHaveBeenCalledWith('user-123');
+  });
 });
+

@@ -1487,6 +1487,16 @@ export type Database = {
           session_reminders_enabled: boolean | null
           sessions_completed: number | null
           show_rate: number | null
+          signup_attributed_at: string | null
+          signup_code: string | null
+          signup_first_touch: Json | null
+          signup_landing_path: string | null
+          signup_ref: string | null
+          signup_src: string | null
+          signup_utm_campaign: string | null
+          signup_utm_content: string | null
+          signup_utm_medium: string | null
+          signup_utm_source: string | null
           specialties: string[] | null
           sports: string[] | null
           storefront_banner_url: string | null
@@ -1558,6 +1568,16 @@ export type Database = {
           session_reminders_enabled?: boolean | null
           sessions_completed?: number | null
           show_rate?: number | null
+          signup_attributed_at?: string | null
+          signup_code?: string | null
+          signup_first_touch?: Json | null
+          signup_landing_path?: string | null
+          signup_ref?: string | null
+          signup_src?: string | null
+          signup_utm_campaign?: string | null
+          signup_utm_content?: string | null
+          signup_utm_medium?: string | null
+          signup_utm_source?: string | null
           specialties?: string[] | null
           sports?: string[] | null
           storefront_banner_url?: string | null
@@ -1629,6 +1649,16 @@ export type Database = {
           session_reminders_enabled?: boolean | null
           sessions_completed?: number | null
           show_rate?: number | null
+          signup_attributed_at?: string | null
+          signup_code?: string | null
+          signup_first_touch?: Json | null
+          signup_landing_path?: string | null
+          signup_ref?: string | null
+          signup_src?: string | null
+          signup_utm_campaign?: string | null
+          signup_utm_content?: string | null
+          signup_utm_medium?: string | null
+          signup_utm_source?: string | null
           specialties?: string[] | null
           sports?: string[] | null
           storefront_banner_url?: string | null

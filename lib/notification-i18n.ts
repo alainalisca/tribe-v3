@@ -165,7 +165,7 @@ const TEMPLATES: Record<TemplateKey, Template> = {
     },
     es: {
       title: '💌 Tienes una invitación',
-      body: '{{name}} te invito a {{sport}} el {{date}}',
+      body: '{{name}} te invitó a {{sport}} el {{date}}',
     },
   },
   // T-PROF1: recipient = the instructor. Nudge to finish their profile so they

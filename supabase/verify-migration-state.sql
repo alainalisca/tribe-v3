@@ -1035,7 +1035,13 @@ where a.attrelid = 'public.users'::regclass
     -- 115: precise home coordinates
     'location_lat', 'location_lng',
     -- 118: email
-    'email'
+    'email',
+    -- 214: how the account arrived and who invited it. Every signed-in user can
+    -- read every granted users column, so a grant would publish this to all of
+    -- them. Admin reads it with the service role.
+    'signup_src', 'signup_code', 'signup_ref', 'signup_utm_source',
+    'signup_utm_medium', 'signup_utm_campaign', 'signup_utm_content',
+    'signup_landing_path', 'signup_first_touch', 'signup_attributed_at'
   )
   and not has_column_privilege('authenticated', a.attrelid, a.attnum, 'SELECT')
 union all
@@ -1058,7 +1064,10 @@ from (values
     ('is_admin'), ('payout_method'), ('stripe_account_id'), ('wompi_merchant_id'),
     ('total_earnings_cents'),
     ('location_lat'), ('location_lng'),
-    ('email')
+    ('email'),
+    ('signup_src'), ('signup_code'), ('signup_ref'), ('signup_utm_source'),
+    ('signup_utm_medium'), ('signup_utm_campaign'), ('signup_utm_content'),
+    ('signup_landing_path'), ('signup_first_touch'), ('signup_attributed_at')
 ) as r(column_name)
 where exists (
         select 1 from information_schema.columns c
@@ -1898,7 +1907,8 @@ select 'GUARD_184_mirror_matches_applied_table',
     ('210_t_av27b_notifications'),
     ('211_t_grow1_lead_attribution'),
     ('212_t_grow1_lead_attended_toggle'),
-    ('213_t_grow1_attribution_events')
+    ('213_t_grow1_attribution_events'),
+    ('214_t_grow1_signup_attribution')
     -- <<<END_MIRROR_LIST>>>
            ) as mirror(migration)
            where not exists (select 1 from public.migrations_applied a
@@ -1944,7 +1954,8 @@ select 'GUARD_184_mirror_matches_applied_table',
     ('210_t_av27b_notifications'),
     ('211_t_grow1_lead_attribution'),
     ('212_t_grow1_lead_attended_toggle'),
-    ('213_t_grow1_attribution_events')
+    ('213_t_grow1_attribution_events'),
+    ('214_t_grow1_signup_attribution')
     -- <<<END_MIRROR_LIST>>>
            ))
            then 'MISSING -- this database has recorded a migration the JSON mirror omits; re-sync it'
@@ -2810,6 +2821,47 @@ select '213_t_grow1_attribution_events',
                               or has_function_privilege('authenticated', oid, 'EXECUTE')
                               or not has_function_privilege('service_role', oid, 'EXECUTE')))
            then 'MISSING -- admin_attribution_summary became a definer, or a client role can execute it, or service_role cannot'
+         else 'applied'
+       end
+
+union all
+
+-- T-GROW1 part C. The ten signup columns exist, no client role can read them,
+-- the write-once guard trigger is attached and enabled, and the service role
+-- can still write (otherwise /api/attr/signup fails on every new account).
+select '214_t_grow1_signup_attribution',
+       -- Every lookup by to_regclass and (oid, attnum), never a literal ::regclass
+       -- or a column NAME: before 214 runs the columns do not exist, and the
+       -- name form of has_column_privilege raises 42703, which would take the
+       -- whole verifier down instead of reading MISSING (verifyTavProbes.test.ts).
+       case
+         when (select count(*) from pg_attribute
+                where attrelid = to_regclass('public.users') and attnum > 0 and not attisdropped
+                  and attname in ('signup_src', 'signup_code', 'signup_ref', 'signup_utm_source',
+                                  'signup_utm_medium', 'signup_utm_campaign', 'signup_utm_content',
+                                  'signup_landing_path', 'signup_first_touch', 'signup_attributed_at')) <> 10
+           then 'MISSING -- not all ten users.signup_* columns exist'
+         when exists (select 1 from pg_attribute a
+                       where a.attrelid = to_regclass('public.users') and a.attnum > 0 and not a.attisdropped
+                         and a.attname like 'signup\_%'
+                         and (has_column_privilege('anon', a.attrelid, a.attnum, 'SELECT')
+                              or has_column_privilege('authenticated', a.attrelid, a.attnum, 'SELECT')))
+           then 'MISSING -- a client role can read a signup_* column; how each person arrived would be public'
+         when not exists (select 1 from pg_trigger t
+                           where t.tgrelid = to_regclass('public.users')
+                             and t.tgname = 'users_signup_attribution_guard'
+                             and not t.tgisinternal and t.tgenabled = 'O'
+                             and (t.tgtype & 2) <> 0 and (t.tgtype & 4) <> 0 and (t.tgtype & 16) <> 0)
+           then 'MISSING -- users_signup_attribution_guard is absent, disabled, or not BEFORE INSERT OR UPDATE; authenticated holds table-level UPDATE on users, so the columns are client-writable without it'
+         when not exists (select 1 from pg_constraint
+                           where conrelid = to_regclass('public.users') and conname = 'users_signup_attr_stamped'
+                             and contype = 'c' and convalidated)
+           then 'MISSING -- users_signup_attr_stamped is gone; attribution could exist with no stamp and bypass write-once'
+         when not coalesce((select has_column_privilege('service_role', a.attrelid, a.attnum, 'UPDATE')
+                              from pg_attribute a
+                             where a.attrelid = to_regclass('public.users')
+                               and a.attname = 'signup_attributed_at' and not a.attisdropped), false)
+           then 'MISSING -- service_role cannot write users.signup_attributed_at; /api/attr/signup fails'
          else 'applied'
        end
 

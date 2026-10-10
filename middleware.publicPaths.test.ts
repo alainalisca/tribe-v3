@@ -104,6 +104,16 @@ describe('existing public surfaces survive the change', () => {
     expect(isPublicPath('/api/attr/')).toBe(true);
   });
 
+  it('lets /api/attr/signup/ reach its handler, which authenticates itself (T-GROW1 part C)', () => {
+    // Public here by the /api/attr prefix, and that is fine rather than an
+    // accident: the route calls getUser() and answers 401 itself (route.test.ts
+    // "refuses a signed-out caller"). What must NOT happen is a 307 to /auth,
+    // because the client fires it with keepalive during the post-sign-in
+    // navigation and never reads the answer, so a redirect would lose the
+    // account's attribution silently, which is this file's running theme.
+    expect(isPublicPath('/api/attr/signup/')).toBe(true);
+  });
+
   it('keeps the one-off outreach route reachable by its cron caller', () => {
     // Found by the dry run, not by review: the route checks CRON_SECRET itself,
     // but middleware's cookie gate runs first and 307s it to /auth. The
