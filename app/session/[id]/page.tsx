@@ -295,7 +295,7 @@ export default function SessionDetailPage() {
           <BringAFriendCard
             context={{ kind: 'session', sessionId: d.session.id, title: d.session.title || d.session.sport }}
             code={myRefCode}
-            language={language === 'es' ? 'es' : 'en'}
+            language={language}
           />
         )}
 

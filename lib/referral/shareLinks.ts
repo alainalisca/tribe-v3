@@ -50,21 +50,36 @@ export function referralLink(context: ReferralContext, code: string): string {
   }
 }
 
-/** The message, with the link at the end where the spec's draft puts it. */
+/**
+ * The message, with the link at the end where the spec's draft puts it.
+ * A table keyed by language rather than a ternary (the house lint rule), with
+ * every context in both languages so neither can be missing one.
+ */
+const MESSAGES: Record<'en' | 'es', (context: ReferralContext, link: string) => string> = {
+  es: (context, link) => {
+    switch (context.kind) {
+      case 'pass':
+        return `Voy a una clase gratis en ${context.partnerName} con Tribe. Vente conmigo: ${link}`;
+      case 'session':
+        return `Voy a entrenar ${context.title} con Tribe. Vente conmigo: ${link}`;
+      case 'profile':
+        return `Entreno con Tribe. Vente conmigo: ${link}`;
+    }
+  },
+  en: (context, link) => {
+    switch (context.kind) {
+      case 'pass':
+        return `I'm doing a free class at ${context.partnerName} with Tribe. Come with me: ${link}`;
+      case 'session':
+        return `I'm training ${context.title} with Tribe. Come with me: ${link}`;
+      case 'profile':
+        return `I train with Tribe. Come with me: ${link}`;
+    }
+  },
+};
+
 export function referralMessage(context: ReferralContext, link: string, language: 'en' | 'es'): string {
-  const es = language === 'es';
-  switch (context.kind) {
-    case 'pass':
-      return es
-        ? `Voy a una clase gratis en ${context.partnerName} con Tribe. Vente conmigo: ${link}`
-        : `I'm doing a free class at ${context.partnerName} with Tribe. Come with me: ${link}`;
-    case 'session':
-      return es
-        ? `Voy a entrenar ${context.title} con Tribe. Vente conmigo: ${link}`
-        : `I'm training ${context.title} with Tribe. Come with me: ${link}`;
-    case 'profile':
-      return es ? `Entreno con Tribe. Vente conmigo: ${link}` : `I train with Tribe. Come with me: ${link}`;
-  }
+  return MESSAGES[language](context, link);
 }
 
 /** wa.me with no number: WhatsApp opens its own contact picker with the text prefilled. */

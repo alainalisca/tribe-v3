@@ -220,7 +220,7 @@ export default function ProfilePage() {
 
           {/* T-GROW2 share moment 3: the persistent entry point. */}
           {profile?.id && myRefCode && (
-            <BringAFriendCard context={{ kind: 'profile' }} code={myRefCode} language={language === 'es' ? 'es' : 'en'} />
+            <BringAFriendCard context={{ kind: 'profile' }} code={myRefCode} language={language} />
           )}
 
           {/* Tribe.OS entry point — surfaces for everyone. Premium
