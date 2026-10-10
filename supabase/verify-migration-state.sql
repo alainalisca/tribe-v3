@@ -2898,4 +2898,27 @@ select '215_t_grow2_referral_loop',
          else 'applied'
        end
 
+
+union all
+
+-- T-AUTH3. The Google photos the 42501 sign-in upsert never saved are back, and
+-- none has gone missing since. The second arm is a live watch, not a one-off:
+-- it reads MISSING whenever a post-118 Google account has a provider photo and
+-- no avatar, which is exactly what the pre-#202 code produced.
+select '216_t_auth3_google_avatar_backfill',
+       case
+         when not exists (select 1 from public.migrations_applied
+                           where migration = '216_t_auth3_google_avatar_backfill')
+           then 'MISSING -- 216 is not recorded in migrations_applied'
+         when exists (select 1 from public.users u join auth.users au on au.id = u.id
+                       where coalesce(btrim(u.avatar_url), '') = ''
+                         and u.deleted_at is null
+                         and u.created_at >= '2026-07-10'
+                         and au.raw_app_meta_data->>'provider' = 'google'
+                         and coalesce(au.raw_user_meta_data->>'avatar_url', au.raw_user_meta_data->>'picture')
+                             ~ '^https://[a-z0-9.-]*googleusercontent\.com/')
+           then 'MISSING -- a Google account has a provider photo and no avatar; the sign-in profile sync is failing again'
+         else 'applied'
+       end
+
 order by migration;
