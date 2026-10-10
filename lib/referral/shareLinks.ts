@@ -17,11 +17,12 @@
  * THE COPY, AND WHICH OF IT IS APPROVED
  * ═══════════════════════════════════════════════════════════════════════════
  *
- * PASS: the spec's draft, verbatim (T-GROW2 B). EN for approval, ES ships.
- * SESSION and PROFILE: the spec gives no copy. These follow the pass draft's
- * shape and are DRAFTS FOR AL'S APPROVAL. No reward is named anywhere (Al is
- * confirming it with Leo); the /referral page's "we both earn a reward" copy is
- * deliberately not reused.
+ * ALL THREE APPROVED BY AL, 2026-10-10, as written below (PR #201).
+ * PASS: the spec's draft, verbatim (T-GROW2 B).
+ * SESSION and PROFILE: the spec gave no copy; these follow the pass draft's
+ * shape. No reward is named anywhere (Al is confirming it with Leo), and the
+ * /referral page's "we both earn a reward" copy is deliberately not reused and
+ * left untouched (Al, 2026-10-10). shareLinks.test.ts fails if a reward appears.
  *
  * Session links go to /s/{id}/, the public share route with the OG card, not
  * /session/{id}/ as the spec wrote: /s/ is what a stranger can open and what
