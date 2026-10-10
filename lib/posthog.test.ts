@@ -36,6 +36,13 @@ describe('initPostHog options', () => {
     expect(options.capture_pageleave).toBe('if_capture_pageview');
   });
 
+  it('sends through the first-party /ingest proxy, with links pointing at PostHog itself', async () => {
+    await initPostHog();
+    const options = init.mock.calls[0][1];
+    expect(options.api_host).toBe('/ingest');
+    expect(options.ui_host).toBe('https://us.posthog.com');
+  });
+
   it('keeps person profiles to identified users only', async () => {
     await initPostHog();
     expect(init.mock.calls[0][1].person_profiles).toBe('identified_only');

@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { isPublicPath, config } from './middleware';
+import nextConfig from './next.config';
 import { isPublicShareRoute, shouldSuppressInstallPrompt } from '@/lib/publicShareRoutes';
 
 /**
@@ -182,5 +183,61 @@ describe('/pase is public (T-LEAD1)', () => {
     expect(shouldSuppressInstallPrompt('/pase/bullbox/')).toBe(true);
     // and still does not sweep up a route that merely starts the same way
     expect(isPublicShareRoute('/pases')).toBe(false);
+  });
+});
+
+describe('/ingest is public (T-ANALYTICS1 part E)', () => {
+  // The PostHog reverse proxy. A signed-out visitor is most of the traffic it
+  // carries, and the SDK fires and forgets: a 307 to /auth would look exactly
+  // like success from the browser while PostHog received nothing. T-GROW1 shipped
+  // that bug once (/api/attr), caught only on the preview.
+  it.each([
+    '/ingest/e/',
+    '/ingest/i/v0/e/',
+    '/ingest/flags/',
+    '/ingest/s/',
+    '/ingest/array/phc_abc/config',
+    '/ingest/decide/',
+  ])('%s skips the auth cookie gate', (path) => {
+    expect(matcher.test(path)).toBe(true);
+    expect(isPublicPath(path)).toBe(true);
+  });
+
+  it('serves the SDK assets without the gate either', () => {
+    const asset = '/ingest/static/array.js';
+    expect(STATIC_ASSET.test(asset) || isPublicPath(asset)).toBe(true);
+  });
+
+  it('does not open neighbouring routes that merely start with the same letters', () => {
+    expect(isPublicPath('/ingestion-report')).toBe(false);
+    expect(isPublicPath('/ingest-admin/')).toBe(false);
+  });
+});
+
+describe('the /ingest rewrites (T-ANALYTICS1 part E)', () => {
+  async function ingestRewrites() {
+    const rewrites = await nextConfig.rewrites!();
+    const list = Array.isArray(rewrites)
+      ? rewrites
+      : [...(rewrites.beforeFiles ?? []), ...(rewrites.afterFiles ?? []), ...(rewrites.fallback ?? [])];
+    return list.filter((r) => r.source.startsWith('/ingest'));
+  }
+
+  it('sends assets and remote config to the assets host, everything else to ingestion', async () => {
+    const byPath = Object.fromEntries((await ingestRewrites()).map((r) => [r.source, r.destination]));
+    expect(byPath['/ingest/static/:path*']).toBe('https://us-assets.i.posthog.com/static/:path*');
+    expect(byPath['/ingest/array/:path*']).toBe('https://us-assets.i.posthog.com/array/:path*');
+    expect(byPath['/ingest/:path*']).toBe('https://us.i.posthog.com/:path*');
+  });
+
+  it('lists the catch-all LAST, or it would swallow the asset routes', async () => {
+    const sources = (await ingestRewrites()).map((r) => r.source);
+    expect(sources[sources.length - 1]).toBe('/ingest/:path*');
+  });
+
+  it('every rewritten path is also public in middleware (the two must stay in sync)', async () => {
+    for (const r of await ingestRewrites()) {
+      expect(isPublicPath(r.source.replace(':path*', 'x/'))).toBe(true);
+    }
   });
 });

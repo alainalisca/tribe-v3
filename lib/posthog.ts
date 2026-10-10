@@ -81,7 +81,14 @@ export async function initPostHog(): Promise<PostHog | null> {
       .then(([mod, platform]) => {
         const ph = mod.default;
         ph.init(process.env.NEXT_PUBLIC_POSTHOG_KEY!, {
-          api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST,
+          // T-ANALYTICS1 part E: same-origin reverse proxy (next.config.ts
+          // rewrites), so ad blockers do not drop events. ui_host keeps links
+          // into the PostHog app (toolbar, replay) pointing at PostHog itself.
+          // The native apps load the remote site, so the relative path works
+          // there too. lib/captureError.ts (server, posthog-node) still talks
+          // to PostHog directly: no ad blocker sits between Vercel and PostHog.
+          api_host: '/ingest',
+          ui_host: 'https://us.posthog.com',
           loaded: (posthog) => {
             posthog.register(superPropertiesFor(platform));
             if (process.env.NODE_ENV === 'development') posthog.debug();
