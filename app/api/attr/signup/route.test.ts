@@ -19,6 +19,7 @@ vi.mock('@/lib/dal/signupAttribution', () => ({
   fetchUserCreatedAt: vi.fn(),
   recordSignupAttribution: vi.fn(),
 }));
+vi.mock('@/lib/dal/referralLinks', () => ({ linkSignupReferral: vi.fn() }));
 
 import { POST } from './route';
 import { createClient } from '@/lib/supabase/server';
@@ -26,6 +27,7 @@ import { getServiceRoleClient } from '@/lib/supabase/admin';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { fetchUserCreatedAt, recordSignupAttribution } from '@/lib/dal/signupAttribution';
 import { logError } from '@/lib/logger';
+import { linkSignupReferral } from '@/lib/dal/referralLinks';
 import { SIGNUP_WINDOW_MS } from '@/lib/signupAttribution';
 
 const USER_ID = '11111111-1111-4111-8111-111111111111';
@@ -66,13 +68,15 @@ beforeEach(() => {
   vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true, remaining: 9, resetAt: new Date() });
   vi.mocked(fetchUserCreatedAt).mockResolvedValue({ success: true, data: now - 60_000 });
   vi.mocked(recordSignupAttribution).mockResolvedValue({ success: true, data: 'recorded' });
+  vi.mocked(linkSignupReferral).mockResolvedValue({ success: true, data: 'linked' });
 });
 
 describe('POST /api/attr/signup', () => {
   it('records the sanitized last touch on the SESSION user, with the window in the WHERE clause', async () => {
     const res = await POST(request({ first: FIRST, last: LAST }));
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ status: 'recorded' });
+    // LAST carries ref a7k2qx, so T-GROW2 links the referral on this call.
+    expect(await res.json()).toEqual({ status: 'recorded', referral: 'linked' });
 
     const [, userId, fields, createdAfter] = vi.mocked(recordSignupAttribution).mock.calls[0];
     expect(userId).toBe(USER_ID);
@@ -160,4 +164,35 @@ describe('POST /api/attr/signup', () => {
     expect(vi.mocked(checkRateLimit).mock.calls[0][1]).toBe(`attr-signup:${USER_ID}`);
     expect(recordSignupAttribution).not.toHaveBeenCalled();
   });
+
+  describe('T-GROW2: crediting the referrer', () => {
+    it('links the uppercased ref to the SESSION user, on the call that recorded', async () => {
+      await POST(request({ first: FIRST, last: LAST, user_id: OTHER_ID }));
+      expect(linkSignupReferral).toHaveBeenCalledTimes(1);
+      const [, code, userId] = vi.mocked(linkSignupReferral).mock.calls[0];
+      expect(code).toBe('A7K2QX');
+      expect(userId).toBe(USER_ID);
+    });
+
+    it('does NOT link when the attribution was already recorded by an earlier call', async () => {
+      vi.mocked(recordSignupAttribution).mockResolvedValue({ success: true, data: 'already' });
+      const res = await POST(request({ first: FIRST, last: LAST }));
+      expect(await res.json()).toEqual({ status: 'already' });
+      expect(linkSignupReferral).not.toHaveBeenCalled();
+    });
+
+    it('does NOT link when the touch carries no ref', async () => {
+      await POST(request({ first: null, last: { ...LAST, ref: null } }));
+      expect(recordSignupAttribution).toHaveBeenCalledTimes(1);
+      expect(linkSignupReferral).not.toHaveBeenCalled();
+    });
+
+    it('a failed link does not fail the request: the attribution is already recorded', async () => {
+      vi.mocked(linkSignupReferral).mockResolvedValue({ success: false, error: 'db' });
+      const res = await POST(request({ first: FIRST, last: LAST }));
+      expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({ status: 'recorded', referral: 'error' });
+    });
+  });
 });
+

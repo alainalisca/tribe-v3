@@ -1908,7 +1908,8 @@ select 'GUARD_184_mirror_matches_applied_table',
     ('211_t_grow1_lead_attribution'),
     ('212_t_grow1_lead_attended_toggle'),
     ('213_t_grow1_attribution_events'),
-    ('214_t_grow1_signup_attribution')
+    ('214_t_grow1_signup_attribution'),
+    ('215_t_grow2_referral_loop')
     -- <<<END_MIRROR_LIST>>>
            ) as mirror(migration)
            where not exists (select 1 from public.migrations_applied a
@@ -1955,7 +1956,8 @@ select 'GUARD_184_mirror_matches_applied_table',
     ('211_t_grow1_lead_attribution'),
     ('212_t_grow1_lead_attended_toggle'),
     ('213_t_grow1_attribution_events'),
-    ('214_t_grow1_signup_attribution')
+    ('214_t_grow1_signup_attribution'),
+    ('215_t_grow2_referral_loop')
     -- <<<END_MIRROR_LIST>>>
            ))
            then 'MISSING -- this database has recorded a migration the JSON mirror omits; re-sync it'
@@ -2862,6 +2864,37 @@ select '214_t_grow1_signup_attribution',
                              where a.attrelid = to_regclass('public.users')
                                and a.attname = 'signup_attributed_at' and not a.attisdropped), false)
            then 'MISSING -- service_role cannot write users.signup_attributed_at; /api/attr/signup fails'
+         else 'applied'
+       end
+
+union all
+
+-- T-GROW2. Lead referral codes exist and are server-only; one credit per
+-- referred person; clients can create only code rows in referrals. Every lookup
+-- by to_regclass, so this reads MISSING (not an error) before 215 runs.
+select '215_t_grow2_referral_loop',
+       case
+         when not exists (select 1 from pg_attribute
+                           where attrelid = to_regclass('public.pass_leads') and attname = 'lead_ref_code'
+                             and not attisdropped)
+           then 'MISSING -- pass_leads.lead_ref_code is absent; /api/pase cannot store a lead''s share code'
+         when not exists (select 1 from pg_indexes
+                           where schemaname = 'public' and tablename = 'pass_leads'
+                             and indexname = 'pass_leads_lead_ref_code_key' and indexdef ilike '%UNIQUE%')
+           then 'MISSING -- lead_ref_code is not unique; two leads could share a code and split each other''s credit'
+         when not exists (select 1 from pg_policies
+                           where schemaname = 'public' and tablename = 'pass_leads'
+                             and policyname = 'Lead referral code is server only' and permissive = 'RESTRICTIVE')
+           then 'MISSING -- a client can insert a lead with its own lead_ref_code'
+         when not exists (select 1 from pg_indexes
+                           where schemaname = 'public' and tablename = 'referrals'
+                             and indexname = 'referrals_one_credit_per_referred' and indexdef ilike '%UNIQUE%')
+           then 'MISSING -- a referred person can be credited to more than one referrer'
+         when not exists (select 1 from pg_policies
+                           where schemaname = 'public' and tablename = 'referrals'
+                             and policyname = 'Clients create only code rows' and permissive = 'RESTRICTIVE'
+                             and position('referred_id IS NULL' in with_check) > 0)
+           then 'MISSING -- a client can insert a referrals row claiming to have referred anyone'
          else 'applied'
        end
 

@@ -32,6 +32,13 @@ vi.mock('@/lib/logger', () => ({ logError: vi.fn(), log: vi.fn() }));
 // The builder is its own component with its own tests; mocking it keeps this file
 // about the table and stops a change there from failing arms about numbers.
 vi.mock('./TrackedLinkBuilder', () => ({ default: () => <div data-testid="builder" /> }));
+// T-GROW2: Referidos is its own component with its own tests and its own fetch.
+// Stubbed so this file's fetch counts stay about the Origen read, and the stub
+// RECORDS the range it is handed: the arm at the bottom asserts the wiring the
+// stub would otherwise hide.
+vi.mock('./AdminReferidosSection', () => ({
+  default: ({ range }: { range: number | null }) => <div data-testid="referidos" data-range={String(range)} />,
+}));
 
 import AdminOrigenTab from './AdminOrigenTab';
 import { showError } from '@/lib/toast';
@@ -247,4 +254,14 @@ describe('AdminOrigenTab', () => {
     render(<AdminOrigenTab />);
     await waitFor(() => expect(screen.getByTestId('builder')).toBeTruthy());
   });
+
+  it('renders Referidos on the SAME range as the table, and moves it with the table', async () => {
+    render(<AdminOrigenTab />);
+    await waitFor(() => expect(screen.getByTestId('referidos').getAttribute('data-range')).toBe('30'));
+    fireEvent.click(screen.getByRole('button', { name: 'range7' }));
+    await waitFor(() => expect(screen.getByTestId('referidos').getAttribute('data-range')).toBe('7'));
+    fireEvent.click(screen.getByRole('button', { name: 'rangeAll' }));
+    await waitFor(() => expect(screen.getByTestId('referidos').getAttribute('data-range')).toBe('null'));
+  });
 });
+

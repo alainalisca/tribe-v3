@@ -28,6 +28,7 @@ import { logError } from '@/lib/logger';
 import { sanitizeAttributionObject } from '@/lib/attribution';
 import { decideSignupAttribution, SIGNUP_WINDOW_MS } from '@/lib/signupAttribution';
 import { fetchUserCreatedAt, recordSignupAttribution } from '@/lib/dal/signupAttribution';
+import { linkSignupReferral } from '@/lib/dal/referralLinks';
 
 /** A sign-in completes once per page load; ten a minute is a loop, not a person. */
 const RATE_LIMIT_MAX = 10;
@@ -80,6 +81,17 @@ export async function POST(request: NextRequest) {
       new Date(now - SIGNUP_WINDOW_MS).toISOString()
     );
     if (!result.success) return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+
+    // T-GROW2: credit the referrer, ONLY on the call that recorded the
+    // attribution. 'already' means an earlier call did both, so linking again
+    // would be a second attempt at a write that already happened. A failed link
+    // does not fail the request: the attribution is recorded and signup_ref
+    // keeps the code, so Referidos still sees it.
+    const ref = decision.fields.signup_ref;
+    if (result.data === 'recorded' && ref) {
+      const link = await linkSignupReferral(admin, ref, user.id);
+      return NextResponse.json({ status: result.data, referral: link.success ? link.data : 'error' });
+    }
     return NextResponse.json({ status: result.data });
   } catch (error) {
     logError(error, { route: '/api/attr/signup', action: 'POST' });

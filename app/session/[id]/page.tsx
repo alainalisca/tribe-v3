@@ -35,6 +35,8 @@ import InviteModal from './InviteModal';
 import SubscribeButton from '@/components/SubscribeButton';
 import SessionStories from './SessionStories';
 import { useSessionDetail } from './useSessionDetail';
+import BringAFriendCard from '@/components/referral/BringAFriendCard';
+import { useMyReferralCode } from '@/hooks/useMyReferralCode';
 import { confirmParticipantPayment } from '@/lib/dal';
 import { createClient } from '@/lib/supabase/client';
 import { showSuccess, showError } from '@/lib/toast';
@@ -52,6 +54,8 @@ export default function SessionDetailPage() {
   const { t, language } = useLanguage();
   const supabase = createClient();
   const d = useSessionDetail(params.id as string, language, (path) => router.push(path));
+  // T-GROW2: called before any early return so the hook order never changes.
+  const myRefCode = useMyReferralCode(d.user?.id);
   const [showPostSessionFlow, setShowPostSessionFlow] = useState(false);
 
   async function shareSession() {
@@ -283,6 +287,17 @@ export default function SessionDetailPage() {
           onInvite={d.generateInviteLink}
           creatingInvite={d.creatingInvite}
         />
+
+        {/* T-GROW2 share moment 2: after joining. A confirmed participant of an
+            upcoming session who is not the host, and only once their code has
+            loaded, so the card never renders a link with no ref. */}
+        {d.user && d.hasJoined && !isCreator && !isPast && myRefCode && (
+          <BringAFriendCard
+            context={{ kind: 'session', sessionId: d.session.id, title: d.session.title || d.session.sport }}
+            code={myRefCode}
+            language={language}
+          />
+        )}
 
         {/* Subscribe to the recurring series — auto-enrolls the athlete in
             future occurrences via the recurring-sessions cron. Only on the
