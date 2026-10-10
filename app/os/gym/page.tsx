@@ -12,7 +12,7 @@
  * not shown — those live in the Stripe Customer Portal.
  */
 
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useState, useCallback, type FormEvent } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { AlertCircle, Building2, ScrollText } from 'lucide-react';
@@ -21,7 +21,12 @@ import { useTribeOSPremiumGate } from '@/hooks/useTribeOSPremiumGate';
 import { createClient } from '@/lib/supabase/client';
 import { trackEvent } from '@/lib/analytics';
 import SampleDataSeedButton from '@/components/tribe-os/SampleDataSeedButton';
-import GymPlansSection from '@/components/tribe-os/GymPlansSection';
+import GymPlansSection, {
+  inferDurationFromName,
+  formatPriceForInput,
+  parsePriceInput,
+  type PlanRowState,
+} from '@/components/tribe-os/GymPlansSection';
 import type { GymRow } from '@/lib/dal/gyms';
 
 type LoadState =
@@ -30,9 +35,6 @@ type LoadState =
   | { kind: 'no_gym' }
   | { kind: 'ready'; gym: GymRow; canEdit: boolean };
 
-// Common IANA timezones for the LATAM + US market. A more complete
-// picker can land later if needed; this covers the gyms we expect
-// to onboard during beta.
 const TIMEZONE_OPTIONS = [
   'America/Bogota',
   'America/Mexico_City',
@@ -48,7 +50,6 @@ const TIMEZONE_OPTIONS = [
   'UTC',
 ] as const;
 
-// ES PENDING VERONICA REVIEW
 const copy = {
   en: {
     backLabel: 'Back to dashboard',
@@ -74,11 +75,12 @@ const copy = {
     notificationsSection: 'Notifications',
     intelligenceEmailLabel: 'Email me when AI flags new at-risk members',
     intelligenceEmailHint:
-      'The nightly intelligence engine sends a digest of the alerts it generated. Turn this off if you’d rather check the dashboard manually.',
+      "The nightly intelligence engine sends a digest of the alerts it generated. Turn this off if you'd rather check the dashboard manually.",
     save: 'Save changes',
     saving: 'Saving',
-    saveSuccess: 'Gym settings updated.',
+    saveSuccess: 'Changes saved.',
     genericError: 'Something went wrong. Please try again.',
+    planSaveError: 'Failed to save plan "{name}".',
     readOnlyNotice: 'Only the gym owner can edit these settings.',
     auditLinkLabel: 'View forensic log',
     auditLinkHint:
@@ -112,8 +114,9 @@ const copy = {
       'El análisis nocturno envía un resumen de las alertas generadas. Desactívalo si prefieres revisar el panel manualmente.',
     save: 'Guardar cambios',
     saving: 'Guardando',
-    saveSuccess: 'Configuración del gym actualizada.',
+    saveSuccess: 'Cambios guardados.',
     genericError: 'Algo salió mal. Por favor intenta de nuevo.',
+    planSaveError: 'No se pudo guardar el plan "{name}".',
     readOnlyNotice: 'Solo el propietario del gym puede editar estos ajustes.',
     auditLinkLabel: 'Ver registro forense',
     auditLinkHint:
@@ -137,7 +140,6 @@ export default function GymSettingsPage() {
 
     (async () => {
       try {
-        // Need to know the caller's auth.uid() to determine owner-only edit access.
         const supabaseClient = createClient();
         const { data: authData } = await supabaseClient.auth.getUser();
         const callerId = authData.user?.id ?? null;
@@ -229,6 +231,21 @@ export default function GymSettingsPage() {
   );
 }
 
+interface GymPlanFromApi {
+  id: string;
+  name: string;
+  price_cents: number;
+  currency: string;
+  duration_months: number;
+}
+
+interface PlansApiData {
+  plans: GymPlanFromApi[];
+  clientPlanNames: string[];
+  gymCurrency: 'COP' | 'USD';
+  isOwner: boolean;
+}
+
 function GymForm({
   initialGym,
   canEdit,
@@ -248,6 +265,74 @@ function GymForm({
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
+  const [planRows, setPlanRows] = useState<PlanRowState[]>([]);
+  const [gymCurrency, setGymCurrency] = useState<'COP' | 'USD'>('COP');
+  const [plansLoading, setPlansLoading] = useState(true);
+  const [plansCanEdit, setPlansCanEdit] = useState(false);
+
+  const fetchPlans = useCallback(async () => {
+    setPlansLoading(true);
+    try {
+      const res = await fetch('/api/tribe-os/gym/plans');
+      if (!res.ok) return;
+      const json = await res.json();
+      if (!json.success) return;
+      const d = json.data as PlansApiData;
+      setGymCurrency(d.gymCurrency);
+      setPlansCanEdit(d.isOwner);
+
+      const plansByLowerName = new Map(d.plans.map((p) => [p.name.toLowerCase(), p]));
+
+      const rows: PlanRowState[] = d.clientPlanNames.map((planName) => {
+        const existing = plansByLowerName.get(planName.toLowerCase()) ?? null;
+        return {
+          name: planName,
+          priceDisplay: existing ? formatPriceForInput(existing.price_cents, d.gymCurrency) : '',
+          durationMonths: existing?.duration_months ?? inferDurationFromName(planName),
+          dirty: false,
+          error: null,
+          existingPlanId: existing?.id ?? null,
+          existingPriceCents: existing?.price_cents ?? null,
+          existingDuration: existing?.duration_months ?? null,
+        };
+      });
+
+      setPlanRows(rows);
+    } catch {
+      // Plans section will show empty
+    } finally {
+      setPlansLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchPlans();
+  }, [fetchPlans]);
+
+  const gymSettingsDirty =
+    name.trim() !== initialGym.name ||
+    timezone !== initialGym.timezone ||
+    (currency === '' ? null : currency) !== initialGym.default_currency ||
+    intelligenceEmailEnabled !== initialGym.intelligence_email_enabled;
+
+  const dirtyPlanCount = planRows.filter((r) => r.dirty).length;
+  const hasDirtyChanges = gymSettingsDirty || dirtyPlanCount > 0;
+
+  useEffect(() => {
+    function handleBeforeUnload(e: BeforeUnloadEvent) {
+      if (hasDirtyChanges) {
+        e.preventDefault();
+      }
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasDirtyChanges]);
+
+  function handlePlanRowChange(index: number, partial: Partial<PlanRowState>) {
+    setPlanRows((prev) => prev.map((r, i) => (i === index ? { ...r, ...partial } : r)));
+    setSuccess(null);
+  }
+
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (saving || !canEdit) return;
@@ -257,44 +342,98 @@ function GymForm({
     setSuccess(null);
 
     try {
-      const payload: Record<string, unknown> = {};
-      if (name.trim() !== initialGym.name) payload.name = name.trim();
-      if (timezone !== initialGym.timezone) payload.timezone = timezone;
-      const normalizedCurrency = currency === '' ? null : currency;
-      if (normalizedCurrency !== initialGym.default_currency) payload.default_currency = normalizedCurrency;
-      if (intelligenceEmailEnabled !== initialGym.intelligence_email_enabled) {
-        payload.intelligence_email_enabled = intelligenceEmailEnabled;
+      if (gymSettingsDirty) {
+        const payload: Record<string, unknown> = {};
+        if (name.trim() !== initialGym.name) payload.name = name.trim();
+        if (timezone !== initialGym.timezone) payload.timezone = timezone;
+        const normalizedCurrency = currency === '' ? null : currency;
+        if (normalizedCurrency !== initialGym.default_currency) payload.default_currency = normalizedCurrency;
+        if (intelligenceEmailEnabled !== initialGym.intelligence_email_enabled) {
+          payload.intelligence_email_enabled = intelligenceEmailEnabled;
+        }
+
+        if (Object.keys(payload).length > 0) {
+          const res = await fetch('/api/tribe-os/gym/', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+          const body = (await res.json().catch(() => ({}))) as {
+            success?: boolean;
+            error?: string;
+          };
+          if (!res.ok || !body.success) {
+            setError(body.error || s.genericError);
+            setSaving(false);
+            return;
+          }
+        }
       }
 
-      if (Object.keys(payload).length === 0) {
-        setSuccess(s.saveSuccess);
-        setSaving(false);
-        return;
+      const dirtyPlans = planRows
+        .map((r, i) => ({ row: r, index: i }))
+        .filter(({ row }) => row.dirty);
+
+      for (const { row, index } of dirtyPlans) {
+        const priceCents = parsePriceInput(row.priceDisplay);
+        if (priceCents <= 0) {
+          setPlanRows((prev) =>
+            prev.map((r, i) =>
+              i === index ? { ...r, error: 'Price must be > 0' } : r
+            )
+          );
+          setError(s.planSaveError.replace('{name}', row.name));
+          setSaving(false);
+          return;
+        }
+
+        const res = await fetch('/api/tribe-os/gym/plans', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: row.name.trim(),
+            price_cents: priceCents,
+            currency: gymCurrency,
+            duration_months: row.durationMonths,
+          }),
+        });
+        const json = await res.json().catch(() => ({ success: false }));
+        if (!res.ok || !json.success) {
+          setPlanRows((prev) =>
+            prev.map((r, i) =>
+              i === index ? { ...r, error: json.error || 'Save failed' } : r
+            )
+          );
+          setError(s.planSaveError.replace('{name}', row.name));
+          setSaving(false);
+          return;
+        }
+
+        setPlanRows((prev) =>
+          prev.map((r, i) =>
+            i === index
+              ? {
+                  ...r,
+                  dirty: false,
+                  error: null,
+                  existingPlanId: json.data?.id ?? r.existingPlanId,
+                  existingPriceCents: priceCents,
+                  existingDuration: row.durationMonths,
+                  priceDisplay: formatPriceForInput(priceCents, gymCurrency),
+                }
+              : r
+          )
+        );
       }
 
-      const res = await fetch('/api/tribe-os/gym/', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      const body = (await res.json().catch(() => ({}))) as {
-        success?: boolean;
-        data?: GymRow;
-        error?: string;
-      };
-      if (!res.ok || !body.success) {
-        setError(body.error || s.genericError);
-        setSaving(false);
-        return;
-      }
       setSuccess(s.saveSuccess);
       setSaving(false);
       trackEvent('tribe_os_gym_settings_saved', {
-        // Which fields changed — coarse aggregation, no values
-        changed_name: 'name' in payload,
-        changed_timezone: 'timezone' in payload,
-        changed_currency: 'default_currency' in payload,
-        changed_intelligence_email: 'intelligence_email_enabled' in payload,
+        changed_name: name.trim() !== initialGym.name,
+        changed_timezone: timezone !== initialGym.timezone,
+        changed_currency: (currency === '' ? null : currency) !== initialGym.default_currency,
+        changed_intelligence_email: intelligenceEmailEnabled !== initialGym.intelligence_email_enabled,
+        plans_saved: dirtyPlans.length,
       });
       onSaved();
     } catch {
@@ -319,7 +458,10 @@ function GymForm({
         <input
           type="text"
           value={name}
-          onChange={(e) => setName(e.target.value)}
+          onChange={(e) => {
+            setName(e.target.value);
+            setSuccess(null);
+          }}
           placeholder={s.namePlaceholder}
           maxLength={255}
           required
@@ -341,11 +483,13 @@ function GymForm({
       <Field label={s.timezoneLabel} hint={s.timezoneHint}>
         <select
           value={timezone}
-          onChange={(e) => setTimezone(e.target.value)}
+          onChange={(e) => {
+            setTimezone(e.target.value);
+            setSuccess(null);
+          }}
           disabled={!canEdit || saving}
           className="w-full px-4 py-2.5 bg-white text-gray-900 text-sm rounded-lg border border-gray-200 focus:border-tribe-green focus:outline-none transition-colors disabled:opacity-60"
         >
-          {/* Render the current value first in case it's outside our common list */}
           {!TIMEZONE_OPTIONS.includes(timezone as (typeof TIMEZONE_OPTIONS)[number]) ? (
             <option value={timezone}>{timezone}</option>
           ) : null}
@@ -360,7 +504,10 @@ function GymForm({
       <Field label={s.currencyLabel} hint={s.currencyHint}>
         <select
           value={currency}
-          onChange={(e) => setCurrency(e.target.value as 'USD' | 'COP' | '')}
+          onChange={(e) => {
+            setCurrency(e.target.value as 'USD' | 'COP' | '');
+            setSuccess(null);
+          }}
           disabled={!canEdit || saving}
           className="w-full px-4 py-2.5 bg-white text-gray-900 text-sm rounded-lg border border-gray-200 focus:border-tribe-green focus:outline-none transition-colors disabled:opacity-60"
         >
@@ -370,9 +517,6 @@ function GymForm({
         </select>
       </Field>
 
-      {/* Notifications section — currently a single toggle, but kept
-          in its own header so it scales when we add more preferences
-          (per-coach digest opt-in, weekly summary, push, etc.). */}
       <div className="pt-2">
         <h2 className="text-xs uppercase tracking-[0.1em] text-gray-500 font-semibold mb-3">
           {s.notificationsSection}
@@ -381,7 +525,10 @@ function GymForm({
           <input
             type="checkbox"
             checked={intelligenceEmailEnabled}
-            onChange={(e) => setIntelligenceEmailEnabled(e.target.checked)}
+            onChange={(e) => {
+              setIntelligenceEmailEnabled(e.target.checked);
+              setSuccess(null);
+            }}
             disabled={!canEdit || saving}
             className="mt-0.5 h-4 w-4 rounded border-gray-300 text-tribe-green focus:ring-tribe-green disabled:opacity-60"
           />
@@ -394,7 +541,15 @@ function GymForm({
         </label>
       </div>
 
-      <GymPlansSection canEdit={canEdit} />
+      {!plansLoading && (
+        <GymPlansSection
+          rows={planRows}
+          gymCurrency={gymCurrency}
+          canEdit={canEdit && plansCanEdit}
+          saving={saving}
+          onRowChange={handlePlanRowChange}
+        />
+      )}
 
       {error ? (
         <div
@@ -418,17 +573,13 @@ function GymForm({
       {canEdit ? (
         <button
           type="submit"
-          disabled={saving}
+          disabled={saving || !hasDirtyChanges}
           className="inline-flex items-center justify-center px-6 py-3 bg-tribe-green text-tribe-dark text-sm font-bold rounded-lg shadow-[0_4px_20px_rgba(132,204,22,0.3)] hover:shadow-[0_6px_28px_rgba(132,204,22,0.45)] hover:-translate-y-0.5 transition-all disabled:opacity-60 disabled:transform-none"
         >
           {saving ? `${s.saving}…` : s.save}
         </button>
       ) : null}
 
-      {/* Forensic log link — always visible to any coach in the gym
-          (read access is gated by migration 082's RLS, not by owner).
-          Discreet placement at the bottom because most users will
-          never click it; the ones who need it know to look here. */}
       <div className="pt-6 border-t border-gray-100">
         <Link href="/os/audit" className="inline-flex items-start gap-2 group">
           <ScrollText className="w-4 h-4 text-tribe-green-dark mt-0.5 shrink-0" />
@@ -441,10 +592,6 @@ function GymForm({
         </Link>
       </div>
 
-      {/* Dev tools — only renders when NEXT_PUBLIC_ALLOW_SAMPLE_DATA_SEED
-          is set and the caller is the gym owner. Server matches with
-          ALLOW_SAMPLE_DATA_SEED. Production deployments leave both
-          unset so this section is invisible there. */}
       <SampleDataSeedButton canEdit={canEdit} />
     </form>
   );
