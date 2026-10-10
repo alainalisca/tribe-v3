@@ -1,7 +1,7 @@
 'use client';
 
 import { showSuccess, showError } from '@/lib/toast';
-import { copyToClipboard } from '@/lib/share';
+import { copyToClipboard, nativeShare } from '@/lib/share';
 import { trackEvent } from '@/lib/analytics';
 import { useLanguage } from '@/lib/LanguageContext';
 import { Button } from '@/components/ui/button';
@@ -25,25 +25,28 @@ export default function InviteModal({ language, inviteLink, session, onClose }: 
     else showError(language === 'es' ? 'No se pudo copiar el enlace' : 'Could not copy the link');
   }
 
-  function shareInviteLink() {
-    trackEvent('session_shared', {
-      session_id: session.id,
-      content_type: 'session',
-      channel: 'native',
-      method: 'native',
+  async function shareInviteLink() {
+    const native = await nativeShare({
+      title: language === 'es' ? `Únete a mi sesión de ${session.sport}` : `Join me for ${session.sport}`,
+      text:
+        language === 'es'
+          ? `Voy a entrenar ${session.sport} en ${session.location}. ¡Únete!`
+          : `I'm training ${session.sport} at ${session.location}. Join me!`,
+      url: inviteLink,
     });
-    if (navigator.share) {
-      navigator
-        .share({
-          title: language === 'es' ? `Únete a mi sesión de ${session.sport}` : `Join me for ${session.sport}`,
-          text:
-            language === 'es'
-              ? `Voy a entrenar ${session.sport} en ${session.location}. ¡Únete!`
-              : `I'm training ${session.sport} at ${session.location}. Join me!`,
-          url: inviteLink,
-        })
-        .catch(() => {});
-    } else copyInviteLink();
+    // Tracked only once the sheet reports a share. It used to fire on tap,
+    // before the sheet opened, so a cancel still counted as a share.
+    if (native === 'shared') {
+      trackEvent('session_shared', {
+        session_id: session.id,
+        content_type: 'session',
+        channel: 'native',
+        method: 'native',
+      });
+    } else if (native !== 'cancelled') {
+      // No share sheet, or one that refused (common on desktop): copy instead.
+      void copyInviteLink();
+    }
   }
 
   return (

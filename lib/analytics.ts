@@ -101,6 +101,7 @@ export type EventName =
   | 'session_join_clicked' // LR-04: fires when the Join button is pressed, before the RPC attempt
   | 'session_join_succeeded' // LR-04: canonical name for a successful join; session_joined retained below
   | 'session_joined'
+  | 'session_join_requested' // T-ANALYTICS1: a curated or paid join, recorded as a PENDING request (not a join)
   | 'session_join_failed'
   | 'session_left'
   | 'session_completed'
@@ -319,6 +320,18 @@ export interface EventPropertyMap {
     /** null when the count could not be read, rather than a guess. */
     is_first_join: boolean | null;
     session_type?: 'paid' | 'free'; // legacy
+  };
+  /**
+   * A join that the server stored as PENDING: a curated session (the host
+   * reviews requests) or a paid one (the instructor confirms payment). Not a
+   * session_joined, because the person is not in yet.
+   */
+  session_join_requested: {
+    session_id: string;
+    sport: string | null;
+    is_paid: boolean;
+    instructor_id: string | null;
+    reason: 'curated' | 'paid';
   };
   session_left: { session_id: string };
   session_created: {

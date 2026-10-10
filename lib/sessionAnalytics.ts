@@ -38,6 +38,24 @@ export async function trackSessionJoined(
   });
 }
 
+/**
+ * Call when joinSession() succeeded with status 'pending'. Until this existed a
+ * curated or paid join produced session_join_clicked and then nothing at all,
+ * which read in PostHog as a join that silently failed (seen on the preview,
+ * 2026-10-10, on a curated session).
+ */
+export function trackSessionJoinRequested(session: JoinedSessionFacts & { price_cents?: number | null }): void {
+  const paid = !!session.is_paid && (session.price_cents ?? 0) > 0;
+  trackEvent('session_join_requested', {
+    session_id: session.id,
+    sport: session.sport,
+    is_paid: !!session.is_paid,
+    instructor_id: session.creator_id,
+    // Same rule joinSession uses to decide 'pending': paid wins over curated.
+    reason: paid ? 'paid' : 'curated',
+  });
+}
+
 /** Call after the leave was confirmed by the server (the delete did not throw). */
 export function trackSessionLeft(sessionId: string): void {
   trackEvent('session_left', { session_id: sessionId });

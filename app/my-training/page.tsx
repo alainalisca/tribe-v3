@@ -20,6 +20,7 @@ import {
 import { sportTranslations } from '@/lib/translations';
 import { haptic } from '@/lib/haptics';
 import { trackEvent } from '@/lib/analytics';
+import { isShareCancel } from '@/lib/share';
 import { showSuccess, showError } from '@/lib/toast';
 import { formatSessionDate } from '@/lib/utils';
 
@@ -146,7 +147,9 @@ export default function MyTrainingPage() {
           // failure — say nothing. Any other rejection (common on desktop
           // where navigator.share exists but isn't fully supported) falls
           // back to clipboard.
-          if (err instanceof Error && err.name === 'AbortError') {
+          // By name, not instanceof Error: DOMException's prototype chain
+          // differs between engines and WebViews (see lib/share.ts).
+          if (isShareCancel(err)) {
             setSharing(false);
             return;
           }

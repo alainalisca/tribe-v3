@@ -5,7 +5,7 @@ import { showSuccess, showError, showInfo } from '@/lib/toast';
 import { getErrorMessage } from '@/lib/errorMessages';
 import { celebrateJoin } from '@/lib/confetti';
 import { trackEvent } from '@/lib/analytics';
-import { trackSessionJoined, trackSessionLeft } from '@/lib/sessionAnalytics';
+import { trackSessionJoined, trackSessionJoinRequested, trackSessionLeft } from '@/lib/sessionAnalytics';
 import { joinSession } from '@/lib/sessions';
 import { needsAthleteSetup } from '@/lib/dal/athleteSetup';
 import { haptic } from '@/lib/haptics';
@@ -95,6 +95,7 @@ export function useSessionActions({
       }
       if (result.status === 'pending') {
         haptic('light');
+        trackSessionJoinRequested(session);
         // T-PAY1: a paid session's request is "awaiting payment" — tell the
         // athlete to pay the instructor directly so the instructor can confirm.
         const paidRequest = !!session.is_paid && (session.price_cents ?? 0) > 0;

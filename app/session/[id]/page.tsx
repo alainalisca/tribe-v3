@@ -6,7 +6,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Share2 } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
-import { getSessionShareUrl } from '@/lib/share';
+import { copyToClipboard, getSessionShareUrl, nativeShare } from '@/lib/share';
 import BottomNav from '@/components/BottomNav';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import AttendanceTracker from '@/components/AttendanceTracker';
@@ -60,16 +60,21 @@ export default function SessionDetailPage() {
     const shareUrl = getSessionShareUrl(d.session.id);
     const titleForShare = d.session.title || d.session.sport;
     const shareText = language === 'es' ? `${titleForShare} — Únete en Tribe` : `${titleForShare} — Join on Tribe`;
-    if (navigator.share) {
-      await navigator.share({ title: shareText, url: shareUrl });
+    // A cancelled share sheet is not an error and not a share: nativeShare
+    // reports it and nothing happens. It used to be an unhandled rejection
+    // that PostHog recorded as an exception on every cancel.
+    const native = await nativeShare({ title: shareText, url: shareUrl });
+    if (native === 'cancelled') return;
+    if (native === 'shared') {
       trackEvent('session_shared', {
         session_id: d.session.id,
         content_type: 'session',
         channel: 'native',
         method: 'native',
       });
-    } else {
-      await navigator.clipboard.writeText(shareUrl);
+      return;
+    }
+    if (await copyToClipboard(shareUrl)) {
       trackEvent('session_shared', {
         session_id: d.session.id,
         content_type: 'session',

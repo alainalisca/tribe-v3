@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { getOrCreateReferralCode, getReferralStats } from '@/lib/dal/referrals';
-import { shareViaWhatsApp, getReferralShareUrl } from '@/lib/share';
+import { shareViaWhatsApp, getReferralShareUrl, nativeShare } from '@/lib/share';
 import LoadingSpinner from '@/components/LoadingSpinner';
 
 export default function ReferralPage() {
@@ -143,22 +143,17 @@ export default function ReferralPage() {
   };
 
   const handleShare = async () => {
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: 'Tribe',
-          text:
-            language === 'es'
-              ? `Entrena conmigo en Medellín con Tribe — running, yoga, fuerza y más. Usa mi código ${referralCode} al registrarte y ambos ganamos una recompensa.`
-              : `Train with me in Medellín on Tribe — running, yoga, strength and more. Use my code ${referralCode} when you sign up and we both earn a reward.`,
-          url: referralLink,
-        });
-      } catch (err) {
-        if (!(err instanceof Error && err.name === 'AbortError')) {
-          logError(err, { action: 'Share failed' });
-        }
-      }
-    }
+    // nativeShare never throws and treats a cancelled sheet as silence
+    // (lib/share.ts); only a genuine failure is worth a log line.
+    const native = await nativeShare({
+      title: 'Tribe',
+      text:
+        language === 'es'
+          ? `Entrena conmigo en Medellín con Tribe — running, yoga, fuerza y más. Usa mi código ${referralCode} al registrarte y ambos ganamos una recompensa.`
+          : `Train with me in Medellín on Tribe — running, yoga, strength and more. Use my code ${referralCode} when you sign up and we both earn a reward.`,
+      url: referralLink,
+    });
+    if (native === 'failed') logError(new Error('native share failed'), { action: 'Share failed' });
   };
 
   if (loading) {

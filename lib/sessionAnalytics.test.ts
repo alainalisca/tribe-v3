@@ -11,7 +11,7 @@ vi.mock('@/lib/dal/participants', () => ({
   fetchParticipantCountForUser: (...a: unknown[]) => fetchParticipantCountForUser(...a),
 }));
 
-import { trackSessionJoined, trackSessionLeft } from './sessionAnalytics';
+import { trackSessionJoined, trackSessionJoinRequested, trackSessionLeft } from './sessionAnalytics';
 
 const supabase = {} as SupabaseClient;
 const session = { id: 's1', sport: 'running', is_paid: false, creator_id: 'coach-1' };
@@ -50,5 +50,23 @@ describe('trackSessionLeft', () => {
   it('sends session_left with the session id only', () => {
     trackSessionLeft('s1');
     expect(trackEvent).toHaveBeenCalledWith('session_left', { session_id: 's1' });
+  });
+});
+
+describe('trackSessionJoinRequested', () => {
+  it('a curated free session is a curated request', () => {
+    trackSessionJoinRequested({ ...session, price_cents: null });
+    expect(trackEvent).toHaveBeenCalledWith('session_join_requested', {
+      session_id: 's1',
+      sport: 'running',
+      is_paid: false,
+      instructor_id: 'coach-1',
+      reason: 'curated',
+    });
+  });
+
+  it('a paid session is a paid request, the same rule joinSession uses', () => {
+    trackSessionJoinRequested({ ...session, is_paid: true, price_cents: 25000 });
+    expect(trackEvent.mock.calls[0][1]).toMatchObject({ is_paid: true, reason: 'paid' });
   });
 });

@@ -13,6 +13,8 @@ import { SITE_URL } from '@/lib/http/siteUrl';
 // ═══════════════════════════════════════════
 
 export type ShareMethod = 'whatsapp' | 'twitter' | 'native' | 'clipboard';
+/** What a high-level sharer reports: the method used, or that the person closed the sheet. */
+export type ShareOutcome = ShareMethod | 'cancelled';
 
 export interface SessionShareData {
   id: string;
@@ -192,15 +194,42 @@ export function shareViaTwitter(text: string, url: string): void {
   window.open(`https://twitter.com/intent/tweet?text=${encodedText}&url=${encodedUrl}`, '_blank');
 }
 
-export async function shareViaNative(title: string, text: string, url: string): Promise<boolean> {
-  if (!navigator.share) return false;
+/**
+ * T-ANALYTICS1: closing the share sheet is a choice, not a failure.
+ *
+ * navigator.share rejects with a DOMException named 'AbortError' when the
+ * person dismisses the sheet. Left unhandled it reached PostHog as an
+ * unhandled $exception on every cancel (seen on the preview), and handled
+ * badly it was logged as an error or fell back to copying the link, which
+ * then recorded a share that never happened.
+ *
+ * Checked by NAME, not `instanceof Error`: whether DOMException inherits from
+ * Error has varied between engines and WebViews.
+ */
+export function isShareCancel(err: unknown): boolean {
+  return typeof err === 'object' && err !== null && (err as { name?: unknown }).name === 'AbortError';
+}
+
+export type NativeShareResult = 'shared' | 'cancelled' | 'unavailable' | 'failed';
+
+/**
+ * The one way to open the system share sheet. Never throws. A cancel is
+ * silent: no event, no log. Any other rejection (desktop browsers that expose
+ * navigator.share but refuse it, a missing user gesture) is 'failed', so the
+ * caller can fall back to copying the link.
+ */
+export async function nativeShare(data: ShareData): Promise<NativeShareResult> {
+  if (typeof navigator === 'undefined' || typeof navigator.share !== 'function') return 'unavailable';
   try {
-    await navigator.share({ title, text, url });
-    return true;
-  } catch {
-    // User cancelled or share failed
-    return false;
+    await navigator.share(data);
+    return 'shared';
+  } catch (err) {
+    return isShareCancel(err) ? 'cancelled' : 'failed';
   }
+}
+
+export async function shareViaNative(title: string, text: string, url: string): Promise<NativeShareResult> {
+  return nativeShare({ title, text, url });
 }
 
 export async function copyToClipboard(text: string): Promise<boolean> {
@@ -225,7 +254,7 @@ async function executeShare(
   title: string,
   preferredMethod: ShareMethod | undefined,
   content: ShareEventContent
-): Promise<ShareMethod> {
+): Promise<ShareOutcome> {
   const method = preferredMethod ?? 'native';
   // T-ANALYTICS1 part D: channel is the dashboard-facing value (whatsapp /
   // copy / native / ...); method is kept as it was for older dashboards.
@@ -246,12 +275,15 @@ async function executeShare(
 
   // Try native, fall back to clipboard
   if (method === 'native' || method === 'clipboard') {
-    const shared = method === 'native' ? await shareViaNative(title, text, url) : false;
+    const native = method === 'native' ? await shareViaNative(title, text, url) : 'unavailable';
 
-    if (shared) {
+    if (native === 'shared') {
       track('native');
       return 'native';
     }
+    // The person closed the sheet: no share happened, so nothing is tracked
+    // and nothing is copied behind their back.
+    if (native === 'cancelled') return 'cancelled';
 
     const copied = await copyToClipboard(`${text}\n${url}`);
     if (copied) {
@@ -267,7 +299,7 @@ export async function shareSession(
   data: SessionShareData,
   language: 'en' | 'es' = 'en',
   preferredMethod?: ShareMethod
-): Promise<ShareMethod> {
+): Promise<ShareOutcome> {
   const text = buildSessionShareText(data, language);
   const url = getSessionShareUrl(data.id);
   const result = await executeShare(text, url, data.title, preferredMethod, {
@@ -275,6 +307,7 @@ export async function shareSession(
     content_id: data.id,
     session_id: data.id,
   });
+  if (result === 'cancelled') return result;
   trackEvent('session_shared', {
     session_id: data.id,
     content_type: 'session',
@@ -288,7 +321,7 @@ export async function shareInstructor(
   data: InstructorShareData,
   language: 'en' | 'es' = 'en',
   preferredMethod?: ShareMethod
-): Promise<ShareMethod> {
+): Promise<ShareOutcome> {
   const text = buildInstructorShareText(data, language);
   const url = getInstructorShareUrl(data.id);
   return executeShare(text, url, data.name, preferredMethod, {
@@ -302,7 +335,7 @@ export async function shareAchievement(
   data: AchievementShareData,
   language: 'en' | 'es' = 'en',
   preferredMethod?: ShareMethod
-): Promise<ShareMethod> {
+): Promise<ShareOutcome> {
   const text = buildAchievementShareText(data, language);
   // Achievements link to the app root
   const url = BASE_URL;
