@@ -238,6 +238,34 @@ export async function GET(): Promise<NextResponse> {
     }
     planExpiry.sort((a, b) => a.planEndsOn.localeCompare(b.planEndsOn));
 
+    // ── 3b. Dedupe: members in both contactToday and planExpiry ──
+    // Show them once in "Contacta hoy" with a combined reason line,
+    // using the plan draft case (plan_expiring / plan_expired).
+    const contactIds = new Set(contactToday.map((c) => c.id));
+    const dupeIds = new Set<string>();
+    for (const p of planExpiry) {
+      if (contactIds.has(p.id)) dupeIds.add(p.id);
+    }
+    if (dupeIds.size > 0) {
+      const planMap = new Map(planExpiry.map((p) => [p.id, p]));
+      for (const c of contactToday) {
+        const p = planMap.get(c.id);
+        if (!p) continue;
+        c.planEndsOn = p.planEndsOn;
+        const planReason = p.planEndsOn <= today
+          ? `Su plan venció / Plan expired`
+          : `Su plan vence / Plan expires`;
+        if (!c.reasons.some((r) => r.includes('plan venc') || r.includes('Plan expir'))) {
+          c.reasons = [...c.reasons, planReason];
+        }
+        const days = c.daysSinceLastActivity;
+        const planLabel = p.label;
+        c.reason = days !== null ? `${days} días sin venir · ${planLabel}` : planLabel;
+      }
+      // Remove dupes from planExpiry
+      planExpiry.splice(0, planExpiry.length, ...planExpiry.filter((p) => !dupeIds.has(p.id)));
+    }
+
     // ── 4. Today's sessions ──
     const todaySessions: BriefingSession[] = (sessionsRes.data ?? []).map((row) => ({
       id: row.id as string,

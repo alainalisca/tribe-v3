@@ -150,6 +150,126 @@ describe('touched member ordering', () => {
   });
 });
 
+describe('briefing dedupe: contactToday vs planExpiry', () => {
+  interface Contact {
+    id: string;
+    name: string | null;
+    reason: string | null;
+    reasons: string[];
+    planEndsOn: string | null;
+    daysSinceLastActivity: number | null;
+  }
+  interface Plan {
+    id: string;
+    name: string | null;
+    planEndsOn: string;
+    label: string;
+  }
+
+  function dedupe(
+    contactToday: Contact[],
+    planExpiry: Plan[],
+    today: string
+  ): { contactToday: Contact[]; planExpiry: Plan[] } {
+    const contactIds = new Set(contactToday.map((c) => c.id));
+    const dupeIds = new Set<string>();
+    for (const p of planExpiry) {
+      if (contactIds.has(p.id)) dupeIds.add(p.id);
+    }
+    if (dupeIds.size > 0) {
+      const planMap = new Map(planExpiry.map((p) => [p.id, p]));
+      for (const c of contactToday) {
+        const p = planMap.get(c.id);
+        if (!p) continue;
+        c.planEndsOn = p.planEndsOn;
+        const planReason =
+          p.planEndsOn <= today ? `Su plan venció / Plan expired` : `Su plan vence / Plan expires`;
+        if (!c.reasons.some((r) => r.includes('plan venc') || r.includes('Plan expir'))) {
+          c.reasons = [...c.reasons, planReason];
+        }
+        const days = c.daysSinceLastActivity;
+        const planLabel = p.label;
+        c.reason = days !== null ? `${days} días sin venir · ${planLabel}` : planLabel;
+      }
+      planExpiry.splice(0, planExpiry.length, ...planExpiry.filter((p) => !dupeIds.has(p.id)));
+    }
+    return { contactToday, planExpiry };
+  }
+
+  it('removes duplicate member from planExpiry', () => {
+    const contacts: Contact[] = [
+      { id: 'a', name: 'Ana', reason: '15 días sin venir', reasons: ['Absent'], planEndsOn: null, daysSinceLastActivity: 15 },
+    ];
+    const plans: Plan[] = [
+      { id: 'a', name: 'Ana', planEndsOn: '2026-10-07', label: 'vence hoy' },
+      { id: 'b', name: 'Bob', planEndsOn: '2026-10-10', label: 'vence el viernes' },
+    ];
+    const result = dedupe(contacts, plans, '2026-10-07');
+    expect(result.planExpiry).toHaveLength(1);
+    expect(result.planExpiry[0].id).toBe('b');
+  });
+
+  it('enriches the contact with plan info', () => {
+    const contacts: Contact[] = [
+      { id: 'a', name: 'Ana', reason: '15 días sin venir', reasons: ['Absent'], planEndsOn: null, daysSinceLastActivity: 15 },
+    ];
+    const plans: Plan[] = [
+      { id: 'a', name: 'Ana', planEndsOn: '2026-10-07', label: 'vence hoy' },
+    ];
+    dedupe(contacts, plans, '2026-10-07');
+    expect(contacts[0].planEndsOn).toBe('2026-10-07');
+    expect(contacts[0].reason).toBe('15 días sin venir · vence hoy');
+    expect(contacts[0].reasons).toContain('Su plan venció / Plan expired');
+  });
+
+  it('uses plan_expiring reason when plan is in the future', () => {
+    const contacts: Contact[] = [
+      { id: 'a', name: 'Ana', reason: null, reasons: [], planEndsOn: null, daysSinceLastActivity: 10 },
+    ];
+    const plans: Plan[] = [
+      { id: 'a', name: 'Ana', planEndsOn: '2026-10-09', label: 'vence el viernes' },
+    ];
+    dedupe(contacts, plans, '2026-10-07');
+    expect(contacts[0].reasons).toContain('Su plan vence / Plan expires');
+  });
+
+  it('does not duplicate plan reason if already present', () => {
+    const contacts: Contact[] = [
+      { id: 'a', name: 'Ana', reason: null, reasons: ['Su plan vence / Plan expires'], planEndsOn: '2026-10-09', daysSinceLastActivity: 10 },
+    ];
+    const plans: Plan[] = [
+      { id: 'a', name: 'Ana', planEndsOn: '2026-10-09', label: 'vence el viernes' },
+    ];
+    dedupe(contacts, plans, '2026-10-07');
+    const planReasons = contacts[0].reasons.filter((r) => r.includes('plan venc') || r.includes('Plan expir'));
+    expect(planReasons).toHaveLength(1);
+  });
+
+  it('leaves both arrays untouched when no overlap', () => {
+    const contacts: Contact[] = [
+      { id: 'a', name: 'Ana', reason: null, reasons: ['Absent'], planEndsOn: null, daysSinceLastActivity: 15 },
+    ];
+    const plans: Plan[] = [
+      { id: 'b', name: 'Bob', planEndsOn: '2026-10-10', label: 'vence el viernes' },
+    ];
+    const result = dedupe(contacts, plans, '2026-10-07');
+    expect(result.contactToday).toHaveLength(1);
+    expect(result.planExpiry).toHaveLength(1);
+    expect(contacts[0].reason).toBeNull();
+  });
+
+  it('handles contact without daysSinceLastActivity', () => {
+    const contacts: Contact[] = [
+      { id: 'a', name: 'Ana', reason: null, reasons: [], planEndsOn: null, daysSinceLastActivity: null },
+    ];
+    const plans: Plan[] = [
+      { id: 'a', name: 'Ana', planEndsOn: '2026-10-09', label: 'vence el viernes' },
+    ];
+    dedupe(contacts, plans, '2026-10-07');
+    expect(contacts[0].reason).toBe('vence el viernes');
+  });
+});
+
 describe('summary generation', () => {
   function buildSummary(contactCount: number, planCount: number, cameBackCount: number): string {
     const parts: string[] = [];
