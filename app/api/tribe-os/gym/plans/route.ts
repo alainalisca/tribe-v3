@@ -38,19 +38,20 @@ export async function GET(): Promise<NextResponse> {
         .order('name', { ascending: true }),
       supabase
         .from('clients')
-        .select('plan')
+        .select('membership_plan')
         .eq('gym_id', gymId)
-        .not('plan', 'is', null),
+        .not('membership_plan', 'is', null),
       gymId ? getGym(supabase, gymId) : getGymForUser(supabase, userId),
     ]);
 
     if (plansRes.error) throw plansRes.error;
+    if (clientPlansRes.error) throw clientPlansRes.error;
 
     const plans = plansRes.data ?? [];
 
     const distinctNames = new Set<string>();
     for (const row of clientPlansRes.data ?? []) {
-      const trimmed = (row.plan as string | null)?.trim();
+      const trimmed = (row.membership_plan as string | null)?.trim();
       if (trimmed) distinctNames.add(trimmed);
     }
 
