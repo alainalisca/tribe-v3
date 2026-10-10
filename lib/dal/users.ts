@@ -333,17 +333,6 @@ export async function softDeleteUser(supabase: SupabaseClient, userId: string): 
   }
 }
 
-export async function upsertUser(supabase: SupabaseClient, payload: Record<string, unknown>): Promise<DalResult<null>> {
-  try {
-    const { error } = await supabase.from('users').upsert(payload, { onConflict: 'id' });
-    if (error) return { success: false, error: error.message };
-    return { success: true };
-  } catch (error) {
-    logError(error, { action: 'upsertUser' });
-    return { success: false, error: 'Failed to upsert user' };
-  }
-}
-
 /** The only user fields the batch email jobs consume. */
 export type EmailJobUser = Pick<UserRow, 'id' | 'email' | 'name' | 'preferred_language' | 'created_at'>;
 
