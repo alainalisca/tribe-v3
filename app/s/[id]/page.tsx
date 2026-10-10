@@ -12,6 +12,7 @@ import {
 } from '@/lib/share/cardCopy';
 import SessionShareClient, { type InitialSession } from './SessionShareClient';
 import { SITE_URL } from '@/lib/http/siteUrl';
+import { serializeJsonLd, sessionEventJsonLd, sessionJsonLdInputFromRow } from '@/lib/seo/jsonLd';
 
 const BASE_URL = SITE_URL;
 
@@ -37,7 +38,7 @@ async function fetchSession(id: string) {
   const { data, error } = await supabase
     .from('sessions_public')
     .select(
-      'id, title, sport, date, start_time, location, location_lat, location_lng, price_cents, currency, max_participants, current_participants, photos, creator_id, creator_name, creator_avatar_url, creator_average_rating'
+      'id, title, sport, description, date, start_time, end_time, status, location, location_lat, location_lng, price_cents, currency, max_participants, current_participants, photos, creator_id, creator_name, creator_avatar_url, creator_average_rating'
     )
     .eq('id', id)
     .maybeSingle();
@@ -166,5 +167,19 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 export default async function PublicSessionPage({ params }: PageProps) {
   const { id } = await params;
   const initialSession = await fetchSession(id);
-  return <SessionShareClient initialSession={initialSession} sessionId={id} />;
+  // T-GROW5a: schema.org Event for search. Built from the same sessions_public
+  // row the page renders, so it cannot say more than the page does.
+  const jsonLd = initialSession
+    ? sessionEventJsonLd(
+        sessionJsonLdInputFromRow(initialSession as unknown as Record<string, unknown>, `${BASE_URL}/s/${id}/`)
+      )
+    : null;
+  return (
+    <>
+      {jsonLd && (
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }} />
+      )}
+      <SessionShareClient initialSession={initialSession} sessionId={id} />
+    </>
+  );
 }
