@@ -5,47 +5,57 @@
  * This makes it easy to swap providers or add multiple ones later.
  */
 
-import { getPostHog, withPostHog } from '@/lib/posthog';
+import { withPostHog } from '@/lib/posthog';
 
 // ═══════════════════════════════════════════
 // USER IDENTIFICATION
 // ═══════════════════════════════════════════
 
-interface UserProfile {
-  id: string;
-  email?: string;
-  name?: string;
-  is_instructor: boolean;
-  is_admin?: boolean;
-  language?: string;
-  city?: string;
-  neighborhood?: string;
-  created_at?: string;
-  sessions_completed?: number;
-  average_rating?: number;
+export type AnalyticsRole = 'athlete' | 'instructor' | 'gym' | 'admin';
+
+/**
+ * T-ANALYTICS1 part B. The ONLY person properties Tribe sends to PostHog.
+ *
+ * Data minimisation (Ley 1581, policy v1.1): no name, email, phone, WhatsApp,
+ * birthdate, city or neighbourhood. The distinct ID is the Supabase UUID, never
+ * an email or phone. The previous identifyUser sent email and name; it was
+ * replaced here, not extended.
+ */
+export interface AnalyticsPersonProperties {
+  role: AnalyticsRole;
+  preferred_language: 'en' | 'es' | null;
+  /** true for admin accounts, so dashboards can filter Tribe's own staff out. */
+  is_internal: boolean;
+  /** Account creation day, YYYY-MM-DD. The day, not the instant. */
+  signup_date: string | null;
+}
+
+export const PERSON_PROPERTY_KEYS = ['role', 'preferred_language', 'is_internal', 'signup_date'] as const;
+
+/** Admin wins, then a gym (owns a featured_partners row), then instructor, else athlete. */
+export function roleFor(facts: { isAdmin: boolean; ownsPartner: boolean; isInstructor: boolean }): AnalyticsRole {
+  if (facts.isAdmin) return 'admin';
+  if (facts.ownsPartner) return 'gym';
+  if (facts.isInstructor) return 'instructor';
+  return 'athlete';
 }
 
 /**
- * Identify a user after login or session restore.
- * Call ONCE when the user is authenticated.
- * PostHog links all subsequent events to this user.
+ * Link this device's events to the Supabase user. Queued if posthog-js has not
+ * loaded yet. Copies exactly PERSON_PROPERTY_KEYS out of `props`, so an object
+ * that carries more (TypeScript allows that for a variable) still cannot leak
+ * an extra key into PostHog.
  */
-export function identifyUser(profile: UserProfile): void {
-  const ph = getPostHog();
-  if (!ph) return;
-
-  ph.identify(profile.id, {
-    email: profile.email,
-    name: profile.name,
-    is_instructor: profile.is_instructor,
-    is_admin: profile.is_admin || false,
-    language: profile.language || 'en',
-    city: profile.city || 'Medellín',
-    neighborhood: profile.neighborhood,
-    created_at: profile.created_at,
-    sessions_completed: profile.sessions_completed || 0,
-    average_rating: profile.average_rating,
-  });
+export function identifyUser(userId: string, props: AnalyticsPersonProperties | null): void {
+  if (!props) {
+    // The facts could not be read. Still link the device to the account:
+    // who it is matters more than which role, and the next load retries.
+    withPostHog((ph) => ph.identify(userId));
+    return;
+  }
+  const allowed: Record<string, unknown> = {};
+  for (const key of PERSON_PROPERTY_KEYS) allowed[key] = props[key];
+  withPostHog((ph) => ph.identify(userId, allowed));
 }
 
 /**
@@ -54,6 +64,19 @@ export function identifyUser(profile: UserProfile): void {
  */
 export function resetUser(): void {
   withPostHog((ph) => ph.reset());
+}
+
+/**
+ * resetUser, but only while an identified user is still attached. The auth
+ * listener in PostHogProvider calls this on SIGNED_OUT as a safety net for
+ * sign-outs that do not go through a button (expiry, another tab); the buttons
+ * call resetUser() first, and a second unconditional reset would mint a second
+ * anonymous ID for no reason.
+ */
+export function resetUserIfIdentified(): void {
+  withPostHog((ph) => {
+    if (ph.get_property('$user_state') === 'identified') ph.reset();
+  });
 }
 
 // ═══════════════════════════════════════════

@@ -11,11 +11,14 @@ vi.mock('next/navigation', () => ({
 const verifyOtp = vi.fn().mockResolvedValue({ data: { user: { id: 'u1' } }, error: null });
 const resend = vi.fn().mockResolvedValue({ error: null });
 const resetPasswordForEmail = vi.fn().mockResolvedValue({ error: null });
+const signInWithPassword = vi.fn();
+const signOut = vi.fn().mockResolvedValue({ error: null });
 vi.mock('@/lib/supabase/client', () => ({
   createClient: () => ({
     auth: {
       getUser: vi.fn().mockResolvedValue({ data: { user: null } }),
-      signInWithPassword: vi.fn(),
+      signInWithPassword,
+      signOut,
       verifyOtp,
       resend,
       resetPasswordForEmail,
@@ -24,7 +27,8 @@ vi.mock('@/lib/supabase/client', () => ({
 }));
 vi.mock('@/lib/auth-helpers', () => ({ upsertUserProfile: vi.fn().mockResolvedValue({ isNewUser: true }) }));
 vi.mock('@/lib/dal/referrals', () => ({ applyReferralCode: vi.fn() }));
-vi.mock('@/lib/analytics', () => ({ trackEvent: vi.fn() }));
+const resetUser = vi.fn();
+vi.mock('@/lib/analytics', () => ({ trackEvent: vi.fn(), resetUser: () => resetUser() }));
 vi.mock('@/lib/haptics', () => ({ haptic: vi.fn() }));
 vi.mock('@/lib/toast', () => ({ showError: vi.fn(), showSuccess: vi.fn() }));
 vi.mock('@/lib/logger', () => ({ logError: vi.fn() }));
@@ -150,5 +154,47 @@ describe('useAuthHandlers — OTP verify', () => {
     });
     expect(result!.result.current.message).toBe(getAuthTranslations('es').verifiedSignIn);
     mockSearchParams = new URLSearchParams(); // reset for other tests
+  });
+});
+
+describe('useAuthHandlers — unverified sign-in (T-ANALYTICS1 part B)', () => {
+  beforeEach(() => {
+    signInWithPassword.mockReset();
+    signOut.mockClear();
+    resetUser.mockClear();
+  });
+
+  it('resets the PostHog identity before signing an unverified account back out', async () => {
+    // The password was right, so the session existed for a moment and the
+    // provider's SIGNED_IN listener may already have identified the account.
+    signInWithPassword.mockResolvedValue({ data: { user: { id: 'u1', email_confirmed_at: null } }, error: null });
+    const { result } = renderHook(() => useAuthHandlers('en'));
+    act(() => {
+      result.current.setEmail('ana@example.com');
+      result.current.setPassword('password1');
+    });
+    await act(async () => {
+      await result.current.handleSubmit({ preventDefault() {} } as React.FormEvent);
+    });
+    expect(signOut).toHaveBeenCalledOnce();
+    expect(resetUser).toHaveBeenCalledOnce();
+    expect(resetUser.mock.invocationCallOrder[0]).toBeLessThan(signOut.mock.invocationCallOrder[0]);
+  });
+
+  it('a verified sign-in does not reset anything', async () => {
+    signInWithPassword.mockResolvedValue({
+      data: { user: { id: 'u1', email_confirmed_at: '2026-10-01T00:00:00Z' } },
+      error: null,
+    });
+    const { result } = renderHook(() => useAuthHandlers('en'));
+    act(() => {
+      result.current.setEmail('ana@example.com');
+      result.current.setPassword('password1');
+    });
+    await act(async () => {
+      await result.current.handleSubmit({ preventDefault() {} } as React.FormEvent);
+    });
+    expect(resetUser).not.toHaveBeenCalled();
+    expect(signOut).not.toHaveBeenCalled();
   });
 });

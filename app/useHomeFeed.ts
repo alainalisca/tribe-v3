@@ -30,8 +30,7 @@ import { logError } from '@/lib/logger';
 import type { User } from '@supabase/supabase-js';
 import type { SessionWithRelations } from '@/lib/dal';
 
-import { identifyUser, setSessionContext, trackEvent } from '@/lib/analytics';
-import { detectNeighborhood } from '@/lib/city-config';
+import { setSessionContext, trackEvent } from '@/lib/analytics';
 
 import { useSessionFiltering } from './hooks/useSessionFiltering';
 import { isPastFeedGrace } from '@/components/SessionCardHelpers';
@@ -320,21 +319,14 @@ export function useHomeFeed() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- mount only
   }, []);
 
-  // --- Analytics: identify user + session context + app_opened ---
+  // --- Analytics: session context + app_opened ---
   useEffect(() => {
     if (!user || !userProfile || identifiedRef.current) return;
     identifiedRef.current = true;
 
-    identifyUser({
-      id: user.id,
-      email: user.email,
-      name: userProfile.name || undefined,
-      is_instructor: userProfile.is_instructor || false,
-      language: language,
-      city: 'Medellín',
-      neighborhood: userLocation ? detectNeighborhood(userLocation.latitude, userLocation.longitude)?.name : undefined,
-      created_at: user.created_at,
-    });
+    // identify is no longer done here (T-ANALYTICS1 part B): PostHogProvider's
+    // auth listener identifies on every authenticated load, on every page, and
+    // without email, name or neighbourhood.
 
     setSessionContext({
       user_role: userProfile.is_instructor ? 'instructor' : 'athlete',
@@ -347,7 +339,7 @@ export function useHomeFeed() {
       is_returning: true,
       entry_page: typeof window !== 'undefined' ? window.location.pathname : '/',
     });
-  }, [user, userProfile, language, userLocation]);
+  }, [user, userProfile, language]);
 
   // --- Internal helpers ---
   async function tryRegisterPushNotifications(userId: string) {

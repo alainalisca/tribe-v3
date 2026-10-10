@@ -30,7 +30,7 @@ vi.mock('@/lib/supabase/client', () => ({
 const upsertUserProfile = vi.fn();
 vi.mock('@/lib/auth-helpers', () => ({ upsertUserProfile: (...a: unknown[]) => upsertUserProfile(...a) }));
 vi.mock('@/lib/dal/referrals', () => ({ applyReferralCode: vi.fn() }));
-vi.mock('@/lib/analytics', () => ({ trackEvent: vi.fn() }));
+vi.mock('@/lib/analytics', () => ({ trackEvent: vi.fn(), resetUser: vi.fn() }));
 vi.mock('@/lib/haptics', () => ({ haptic: vi.fn() }));
 vi.mock('@/lib/toast', () => ({ showError: vi.fn(), showSuccess: vi.fn() }));
 vi.mock('@/lib/logger', () => ({ logError: vi.fn() }));
