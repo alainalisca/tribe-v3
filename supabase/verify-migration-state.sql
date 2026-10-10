@@ -1909,7 +1909,8 @@ select 'GUARD_184_mirror_matches_applied_table',
     ('212_t_grow1_lead_attended_toggle'),
     ('213_t_grow1_attribution_events'),
     ('214_t_grow1_signup_attribution'),
-    ('215_t_grow2_referral_loop')
+    ('215_t_grow2_referral_loop'),
+    ('216_t_auth3_google_avatar_backfill')
     -- <<<END_MIRROR_LIST>>>
            ) as mirror(migration)
            where not exists (select 1 from public.migrations_applied a
@@ -1957,7 +1958,8 @@ select 'GUARD_184_mirror_matches_applied_table',
     ('212_t_grow1_lead_attended_toggle'),
     ('213_t_grow1_attribution_events'),
     ('214_t_grow1_signup_attribution'),
-    ('215_t_grow2_referral_loop')
+    ('215_t_grow2_referral_loop'),
+    ('216_t_auth3_google_avatar_backfill')
     -- <<<END_MIRROR_LIST>>>
            ))
            then 'MISSING -- this database has recorded a migration the JSON mirror omits; re-sync it'
