@@ -68,7 +68,7 @@ export default function ImageCropModal({ src, aspect = 3, language, onConfirm, o
     >
       <div
         className="w-full max-w-lg overflow-hidden rounded-t-2xl border border-theme bg-theme-card sm:rounded-2xl"
-        style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 0px)' }}
+        style={{ paddingBottom: 'max(var(--safe-area-inset-bottom, 0px), 0px)' }}
       >
         <div className="p-4">
           <h2 className="text-base font-bold text-theme-primary">{t.title}</h2>

@@ -236,7 +236,7 @@ export default function TipButton({
         >
           <div
             className="w-full max-w-md bg-theme-card rounded-t-2xl sm:rounded-2xl p-5"
-            style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 1.25rem)' }}
+            style={{ paddingBottom: 'max(var(--safe-area-inset-bottom, 0px), 1.25rem)' }}
             onClick={(e) => e.stopPropagation()}
           >
             {renderPanel()}

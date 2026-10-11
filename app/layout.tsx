@@ -180,7 +180,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <Toaster
                   position="top-center"
                   containerStyle={{
-                    top: 'calc(max(env(safe-area-inset-top, 0px), 20px) + 12px)',
+                    top: 'calc(max(var(--safe-area-inset-top, 0px), 20px) + 12px)',
                   }}
                   toastOptions={{
                     style: {

@@ -111,7 +111,7 @@ export default function PhotoLightbox({ photos, initialIndex, onClose }: PhotoLi
         onClick={onClose}
         aria-label={tCommon('close')}
         className="absolute right-4 min-w-[44px] min-h-[44px] flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-full transition z-10"
-        style={{ top: 'max(1rem, env(safe-area-inset-top, 1rem))' }}
+        style={{ top: 'max(1rem, var(--safe-area-inset-top, 1rem))' }}
       >
         <X className="w-6 h-6 text-white" />
       </button>
