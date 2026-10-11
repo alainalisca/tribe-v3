@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useLanguage } from '@/lib/LanguageContext';
 import { useTribeOSPremiumGate } from '@/hooks/useTribeOSPremiumGate';
 import { trackEvent } from '@/lib/analytics';
+import { showError } from '@/lib/toast';
 import { Settings as SettingsIcon } from 'lucide-react';
 
 const copy = {
@@ -23,6 +24,7 @@ const copy = {
     saving: 'Saving...',
     saved: 'Saved',
     ownerOnly: 'Only the gym owner can change this setting.',
+    errorSave: 'Could not save setting. Try again.',
   },
   es: {
     pageTitle: 'Ajustes',
@@ -40,6 +42,7 @@ const copy = {
     saving: 'Guardando...',
     saved: 'Guardado',
     ownerOnly: 'Solo el dueño del gym puede cambiar este ajuste.',
+    errorSave: 'No se pudo guardar el ajuste. Intenta de nuevo.',
   },
 } as const;
 
@@ -90,7 +93,13 @@ export default function SettingsPage() {
         trackEvent('tribe_os_autonomy_changed', { value });
         setSaved(true);
         setTimeout(() => setSaved(false), 2000);
+      } else {
+        showError(s.errorSave);
+        console.error('[settings]', json);
       }
+    } catch (err) {
+      showError(s.errorSave);
+      console.error('[settings]', err);
     } finally {
       setSaving(false);
     }

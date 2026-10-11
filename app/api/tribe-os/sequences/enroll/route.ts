@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { logError } from '@/lib/logger';
 import { requireTribeOSPremium } from '@/lib/auth/premium';
+import type { EnrolledByType } from '@/lib/tribe-os/sequences/constants';
 
 const EnrollSchema = z.object({
   client_id: z.string().uuid(),
@@ -59,6 +60,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       }
     }
 
+    const enrolledByType: EnrolledByType = 'user';
+
     const { data: enrollment, error } = await supabase
       .from('tribe_os_sequence_enrollments')
       .insert({
@@ -67,7 +70,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         sequence_id,
         status: 'active',
         current_step: 1,
-        enrolled_by_type: 'coach',
+        enrolled_by_type: enrolledByType,
         enrolled_by: userId,
       })
       .select('id')
@@ -76,6 +79,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     if (error) {
       if (error.code === '23505') {
         return NextResponse.json({ success: false, error: 'already_enrolled' }, { status: 409 });
+      }
+      if (error.code === '23514') {
+        logError(error, { route: 'POST /api/tribe-os/sequences/enroll', code: '23514' });
+        return NextResponse.json({ success: false, error: 'constraint_violation' }, { status: 400 });
       }
       throw error;
     }

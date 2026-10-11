@@ -10,6 +10,7 @@ import { StatCard, Badge, Button } from '@/components/tribe-os/ui';
 import DraftModal from '@/components/tribe-os/DraftModal';
 import type { DraftContext } from '@/lib/tribe-os/drafts/templates';
 import { filterContactToday } from '@/lib/tribe-os/contactFilter';
+import { showError } from '@/lib/toast';
 import { Users, Phone, RotateCcw, MessageCircle, RefreshCw, ChevronDown, Check, Play } from 'lucide-react';
 
 const copy = {
@@ -55,6 +56,8 @@ const copy = {
     noActiveSequence: 'No active sequence',
     alreadyEnrolled: 'Already enrolled',
     cooldown: 'Ended recently',
+    enrollError: 'Could not start sequence. Try again.',
+    enrollAlreadyError: 'This member is already in a sequence.',
   },
   es: {
     pageTitle: 'Retención',
@@ -97,6 +100,8 @@ const copy = {
     noActiveSequence: 'Sin secuencia activa',
     alreadyEnrolled: 'Ya inscrito',
     cooldown: 'Terminó recientemente',
+    enrollError: 'No se pudo iniciar el seguimiento. Intenta de nuevo.',
+    enrollAlreadyError: 'Este miembro ya está en seguimiento.',
   },
 } as const;
 
@@ -261,13 +266,22 @@ export default function RetentionPage() {
             next.set(clientId, { status: 'active', currentStep: 1 });
             return next;
           });
+        } else {
+          if (json.error === 'already_enrolled') {
+            showError(s.enrollAlreadyError);
+          } else {
+            showError(s.enrollError);
+          }
+          console.error('[enroll]', json);
         }
-      } catch {
+      } catch (err) {
+        showError(s.enrollError);
+        console.error('[enroll]', err);
       } finally {
         setEnrollingId(null);
       }
     },
-    [enrollingId]
+    [enrollingId, s.enrollAlreadyError, s.enrollError]
   );
 
   const [sendingTouch, setSendingTouch] = useState<string | null>(null);

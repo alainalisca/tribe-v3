@@ -9,6 +9,7 @@ import { Button, Badge } from '@/components/tribe-os/ui';
 import DraftModal from '@/components/tribe-os/DraftModal';
 import type { DraftContext } from '@/lib/tribe-os/drafts/templates';
 import { STEP_CHANNEL_LABELS, STOP_REASONS } from '@/lib/tribe-os/sequences/helpers';
+import { showError } from '@/lib/toast';
 import { Check, MessageCircle, Square, RefreshCw } from 'lucide-react';
 
 const copy = {
@@ -38,6 +39,9 @@ const copy = {
     refresh: 'Refresh',
     activeEnrollments: (n: number) => n === 1 ? '1 active enrollment' : `${n} active enrollments`,
     completing: 'Saving...',
+    errorComplete: 'Could not mark as done. Try again.',
+    errorStop: 'Could not stop sequence. Try again.',
+    errorApprove: 'Could not process approval. Try again.',
   },
   es: {
     pageTitle: 'Tareas de hoy',
@@ -65,6 +69,9 @@ const copy = {
     refresh: 'Actualizar',
     activeEnrollments: (n: number) => n === 1 ? '1 inscripción activa' : `${n} inscripciones activas`,
     completing: 'Guardando...',
+    errorComplete: 'No se pudo marcar como hecho. Intenta de nuevo.',
+    errorStop: 'No se pudo detener la secuencia. Intenta de nuevo.',
+    errorApprove: 'No se pudo procesar la aprobación. Intenta de nuevo.',
   },
 } as const;
 
@@ -153,7 +160,13 @@ export default function TasksPage() {
       if (json.success) {
         trackEvent('tribe_os_task_completed');
         await fetchTasks(true);
+      } else {
+        showError(s.errorComplete);
+        console.error('[complete]', json);
       }
+    } catch (err) {
+      showError(s.errorComplete);
+      console.error('[complete]', err);
     } finally {
       setBusyId(null);
     }
@@ -177,7 +190,13 @@ export default function TasksPage() {
       if (json.success) {
         trackEvent(action === 'approve' ? 'tribe_os_enrollment_approved' : 'tribe_os_enrollment_rejected');
         await fetchTasks(true);
+      } else {
+        showError(s.errorApprove);
+        console.error('[approve]', json);
       }
+    } catch (err) {
+      showError(s.errorApprove);
+      console.error('[approve]', err);
     } finally {
       setBusyId(null);
     }
@@ -201,7 +220,13 @@ export default function TasksPage() {
         trackEvent('tribe_os_enrollment_stopped');
         setStopTarget(null);
         await fetchTasks(true);
+      } else {
+        showError(s.errorStop);
+        console.error('[stop]', json);
       }
+    } catch (err) {
+      showError(s.errorStop);
+      console.error('[stop]', err);
     } finally {
       setBusyId(null);
     }

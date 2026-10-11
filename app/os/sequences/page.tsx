@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useLanguage } from '@/lib/LanguageContext';
 import { useTribeOSPremiumGate } from '@/hooks/useTribeOSPremiumGate';
 import { trackEvent } from '@/lib/analytics';
+import { showError } from '@/lib/toast';
 import { Button, Badge } from '@/components/tribe-os/ui';
 import { STEP_CHANNEL_LABELS } from '@/lib/tribe-os/sequences/helpers';
 import type { DraftCase } from '@/lib/tribe-os/drafts/templates';
@@ -56,6 +57,8 @@ const copy = {
     deleteStep: 'Delete step',
     ownerOnly: 'Only the gym owner can edit sequences.',
     readOnly: 'Read-only view for coaches.',
+    errorSave: 'Could not save sequence. Try again.',
+    errorToggle: 'Could not update sequence. Try again.',
   },
   es: {
     pageTitle: 'Secuencias',
@@ -81,6 +84,8 @@ const copy = {
     deleteStep: 'Eliminar paso',
     ownerOnly: 'Solo el dueño del gym puede editar secuencias.',
     readOnly: 'Vista de solo lectura para coaches.',
+    errorSave: 'No se pudo guardar la secuencia. Intenta de nuevo.',
+    errorToggle: 'No se pudo actualizar la secuencia. Intenta de nuevo.',
   },
 } as const;
 
@@ -224,7 +229,13 @@ export default function SequencesPage() {
         trackEvent(editId === 'new' ? 'tribe_os_sequence_created' : 'tribe_os_sequence_updated');
         cancelEdit();
         await fetchSequences();
+      } else {
+        showError(s.errorSave);
+        console.error('[sequences:save]', json);
       }
+    } catch (err) {
+      showError(s.errorSave);
+      console.error('[sequences:save]', err);
     } finally {
       setSaving(false);
     }
@@ -232,13 +243,23 @@ export default function SequencesPage() {
 
   const handleToggle = async (seq: SequenceData) => {
     if (!isOwner) return;
-    const res = await fetch('/api/tribe-os/sequences', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action_type: 'toggle', id: seq.id, active: !seq.active }),
-    });
-    const json = await res.json();
-    if (json.success) await fetchSequences();
+    try {
+      const res = await fetch('/api/tribe-os/sequences', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action_type: 'toggle', id: seq.id, active: !seq.active }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        await fetchSequences();
+      } else {
+        showError(s.errorToggle);
+        console.error('[sequences:toggle]', json);
+      }
+    } catch (err) {
+      showError(s.errorToggle);
+      console.error('[sequences:toggle]', err);
+    }
   };
 
   if (gate.state !== 'allowed') {
