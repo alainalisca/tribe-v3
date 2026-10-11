@@ -208,6 +208,25 @@ describe('public.users columns added after 067 carry an explicit SELECT grant', 
     // (2026-09-09): leave it alone rather than write a migration for a
     // privilege production already has.
     last_seen_release: 'granted out of band; confirmed readable in production',
+    // 214 (T-GROW1 part C): how an account arrived and who invited it.
+    // "Users can view all profiles" is USING (true), so a grant would publish
+    // this to every signed-in user. Withheld on purpose, read by the admin with
+    // the service role, and listed in both users exclusion lists in
+    // verify-migration-state.sql; 214's own guard asserts no client can read it.
+    ...Object.fromEntries(
+      [
+        'signup_src',
+        'signup_code',
+        'signup_ref',
+        'signup_utm_source',
+        'signup_utm_medium',
+        'signup_utm_campaign',
+        'signup_utm_content',
+        'signup_landing_path',
+        'signup_first_touch',
+        'signup_attributed_at',
+      ].map((c) => [c, 'withheld from clients by design (214): arrival and inviter are not public'])
+    ),
   };
 
   /** Strip block and line comments so commented-out DDL never counts. */

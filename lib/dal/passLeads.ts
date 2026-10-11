@@ -167,6 +167,8 @@ export interface NewPassLead {
   first_touch?: Attribution | null;
   /** T-AV23. Written only for an attributed lead; see lib/pase/athleteAttribution.ts. */
   referred_by_athlete_id?: string | null;
+  /** T-GROW2 (migration 215). The code this lead shares; server-generated, see lib/referral/leadRefCode.ts. */
+  lead_ref_code?: string | null;
 }
 
 export type InsertResult =

@@ -42,6 +42,7 @@ import { useTranslations } from '@/lib/i18n/useTranslations';
 import { useAdminOrigen } from '@/app/admin/useAdminOrigen';
 import { showUpRate, type OriginGrouping, type OriginGroup, type OriginRange } from '@/lib/growth/originGrouping';
 import TrackedLinkBuilder from './TrackedLinkBuilder';
+import AdminReferidosSection from './AdminReferidosSection';
 
 const TH = 'px-3 py-2 text-left text-[11px] font-bold uppercase tracking-wide text-stone-500 dark:text-gray-400';
 const TD = 'px-3 py-2 align-middle text-sm text-tribe-dark dark:text-white whitespace-nowrap';
@@ -214,6 +215,9 @@ export default function AdminOrigenTab() {
       {/* The missing columns, said in words. An absent column with no explanation
           reads as an oversight; a zero would read as a measurement. */}
       <p className="text-xs leading-relaxed text-stone-500 dark:text-gray-400">{t('pendingNote')}</p>
+
+      {/* T-GROW2 C. Same range as the table above, by construction. */}
+      <AdminReferidosSection range={range} />
 
       <TrackedLinkBuilder />
     </div>

@@ -16,7 +16,7 @@ import {
   FeedbackList,
   BugReports,
   MessageList,
-  SessionManagement,
+  AdminSessionsTab,
   AdminLeadsTab,
   AdminOrigenTab,
 } from '@/components/admin';
@@ -114,7 +114,6 @@ export default function AdminPage() {
     else if (activeTab === 'feedback') data.loadFeedback();
     else if (activeTab === 'bugs') data.loadBugs();
     else if (activeTab === 'messages') data.loadMessages();
-    else if (activeTab === 'sessions') data.loadSessions();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- loads once per tab
   }, [activeTab]);
 
@@ -307,6 +306,7 @@ export default function AdminPage() {
             actionLoading={actions.actionLoading}
             onBan={actions.banUser}
             onUnban={actions.unbanUser}
+            onDelete={actions.deleteUser}
           />
         )}
         {activeTab === 'reports' && (
@@ -343,10 +343,11 @@ export default function AdminPage() {
           />
         )}
         {activeTab === 'sessions' && (
-          <SessionManagement
-            sessions={data.sessions}
-            loading={data.loadingSessions}
-            language={language}
+          <AdminSessionsTab
+            supabase={supabase}
+            reviewSessions={data.sessions}
+            reviewLoading={data.loadingSessions}
+            onLoadReview={data.loadSessions}
             onVerify={actions.verifySessionPhotos}
             onUnverify={actions.unverifySessionPhotos}
           />

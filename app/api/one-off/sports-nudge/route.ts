@@ -8,6 +8,7 @@ import { claimOneOffSend, recordOneOffOutcome, releaseOneOffClaim, type OneOffCh
 import { isEmailSuppressed, unsubUrlFor, unsubHeaders } from '@/lib/dal/emailUnsubscribe';
 import { bilingual, type BilingualCopy } from '@/lib/oneOff/sportsNudgeCopy';
 import { SITE_URL } from '@/lib/http/siteUrl';
+import { TRIBE_FROM } from '@/lib/email/sender';
 
 /**
  * @description One-off nudge to athletes with no sports: push to those with a token, email to all of them.
@@ -93,7 +94,7 @@ const NOTIFICATION_TYPE = 'comeback'; // training_nudges category; push default_
 // tribeapp.co is not a domain Resend holds for this account, so a plausible
 // address on it would have had every one of these 34 emails rejected at the
 // API with nothing on the recipient's side to show for it.
-const FROM = 'Tribe <tribe@aplusfitnessllc.com>';
+const FROM = TRIBE_FROM;
 
 interface Recipient {
   id: string;

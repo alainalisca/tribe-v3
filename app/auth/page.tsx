@@ -10,8 +10,7 @@ import { useTranslations } from '@/lib/i18n/useTranslations';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import LanguageToggle from '@/components/LanguageToggle';
 import { Card, CardContent } from '@/components/ui/card';
-import { createClient } from '@/lib/supabase/client';
-import { lookupReferralCode } from '@/lib/dal/referrals';
+import { fetchInviterFirstName } from '@/lib/referralInviterClient';
 
 import OAuthButtons from './OAuthButtons';
 import ResetPasswordForm from './ResetPasswordForm';
@@ -34,12 +33,15 @@ export default function AuthPage() {
 
     localStorage.setItem('tribe_referral_code', refCode);
 
-    const supabase = createClient();
-    lookupReferralCode(supabase, refCode).then((result) => {
-      if (result.success && result.data) {
-        setReferrerName(result.data.referrerName);
-      }
+    // Server lookup: the visitor here is signed out, and anon cannot read
+    // public.referrals, so a browser query never found anyone.
+    let cancelled = false;
+    fetchInviterFirstName(refCode).then((firstName) => {
+      if (!cancelled) setReferrerName(firstName);
     });
+    return () => {
+      cancelled = true;
+    };
   }, [searchParams]);
 
   if (h.checkingAuth) {

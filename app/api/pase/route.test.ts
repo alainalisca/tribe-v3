@@ -97,7 +97,8 @@ describe('POST /api/pase', () => {
     expect(res.status).toBe(200);
     const json = await res.json();
 
-    expect(Object.keys(json).sort()).toEqual(['pass_code', 'storefront_url', 'whatsapp_url']);
+    // T-GROW2 added ref_code: the lead's share code for the "Trae a un amigo" card.
+    expect(Object.keys(json).sort()).toEqual(['pass_code', 'ref_code', 'storefront_url', 'whatsapp_url']);
     expect(json.pass_code).toBe('BB-4F7K');
     expect(json.whatsapp_url).toBe(
       'https://wa.me/573001112233?text=' +

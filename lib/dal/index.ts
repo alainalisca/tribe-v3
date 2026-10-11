@@ -1,6 +1,7 @@
 export * from './types';
 export * from './sessions';
 export * from './users';
+export * from './userProfileSync';
 export * from './onboarding';
 export * from './participants';
 export * from './doorCheckin';

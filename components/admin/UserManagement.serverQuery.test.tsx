@@ -58,6 +58,7 @@ function renderList(props: Partial<React.ComponentProps<typeof UserManagement>> 
       actionLoading={null}
       onBan={vi.fn()}
       onUnban={vi.fn()}
+      onDelete={vi.fn()}
       {...props}
     />
   );

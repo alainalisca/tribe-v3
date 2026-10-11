@@ -13,6 +13,7 @@ import {
   updateBugStatus as dalUpdateBugStatus,
 } from '@/lib/dal';
 import type { TranslationKey } from '@/lib/translations';
+import { requestAdminUserDelete, deleteUserErrorMessage } from '@/lib/adminDeleteRequests';
 import type { AdminUser, AdminReport, AdminFeedback, AdminBug, AdminSession, AdminMessage } from './types';
 
 interface Setters {
@@ -159,26 +160,34 @@ export function useAdminActions(
     });
   }
 
-  function deleteUser(targetUserId: string) {
+  /**
+   * Deletes an account via the admin route (soft-deletes the profile and
+   * removes their messages, bookings and hosted sessions in one transaction;
+   * see migration 050). The confirmation names the account, because the list
+   * is full of near-identical test rows and a generic "delete user?" prompt
+   * does not tell you which one you are about to remove.
+   */
+  function deleteUser(target: { id: string; name: string | null; email: string | null }) {
+    const who = target.name?.trim() || target.email || target.id;
     setConfirmAction({
       title: t('deleteUserBtn'),
-      message: t('deleteUserConfirm'),
+      message:
+        language === 'es'
+          ? `Se eliminará la cuenta de ${who}${target.email && target.name ? ` (${target.email})` : ''}, junto con sus mensajes, inscripciones y las sesiones que creó. Esto no se puede deshacer.`
+          : `This deletes ${who}${target.email && target.name ? ` (${target.email})` : ''}, along with their messages, bookings and the sessions they created. This cannot be undone.`,
       confirmLabel: t('delete'),
       variant: 'danger',
       onConfirm: async () => {
         setConfirmAction(null);
-        setActionLoading(targetUserId);
+        setActionLoading(target.id);
         try {
-          // QA-18: cascade-delete via server route so RLS doesn't block us.
-          const res = await fetch(`/api/admin/users/${targetUserId}/delete`, { method: 'POST' });
-          const payload = (await res.json().catch(() => ({}))) as { error?: string };
-          if (!res.ok) {
-            throw new Error(payload.error || `HTTP ${res.status}`);
+          const result = await requestAdminUserDelete(target.id);
+          if (!result.ok) {
+            showError(deleteUserErrorMessage(result.error, language === 'es'));
+            return;
           }
-          setters.setUsers((prev) => prev.filter((u) => u.id !== targetUserId));
-          showSuccess(language === 'es' ? 'Usuario eliminado' : 'User deleted');
-        } catch (error: unknown) {
-          showError(getErrorMessage(error, 'admin_action', language));
+          setters.setUsers((prev) => prev.filter((u) => u.id !== target.id));
+          showSuccess(language === 'es' ? 'Cuenta eliminada' : 'Account deleted');
         } finally {
           setActionLoading(null);
         }

@@ -15,6 +15,7 @@ import {
 } from '@/lib/dal/admin';
 import { fetchAdminLeads, ADMIN_LEADS_ALL_PARTNERS, ADMIN_LEADS_PAGE_SIZE } from '@/lib/dal/adminLeads';
 import { fetchAttributionSummary } from '@/lib/dal/attributionSummary';
+import { fetchReferralSummary } from '@/lib/dal/referralSummary';
 import { isOriginRange, originRangeSince, type OriginRange } from '@/lib/growth/originGrouping';
 
 /**
@@ -30,6 +31,27 @@ import { isOriginRange, originRangeSince, type OriginRange } from '@/lib/growth/
  * @query partner - leads only: a featured_partners id, or "all"
  * @query offset - leads only: row offset, 50 per page
  */
+/**
+ * The Origen tab's window, shared by its two reads (origen, referidos) so the
+ * two tables can never disagree about what "last 30 days" means. The reasons
+ * for a closed-set Map are on the lines below.
+ */
+function parseOriginRange(request: NextRequest): OriginRange {
+  const RANGES = new Map<string, OriginRange>([
+    ['7', 7],
+    ['30', 30],
+    ['90', 90],
+    ['all', null],
+  ]);
+  const raw = request.nextUrl.searchParams.get('days');
+  const matched = raw !== null && RANGES.has(raw) ? RANGES.get(raw)! : 30;
+  // isOriginRange is belt and braces on a value the Map already constrains,
+  // and it is what keeps the two definitions of "a valid range" from
+  // drifting: the Map's keys and ORIGIN_RANGES have to agree.
+  const range: OriginRange = isOriginRange(matched) ? matched : 30;
+  return range;
+}
+
 export async function GET(request: NextRequest) {
   // GATE FIRST — nothing is read until the caller is a confirmed admin.
   const gate = await requireApiAdmin();
@@ -129,19 +151,16 @@ export async function GET(request: NextRequest) {
          * walks the prototype chain, so an object literal plus `in` would admit
          * `?days=constructor` and hand back undefined.
          */
-        const RANGES = new Map<string, OriginRange>([
-          ['7', 7],
-          ['30', 30],
-          ['90', 90],
-          ['all', null],
-        ]);
-        const raw = request.nextUrl.searchParams.get('days');
-        const matched = raw !== null && RANGES.has(raw) ? RANGES.get(raw)! : 30;
-        // isOriginRange is belt and braces on a value the Map already constrains,
-        // and it is what keeps the two definitions of "a valid range" from
-        // drifting: the Map's keys and ORIGIN_RANGES have to agree.
-        const range: OriginRange = isOriginRange(matched) ? matched : 30;
+        const range = parseOriginRange(request);
         result = await fetchAttributionSummary(service, originRangeSince(range, Date.now()));
+        break;
+      }
+      case 'referidos': {
+        // T-GROW2 C. Service role for the same reason as origen: it reads every
+        // referred lead's contact fields to apply the self-referral guard, and
+        // only counts and display names leave this route.
+        const range = parseOriginRange(request);
+        result = await fetchReferralSummary(service, originRangeSince(range, Date.now()));
         break;
       }
       default:

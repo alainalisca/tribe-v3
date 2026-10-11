@@ -28,6 +28,7 @@ vi.mock('@/lib/logger', () => ({ logError: vi.fn(), log: vi.fn() }));
 vi.mock('@/lib/supabase/admin', () => ({ getServiceRoleClient: vi.fn() }));
 vi.mock('@/lib/rate-limit', () => ({ checkRateLimit: vi.fn() }));
 vi.mock('@/lib/pase/passCode', () => ({ generatePassCode: vi.fn(() => 'BB-4F7K') }));
+vi.mock('@/lib/referral/leadRefCode', () => ({ generateLeadRefCode: vi.fn(() => 'KQ7M2Z') }));
 vi.mock('@/lib/dal/passLeads', () => ({
   fetchPassConfig: vi.fn(),
   insertPassLead: vi.fn(),
@@ -148,6 +149,10 @@ describe('POST /api/pase with the athletes flag off is identical to before T-AV2
         expect(res.status).toBe(200);
         expect(await res.json()).toStrictEqual({
           pass_code: 'BB-4F7K',
+          // T-GROW2: present in every flag state, so the athletes flag still
+          // changes nothing about the body. Still toStrictEqual, same reasoning
+          // as the T-GROW1 note on the row below.
+          ref_code: 'KQ7M2Z',
           whatsapp_url: WHATSAPP_URL,
           storefront_url: storefront(c.storefrontTag),
         });
@@ -184,6 +189,8 @@ describe('POST /api/pase with the athletes flag off is identical to before T-AV2
           utm_content: null,
           landing_path: null,
           first_touch: null,
+          // T-GROW2 (migration 215): every lead gets a share code, in every flag state.
+          lead_ref_code: 'KQ7M2Z',
         });
 
         expect(sendPartnerLeadNotification).toHaveBeenCalledTimes(1);

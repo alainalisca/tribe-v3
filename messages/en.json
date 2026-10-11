@@ -689,6 +689,13 @@
     "incomplete": "Pick a destination to get a link.",
     "hintUnconventional": "This works, but the convention is CHANNEL-DETAIL-NN, like RUNCLUB-SAT0927.",
     "hintUncapturable": "This code cannot be tracked: use only letters, numbers, dashes and underscores, up to 40 characters.",
-    "conventionNote": "Name codes CHANNEL-DETAIL-NN so a year of them reads at a glance: RUNCLUB-SAT0927, IG-REEL-01, EAFIT-TABLE-01, BULLBOX-01."
+    "conventionNote": "Name codes CHANNEL-DETAIL-NN so a year of them reads at a glance: RUNCLUB-SAT0927, IG-REEL-01, EAFIT-TABLE-01, BULLBOX-01.",
+    "referidosTitle": "Referrals",
+    "referidosNote": "Who brought whom, in this period. A referred lead or signup that shares the referrer's own phone or email is not counted and shows under Self. Rewards are decided by the partner.",
+    "colReferrer": "Referrer",
+    "colSignups": "Signups",
+    "colSelf": "Self",
+    "unknownReferrer": "Unknown code",
+    "referidosEmpty": "No referrals in this period."
   }
 }

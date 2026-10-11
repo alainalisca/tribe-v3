@@ -105,6 +105,27 @@ describe('existing public surfaces survive the change', () => {
     expect(isPublicPath('/api/attr/')).toBe(true);
   });
 
+  it('lets /api/attr/signup/ reach its handler, which authenticates itself (T-GROW1 part C)', () => {
+    // Public here by the /api/attr prefix, and that is fine rather than an
+    // accident: the route calls getUser() and answers 401 itself (route.test.ts
+    // "refuses a signed-out caller"). What must NOT happen is a 307 to /auth,
+    // because the client fires it with keepalive during the post-sign-in
+    // navigation and never reads the answer, so a redirect would lose the
+    // account's attribution silently, which is this file's running theme.
+    expect(isPublicPath('/api/attr/signup/')).toBe(true);
+  });
+
+  it('lets a signed-out visitor reach /api/referral/inviter/ (the "Invitado por X" banner)', () => {
+    // The banner's whole audience is signed out. Without this entry the fetch
+    // is answered with a redirect to /auth, the banner stays hidden, and nothing
+    // errors: the same silent shape as the browser lookup it replaced.
+    expect(isPublicPath('/api/referral/inviter')).toBe(true);
+    expect(isPublicPath('/api/referral/inviter/')).toBe(true);
+    // Only this route: the rest of /api/referral keeps its session gate.
+    expect(isPublicPath('/api/referral')).toBe(false);
+    expect(isPublicPath('/api/referral/apply/')).toBe(false);
+  });
+
   it('keeps the one-off outreach route reachable by its cron caller', () => {
     // Found by the dry run, not by review: the route checks CRON_SECRET itself,
     // but middleware's cookie gate runs first and 307s it to /auth. The
