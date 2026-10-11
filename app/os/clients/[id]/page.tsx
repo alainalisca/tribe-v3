@@ -565,6 +565,8 @@ export default function ClientDetailPage() {
               </div>
             </header>
 
+            <EnrollmentSection clientId={state.client.id} language={language} />
+
             {/* Churn-risk intelligence panel — the AI's view of this
                 member's health. Surfaces churn_risk_score + health_status
                 with a "Rescore now" button (calls /api/tribe-os/ai/
@@ -1463,6 +1465,109 @@ function AttendanceListItem({
         </div>
       ) : null}
     </li>
+  );
+}
+
+const enrollmentCopy = {
+  en: {
+    title: 'Sequence enrollment',
+    status: (st: string) =>
+      st === 'active' ? 'Active' : st === 'pending_approval' ? 'Pending approval' : st === 'completed' ? 'Completed' : st === 'stopped' ? 'Stopped' : st === 'came_back' ? 'Came back' : st,
+    step: (pos: number, total: number) => `Step ${pos} of ${total}`,
+    nextDue: (d: string) => `Next due: ${d}`,
+    noEnrollment: 'Not enrolled in any sequence.',
+    completedSteps: 'Completed steps',
+    loading: 'Loading...',
+  },
+  es: {
+    title: 'Inscripción en secuencia',
+    status: (st: string) =>
+      st === 'active' ? 'Activo' : st === 'pending_approval' ? 'Pendiente de aprobación' : st === 'completed' ? 'Completado' : st === 'stopped' ? 'Detenido' : st === 'came_back' ? 'Volvió' : st,
+    step: (pos: number, total: number) => `Paso ${pos} de ${total}`,
+    nextDue: (d: string) => `Próximo: ${d}`,
+    noEnrollment: 'No inscrito en ninguna secuencia.',
+    completedSteps: 'Pasos completados',
+    loading: 'Cargando...',
+  },
+} as const;
+
+function EnrollmentSection({ clientId, language }: { clientId: string; language: 'en' | 'es' }) {
+  const ec = enrollmentCopy[language];
+  const [enrollment, setEnrollment] = useState<{
+    status: string;
+    sequenceName: string;
+    currentStep: number;
+    totalSteps: number;
+    completions: number[];
+  } | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`/api/tribe-os/sequences/member-enrollment?client_id=${clientId}`);
+        const json = await res.json();
+        if (!cancelled && json.success && json.data) {
+          setEnrollment(json.data);
+        }
+      } catch {}
+      if (!cancelled) setLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, [clientId]);
+
+  if (loading) return null;
+  if (!enrollment) return null;
+
+  const statusBadgeVariant =
+    enrollment.status === 'active' ? 'info' as const :
+    enrollment.status === 'completed' ? 'success' as const :
+    enrollment.status === 'stopped' ? 'danger' as const :
+    enrollment.status === 'came_back' ? 'success' as const :
+    'default' as const;
+
+  return (
+    <section className="bg-white rounded-xl border border-gray-200 p-4 mb-4">
+      <h2 className="text-xs uppercase tracking-[0.1em] text-gray-500 font-semibold mb-3">{ec.title}</h2>
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="text-sm font-semibold text-gray-900">{enrollment.sequenceName}</span>
+        <span className={`inline-flex items-center px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded-full border shrink-0 ${
+          statusBadgeVariant === 'info' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+          statusBadgeVariant === 'success' ? 'bg-green-50 text-green-700 border-green-200' :
+          statusBadgeVariant === 'danger' ? 'bg-red-50 text-red-700 border-red-200' :
+          'bg-gray-100 text-gray-600 border-gray-200'
+        }`}>
+          {ec.status(enrollment.status)}
+        </span>
+      </div>
+      {enrollment.status === 'active' && (
+        <p className="text-xs text-gray-500 mt-1">
+          {ec.step(enrollment.currentStep, enrollment.totalSteps)}
+        </p>
+      )}
+      {enrollment.completions.length > 0 && (
+        <div className="mt-2">
+          <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">{ec.completedSteps}</p>
+          <div className="flex gap-1 flex-wrap">
+            {Array.from({ length: enrollment.totalSteps }, (_, i) => i + 1).map((pos) => (
+              <span
+                key={pos}
+                className={`w-6 h-6 rounded-full text-[10px] font-bold flex items-center justify-center ${
+                  enrollment.completions.includes(pos)
+                    ? 'bg-green-100 text-green-700'
+                    : pos === enrollment.currentStep && enrollment.status === 'active'
+                      ? 'bg-blue-100 text-blue-700 ring-2 ring-blue-300'
+                      : 'bg-gray-100 text-gray-400'
+                }`}
+              >
+                {pos}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+    </section>
   );
 }
 

@@ -244,6 +244,16 @@ type EventName =
   | 'tribe_os_import_completed'
   | 'tribe_os_messages_viewed' // /os/messages page rendered
   | 'tribe_os_weekly_viewed' // /os/weekly page rendered
+  | 'tribe_os_tasks_viewed'
+  | 'tribe_os_task_completed'
+  | 'tribe_os_enrollment_approved'
+  | 'tribe_os_enrollment_rejected'
+  | 'tribe_os_enrollment_stopped'
+  | 'tribe_os_sequences_viewed'
+  | 'tribe_os_sequence_created'
+  | 'tribe_os_sequence_updated'
+  | 'tribe_os_autonomy_changed'
+  | 'tribe_os_retention_enroll'
 
   // Demand signal for not-yet-built paid flows (honest "notify me")
   | 'tribe_plus_interest' // user tapped Tribe+ subscribe before billing is live

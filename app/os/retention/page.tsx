@@ -10,7 +10,7 @@ import { StatCard, Badge, Button } from '@/components/tribe-os/ui';
 import DraftModal from '@/components/tribe-os/DraftModal';
 import type { DraftContext } from '@/lib/tribe-os/drafts/templates';
 import { filterContactToday } from '@/lib/tribe-os/contactFilter';
-import { Users, Phone, RotateCcw, MessageCircle, RefreshCw, ChevronDown, Check } from 'lucide-react';
+import { Users, Phone, RotateCcw, MessageCircle, RefreshCw, ChevronDown, Check, Play } from 'lucide-react';
 
 const copy = {
   en: {
@@ -47,6 +47,14 @@ const copy = {
     viaChannel: (ch: string) =>
       ch === 'whatsapp' ? 'via WhatsApp' : ch === 'call' ? 'via call' : ch === 'in_person' ? 'in person' : '',
     waMessage: (name: string) => `Hola ${name}, ¡te extrañamos en el gym! ¿Cuándo vienes?`,
+    startSequence: 'Start sequence',
+    inSequence: 'In sequence',
+    stepN: (n: number) => `step ${n}`,
+    enrolling: 'Enrolling...',
+    enrolled: 'Enrolled',
+    noActiveSequence: 'No active sequence',
+    alreadyEnrolled: 'Already enrolled',
+    cooldown: 'Ended recently',
   },
   es: {
     pageTitle: 'Retención',
@@ -81,6 +89,14 @@ const copy = {
     viaChannel: (ch: string) =>
       ch === 'whatsapp' ? 'por WhatsApp' : ch === 'call' ? 'por llamada' : ch === 'in_person' ? 'en persona' : '',
     waMessage: (name: string) => `Hola ${name}, ¡te extrañamos en el gym! ¿Cuándo vienes?`,
+    startSequence: 'Iniciar seguimiento',
+    inSequence: 'En seguimiento',
+    stepN: (n: number) => `paso ${n}`,
+    enrolling: 'Inscribiendo...',
+    enrolled: 'Inscrito',
+    noActiveSequence: 'Sin secuencia activa',
+    alreadyEnrolled: 'Ya inscrito',
+    cooldown: 'Terminó recientemente',
   },
 } as const;
 
@@ -194,19 +210,65 @@ export default function RetentionPage() {
   const [wellOpen, setWellOpen] = useState(false);
   const [contactedOpen, setContactedOpen] = useState(false);
   const [draftTarget, setDraftTarget] = useState<{ member: MemberRow; cameBack?: boolean } | null>(null);
+  const [enrollments, setEnrollments] = useState<Map<string, { status: string; currentStep: number }>>(new Map());
+  const [enrollingId, setEnrollingId] = useState<string | null>(null);
   const contactRef = useRef<HTMLElement>(null);
   const winBackRef = useRef<HTMLElement>(null);
 
   const fetchScores = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/tribe-os/retention/scores');
-      const json = await res.json();
-      if (json.success) setData(json.data);
+      const [scoresRes, tasksRes] = await Promise.all([
+        fetch('/api/tribe-os/retention/scores'),
+        fetch('/api/tribe-os/sequences/tasks'),
+      ]);
+      const scoresJson = await scoresRes.json();
+      if (scoresJson.success) setData(scoresJson.data);
+
+      const tasksJson = await tasksRes.json();
+      if (tasksJson.success && tasksJson.data) {
+        const map = new Map<string, { status: string; currentStep: number }>();
+        for (const t of tasksJson.data.tasks ?? []) {
+          map.set(t.clientId, { status: 'active', currentStep: t.stepPosition });
+        }
+        for (const p of tasksJson.data.pending ?? []) {
+          if (!map.has(p.clientId)) {
+            map.set(p.clientId, { status: 'pending_approval', currentStep: 1 });
+          }
+        }
+        setEnrollments(map);
+      }
     } finally {
       setLoading(false);
     }
   }, []);
+
+  const handleEnroll = useCallback(
+    async (clientId: string) => {
+      if (enrollingId) return;
+      setEnrollingId(clientId);
+      try {
+        const res = await fetch('/api/tribe-os/sequences/enroll', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ client_id: clientId }),
+        });
+        const json = await res.json();
+        if (json.success) {
+          trackEvent('tribe_os_retention_enroll');
+          setEnrollments((prev) => {
+            const next = new Map(prev);
+            next.set(clientId, { status: 'active', currentStep: 1 });
+            return next;
+          });
+        }
+      } catch {
+      } finally {
+        setEnrollingId(null);
+      }
+    },
+    [enrollingId]
+  );
 
   const [sendingTouch, setSendingTouch] = useState<string | null>(null);
 
@@ -389,6 +451,9 @@ export default function RetentionPage() {
                       onTouch={recordTouch}
                       onDraft={(member) => setDraftTarget({ member })}
                       disabled={!!sendingTouch}
+                      enrollment={enrollments.get(m.id)}
+                      onEnroll={handleEnroll}
+                      enrolling={enrollingId === m.id}
                     />
                   ))}
                 </div>
@@ -429,6 +494,9 @@ export default function RetentionPage() {
                         onTouch={recordTouch}
                         onDraft={(member) => setDraftTarget({ member })}
                         disabled={!!sendingTouch}
+                        enrollment={enrollments.get(m.id)}
+                        onEnroll={handleEnroll}
+                        enrolling={enrollingId === m.id}
                       />
                     ))}
                   </div>
@@ -544,6 +612,9 @@ function MemberCard({
   onTouch,
   onDraft,
   disabled,
+  enrollment,
+  onEnroll,
+  enrolling,
 }: {
   member: MemberRow;
   language: 'en' | 'es';
@@ -551,6 +622,9 @@ function MemberCard({
   onTouch: (clientId: string, channel: Channel, note?: string) => void;
   onDraft: (member: MemberRow) => void;
   disabled?: boolean;
+  enrollment?: { status: string; currentStep: number };
+  onEnroll?: (clientId: string) => void;
+  enrolling?: boolean;
 }) {
   const [picking, setPicking] = useState(false);
   const [note, setNote] = useState('');
@@ -580,10 +654,26 @@ function MemberCard({
           <div className="flex items-center gap-2 flex-wrap">
             <span className="font-semibold text-tribe-dark truncate">{m.name ?? 'Sin nombre'}</span>
             <Badge variant={badge.variant}>{language === 'es' ? badge.es : badge.en}</Badge>
+            {enrollment && (
+              <Badge variant="info">
+                {s.inSequence} · {s.stepN(enrollment.currentStep)}
+              </Badge>
+            )}
           </div>
           {reasonText && <p className="text-xs text-tribe-dark-80 mt-0.5 truncate">{reasonText}</p>}
         </div>
         <div className="shrink-0 flex items-center gap-1.5">
+          {!enrollment && onEnroll && (
+            <button
+              type="button"
+              onClick={() => onEnroll(m.id)}
+              disabled={enrolling || disabled}
+              className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-tribe bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors disabled:opacity-40"
+            >
+              <Play className="h-3.5 w-3.5" />
+              {enrolling ? s.enrolling : s.startSequence}
+            </button>
+          )}
           {!picking && (
             <button
               type="button"
