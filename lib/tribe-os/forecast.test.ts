@@ -217,7 +217,7 @@ describe('computeForecast', () => {
       }),
     ];
     const result = computeForecast(members, PLANS, 'COP', TODAY, MONTH_START);
-    expect(result.atRiskMembers[0].reasons[0]).toMatch(/No ha vuelto desde el 25 de sept\./);
+    expect(result.atRiskMembers[0].reasons[0]).toMatch(/No ha vuelto desde el 25 de sep\./);
   });
 
   it('keeps "Viene X% menos" when X < 100', () => {
@@ -304,7 +304,7 @@ describe('humanizeReason', () => {
       '2026-09-15T14:00:00Z',
       'es',
     );
-    expect(result).toBe('No ha vuelto desde el 15 de sept.');
+    expect(result).toBe('No ha vuelto desde el 15 de sep.');
   });
 
   it('replaces "Visiting 100% less" with last activity date (EN)', () => {

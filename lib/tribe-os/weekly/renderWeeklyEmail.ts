@@ -1,4 +1,5 @@
-import { weekLabel, type WeekRange } from './helpers';
+import { weekLabel, formatClassSlot, type WeekRange, type ClassSlot } from './helpers';
+import { formatCents, type Currency, type FormatLanguage } from '@/lib/format/currency';
 
 interface WeeklyNumbers {
   visits: number;
@@ -22,14 +23,15 @@ interface ExpiringPlan {
   name: string | null;
   plan: string | null;
   planEndsOn: string;
+  expiryLabel: string;
+  expiryLabelEn: string;
   monthlyValueCents: number | null;
 }
 
-interface ClassInfo {
-  className: string;
-  visits: number;
-  day: string;
-  hour: number;
+interface ContactMember {
+  name: string | null;
+  daysSinceLastActivity: number | null;
+  plan: string | null;
 }
 
 export interface WeeklyEmailData {
@@ -38,14 +40,8 @@ export interface WeeklyEmailData {
   numbers: WeeklyNumbers;
   came_back_members: CameBackMember[];
   expiring_plans: ExpiringPlan[];
-  classes: { fullest: ClassInfo | null; emptiest: ClassInfo | null };
-}
-
-function formatCentsEmail(cents: number, currency: string): string {
-  if (currency === 'COP') {
-    return `$${Math.round(cents / 100).toLocaleString('es-CO')} COP`;
-  }
-  return `$${(cents / 100).toFixed(2)} ${currency}`;
+  to_contact: ContactMember[];
+  classes: { fullest: ClassSlot | null; emptiest: ClassSlot | null };
 }
 
 const CHANNEL_LABELS: Record<string, string> = {
@@ -55,13 +51,27 @@ const CHANNEL_LABELS: Record<string, string> = {
   other: 'Otro',
 };
 
+const CHANNEL_LABELS_EN: Record<string, string> = {
+  whatsapp: 'WhatsApp',
+  call: 'Call',
+  in_person: 'In person',
+  other: 'Other',
+};
+
+function fmtMoney(cents: number, currency: string, lang: FormatLanguage): string {
+  return formatCents(cents, currency as Currency, lang);
+}
+
 export function renderWeeklyEmail(data: WeeklyEmailData, lang: 'en' | 'es' = 'es'): string {
   const title = weekLabel(data.week, lang);
   const n = data.numbers;
+  const channelMap = lang === 'es' ? CHANNEL_LABELS : CHANNEL_LABELS_EN;
 
   const visitsPct = n.visits_pct !== null
     ? ` (${n.visits_pct > 0 ? '+' : ''}${n.visits_pct}%)`
     : '';
+
+  const daysLabel = lang === 'es' ? 'días' : 'days';
 
   const rows = [
     { label: lang === 'es' ? 'Visitas' : 'Visits', value: `${n.visits}${visitsPct}` },
@@ -69,8 +79,8 @@ export function renderWeeklyEmail(data: WeeklyEmailData, lang: 'en' | 'es' = 'es
     { label: lang === 'es' ? 'Nuevos' : 'New', value: String(n.new_members) },
     { label: lang === 'es' ? 'Contactos hechos' : 'Contacts made', value: String(n.touches) },
     { label: lang === 'es' ? 'Volvieron' : 'Came back', value: String(n.came_back) },
-    { label: lang === 'es' ? 'Dinero recuperado' : 'Recovered', value: formatCentsEmail(n.recovered_cents, data.currency) },
-    { label: lang === 'es' ? 'Dinero en riesgo hoy' : 'At risk today', value: formatCentsEmail(n.at_risk_cents, data.currency) },
+    { label: lang === 'es' ? 'Dinero recuperado' : 'Recovered', value: fmtMoney(n.recovered_cents, data.currency, lang) },
+    { label: lang === 'es' ? 'Dinero en riesgo hoy' : 'At risk today', value: fmtMoney(n.at_risk_cents, data.currency, lang) },
   ];
 
   const numbersHtml = rows
@@ -88,9 +98,9 @@ export function renderWeeklyEmail(data: WeeklyEmailData, lang: 'en' | 'es' = 'es
           .map(
             (m) =>
               `<tr><td style="padding:4px 12px;font-size:13px;color:#374151;">${m.name ?? (lang === 'es' ? 'Sin nombre' : 'No name')}</td>` +
-              `<td style="padding:4px 12px;font-size:13px;color:#6B7280;">${CHANNEL_LABELS[m.channel] ?? m.channel}</td>` +
-              `<td style="padding:4px 12px;font-size:13px;color:#6B7280;text-align:right;">${m.days}d</td>` +
-              `<td style="padding:4px 12px;font-size:13px;color:#6B7280;text-align:right;">${m.monthlyValueCents ? formatCentsEmail(m.monthlyValueCents, data.currency) : ''}</td></tr>`,
+              `<td style="padding:4px 12px;font-size:13px;color:#6B7280;">${channelMap[m.channel] ?? m.channel}</td>` +
+              `<td style="padding:4px 12px;font-size:13px;color:#6B7280;text-align:right;">${m.days} ${daysLabel}</td>` +
+              `<td style="padding:4px 12px;font-size:13px;color:#6B7280;text-align:right;">${m.monthlyValueCents ? fmtMoney(m.monthlyValueCents, data.currency, lang) : ''}</td></tr>`,
           )
           .join('\n');
 
@@ -102,19 +112,37 @@ export function renderWeeklyEmail(data: WeeklyEmailData, lang: 'en' | 'es' = 'es
             (m) =>
               `<tr><td style="padding:4px 12px;font-size:13px;color:#374151;">${m.name ?? ''}</td>` +
               `<td style="padding:4px 12px;font-size:13px;color:#6B7280;">${m.plan ?? ''}</td>` +
-              `<td style="padding:4px 12px;font-size:13px;color:#6B7280;text-align:right;">${m.planEndsOn}</td></tr>`,
+              `<td style="padding:4px 12px;font-size:13px;color:#6B7280;text-align:right;">${lang === 'es' ? m.expiryLabel : m.expiryLabelEn}</td></tr>`,
+          )
+          .join('\n');
+
+  const contactHtml =
+    data.to_contact.length === 0
+      ? `<p style="font-size:13px;color:#9CA3AF;padding:8px 0;">${lang === 'es' ? 'Ninguno esta semana.' : 'None this week.'}</p>`
+      : data.to_contact
+          .map(
+            (m) =>
+              `<tr><td style="padding:4px 12px;font-size:13px;color:#374151;">${m.name ?? (lang === 'es' ? 'Sin nombre' : 'No name')}</td>` +
+              `<td style="padding:4px 12px;font-size:13px;color:#6B7280;text-align:right;">${m.daysSinceLastActivity !== null ? `${m.daysSinceLastActivity} ${daysLabel}` : ''}</td>` +
+              `<td style="padding:4px 12px;font-size:13px;color:#6B7280;text-align:right;">${m.plan ?? ''}</td></tr>`,
           )
           .join('\n');
 
   const classesHtml =
     data.classes.fullest
       ? `<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
-          <tr><td style="padding:4px 12px;font-size:13px;color:#374151;">${lang === 'es' ? 'Mas llena' : 'Fullest'}</td>
-          <td style="padding:4px 12px;font-size:13px;color:#232A31;font-weight:600;">${data.classes.fullest.className} (${data.classes.fullest.visits})</td></tr>
-          ${data.classes.emptiest ? `<tr><td style="padding:4px 12px;font-size:13px;color:#374151;">${lang === 'es' ? 'Mas vacia' : 'Emptiest'}</td>
-          <td style="padding:4px 12px;font-size:13px;color:#232A31;font-weight:600;">${data.classes.emptiest.className} (${data.classes.emptiest.visits})</td></tr>` : ''}
+          <tr><td style="padding:4px 12px;font-size:13px;color:#374151;">${lang === 'es' ? 'Más llena' : 'Fullest'}</td>
+          <td style="padding:4px 12px;font-size:13px;color:#232A31;font-weight:600;">${formatClassSlot(data.classes.fullest, lang)}</td></tr>
+          ${data.classes.emptiest ? `<tr><td style="padding:4px 12px;font-size:13px;color:#374151;">${lang === 'es' ? 'Más vacía' : 'Emptiest'}</td>
+          <td style="padding:4px 12px;font-size:13px;color:#232A31;font-weight:600;">${formatClassSlot(data.classes.emptiest, lang)}</td></tr>` : ''}
         </table>`
       : `<p style="font-size:13px;color:#9CA3AF;padding:8px 0;">${lang === 'es' ? 'Sin datos.' : 'No data.'}</p>`;
+
+  const baseUrl = typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_SITE_URL
+    ? process.env.NEXT_PUBLIC_SITE_URL
+    : 'http://localhost:3002';
+  const buttonUrl = `${baseUrl}/os/retention`;
+  const buttonLabel = lang === 'es' ? 'Abrir Tribe.OS' : 'Open Tribe.OS';
 
   return `<!DOCTYPE html>
 <html lang="${lang}">
@@ -128,7 +156,7 @@ export function renderWeeklyEmail(data: WeeklyEmailData, lang: 'en' | 'es' = 'es
     <p style="margin:4px 0 0;font-size:14px;color:#D1D5DB;">${title}</p>
   </td></tr>
   <tr><td style="padding:20px 24px;">
-    <h2 style="margin:0 0 12px;font-size:16px;color:#232A31;">${lang === 'es' ? 'Numeros de la semana' : 'Weekly numbers'}</h2>
+    <h2 style="margin:0 0 12px;font-size:16px;color:#232A31;">${lang === 'es' ? 'Números de la semana' : 'Weekly numbers'}</h2>
     <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;border:1px solid #E5E7EB;border-radius:8px;">
       ${numbersHtml}
     </table>
@@ -138,6 +166,10 @@ export function renderWeeklyEmail(data: WeeklyEmailData, lang: 'en' | 'es' = 'es
     ${data.came_back_members.length > 0 ? `<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;border:1px solid #E5E7EB;border-radius:8px;">${cameBackHtml}</table>` : cameBackHtml}
   </td></tr>
   <tr><td style="padding:0 24px 20px;">
+    <h2 style="margin:0 0 12px;font-size:16px;color:#232A31;">${lang === 'es' ? 'Para contactar esta semana' : 'Contact this week'}</h2>
+    ${data.to_contact.length > 0 ? `<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;border:1px solid #E5E7EB;border-radius:8px;">${contactHtml}</table>` : contactHtml}
+  </td></tr>
+  <tr><td style="padding:0 24px 20px;">
     <h2 style="margin:0 0 12px;font-size:16px;color:#232A31;">${lang === 'es' ? 'Planes por vencer' : 'Expiring plans'}</h2>
     ${data.expiring_plans.length > 0 ? `<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;border:1px solid #E5E7EB;border-radius:8px;">${expiringHtml}</table>` : expiringHtml}
   </td></tr>
@@ -145,8 +177,11 @@ export function renderWeeklyEmail(data: WeeklyEmailData, lang: 'en' | 'es' = 'es
     <h2 style="margin:0 0 12px;font-size:16px;color:#232A31;">${lang === 'es' ? 'Clases de la semana' : 'Classes this week'}</h2>
     ${classesHtml}
   </td></tr>
+  <tr><td style="padding:0 24px 20px;" align="center">
+    <a href="${buttonUrl}" style="display:inline-block;padding:12px 28px;background:#B2E269;color:#232A31;font-size:14px;font-weight:700;text-decoration:none;border-radius:8px;">${buttonLabel}</a>
+  </td></tr>
   <tr><td style="background:#F9FAFB;padding:16px 24px;text-align:center;">
-    <p style="margin:0;font-size:12px;color:#9CA3AF;">Tribe.OS by A+ Fitness LLC</p>
+    <p style="margin:0;font-size:12px;color:#9CA3AF;">Tribe.OS</p>
   </td></tr>
 </table>
 </td></tr>

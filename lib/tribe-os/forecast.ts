@@ -116,7 +116,7 @@ export function ownerReason(bilingual: string, language: 'en' | 'es'): string {
 
 const BOGOTA_MONTHS_ES = [
   'ene.', 'feb.', 'mar.', 'abr.', 'may.', 'jun.',
-  'jul.', 'ago.', 'sept.', 'oct.', 'nov.', 'dic.',
+  'jul.', 'ago.', 'sep.', 'oct.', 'nov.', 'dic.',
 ];
 const BOGOTA_MONTHS_EN = [
   'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',

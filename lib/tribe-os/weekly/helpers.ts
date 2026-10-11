@@ -1,3 +1,5 @@
+import { ES_MONTHS_ABBR, EN_MONTHS_ABBR, ES_WEEKDAYS } from '@/lib/tribe-os/dates';
+
 const BOGOTA_TZ = 'America/Bogota';
 const FMT = new Intl.DateTimeFormat('en-CA', {
   timeZone: BOGOTA_TZ,
@@ -56,20 +58,10 @@ export function previousWeeks(todayBogota: string, count: number): WeekRange[] {
   return weeks;
 }
 
-const ES_MONTHS = [
-  'ene', 'feb', 'mar', 'abr', 'may', 'jun',
-  'jul', 'ago', 'sep', 'oct', 'nov', 'dic',
-];
-
-const EN_MONTHS = [
-  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-];
-
 export function weekLabel(week: WeekRange, lang: 'en' | 'es'): string {
   const m = new Date(week.monday + 'T12:00:00Z');
   const s = new Date(week.sunday + 'T12:00:00Z');
-  const months = lang === 'es' ? ES_MONTHS : EN_MONTHS;
+  const months = lang === 'es' ? ES_MONTHS_ABBR : EN_MONTHS_ABBR;
   const md = m.getUTCDate();
   const sd = s.getUTCDate();
   const mm = months[m.getUTCMonth()];
@@ -92,4 +84,52 @@ export function isInWeek(isoDate: string, week: WeekRange): boolean {
 export function pctChange(current: number, previous: number): number | null {
   if (previous === 0) return current > 0 ? 100 : null;
   return Math.round(((current - previous) / previous) * 100);
+}
+
+const FOURTEEN_DAYS_MS = 14 * 24 * 60 * 60 * 1000;
+
+export function findReturnVisitDate(
+  touch: { client_id: string; created_at: string },
+  visits: { client_id: string; visited_at: string }[],
+): string | null {
+  const touchMs = new Date(touch.created_at).getTime();
+  let earliest: string | null = null;
+  let earliestMs = Infinity;
+  for (const v of visits) {
+    if (v.client_id !== touch.client_id) continue;
+    const vMs = new Date(v.visited_at).getTime();
+    if (vMs <= touchMs) continue;
+    if (vMs - touchMs > FOURTEEN_DAYS_MS) continue;
+    if (vMs < earliestMs) {
+      earliestMs = vMs;
+      earliest = v.visited_at;
+    }
+  }
+  return earliest;
+}
+
+export interface ClassSlot {
+  className: string;
+  weekday: number;
+  hour: number;
+  weekdayName: string;
+  visits: number;
+}
+
+export function toBogotaWeekdayAndHour(isoDate: string): { weekday: number; hour: number } {
+  const d = new Date(isoDate);
+  const bogota = new Date(d.toLocaleString('en-US', { timeZone: BOGOTA_TZ }));
+  return { weekday: bogota.getDay(), hour: bogota.getHours() };
+}
+
+export function formatClassSlot(slot: ClassSlot, lang: 'en' | 'es'): string {
+  const dayName = lang === 'es'
+    ? ES_WEEKDAYS[slot.weekday]
+    : ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][slot.weekday];
+  const hour12 = slot.hour % 12 || 12;
+  const ampm = lang === 'es'
+    ? (slot.hour < 12 ? 'a. m.' : 'p. m.')
+    : (slot.hour < 12 ? 'AM' : 'PM');
+  const visits = lang === 'es' ? `${slot.visits} visitas` : `${slot.visits} visits`;
+  return `${slot.className}, ${dayName} ${hour12}:00 ${ampm} (${visits})`;
 }

@@ -1,13 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { logError } from '@/lib/logger';
 import { requireTribeOSPremium } from '@/lib/auth/premium';
-import { bogotaToday } from '@/lib/tribe-os/dates';
+import { bogotaToday, planExpiryLabelBi } from '@/lib/tribe-os/dates';
 import { monthlyValueCents, type PlanPrice } from '@/lib/tribe-os/forecast';
 import {
   weekNAgo,
   isInWeek,
   pctChange,
   toBogotaDate,
+  findReturnVisitDate,
+  toBogotaWeekdayAndHour,
+  type ClassSlot,
 } from '@/lib/tribe-os/weekly/helpers';
 import {
   computeTouchOutcome,
@@ -75,11 +78,6 @@ interface TouchWithClient extends TouchRow {
   clients: { name: string | null } | null;
 }
 
-interface ClassVisit {
-  class_name: string | null;
-  visited_at: string;
-}
-
 export async function GET(request: NextRequest): Promise<NextResponse> {
   const gate = await requireTribeOSPremium();
   if (!gate.ok) return gate.response;
@@ -96,7 +94,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const today = bogotaToday();
     const week = weekNAgo(today, weekOffset);
     const prevWeek = weekNAgo(today, weekOffset + 1);
-    const rangeStart = prevWeek.monday;
+    const fourWeeksAgo = weekNAgo(today, weekOffset + 3);
+    const rangeStart = fourWeeksAgo.monday;
 
     const [visits, touches, touchesWithClients, plansRes, membersRes, scoresRes] = await Promise.all([
       fetchAllFrom<VisitRow & { class_name: string | null; coach_name: string | null }>(
@@ -154,18 +153,26 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const prevExistedBefore = await fetchFirstVisitBefore(supabase, gymId, prevWeek.monday);
     const prevNewMembers = [...prevUniqueVisitors].filter((id) => !prevExistedBefore.has(id)).length;
 
+    // Came-back attribution: attribute to the week of the RETURN VISIT, not the touch.
     const now = new Date();
-    const weekTouchOutcomes = weekTouches.map((t) => ({
+    const allTouchOutcomes = touches.map((t) => ({
       ...t,
       outcome: computeTouchOutcome(t, visits, now),
     }));
-    const cameBackCount = weekTouchOutcomes.filter((t) => t.outcome.kind === 'came_back').length;
+
+    const cameBackInWeek = allTouchOutcomes
+      .filter((t) => t.outcome.kind === 'came_back')
+      .filter((t) => {
+        const returnDate = findReturnVisitDate(t, visits);
+        return returnDate !== null && isInWeek(returnDate, week);
+      });
+
+    const cameBackCount = cameBackInWeek.length;
+    const cameBackClientIds = new Set(cameBackInWeek.map((t) => t.client_id));
 
     let recoveredCents = 0;
-    for (const t of weekTouchOutcomes) {
-      if (t.outcome.kind === 'came_back') {
-        recoveredCents += planValueMap.get(t.client_id) ?? 0;
-      }
+    for (const id of cameBackClientIds) {
+      recoveredCents += planValueMap.get(id) ?? 0;
     }
 
     const atRiskCents = (membersRes.data ?? []).reduce((sum, m) => {
@@ -177,19 +184,21 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       return sum;
     }, 0);
 
-    const cameBackMembers = weekTouchOutcomes
-      .filter((t) => t.outcome.kind === 'came_back')
-      .map((t) => {
-        const twc = touchesWithClients.find((tc) => tc.id === t.id);
-        const clientObj = twc?.clients;
-        return {
-          id: t.client_id,
-          name: clientObj?.name ?? null,
-          channel: twc?.channel ?? 'other',
-          days: t.outcome.kind === 'came_back' ? t.outcome.days : 0,
-          monthlyValueCents: planValueMap.get(t.client_id) ?? null,
-        };
-      });
+    const cameBackMembers = cameBackInWeek.map((t) => {
+      const twc = touchesWithClients.find((tc) => tc.id === t.id);
+      const clientObj = twc?.clients;
+      const returnDate = findReturnVisitDate(t, visits);
+      const touchMs = new Date(t.created_at).getTime();
+      const returnMs = returnDate ? new Date(returnDate).getTime() : touchMs;
+      const days = Math.ceil((returnMs - touchMs) / (24 * 60 * 60 * 1000));
+      return {
+        id: t.client_id,
+        name: clientObj?.name ?? null,
+        channel: twc?.channel ?? 'other',
+        days,
+        monthlyValueCents: planValueMap.get(t.client_id) ?? null,
+      };
+    });
 
     const scoreMap = new Map(
       (scoresRes.data ?? []).map((s) => [s.client_id, s]),
@@ -259,28 +268,64 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         name: m.name ?? null,
         plan: m.membership_plan ?? null,
         planEndsOn: m.plan_ends_on as string,
+        expiryLabel: planExpiryLabelBi(today, m.plan_ends_on as string, 'es'),
+        expiryLabelEn: planExpiryLabelBi(today, m.plan_ends_on as string, 'en'),
         monthlyValueCents: planValueMap.get(m.id) ?? null,
       }))
       .sort((a, b) => a.planEndsOn.localeCompare(b.planEndsOn));
 
-    const classMap = new Map<string, { count: number; day: string; hour: number }>();
-    for (const v of weekVisits) {
-      const name = (v as ClassVisit).class_name ?? '(Sin clase)';
+    // Class SLOTS: group by class + weekday + hour
+    const slotKey = (name: string, wd: number, h: number) => `${name}||${wd}||${h}`;
+
+    // Count how many distinct weeks each slot appeared in (last 4 weeks)
+    const slotWeekSets = new Map<string, Set<string>>();
+    for (const v of visits) {
+      const name = v.class_name ?? '(Sin clase)';
+      const { weekday, hour } = toBogotaWeekdayAndHour(v.visited_at);
+      const key = slotKey(name, weekday, hour);
       const bogotaDate = toBogotaDate(v.visited_at);
-      const bogotaHour = new Date(
-        new Date(v.visited_at).toLocaleString('en-US', { timeZone: 'America/Bogota' }),
-      ).getHours();
-      const entry = classMap.get(name) ?? { count: 0, day: bogotaDate, hour: bogotaHour };
-      entry.count++;
-      classMap.set(name, entry);
+      if (!slotWeekSets.has(key)) slotWeekSets.set(key, new Set());
+      // Determine which week this visit belongs to (by its Monday)
+      const vDate = new Date(bogotaDate + 'T12:00:00Z');
+      const vDow = vDate.getUTCDay();
+      const mondayOff = vDow === 0 ? 6 : vDow - 1;
+      const mondayDate = new Date(vDate);
+      mondayDate.setUTCDate(mondayDate.getUTCDate() - mondayOff);
+      slotWeekSets.get(key)!.add(mondayDate.toISOString().slice(0, 10));
     }
-    const classes = Array.from(classMap.entries())
-      .map(([name, info]) => ({ className: name, visits: info.count, day: info.day, hour: info.hour }));
-    const fullest = classes.length > 0
-      ? classes.reduce((a, b) => (b.visits > a.visits ? b : a))
+
+    const qualifiedSlots = new Set<string>();
+    for (const [key, weeks] of slotWeekSets) {
+      if (weeks.size >= 2) qualifiedSlots.add(key);
+    }
+
+    // Aggregate current week visits by slot, only qualified slots
+    const weekSlotCounts = new Map<string, ClassSlot>();
+    for (const v of weekVisits) {
+      const name = v.class_name ?? '(Sin clase)';
+      const { weekday, hour } = toBogotaWeekdayAndHour(v.visited_at);
+      const key = slotKey(name, weekday, hour);
+      if (!qualifiedSlots.has(key)) continue;
+      const existing = weekSlotCounts.get(key);
+      if (existing) {
+        existing.visits++;
+      } else {
+        weekSlotCounts.set(key, {
+          className: name,
+          weekday,
+          hour,
+          weekdayName: '',
+          visits: 1,
+        });
+      }
+    }
+
+    const slots = Array.from(weekSlotCounts.values());
+    const fullest = slots.length > 0
+      ? slots.reduce((a, b) => (b.visits > a.visits ? b : a))
       : null;
-    const emptiest = classes.length > 1
-      ? classes.reduce((a, b) => (b.visits < a.visits ? b : a))
+    const emptiest = slots.length > 1
+      ? slots.filter((s) => s !== fullest).reduce((a, b) => (b.visits < a.visits ? b : a))
       : null;
 
     return NextResponse.json({
@@ -307,7 +352,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         expiring_plans: expiringPlans,
         classes: {
           fullest,
-          emptiest: emptiest && emptiest !== fullest ? emptiest : null,
+          emptiest,
         },
       },
     });

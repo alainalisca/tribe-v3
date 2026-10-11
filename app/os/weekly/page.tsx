@@ -17,7 +17,13 @@ import { formatCents, type Currency } from '@/lib/format/currency';
 import { buildWhatsAppUrl } from '@/lib/phone';
 import { ownerReason, humanizeReason } from '@/lib/tribe-os/forecast';
 import { trackEvent } from '@/lib/analytics';
-import { weekLabel, previousWeeks, type WeekRange } from '@/lib/tribe-os/weekly/helpers';
+import {
+  weekLabel,
+  previousWeeks,
+  formatClassSlot,
+  type WeekRange,
+  type ClassSlot,
+} from '@/lib/tribe-os/weekly/helpers';
 import { renderWeeklyEmail, type WeeklyEmailData } from '@/lib/tribe-os/weekly/renderWeeklyEmail';
 
 const copy = {
@@ -58,7 +64,7 @@ const copy = {
     redirecting: 'Redirigiendo',
     error: 'No se pudo cargar el resumen semanal.',
     retry: 'Reintentar',
-    numbersTitle: 'Numeros de la semana',
+    numbersTitle: 'Números de la semana',
     visits: 'Visitas',
     activeMembers: 'Miembros activos',
     newMembers: 'Nuevos',
@@ -68,19 +74,19 @@ const copy = {
     atRisk: 'Dinero en riesgo hoy',
     vsLast: 'vs semana anterior',
     cameBackTitle: 'Volvieron gracias a ti',
-    cameBackEmpty: 'Ningun miembro volvio por un contacto esta semana.',
-    days: 'dias',
+    cameBackEmpty: 'Ningún miembro volvió por un contacto esta semana.',
+    days: 'días',
     toContactTitle: 'Para contactar esta semana',
     toContactEmpty: 'No hay miembros para contactar ahora mismo.',
     write: 'Escribir',
     expiringTitle: 'Planes por vencer',
-    expiringEmpty: 'No hay planes por vencer en los proximos 7 dias.',
+    expiringEmpty: 'No hay planes por vencer en los próximos 7 días.',
     classesTitle: 'Clases de la semana',
-    fullest: 'Mas llena',
-    emptiest: 'Mas vacia',
+    fullest: 'Más llena',
+    emptiest: 'Más vacía',
     noClasses: 'Sin datos de clases.',
     previewEmail: 'Vista previa del correo',
-    emailNotReady: 'El envio automatico aun no esta activado.',
+    emailNotReady: 'El envío automático aún no está activado.',
     close: 'Cerrar',
   },
 } as const;
@@ -130,14 +136,15 @@ interface WeeklyData {
     name: string | null;
     plan: string | null;
     planEndsOn: string;
+    expiryLabel: string;
+    expiryLabelEn: string;
     monthlyValueCents: number | null;
   }[];
   classes: {
-    fullest: { className: string; visits: number; day: string; hour: number } | null;
-    emptiest: { className: string; visits: number; day: string; hour: number } | null;
+    fullest: ClassSlot | null;
+    emptiest: ClassSlot | null;
   };
 }
-
 
 export default function WeeklyPage() {
   const { language } = useLanguage();
@@ -276,7 +283,9 @@ export default function WeeklyPage() {
                       <span className="text-xs text-gray-500 ml-2">
                         {CHANNEL_LABELS[m.channel]?.[language] ?? m.channel}
                       </span>
-                      <span className="text-xs text-gray-400 ml-2">{m.days} {s.days}</span>
+                      <span className="text-xs text-gray-400 ml-2">
+                        {m.days} {s.days}
+                      </span>
                     </div>
                     {m.monthlyValueCents !== null && m.monthlyValueCents > 0 && (
                       <span className="text-xs text-gray-500">{formatCents(m.monthlyValueCents, cur, language)}</span>
@@ -345,7 +354,9 @@ export default function WeeklyPage() {
                       <span className="font-medium text-gray-900">{m.name ?? ''}</span>
                       <span className="text-xs text-gray-500 ml-2">{m.plan}</span>
                     </div>
-                    <span className="text-xs text-gray-500">{m.planEndsOn}</span>
+                    <span className="text-xs text-gray-500 capitalize">
+                      {language === 'es' ? m.expiryLabel : m.expiryLabelEn}
+                    </span>
                   </li>
                 ))}
               </ul>
@@ -363,14 +374,14 @@ export default function WeeklyPage() {
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-gray-500">{s.fullest}</span>
                   <span className="font-medium text-gray-900">
-                    {data.classes.fullest.className} ({data.classes.fullest.visits})
+                    {formatClassSlot(data.classes.fullest, language)}
                   </span>
                 </div>
                 {data.classes.emptiest && (
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-gray-500">{s.emptiest}</span>
                     <span className="font-medium text-gray-900">
-                      {data.classes.emptiest.className} ({data.classes.emptiest.visits})
+                      {formatClassSlot(data.classes.emptiest, language)}
                     </span>
                   </div>
                 )}
@@ -408,7 +419,16 @@ export default function WeeklyPage() {
                 </div>
                 <div className="flex-1 overflow-auto">
                   <iframe
-                    srcDoc={renderWeeklyEmail(data as WeeklyEmailData, language)}
+                    srcDoc={renderWeeklyEmail(
+                      {
+                        ...data,
+                        came_back_members: data.came_back_members.map((m) => ({
+                          ...m,
+                          monthlyValueCents: m.monthlyValueCents,
+                        })),
+                      } as WeeklyEmailData,
+                      language,
+                    )}
                     className="w-full h-full min-h-[500px] border-0"
                     title="Email preview"
                   />

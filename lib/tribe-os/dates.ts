@@ -12,7 +12,8 @@
 
 const BOGOTA = 'America/Bogota';
 
-const ES_WEEKDAYS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+export const ES_WEEKDAYS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+export const EN_WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 const ES_MONTHS = [
   'enero',
   'febrero',
@@ -26,6 +27,14 @@ const ES_MONTHS = [
   'octubre',
   'noviembre',
   'diciembre',
+];
+export const ES_MONTHS_ABBR = [
+  'ene', 'feb', 'mar', 'abr', 'may', 'jun',
+  'jul', 'ago', 'sep', 'oct', 'nov', 'dic',
+];
+export const EN_MONTHS_ABBR = [
+  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
 ];
 
 export function bogotaToday(): string {
@@ -82,4 +91,18 @@ export function planExpiryLabel(today: string, planEndsOn: string): string {
   }
   if (diff === 0) return 'vence hoy';
   return `vence ${rel}`;
+}
+
+export function planExpiryLabelBi(today: string, planEndsOn: string, lang: 'en' | 'es'): string {
+  if (lang === 'es') return planExpiryLabel(today, planEndsOn);
+  const diff = dayDiff(today, planEndsOn);
+  if (diff < 0) return diff === -1 ? 'expired yesterday' : `expired ${formatDateEn(planEndsOn)}`;
+  if (diff === 0) return 'expires today';
+  if (diff === 1) return 'expires tomorrow';
+  return `expires ${formatDateEn(planEndsOn)}`;
+}
+
+function formatDateEn(dateStr: string): string {
+  const d = new Date(dateStr + 'T12:00:00Z');
+  return `${EN_MONTHS_ABBR[d.getUTCMonth()]} ${d.getUTCDate()}`;
 }

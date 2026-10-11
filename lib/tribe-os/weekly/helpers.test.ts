@@ -1,5 +1,13 @@
 import { describe, it, expect } from 'vitest';
-import { lastCompletedWeek, isInWeek, pctChange, weekLabel, toBogotaDate } from './helpers';
+import {
+  lastCompletedWeek,
+  isInWeek,
+  pctChange,
+  weekLabel,
+  toBogotaDate,
+  findReturnVisitDate,
+  formatClassSlot,
+} from './helpers';
 
 describe('lastCompletedWeek', () => {
   it('on Sunday, last completed week is the one before (current week still in progress)', () => {
@@ -74,5 +82,73 @@ describe('weekLabel', () => {
   it('generates English label', () => {
     const label = weekLabel({ monday: '2026-10-05', sunday: '2026-10-11' }, 'en');
     expect(label).toBe('Week of Oct 5 to 11');
+  });
+});
+
+describe('findReturnVisitDate (came-back attribution)', () => {
+  const visits = [
+    { client_id: 'natalia', visited_at: '2026-10-05T14:00:00Z' },
+    { client_id: 'natalia', visited_at: '2026-10-01T10:00:00Z' },
+    { client_id: 'carlos', visited_at: '2026-10-06T10:00:00Z' },
+  ];
+
+  it('touch Sat Oct 3, return Mon Oct 5: return date is Oct 5 (in week Oct 5-11)', () => {
+    const touch = { client_id: 'natalia', created_at: '2026-10-03T18:00:00Z' };
+    const returnDate = findReturnVisitDate(touch, visits);
+    expect(returnDate).toBe('2026-10-05T14:00:00Z');
+    expect(isInWeek(returnDate!, { monday: '2026-10-05', sunday: '2026-10-11' })).toBe(true);
+    expect(isInWeek(returnDate!, { monday: '2026-09-28', sunday: '2026-10-04' })).toBe(false);
+  });
+
+  it('touch and return in the same week', () => {
+    const touch = { client_id: 'carlos', created_at: '2026-10-05T08:00:00Z' };
+    const returnDate = findReturnVisitDate(touch, visits);
+    expect(returnDate).toBe('2026-10-06T10:00:00Z');
+    expect(isInWeek(returnDate!, { monday: '2026-10-05', sunday: '2026-10-11' })).toBe(true);
+  });
+
+  it('a return can never be counted in two weeks (return date is deterministic)', () => {
+    const touch = { client_id: 'natalia', created_at: '2026-10-03T18:00:00Z' };
+    const returnDate = findReturnVisitDate(touch, visits);
+    const weekA = { monday: '2026-09-28', sunday: '2026-10-04' };
+    const weekB = { monday: '2026-10-05', sunday: '2026-10-11' };
+    const inA = isInWeek(returnDate!, weekA);
+    const inB = isInWeek(returnDate!, weekB);
+    expect(inA).toBe(false);
+    expect(inB).toBe(true);
+    expect(inA && inB).toBe(false);
+  });
+
+  it('visit before the touch is ignored', () => {
+    const touch = { client_id: 'natalia', created_at: '2026-10-02T00:00:00Z' };
+    const onlyBefore = [
+      { client_id: 'natalia', visited_at: '2026-10-01T10:00:00Z' },
+    ];
+    expect(findReturnVisitDate(touch, onlyBefore)).toBeNull();
+  });
+
+  it('visit more than 14 days after touch is ignored', () => {
+    const touch = { client_id: 'natalia', created_at: '2026-10-01T00:00:00Z' };
+    const farVisit = [
+      { client_id: 'natalia', visited_at: '2026-10-20T10:00:00Z' },
+    ];
+    expect(findReturnVisitDate(touch, farVisit)).toBeNull();
+  });
+});
+
+describe('formatClassSlot', () => {
+  it('formats Spanish slot', () => {
+    const slot = { className: 'CrossFit', weekday: 2, hour: 6, weekdayName: '', visits: 24 };
+    expect(formatClassSlot(slot, 'es')).toBe('CrossFit, martes 6:00 a. m. (24 visitas)');
+  });
+
+  it('formats English slot', () => {
+    const slot = { className: 'Yoga', weekday: 4, hour: 18, weekdayName: '', visits: 4 };
+    expect(formatClassSlot(slot, 'en')).toBe('Yoga, Thursday 6:00 PM (4 visits)');
+  });
+
+  it('formats noon correctly', () => {
+    const slot = { className: 'Spinning', weekday: 1, hour: 12, weekdayName: '', visits: 15 };
+    expect(formatClassSlot(slot, 'es')).toBe('Spinning, lunes 12:00 p. m. (15 visitas)');
   });
 });
