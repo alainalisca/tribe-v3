@@ -200,6 +200,7 @@
   "214_t_grow1_signup_attribution.sql": "3737b4581d27d536c01a69f1232451b4d86092d56b2f569d140f50a96b670161",
   "215_t_grow2_referral_loop.sql": "c23c4fdd9c0226547e05993674c1338807c0046b0741c8b085ddfe3e50c3578e",
   "216_t_auth3_google_avatar_backfill.sql": "be94547ab28d45c9ef8c4acb0984cec44817829d5b57d3fcdd26be674efd4ee4",
+  "217_t_partner_metric1_increment_partner_metric.sql": "c56d7b3bb0f4c6a50916e872445c4e348dc934bde09ec27b6b2236e55b247104",
   "add_admin_rls.sql": "e2e8367cd24af4b3a762e12898e8dbe81bd363acb2d22c22e1ac3538a41110a7",
   "add_community_events.sql": "3f7cb81caebc1f1a5e3461bc4e1faae9e55e680fea470f334c2b10848652ff50",
   "add_composite_indexes.sql": "a819cf7f037ccd7f5da322d77f076a03af77d9463830050364b7be762dda97a9",
