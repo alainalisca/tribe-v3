@@ -49,8 +49,8 @@ android {
             // February 2027. Capacitor's own consumer rules keep every plugin
             // class and its @PluginMethod methods, which the JS bridge calls by
             // name; proguard-rules.pro adds what those rules do not cover.
-            // Upload app/build/outputs/mapping/release/mapping.txt to Play
-            // Console with each release so crash reports are readable.
+            // The bundle embeds the R8 map (BUNDLE-METADATA/.../proguard.map),
+            // so Play Console de-obfuscates crash reports automatically.
             minifyEnabled true
             shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
