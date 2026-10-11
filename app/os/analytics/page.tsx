@@ -241,9 +241,6 @@ export default function AnalyticsPage() {
                       sub={s.perMonth}
                     />
                   </div>
-                  {data.contact_effect.touches < 5 && (
-                    <p className="text-sm text-gray-500 italic">{s.contactEmpty}</p>
-                  )}
                   {data.contact_effect.touches >= 5 && (
                     <AnalyticsCharts
                       data={data.contact_effect.weekly.map((w) => ({

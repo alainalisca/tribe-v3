@@ -68,7 +68,7 @@ async function fetchAllTouches(
   return all;
 }
 
-async function fetchPriorVisitClientIds(
+async function fetchFirstVisitBefore(
   supabase: SupabaseClient,
   gymId: string,
   before: string,
@@ -140,7 +140,10 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     }
 
     const allClientIds = new Set((membersRes.data ?? []).map((m) => m.id));
-    const priorClients = await fetchPriorVisitClientIds(supabase, gymId, rangeStart);
+    const td = new Date(today + 'T12:00:00Z');
+    td.setUTCDate(td.getUTCDate() - 28);
+    const twentyEightAgoCutoff = td.toISOString().slice(0, 10);
+    const priorClients = await fetchFirstVisitBefore(supabase, gymId, twentyEightAgoCutoff);
 
     const attendance = computeWeeklyAttendance(visits, buckets);
     const peakHours = computePeakHours(visits);

@@ -243,6 +243,7 @@ type EventName =
   | 'tribe_os_draft_whatsapp_sent'
   | 'tribe_os_import_completed'
   | 'tribe_os_messages_viewed' // /os/messages page rendered
+  | 'tribe_os_weekly_viewed' // /os/weekly page rendered
 
   // Demand signal for not-yet-built paid flows (honest "notify me")
   | 'tribe_plus_interest' // user tapped Tribe+ subscribe before billing is live
