@@ -103,6 +103,19 @@ const copy = {
       lapsed: 'Lapsed',
     },
 
+    // Contact history
+    touchHistoryTitle: 'Contact history',
+    touchHistoryEmpty: 'No contacts recorded.',
+    touchHistoryLoading: 'Loading…',
+    touchChannelWhatsapp: 'WhatsApp',
+    touchChannelCall: 'Call',
+    touchChannelInPerson: 'In person',
+    touchChannelOther: 'Other',
+    touchOutcomeCameBack: (d: number) => `Came back in ${d}d`,
+    touchOutcomeWaiting: 'Waiting',
+    touchOutcomeNoResponse: 'No response',
+    touchBy: 'by',
+
     // History
     historyTitle: 'Attendance history',
     historyEmpty: 'No attendance recorded yet.',
@@ -220,6 +233,18 @@ const copy = {
       lead: 'Prospecto',
       lapsed: 'Suspendido',
     },
+
+    touchHistoryTitle: 'Historial de contacto',
+    touchHistoryEmpty: 'Sin contactos registrados.',
+    touchHistoryLoading: 'Cargando…',
+    touchChannelWhatsapp: 'WhatsApp',
+    touchChannelCall: 'Llamada',
+    touchChannelInPerson: 'En persona',
+    touchChannelOther: 'Otro',
+    touchOutcomeCameBack: (d: number) => `Volvió en ${d} días`,
+    touchOutcomeWaiting: 'Esperando',
+    touchOutcomeNoResponse: 'Sin respuesta',
+    touchBy: 'por',
 
     historyTitle: 'Historial de asistencias',
     historyEmpty: 'Aún no hay asistencias registradas.',
@@ -775,6 +800,8 @@ export default function ClientDetailPage() {
                 this client (active + dismissed + expired). Hides
                 when zero history. Helps spot patterns over time. */}
             <InsightHistorySection clientId={state.client.id} />
+
+            <ContactHistorySection clientId={state.client.id} language={language} s={s} onDraft={handleOpenDraft} />
 
             {/* Attendance history */}
             <section className="mt-6">
@@ -1424,5 +1451,128 @@ function AttendanceListItem({
         </div>
       ) : null}
     </li>
+  );
+}
+
+const TOUCH_CHANNEL_MAP: Record<string, 'touchChannelWhatsapp' | 'touchChannelCall' | 'touchChannelInPerson' | 'touchChannelOther'> = {
+  whatsapp: 'touchChannelWhatsapp',
+  call: 'touchChannelCall',
+  in_person: 'touchChannelInPerson',
+  other: 'touchChannelOther',
+};
+
+interface TouchHistoryItem {
+  id: string;
+  channel: string;
+  note: string | null;
+  created_by_name: string | null;
+  created_at: string;
+  outcome: 'came_back' | 'waiting' | 'no_response';
+  came_back_days: number | null;
+}
+
+function ContactHistorySection({
+  clientId,
+  language,
+  s,
+  onDraft,
+}: {
+  clientId: string;
+  language: 'en' | 'es';
+  s: (typeof copy)['en'] | (typeof copy)['es'];
+  onDraft: () => void;
+}) {
+  const [touches, setTouches] = useState<TouchHistoryItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`/api/tribe-os/messages?search=&per_page=50&client_id=${clientId}`);
+        const json = await res.json();
+        if (!cancelled && json.success) {
+          setTouches(
+            (json.data.touches as Array<TouchHistoryItem & { client_id: string }>).filter(
+              (t) => t.client_id === clientId,
+            ),
+          );
+        }
+      } catch {}
+      if (!cancelled) setLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, [clientId]);
+
+  if (loading) {
+    return (
+      <section className="bg-white rounded-xl border border-gray-200 p-4 mb-4">
+        <h2 className="text-xs uppercase tracking-[0.1em] text-gray-500 font-semibold mb-3">{s.touchHistoryTitle}</h2>
+        <p className="text-sm text-gray-500">{s.touchHistoryLoading}</p>
+      </section>
+    );
+  }
+
+  return (
+    <section className="bg-white rounded-xl border border-gray-200 p-4 mb-4">
+      <div className="flex items-center justify-between gap-2 mb-3">
+        <h2 className="text-xs uppercase tracking-[0.1em] text-gray-500 font-semibold">{s.touchHistoryTitle}</h2>
+        <button
+          type="button"
+          onClick={onDraft}
+          className="inline-flex items-center gap-1 px-2.5 py-1 bg-tribe-green/15 text-tribe-green text-[11px] font-bold rounded-full border border-tribe-green/30 hover:bg-tribe-green/25 transition-colors"
+        >
+          <PenLine className="w-3 h-3" />
+          {s.draftLabel}
+        </button>
+      </div>
+      {touches.length === 0 ? (
+        <p className="text-sm text-gray-500">{s.touchHistoryEmpty}</p>
+      ) : (
+        <ul className="space-y-2">
+          {touches.map((t) => {
+            const channelKey = TOUCH_CHANNEL_MAP[t.channel] ?? 'touchChannelOther';
+            const channelLabel = s[channelKey];
+            const d = new Date(t.created_at);
+            const bogota = new Date(d.toLocaleString('en-US', { timeZone: 'America/Bogota' }));
+            const dateStr = bogota.toLocaleDateString(language === 'es' ? 'es-CO' : 'en-US', {
+              day: 'numeric',
+              month: 'short',
+              hour: 'numeric',
+              minute: '2-digit',
+              hour12: true,
+            });
+
+            return (
+              <li key={t.id} className="flex items-start justify-between gap-2 py-1.5 border-b border-gray-100 last:border-0">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 text-xs">
+                    <span className="font-medium text-gray-700">{channelLabel}</span>
+                    <span className="text-gray-400">{dateStr}</span>
+                    {t.created_by_name && <span className="text-gray-400">· {s.touchBy} {t.created_by_name}</span>}
+                  </div>
+                  {t.note && <p className="text-xs text-gray-600 mt-0.5 line-clamp-2">{t.note}</p>}
+                </div>
+                <span
+                  className={`shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded-full ${
+                    t.outcome === 'came_back'
+                      ? 'bg-green-50 text-green-700'
+                      : t.outcome === 'waiting'
+                        ? 'bg-yellow-50 text-yellow-700'
+                        : 'bg-gray-100 text-gray-500'
+                  }`}
+                >
+                  {t.outcome === 'came_back'
+                    ? s.touchOutcomeCameBack(t.came_back_days ?? 0)
+                    : t.outcome === 'waiting'
+                      ? s.touchOutcomeWaiting
+                      : s.touchOutcomeNoResponse}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </section>
   );
 }

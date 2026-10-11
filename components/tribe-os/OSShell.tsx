@@ -34,6 +34,7 @@ import {
   BarChart3,
   Brain,
   HeartPulse,
+  MessageSquare,
   Upload,
   Settings as SettingsIcon,
   HelpCircle,
@@ -134,6 +135,7 @@ const NAV_ITEMS: readonly NavItem[] = [
   { href: '/os/analytics', labelKey: 'analytics', Icon: BarChart3, matchPrefix: '/os/analytics' },
   { href: '/os/intelligence', labelKey: 'intelligence', Icon: Brain, matchPrefix: '/os/intelligence' },
   { href: '/os/retention', labelKey: 'retention', Icon: HeartPulse, matchPrefix: '/os/retention' },
+  { href: '/os/messages', labelKey: 'messages', Icon: MessageSquare, matchPrefix: '/os/messages' },
   { href: '/os/import', labelKey: 'import', Icon: Upload, matchPrefix: '/os/import' },
   { href: '/os/settings', labelKey: 'settings', Icon: SettingsIcon, matchPrefix: '/os/settings' },
 ] as const;

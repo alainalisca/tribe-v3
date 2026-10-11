@@ -46,7 +46,7 @@ export function WeeklyBarChart({
         )}
       </div>
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={data} margin={{ top: 4, right: 4, bottom: 4, left: -16 }}>
+        <BarChart data={data} margin={{ top: 4, right: 4, bottom: 4, left: 0 }}>
           <CartesianGrid stroke="rgba(0,0,0,0.05)" vertical={false} />
           <XAxis
             dataKey="label"
@@ -59,10 +59,16 @@ export function WeeklyBarChart({
             tick={{ fill: 'rgb(100,116,139)', fontSize: 10 }}
             axisLine={false}
             tickLine={false}
-            width={40}
+            width={48}
             domain={[0, ticks[ticks.length - 1]]}
             ticks={ticks}
-            tickFormatter={(v: number) => v.toLocaleString('es-CO')}
+            tickFormatter={(v: number) =>
+              v >= 1_000_000
+                ? `${(v / 1_000_000).toLocaleString('es-CO', { maximumFractionDigits: 1 })} M`
+                : v >= 1_000
+                  ? `${(v / 1_000).toLocaleString('es-CO', { maximumFractionDigits: 1 })} mil`
+                  : v.toLocaleString('es-CO')
+            }
           />
           <Tooltip
             cursor={{ fill: 'rgba(178,226,105,0.1)' }}

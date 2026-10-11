@@ -209,12 +209,12 @@ export default function RetentionPage() {
   }, []);
 
   const recordTouch = useCallback(
-    async (clientId: string, channel: 'whatsapp' | 'call' | 'in_person' | 'other') => {
+    async (clientId: string, channel: 'whatsapp' | 'call' | 'in_person' | 'other', note?: string) => {
       try {
         const res = await fetch('/api/tribe-os/retention/touches', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ client_id: clientId, channel }),
+          body: JSON.stringify({ client_id: clientId, channel, note: note || undefined }),
         });
         const json = await res.json();
         if (json.success) {
@@ -538,10 +538,11 @@ function MemberCard({
   member: MemberRow;
   language: 'en' | 'es';
   s: (typeof copy)['en'] | (typeof copy)['es'];
-  onTouch: (clientId: string, channel: Channel) => void;
+  onTouch: (clientId: string, channel: Channel, note?: string) => void;
   onDraft: (member: MemberRow) => void;
 }) {
   const [picking, setPicking] = useState(false);
+  const [note, setNote] = useState('');
   const badge = levelBadge[m.level ?? 'insufficient_data'] ?? levelBadge.insufficient_data;
 
   const reasons = deduplicateReasons(m.reasons);
@@ -554,21 +555,52 @@ function MemberCard({
     .join(' · ');
 
   const pickChannel = (ch: Channel) => {
+    const trimmed = note.trim();
     setPicking(false);
-    onTouch(m.id, ch);
+    setNote('');
+    onTouch(m.id, ch, trimmed || undefined);
   };
 
   return (
-    <div className="bg-white rounded-tribe shadow-tribe px-4 py-3 flex items-center gap-2 sm:gap-3">
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="font-semibold text-tribe-dark truncate">{m.name ?? 'Sin nombre'}</span>
-          <Badge variant={badge.variant}>{language === 'es' ? badge.es : badge.en}</Badge>
+    <div className="bg-white rounded-tribe shadow-tribe px-4 py-3">
+      <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="font-semibold text-tribe-dark truncate">{m.name ?? 'Sin nombre'}</span>
+            <Badge variant={badge.variant}>{language === 'es' ? badge.es : badge.en}</Badge>
+          </div>
+          {reasonText && <p className="text-xs text-tribe-dark-80 mt-0.5 truncate">{reasonText}</p>}
         </div>
-        {reasonText && <p className="text-xs text-tribe-dark-80 mt-0.5 truncate">{reasonText}</p>}
+        <div className="shrink-0 flex items-center gap-1.5">
+          {!picking && (
+            <button
+              type="button"
+              onClick={() => setPicking(true)}
+              className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-tribe bg-gray-100 text-tribe-dark hover:bg-gray-200 transition-colors"
+            >
+              <Check className="h-3.5 w-3.5" />
+              {s.contacted}
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => onDraft(m)}
+            className="shrink-0 p-2 rounded-tribe bg-tribe-green-50 hover:bg-tribe-green transition-colors"
+            aria-label={`${language === 'es' ? 'Redactar para' : 'Draft for'} ${firstName(m.name)}`}
+          >
+            <MessageCircle className="h-5 w-5 text-tribe-green-dark" />
+          </button>
+        </div>
       </div>
-      <div className="shrink-0 flex items-center gap-1.5">
-        {picking ? (
+      {picking && (
+        <div className="mt-2 space-y-2">
+          <input
+            type="text"
+            value={note}
+            onChange={(e) => setNote(e.target.value.slice(0, 200))}
+            placeholder={language === 'es' ? 'Nota breve (opcional)' : 'Short note (optional)'}
+            className="w-full px-2.5 py-1.5 text-xs border border-gray-200 rounded-tribe bg-white focus:outline-none focus:ring-2 focus:ring-tribe-green/30"
+          />
           <div className="flex items-center gap-1">
             <button
               type="button"
@@ -591,26 +623,16 @@ function MemberCard({
             >
               {s.channelInPerson}
             </button>
+            <button
+              type="button"
+              onClick={() => { setPicking(false); setNote(''); }}
+              className="ml-auto px-2 py-1 text-[11px] font-medium rounded-tribe text-gray-500 hover:bg-gray-100 transition-colors"
+            >
+              ✕
+            </button>
           </div>
-        ) : (
-          <button
-            type="button"
-            onClick={() => setPicking(true)}
-            className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-tribe bg-gray-100 text-tribe-dark hover:bg-gray-200 transition-colors"
-          >
-            <Check className="h-3.5 w-3.5" />
-            {s.contacted}
-          </button>
-        )}
-        <button
-          type="button"
-          onClick={() => onDraft(m)}
-          className="shrink-0 p-2 rounded-tribe bg-tribe-green-50 hover:bg-tribe-green transition-colors"
-          aria-label={`${language === 'es' ? 'Redactar para' : 'Draft for'} ${firstName(m.name)}`}
-        >
-          <MessageCircle className="h-5 w-5 text-tribe-green-dark" />
-        </button>
-      </div>
+        </div>
+      )}
     </div>
   );
 }
