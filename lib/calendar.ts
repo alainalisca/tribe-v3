@@ -4,6 +4,7 @@
  */
 
 import { createEvent, EventAttributes } from 'ics';
+import { SITE_URL } from '@/lib/http/siteUrl';
 
 // ── Legacy interface (used by ActionButtons) ──
 
@@ -40,7 +41,9 @@ export function downloadICS(event: CalendarEvent): void {
   const end = new Date(start);
   end.setMinutes(end.getMinutes() + (event.duration || 60));
 
-  const siteUrl = typeof window !== 'undefined' ? window.location.origin : 'https://tribe-v3.vercel.app';
+  // Canonical host, not window.location.origin: inside the native app the
+  // origin is tribe-v3.vercel.app, and a calendar event outlives the session.
+  const siteUrl = SITE_URL;
   const description = [
     event.description || '',
     '',

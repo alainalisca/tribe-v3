@@ -22,7 +22,7 @@
 import { describe, it, expect } from 'vitest';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import ts from 'typescript';
+import { renderableText } from '@/lib/testing/renderableText';
 
 const ROOT = path.join(__dirname, '..');
 const OLD = 'aplusfitnessllc';
@@ -37,27 +37,6 @@ function sourceFiles(dir: string, out: string[] = []): string[] {
       out.push(full);
     }
   }
-  return out;
-}
-
-/** Every piece of text in `src` that can render: string literals, template text, JSX text. */
-export function renderableText(fileName: string, src: string): string[] {
-  const sf = ts.createSourceFile(fileName, src, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
-  const out: string[] = [];
-  const visit = (node: ts.Node): void => {
-    if (
-      ts.isStringLiteral(node) ||
-      ts.isNoSubstitutionTemplateLiteral(node) ||
-      ts.isTemplateHead(node) ||
-      ts.isTemplateMiddle(node) ||
-      ts.isTemplateTail(node) ||
-      ts.isJsxText(node)
-    ) {
-      out.push(node.text);
-    }
-    ts.forEachChild(node, visit);
-  };
-  visit(sf);
   return out;
 }
 
