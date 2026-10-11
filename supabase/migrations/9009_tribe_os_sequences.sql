@@ -46,7 +46,6 @@ CREATE POLICY "tribe_os_gym_settings_insert"
       SELECT 1 FROM public.gyms g
       WHERE g.id = tribe_os_gym_settings.gym_id AND g.owner_user_id = auth.uid()
     )
-    OR public.is_app_admin()
   );
 
 CREATE POLICY "tribe_os_gym_settings_update"
@@ -57,14 +56,12 @@ CREATE POLICY "tribe_os_gym_settings_update"
       SELECT 1 FROM public.gyms g
       WHERE g.id = tribe_os_gym_settings.gym_id AND g.owner_user_id = auth.uid()
     )
-    OR public.is_app_admin()
   )
   WITH CHECK (
     EXISTS (
       SELECT 1 FROM public.gyms g
       WHERE g.id = tribe_os_gym_settings.gym_id AND g.owner_user_id = auth.uid()
     )
-    OR public.is_app_admin()
   );
 
 REVOKE ALL ON public.tribe_os_gym_settings FROM PUBLIC;
@@ -79,6 +76,10 @@ CREATE TABLE IF NOT EXISTS public.tribe_os_sequences (
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
 );
+
+-- Composite unique for child composite FKs
+CREATE UNIQUE INDEX IF NOT EXISTS idx_tribe_os_sequences_id_gym
+  ON public.tribe_os_sequences (id, gym_id);
 
 CREATE INDEX IF NOT EXISTS idx_tribe_os_sequences_gym
   ON public.tribe_os_sequences (gym_id);
@@ -108,7 +109,6 @@ CREATE POLICY "tribe_os_sequences_insert"
       SELECT 1 FROM public.gyms g
       WHERE g.id = tribe_os_sequences.gym_id AND g.owner_user_id = auth.uid()
     )
-    OR public.is_app_admin()
   );
 
 CREATE POLICY "tribe_os_sequences_update"
@@ -119,14 +119,12 @@ CREATE POLICY "tribe_os_sequences_update"
       SELECT 1 FROM public.gyms g
       WHERE g.id = tribe_os_sequences.gym_id AND g.owner_user_id = auth.uid()
     )
-    OR public.is_app_admin()
   )
   WITH CHECK (
     EXISTS (
       SELECT 1 FROM public.gyms g
       WHERE g.id = tribe_os_sequences.gym_id AND g.owner_user_id = auth.uid()
     )
-    OR public.is_app_admin()
   );
 
 REVOKE ALL ON public.tribe_os_sequences FROM PUBLIC;
@@ -135,15 +133,17 @@ REVOKE ALL ON public.tribe_os_sequences FROM anon;
 -- ─── 3. Sequence steps ─────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.tribe_os_sequence_steps (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  sequence_id uuid NOT NULL REFERENCES public.tribe_os_sequences(id) ON DELETE CASCADE,
-  gym_id uuid NOT NULL REFERENCES public.gyms(id) ON DELETE CASCADE,
+  sequence_id uuid NOT NULL,
+  gym_id uuid NOT NULL,
   position int NOT NULL CHECK (position BETWEEN 1 AND 20),
   day_offset int NOT NULL CHECK (day_offset BETWEEN 0 AND 60),
   channel text NOT NULL CHECK (channel IN ('whatsapp', 'call', 'in_person', 'other')),
   template_key text,
   note text,
   created_at timestamptz NOT NULL DEFAULT now(),
-  updated_at timestamptz NOT NULL DEFAULT now()
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  FOREIGN KEY (sequence_id, gym_id)
+    REFERENCES public.tribe_os_sequences (id, gym_id) ON DELETE CASCADE
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_tribe_os_sequence_steps_seq_pos
@@ -177,7 +177,6 @@ CREATE POLICY "tribe_os_sequence_steps_insert"
       SELECT 1 FROM public.gyms g
       WHERE g.id = tribe_os_sequence_steps.gym_id AND g.owner_user_id = auth.uid()
     )
-    OR public.is_app_admin()
   );
 
 CREATE POLICY "tribe_os_sequence_steps_update"
@@ -188,14 +187,22 @@ CREATE POLICY "tribe_os_sequence_steps_update"
       SELECT 1 FROM public.gyms g
       WHERE g.id = tribe_os_sequence_steps.gym_id AND g.owner_user_id = auth.uid()
     )
-    OR public.is_app_admin()
   )
   WITH CHECK (
     EXISTS (
       SELECT 1 FROM public.gyms g
       WHERE g.id = tribe_os_sequence_steps.gym_id AND g.owner_user_id = auth.uid()
     )
-    OR public.is_app_admin()
+  );
+
+CREATE POLICY "tribe_os_sequence_steps_delete"
+  ON public.tribe_os_sequence_steps FOR DELETE
+  TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.gyms g
+      WHERE g.id = tribe_os_sequence_steps.gym_id AND g.owner_user_id = auth.uid()
+    )
   );
 
 REVOKE ALL ON public.tribe_os_sequence_steps FROM PUBLIC;
@@ -206,10 +213,10 @@ CREATE TABLE IF NOT EXISTS public.tribe_os_sequence_enrollments (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   gym_id uuid NOT NULL REFERENCES public.gyms(id) ON DELETE CASCADE,
   client_id uuid NOT NULL REFERENCES public.clients(id) ON DELETE CASCADE,
-  sequence_id uuid NOT NULL REFERENCES public.tribe_os_sequences(id) ON DELETE CASCADE,
+  sequence_id uuid NOT NULL,
   status text NOT NULL DEFAULT 'pending_approval'
     CHECK (status IN ('pending_approval', 'active', 'completed', 'stopped', 'came_back')),
-  current_step int NOT NULL DEFAULT 0 CHECK (current_step >= 0),
+  current_step int NOT NULL DEFAULT 1 CHECK (current_step BETWEEN 1 AND 20),
   started_at timestamptz NOT NULL DEFAULT now(),
   stopped_reason text,
   enrolled_by_type text NOT NULL DEFAULT 'user'
@@ -218,8 +225,16 @@ CREATE TABLE IF NOT EXISTS public.tribe_os_sequence_enrollments (
   approved_by uuid REFERENCES public.users(id) ON DELETE SET NULL,
   approved_at timestamptz,
   created_at timestamptz NOT NULL DEFAULT now(),
-  updated_at timestamptz NOT NULL DEFAULT now()
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  FOREIGN KEY (sequence_id, gym_id)
+    REFERENCES public.tribe_os_sequences (id, gym_id),
+  CHECK ((approved_by IS NULL) = (approved_at IS NULL)),
+  CHECK (status <> 'stopped' OR stopped_reason IS NOT NULL)
 );
+
+-- Composite unique for child composite FK (step_completions)
+CREATE UNIQUE INDEX IF NOT EXISTS idx_tribe_os_enrollments_id_gym
+  ON public.tribe_os_sequence_enrollments (id, gym_id);
 
 -- At most one open enrollment (pending_approval or active) per member per gym
 CREATE UNIQUE INDEX IF NOT EXISTS idx_tribe_os_enrollments_one_open
@@ -262,7 +277,6 @@ CREATE POLICY "tribe_os_enrollments_insert"
         SELECT 1 FROM public.gym_coaches gc
         WHERE gc.gym_id = tribe_os_sequence_enrollments.gym_id AND gc.user_id = auth.uid()
       )
-      OR public.is_app_admin()
     )
     AND EXISTS (
       SELECT 1 FROM public.clients c
@@ -283,7 +297,6 @@ CREATE POLICY "tribe_os_enrollments_update"
       SELECT 1 FROM public.gym_coaches gc
       WHERE gc.gym_id = tribe_os_sequence_enrollments.gym_id AND gc.user_id = auth.uid()
     )
-    OR public.is_app_admin()
   )
   WITH CHECK (
     EXISTS (
@@ -294,7 +307,6 @@ CREATE POLICY "tribe_os_enrollments_update"
       SELECT 1 FROM public.gym_coaches gc
       WHERE gc.gym_id = tribe_os_sequence_enrollments.gym_id AND gc.user_id = auth.uid()
     )
-    OR public.is_app_admin()
   );
 
 REVOKE ALL ON public.tribe_os_sequence_enrollments FROM PUBLIC;
@@ -303,11 +315,13 @@ REVOKE ALL ON public.tribe_os_sequence_enrollments FROM anon;
 -- ─── 5. Step completions ───────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.tribe_os_step_completions (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  enrollment_id uuid NOT NULL REFERENCES public.tribe_os_sequence_enrollments(id) ON DELETE CASCADE,
-  gym_id uuid NOT NULL REFERENCES public.gyms(id) ON DELETE CASCADE,
+  enrollment_id uuid NOT NULL,
+  gym_id uuid NOT NULL,
   step_position int NOT NULL CHECK (step_position BETWEEN 1 AND 20),
   touch_id uuid REFERENCES public.client_touches(id) ON DELETE SET NULL,
-  done_at timestamptz NOT NULL DEFAULT now()
+  done_at timestamptz NOT NULL DEFAULT now(),
+  FOREIGN KEY (enrollment_id, gym_id)
+    REFERENCES public.tribe_os_sequence_enrollments (id, gym_id) ON DELETE CASCADE
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_tribe_os_step_completions_uniq
@@ -346,7 +360,6 @@ CREATE POLICY "tribe_os_step_completions_insert"
         SELECT 1 FROM public.gym_coaches gc
         WHERE gc.gym_id = tribe_os_step_completions.gym_id AND gc.user_id = auth.uid()
       )
-      OR public.is_app_admin()
     )
     AND EXISTS (
       SELECT 1 FROM public.tribe_os_sequence_enrollments e
