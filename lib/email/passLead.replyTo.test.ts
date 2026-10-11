@@ -42,6 +42,7 @@ vi.mock('resend', () => ({
 }));
 
 import { sendPartnerLeadNotification } from './passLead';
+import { TRIBE_FROM } from './sender';
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -81,7 +82,9 @@ describe('the partner notification carries Reply-To', () => {
     expect(payload.replyTo).toBe('ana@example.com');
     // The whole point: replying must not reach the From address.
     expect(payload.replyTo).not.toBe(payload.from);
-    expect(payload.from).toContain('tribe@aplusfitnessllc.com');
+    // Tribe's own sender, from its one home (lib/email/sender.ts), not a literal
+    // that would pin a domain.
+    expect(payload.from).toBe(TRIBE_FROM);
   });
 
   it('goes to the partner inbox with the cc list', async () => {

@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { logError } from '@/lib/logger';
 import { checkRateLimit } from '@/lib/rate-limit';
+import { TRIBE_FROM } from '@/lib/email/sender';
 
 const ADMIN_EMAIL = 'tribe@aplusfitnessllc.com';
 
@@ -68,7 +69,7 @@ export async function POST(request: NextRequest) {
     });
 
     await resend.emails.send({
-      from: 'Tribe <tribe@aplusfitnessllc.com>',
+      from: TRIBE_FROM,
       to: ADMIN_EMAIL,
       subject: `New Tribe signup: ${String(userName).replace(/[\r\n]/g, ' ')}`,
       html: `

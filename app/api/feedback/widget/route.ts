@@ -12,6 +12,7 @@ import { getResendClientOrNull, type EmailClient } from '@/lib/email/resendClien
 import { logError } from '@/lib/logger';
 import { checkRateLimit } from '@/lib/rate-limit';
 import type { FeedbackCategory, FeedbackSubmitPayload } from '@/types/feedback';
+import { TRIBE_FEEDBACK_FROM } from '@/lib/email/sender';
 
 const feedbackSchema = z.object({
   category: z.enum(['bug', 'feature_request', 'general']),
@@ -142,7 +143,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       const resend = getResendClient();
       if (!resend) throw new Error('Resend not configured — skipping email');
       await resend.emails.send({
-        from: 'Tribe Feedback <tribe@aplusfitnessllc.com>',
+        from: TRIBE_FEEDBACK_FROM,
         to: [ADMIN_EMAIL],
         subject: `[Tribe Feedback] New ${CATEGORY_LABELS[body.category]} from ${user.email ?? 'unknown user'}`,
         text: [

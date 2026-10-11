@@ -13,6 +13,7 @@ import { isEmailSuppressed, unsubUrlFor, unsubHeaders } from '@/lib/dal/emailUns
 import { bogotaDateOffset } from '@/lib/time/bogotaDate';
 import { isValidCronAuth } from '@/lib/auth/cron';
 import { SITE_URL } from '@/lib/http/siteUrl';
+import { TRIBE_FROM } from '@/lib/email/sender';
 
 /**
  * @description Sends re-engagement emails to users who have been inactive for 14+ days, encouraging them to return and browse sessions.
@@ -138,7 +139,7 @@ export async function POST(request: Request) {
         const tagline = isSpanish ? 'Nunca Entrenes Solo' : 'Never Train Alone';
 
         await resend.emails.send({
-          from: 'Tribe <tribe@aplusfitnessllc.com>',
+          from: TRIBE_FROM,
           to: user.email,
           subject: subject,
           headers: unsubHeaders(unsubUrl),

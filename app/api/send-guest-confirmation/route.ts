@@ -5,6 +5,7 @@ import { logError } from '@/lib/logger';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { fetchGuestParticipant } from '@/lib/dal/participants';
 import { SITE_URL } from '@/lib/http/siteUrl';
+import { TRIBE_FROM } from '@/lib/email/sender';
 
 /** Minimal HTML-entity escape for values interpolated into the email body. */
 function esc(s: string): string {
@@ -99,7 +100,7 @@ export async function POST(request: NextRequest) {
       : 'If you have questions, reach out to the host through the session page.';
 
     await resend.emails.send({
-      from: 'Tribe <tribe@aplusfitnessllc.com>',
+      from: TRIBE_FROM,
       to: email,
       subject,
       html: `
