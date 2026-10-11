@@ -60,6 +60,16 @@ describe('renderWeeklyEmail', () => {
     expect(html).not.toMatch(/3d[^i]/);
   });
 
+  it('pluralizes singular: 1 día / 1 day', () => {
+    const data = { ...SAMPLE_DATA, came_back_members: [{ name: 'X', channel: 'whatsapp', days: 1, monthlyValueCents: null }] };
+    const esHtml = renderWeeklyEmail(data, 'es');
+    expect(esHtml).toContain('1 día');
+    expect(esHtml).not.toContain('1 días');
+    const enHtml = renderWeeklyEmail(data, 'en');
+    expect(enHtml).toContain('1 day');
+    expect(enHtml).not.toContain('1 days');
+  });
+
   it('includes expiring plans with human-readable label', () => {
     const html = renderWeeklyEmail(SAMPLE_DATA, 'es');
     expect(html).toContain('Ana Ruiz');

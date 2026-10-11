@@ -130,6 +130,8 @@ export function formatClassSlot(slot: ClassSlot, lang: 'en' | 'es'): string {
   const ampm = lang === 'es'
     ? (slot.hour < 12 ? 'a. m.' : 'p. m.')
     : (slot.hour < 12 ? 'AM' : 'PM');
-  const visits = lang === 'es' ? `${slot.visits} visitas` : `${slot.visits} visits`;
-  return `${slot.className}, ${dayName} ${hour12}:00 ${ampm} (${visits})`;
+  const vLabel = lang === 'es'
+    ? (slot.visits === 1 ? '1 visita' : `${slot.visits} visitas`)
+    : (slot.visits === 1 ? '1 visit' : `${slot.visits} visits`);
+  return `${slot.className}, ${dayName} ${hour12}:00 ${ampm} (${vLabel})`;
 }

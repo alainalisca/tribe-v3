@@ -71,7 +71,9 @@ export function renderWeeklyEmail(data: WeeklyEmailData, lang: 'en' | 'es' = 'es
     ? ` (${n.visits_pct > 0 ? '+' : ''}${n.visits_pct}%)`
     : '';
 
-  const daysLabel = lang === 'es' ? 'días' : 'days';
+  const dLabel = (n: number) => lang === 'es'
+    ? (n === 1 ? 'día' : 'días')
+    : (n === 1 ? 'day' : 'days');
 
   const rows = [
     { label: lang === 'es' ? 'Visitas' : 'Visits', value: `${n.visits}${visitsPct}` },
@@ -99,7 +101,7 @@ export function renderWeeklyEmail(data: WeeklyEmailData, lang: 'en' | 'es' = 'es
             (m) =>
               `<tr><td style="padding:4px 12px;font-size:13px;color:#374151;">${m.name ?? (lang === 'es' ? 'Sin nombre' : 'No name')}</td>` +
               `<td style="padding:4px 12px;font-size:13px;color:#6B7280;">${channelMap[m.channel] ?? m.channel}</td>` +
-              `<td style="padding:4px 12px;font-size:13px;color:#6B7280;text-align:right;">${m.days} ${daysLabel}</td>` +
+              `<td style="padding:4px 12px;font-size:13px;color:#6B7280;text-align:right;">${m.days} ${dLabel(m.days)}</td>` +
               `<td style="padding:4px 12px;font-size:13px;color:#6B7280;text-align:right;">${m.monthlyValueCents ? fmtMoney(m.monthlyValueCents, data.currency, lang) : ''}</td></tr>`,
           )
           .join('\n');
@@ -123,7 +125,7 @@ export function renderWeeklyEmail(data: WeeklyEmailData, lang: 'en' | 'es' = 'es
           .map(
             (m) =>
               `<tr><td style="padding:4px 12px;font-size:13px;color:#374151;">${m.name ?? (lang === 'es' ? 'Sin nombre' : 'No name')}</td>` +
-              `<td style="padding:4px 12px;font-size:13px;color:#6B7280;text-align:right;">${m.daysSinceLastActivity !== null ? `${m.daysSinceLastActivity} ${daysLabel}` : ''}</td>` +
+              `<td style="padding:4px 12px;font-size:13px;color:#6B7280;text-align:right;">${m.daysSinceLastActivity !== null ? `${m.daysSinceLastActivity} ${dLabel(m.daysSinceLastActivity)}` : ''}</td>` +
               `<td style="padding:4px 12px;font-size:13px;color:#6B7280;text-align:right;">${m.plan ?? ''}</td></tr>`,
           )
           .join('\n');

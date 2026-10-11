@@ -151,4 +151,10 @@ describe('formatClassSlot', () => {
     const slot = { className: 'Spinning', weekday: 1, hour: 12, weekdayName: '', visits: 15 };
     expect(formatClassSlot(slot, 'es')).toBe('Spinning, lunes 12:00 p. m. (15 visitas)');
   });
+
+  it('pluralizes correctly: 1 visita / 1 visit', () => {
+    const slot = { className: 'Pilates', weekday: 3, hour: 9, weekdayName: '', visits: 1 };
+    expect(formatClassSlot(slot, 'es')).toBe('Pilates, miércoles 9:00 a. m. (1 visita)');
+    expect(formatClassSlot(slot, 'en')).toBe('Pilates, Wednesday 9:00 AM (1 visit)');
+  });
 });

@@ -284,7 +284,7 @@ export default function WeeklyPage() {
                         {CHANNEL_LABELS[m.channel]?.[language] ?? m.channel}
                       </span>
                       <span className="text-xs text-gray-400 ml-2">
-                        {m.days} {s.days}
+                        {m.days} {m.days === 1 ? (language === 'es' ? 'día' : 'day') : s.days}
                       </span>
                     </div>
                     {m.monthlyValueCents !== null && m.monthlyValueCents > 0 && (
@@ -354,7 +354,7 @@ export default function WeeklyPage() {
                       <span className="font-medium text-gray-900">{m.name ?? ''}</span>
                       <span className="text-xs text-gray-500 ml-2">{m.plan}</span>
                     </div>
-                    <span className="text-xs text-gray-500 capitalize">
+                    <span className="text-xs text-gray-500">
                       {language === 'es' ? m.expiryLabel : m.expiryLabelEn}
                     </span>
                   </li>
