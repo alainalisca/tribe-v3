@@ -65,7 +65,9 @@ describe('fetchSitemapPartnerSlugs', () => {
 
 describe('fetchSitemapSessions', () => {
   it('reads sessions_public, active only, from today in Medellín', async () => {
-    const { client, calls } = fakeClient({ sessions_public: { data: [{ id: 's1', date: '2026-10-12' }], error: null } });
+    const { client, calls } = fakeClient({
+      sessions_public: { data: [{ id: 's1', date: '2026-10-12' }], error: null },
+    });
     expect(await fetchSitemapSessions(client, '2026-10-09')).toEqual({
       success: true,
       data: [{ id: 's1', date: '2026-10-12' }],

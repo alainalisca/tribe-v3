@@ -5,47 +5,57 @@
  * This makes it easy to swap providers or add multiple ones later.
  */
 
-import { getPostHog } from '@/lib/posthog';
+import { withPostHog } from '@/lib/posthog';
 
 // ═══════════════════════════════════════════
 // USER IDENTIFICATION
 // ═══════════════════════════════════════════
 
-interface UserProfile {
-  id: string;
-  email?: string;
-  name?: string;
-  is_instructor: boolean;
-  is_admin?: boolean;
-  language?: string;
-  city?: string;
-  neighborhood?: string;
-  created_at?: string;
-  sessions_completed?: number;
-  average_rating?: number;
+export type AnalyticsRole = 'athlete' | 'instructor' | 'gym' | 'admin';
+
+/**
+ * T-ANALYTICS1 part B. The ONLY person properties Tribe sends to PostHog.
+ *
+ * Data minimisation (Ley 1581, policy v1.1): no name, email, phone, WhatsApp,
+ * birthdate, city or neighbourhood. The distinct ID is the Supabase UUID, never
+ * an email or phone. The previous identifyUser sent email and name; it was
+ * replaced here, not extended.
+ */
+export interface AnalyticsPersonProperties {
+  role: AnalyticsRole;
+  preferred_language: 'en' | 'es' | null;
+  /** true for admin accounts, so dashboards can filter Tribe's own staff out. */
+  is_internal: boolean;
+  /** Account creation day, YYYY-MM-DD. The day, not the instant. */
+  signup_date: string | null;
+}
+
+export const PERSON_PROPERTY_KEYS = ['role', 'preferred_language', 'is_internal', 'signup_date'] as const;
+
+/** Admin wins, then a gym (owns a featured_partners row), then instructor, else athlete. */
+export function roleFor(facts: { isAdmin: boolean; ownsPartner: boolean; isInstructor: boolean }): AnalyticsRole {
+  if (facts.isAdmin) return 'admin';
+  if (facts.ownsPartner) return 'gym';
+  if (facts.isInstructor) return 'instructor';
+  return 'athlete';
 }
 
 /**
- * Identify a user after login or session restore.
- * Call ONCE when the user is authenticated.
- * PostHog links all subsequent events to this user.
+ * Link this device's events to the Supabase user. Queued if posthog-js has not
+ * loaded yet. Copies exactly PERSON_PROPERTY_KEYS out of `props`, so an object
+ * that carries more (TypeScript allows that for a variable) still cannot leak
+ * an extra key into PostHog.
  */
-export function identifyUser(profile: UserProfile): void {
-  const ph = getPostHog();
-  if (!ph) return;
-
-  ph.identify(profile.id, {
-    email: profile.email,
-    name: profile.name,
-    is_instructor: profile.is_instructor,
-    is_admin: profile.is_admin || false,
-    language: profile.language || 'en',
-    city: profile.city || 'Medellín',
-    neighborhood: profile.neighborhood,
-    created_at: profile.created_at,
-    sessions_completed: profile.sessions_completed || 0,
-    average_rating: profile.average_rating,
-  });
+export function identifyUser(userId: string, props: AnalyticsPersonProperties | null): void {
+  if (!props) {
+    // The facts could not be read. Still link the device to the account:
+    // who it is matters more than which role, and the next load retries.
+    withPostHog((ph) => ph.identify(userId));
+    return;
+  }
+  const allowed: Record<string, unknown> = {};
+  for (const key of PERSON_PROPERTY_KEYS) allowed[key] = props[key];
+  withPostHog((ph) => ph.identify(userId, allowed));
 }
 
 /**
@@ -53,16 +63,27 @@ export function identifyUser(profile: UserProfile): void {
  * Ensures the next user on the device isn't linked to the previous one.
  */
 export function resetUser(): void {
-  const ph = getPostHog();
-  if (!ph) return;
-  ph.reset();
+  withPostHog((ph) => ph.reset());
+}
+
+/**
+ * resetUser, but only while an identified user is still attached. The auth
+ * listener in PostHogProvider calls this on SIGNED_OUT as a safety net for
+ * sign-outs that do not go through a button (expiry, another tab); the buttons
+ * call resetUser() first, and a second unconditional reset would mint a second
+ * anonymous ID for no reason.
+ */
+export function resetUserIfIdentified(): void {
+  withPostHog((ph) => {
+    if (ph.get_property('$user_state') === 'identified') ph.reset();
+  });
 }
 
 // ═══════════════════════════════════════════
 // EVENT TRACKING
 // ═══════════════════════════════════════════
 
-type EventName =
+export type EventName =
   // Onboarding
   | 'signup_started'
   | 'signup_email_submitted' // LR-04: fires when email signup form is POSTed
@@ -80,6 +101,7 @@ type EventName =
   | 'session_join_clicked' // LR-04: fires when the Join button is pressed, before the RPC attempt
   | 'session_join_succeeded' // LR-04: canonical name for a successful join; session_joined retained below
   | 'session_joined'
+  | 'session_join_requested' // T-ANALYTICS1: a curated or paid join, recorded as a PENDING request (not a join)
   | 'session_join_failed'
   | 'session_left'
   | 'session_completed'
@@ -248,23 +270,139 @@ type EventName =
 
   // Digital pass (T-LEAD1 / T-LEAD2)
   | 'pass_entry_tapped' // an in-app entry point into /pase tapped; `surface` and `code` say which one
+  | 'pass_claimed' // T-ANALYTICS1: /pase lead accepted by the server (not on tap)
 
   // Errors
   | 'error_occurred'
   | 'api_error';
 
-/**
- * Track a named event with optional properties.
- * This is the main function components call.
- */
-export function trackEvent(event: EventName, properties?: Record<string, unknown>): void {
-  const ph = getPostHog();
-  if (!ph) return;
+// ═══════════════════════════════════════════
+// TYPED PROPERTIES (T-ANALYTICS1 part D)
+// ═══════════════════════════════════════════
+//
+// The core product events have a declared property shape, so a missing or
+// misspelled property is a compile error at the call site instead of a hole
+// in a funnel. Every other event keeps the loose Record<string, unknown>.
+//
+// No PII in any of these: IDs, enums and booleans only, never names, emails
+// or phone numbers. Fields marked "legacy" predate this ticket and are kept so
+// existing dashboards keep reading; their values are unchanged.
 
-  ph.capture(event, {
-    ...properties,
-    timestamp: new Date().toISOString(),
-    platform: typeof window !== 'undefined' && 'Capacitor' in window ? 'mobile' : 'web',
+export type ShareContentType = 'session' | 'instructor' | 'gym' | 'pass' | 'referral' | 'achievement';
+/** Where a share went. 'copy' is the clipboard; 'twitter' predates this list and is kept. */
+export type ShareChannel = 'whatsapp' | 'instagram' | 'copy' | 'native' | 'twitter';
+/**
+ * How someone reached a session. 'public_share' is the /s/[id] share page
+ * (kept, not renamed: continuity with existing data). 'direct' is a session
+ * opened as the first page of a visit; 'other' is any in-app route not below.
+ * 'map' is declared for the spec but nothing emits it: no session map exists.
+ */
+export type SessionViewSource = 'feed' | 'share_link' | 'profile' | 'map' | 'public_share' | 'direct' | 'other';
+
+export interface EventPropertyMap {
+  signup_completed: { method: 'google' | 'apple' | 'email'; role: Exclude<AnalyticsRole, 'admin'> };
+  onboarding_completed: { role: 'athlete' | 'instructor' };
+  session_viewed: {
+    session_id: string;
+    source: SessionViewSource;
+    sport: string | null;
+    is_paid: boolean;
+    instructor_id: string | null;
+    session_type?: 'paid' | 'free'; // legacy
+    price_cents?: number | null; // legacy
+    currency?: string | null; // legacy
+  };
+  session_joined: {
+    session_id: string;
+    sport: string | null;
+    is_paid: boolean;
+    instructor_id: string | null;
+    /** null when the count could not be read, rather than a guess. */
+    is_first_join: boolean | null;
+    session_type?: 'paid' | 'free'; // legacy
+  };
+  /**
+   * A join that the server stored as PENDING: a curated session (the host
+   * reviews requests) or a paid one (the instructor confirms payment). Not a
+   * session_joined, because the person is not in yet.
+   */
+  session_join_requested: {
+    session_id: string;
+    sport: string | null;
+    is_paid: boolean;
+    instructor_id: string | null;
+    reason: 'curated' | 'paid';
+  };
+  session_left: { session_id: string };
+  session_created: {
+    session_id: string | undefined;
+    sport: string;
+    is_paid: boolean;
+    is_recurring: boolean;
+    price_cents?: number; // legacy
+    currency?: string; // legacy
+    max_participants?: number; // legacy
+  };
+  instructor_profile_viewed: { instructor_id: string; source: string };
+  pass_claimed: { partner_slug: string; src: string | null; code: string | null };
+  session_shared: {
+    session_id: string;
+    content_type: 'session';
+    channel: ShareChannel;
+    method?: string; // legacy: the raw share method
+    sport?: string; // legacy (WhatsApp button)
+    is_creator?: boolean; // legacy (WhatsApp button)
+    language?: string; // legacy (WhatsApp button)
+  };
+  share_link_created: {
+    content_type: ShareContentType;
+    content_id: string;
+    channel: ShareChannel;
+    method?: string; // legacy: the raw share method
+    type?: string; // legacy (profile share)
+    session_id?: string; // legacy
+    instructor_id?: string; // legacy
+    achievement_type?: string; // legacy
+  };
+}
+
+/** Properties trackEvent accepts for `E`: the declared shape, or anything for an untyped event. */
+export type TrackEventArgs<E extends EventName> = E extends keyof EventPropertyMap
+  ? [properties: EventPropertyMap[E]]
+  : [properties?: Record<string, unknown>];
+
+/** Share method (lib/share.ts ShareMethod and friends) to the channel the dashboards group by. */
+export function channelFor(method: string): ShareChannel {
+  if (method === 'clipboard' || method === 'copy') return 'copy';
+  if (method === 'whatsapp' || method === 'instagram' || method === 'twitter') return method;
+  return 'native';
+}
+
+/**
+ * Track a named event. The name must be an EventName (anything else is a
+ * compile error), and the core product events must carry their declared
+ * properties (EventPropertyMap).
+ */
+export function trackEvent<E extends EventName>(event: E, ...args: TrackEventArgs<E>): void {
+  captureEvent(event, args[0] as Record<string, unknown> | undefined);
+}
+
+function captureEvent(event: EventName, properties?: Record<string, unknown>): void {
+  // Read the clock at the call, not when PostHog gets round to it: an event
+  // queued behind the SDK load must keep the time it actually happened.
+  const at = new Date();
+  withPostHog((ph) => {
+    ph.capture(
+      event,
+      {
+        ...properties,
+        timestamp: at.toISOString(),
+        // `platform` is not set here any more: it is a super property
+        // (ios | android | web) registered at init in lib/posthog.ts. Setting
+        // it per event would overwrite that with the old 'mobile' | 'web'.
+      },
+      { timestamp: at }
+    );
   });
 }
 
@@ -276,7 +414,7 @@ export function startTimedEvent(event: EventName, properties?: Record<string, un
   const startTime = Date.now();
   return () => {
     const durationMs = Date.now() - startTime;
-    trackEvent(event, {
+    captureEvent(event, {
       ...properties,
       duration_ms: durationMs,
       duration_seconds: Math.round(durationMs / 1000),
@@ -293,9 +431,7 @@ export function startTimedEvent(event: EventName, properties?: Record<string, un
  * E.g., when they complete a session, update sessions_completed.
  */
 export function updateUserProperty(key: string, value: string | number | boolean): void {
-  const ph = getPostHog();
-  if (!ph) return;
-  ph.people?.set({ [key]: value });
+  withPostHog((ph) => ph.setPersonProperties({ [key]: value }));
 }
 
 // ═══════════════════════════════════════════
@@ -307,7 +443,5 @@ export function updateUserProperty(key: string, value: string | number | boolean
  * Call when context changes (e.g., user selects a neighborhood filter).
  */
 export function setSessionContext(context: Record<string, unknown>): void {
-  const ph = getPostHog();
-  if (!ph) return;
-  ph.register(context);
+  withPostHog((ph) => ph.register(context));
 }

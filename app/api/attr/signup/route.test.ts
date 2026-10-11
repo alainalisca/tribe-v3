@@ -195,4 +195,3 @@ describe('POST /api/attr/signup', () => {
     });
   });
 });
-

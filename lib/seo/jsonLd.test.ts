@@ -56,7 +56,11 @@ describe('sessionEventJsonLd', () => {
       endDate: '2026-10-12T19:30:00-05:00',
       eventStatus: 'https://schema.org/EventScheduled',
       eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode',
-      location: { '@type': 'Place', name: 'CrossFit BullBox Ciudad del Río', address: 'CrossFit BullBox Ciudad del Río' },
+      location: {
+        '@type': 'Place',
+        name: 'CrossFit BullBox Ciudad del Río',
+        address: 'CrossFit BullBox Ciudad del Río',
+      },
       isAccessibleForFree: false,
       url: 'https://tribelatam.com/s/abc/',
       description: 'Bloques de estaciones',

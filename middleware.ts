@@ -64,6 +64,13 @@ const publicPaths = [
   '/_next',
   '/sw.js',
   '/manifest.json',
+  // T-ANALYTICS1 part E: the PostHog reverse proxy (next.config.ts rewrites).
+  // Every visitor sends analytics, signed in or not; behind the cookie gate a
+  // signed-out visitor's POST /ingest/e/ would 307 to /auth and record nothing,
+  // silently -- the /api/attr bug T-GROW1 found on its preview, again. The
+  // .js assets under /ingest/static would pass the static-asset short-circuit
+  // anyway; /ingest/e/, /ingest/flags/ and /ingest/array/... would not.
+  '/ingest',
 ];
 
 const publicApiPaths = [

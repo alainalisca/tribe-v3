@@ -70,7 +70,11 @@ describe('recordSignupAttribution', () => {
 describe('fetchUserCreatedAt', () => {
   it('returns epoch ms, and null for a missing row', async () => {
     const make = (data: unknown) => {
-      const c = { select: vi.fn(() => c), eq: vi.fn(() => c), maybeSingle: vi.fn(() => Promise.resolve({ data, error: null })) };
+      const c = {
+        select: vi.fn(() => c),
+        eq: vi.fn(() => c),
+        maybeSingle: vi.fn(() => Promise.resolve({ data, error: null })),
+      };
       return { from: vi.fn(() => c) } as never;
     };
     expect(await fetchUserCreatedAt(make({ created_at: '2026-10-09T15:00:00.000Z' }), 'u1')).toEqual({

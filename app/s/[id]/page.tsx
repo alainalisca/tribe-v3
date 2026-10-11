@@ -176,9 +176,7 @@ export default async function PublicSessionPage({ params }: PageProps) {
     : null;
   return (
     <>
-      {jsonLd && (
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }} />
-      )}
+      {jsonLd && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }} />}
       <SessionShareClient initialSession={initialSession} sessionId={id} />
     </>
   );

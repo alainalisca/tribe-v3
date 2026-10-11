@@ -37,7 +37,7 @@ const resultsPath = path.resolve(ROOT, process.argv[2] ?? '.vitest-results.json'
  * was never going to run and becomes noise the next person learns to ignore.
  * `.claude/worktrees` in particular holds whole second copies of the repo.
  */
-const SKIP_DIRS = new Set(['node_modules', '.next', '.git', 'dist', 'e2e', '.claude', 'coverage', 'playwright-report']);
+const SKIP_DIRS = new Set(['node_modules', '.next', '.git', 'dist', 'e2e', '.claude', '.worktrees', 'coverage', 'playwright-report']);
 const TEST_FILE = /\.(test|spec)\.[cm]?[jt]sx?$/;
 
 function testFilesOnDisk(dir = ROOT, acc = []) {

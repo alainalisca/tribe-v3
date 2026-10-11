@@ -21,8 +21,12 @@ describe('referralLink', () => {
 describe('referralMessage', () => {
   it('pass copy is the spec draft verbatim, both languages', () => {
     const ctx = { kind: 'pass' as const, slug: 'bullbox', partnerName: 'CrossFit BullBox' };
-    expect(referralMessage(ctx, 'L', 'es')).toBe('Voy a una clase gratis en CrossFit BullBox con Tribe. Vente conmigo: L');
-    expect(referralMessage(ctx, 'L', 'en')).toBe("I'm doing a free class at CrossFit BullBox with Tribe. Come with me: L");
+    expect(referralMessage(ctx, 'L', 'es')).toBe(
+      'Voy a una clase gratis en CrossFit BullBox con Tribe. Vente conmigo: L'
+    );
+    expect(referralMessage(ctx, 'L', 'en')).toBe(
+      "I'm doing a free class at CrossFit BullBox with Tribe. Come with me: L"
+    );
   });
   it('never promises a reward in any context or language (Al is confirming it with Leo)', () => {
     const ctxs = [

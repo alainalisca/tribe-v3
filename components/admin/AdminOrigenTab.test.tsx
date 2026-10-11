@@ -264,4 +264,3 @@ describe('AdminOrigenTab', () => {
     await waitFor(() => expect(screen.getByTestId('referidos').getAttribute('data-range')).toBe('null'));
   });
 });
-

@@ -5,7 +5,7 @@ const LEAD_A: CodeOwner = { code: 'KQ7M2Z', kind: 'lead', label: 'Ana', email: '
 const USER_B: CodeOwner = { code: 'TRIBE-AB2CD', kind: 'user', label: 'Beto', email: 'beto@x.co', phone: null };
 
 describe('summarizeReferrals', () => {
-  it('spec DoD: A shares, B claims with A\'s code, Leo marks B attended -> A: 1 lead, 1 attended', () => {
+  it("spec DoD: A shares, B claims with A's code, Leo marks B attended -> A: 1 lead, 1 attended", () => {
     const rows = summarizeReferrals(
       [LEAD_A],
       [{ ref: 'KQ7M2Z', email: 'b@x.co', phone: '+573009998877', attended: true }],

@@ -34,7 +34,10 @@ export async function fetchReferralSummary(
   since: string | null
 ): Promise<DalResult<ReferralRow[]>> {
   try {
-    let leadsQ = supabase.from('pass_leads').select('attr_ref, email, whatsapp, attended_at').not('attr_ref', 'is', null);
+    let leadsQ = supabase
+      .from('pass_leads')
+      .select('attr_ref, email, whatsapp, attended_at')
+      .not('attr_ref', 'is', null);
     let signupsQ = supabase.from('users').select('signup_ref, email').not('signup_ref', 'is', null);
     if (since) {
       leadsQ = leadsQ.gte('created_at', since);

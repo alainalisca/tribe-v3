@@ -18,6 +18,7 @@
  * button is tribe-dark with white text, as on the pass page.
  */
 import { useEffect, useState } from 'react';
+import { nativeShare } from '@/lib/share';
 import { MessageCircle, Link2, Share2 } from 'lucide-react';
 import { referralLink, referralMessage, whatsappShareUrl, type ReferralContext } from '@/lib/referral/shareLinks';
 import { logShareClick, type ShareChannel } from '@/lib/referral/shareClick';
@@ -31,8 +32,20 @@ export interface BringAFriendCardProps {
 }
 
 const LABELS = {
-  es: { title: 'Trae a un amigo', whatsapp: 'Compartir por WhatsApp', copy: 'Copiar enlace', copied: 'Enlace copiado', more: 'Compartir' },
-  en: { title: 'Bring a friend', whatsapp: 'Share on WhatsApp', copy: 'Copy link', copied: 'Link copied', more: 'Share' },
+  es: {
+    title: 'Trae a un amigo',
+    whatsapp: 'Compartir por WhatsApp',
+    copy: 'Copiar enlace',
+    copied: 'Enlace copiado',
+    more: 'Compartir',
+  },
+  en: {
+    title: 'Bring a friend',
+    whatsapp: 'Share on WhatsApp',
+    copy: 'Copy link',
+    copied: 'Link copied',
+    more: 'Share',
+  },
 } as const;
 
 export default function BringAFriendCard({ context, code, language }: BringAFriendCardProps) {
@@ -62,12 +75,11 @@ export default function BringAFriendCard({ context, code, language }: BringAFrie
 
   async function handleNative() {
     log('native');
-    try {
-      await navigator.share({ text: message, url: link });
-    } catch (err) {
-      // Dismissing the sheet is not an error.
-      if (!(err instanceof Error && err.name === 'AbortError')) logError(err, { action: 'BringAFriendCard.native' });
-    }
+    // Dismissing the sheet is not an error. nativeShare (lib/share.ts) never
+    // throws and recognises the cancel by name, which `instanceof Error` does
+    // not do reliably across engines and WebViews (T-ANALYTICS1).
+    const result = await nativeShare({ text: message, url: link });
+    if (result === 'failed') logError(new Error('native share failed'), { action: 'BringAFriendCard.native' });
   }
 
   const secondary =

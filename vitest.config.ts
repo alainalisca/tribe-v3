@@ -34,6 +34,12 @@ export default defineConfig({
       // was collecting their test files too (the stale tdisc1 copy alone
       // added 22 failures against fixtures that have since moved on).
       '**/.claude/worktrees/**',
+      // 2026-10-09: the same thing at the repo root. .worktrees/ (in
+      // .git/info/exclude, so git never shows it) holds four more full
+      // checkouts -- deeplinks, scrub194, sync192, sync193. vitest collected
+      // all of them: 4252 files instead of 338, and 187 failures, every one of
+      // them in a stale copy and none in this tree.
+      '**/.worktrees/**',
       // All LOGIC-04 webhook fixtures (stripe, wompi, payment/create) were
       // rewritten 2026-04-21 against the current contracts and are no
       // longer excluded. Kept this header block for future refactor

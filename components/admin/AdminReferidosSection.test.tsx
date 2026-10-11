@@ -47,7 +47,10 @@ describe('AdminReferidosSection', () => {
     fetchMock.mockResolvedValue({ ok: false, status: 500 } as unknown as Response);
     render(<AdminReferidosSection range={30} />);
     await waitFor(() => expect(showError).toHaveBeenCalledWith('loadError'));
-    expect(logError).toHaveBeenCalledWith(expect.any(Error), expect.objectContaining({ action: 'AdminReferidosSection.load' }));
+    expect(logError).toHaveBeenCalledWith(
+      expect.any(Error),
+      expect.objectContaining({ action: 'AdminReferidosSection.load' })
+    );
     expect(screen.queryByText('referidosEmpty')).toBeNull();
   });
 });

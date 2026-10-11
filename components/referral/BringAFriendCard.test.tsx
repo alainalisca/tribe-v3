@@ -34,7 +34,11 @@ function shareClickBody() {
 describe('BringAFriendCard', () => {
   it('session, in English: WhatsApp carries the /s/ link with the code, and logs a share_click', () => {
     render(
-      <BringAFriendCard context={{ kind: 'session', sessionId: 's1', title: 'HYROX' }} code="TRIBE-AB2CD" language="en" />
+      <BringAFriendCard
+        context={{ kind: 'session', sessionId: 's1', title: 'HYROX' }}
+        code="TRIBE-AB2CD"
+        language="en"
+      />
     );
     const wa = screen.getByRole('link', { name: /Share on WhatsApp/ });
     expect(decodeURIComponent((wa.getAttribute('href') ?? '').replace('https://wa.me/?text=', ''))).toBe(
@@ -67,6 +71,8 @@ describe('BringAFriendCard', () => {
     Object.defineProperty(navigator, 'share', { value: share, configurable: true });
     render(<BringAFriendCard context={{ kind: 'profile' }} code="TRIBE-AB2CD" language="es" />);
     fireEvent.click(await screen.findByRole('button', { name: 'Compartir' }));
-    await waitFor(() => expect(share).toHaveBeenCalledWith(expect.objectContaining({ url: `${SITE_URL}/?ref=TRIBE-AB2CD&src=referral` })));
+    await waitFor(() =>
+      expect(share).toHaveBeenCalledWith(expect.objectContaining({ url: `${SITE_URL}/?ref=TRIBE-AB2CD&src=referral` }))
+    );
   });
 });

@@ -50,7 +50,9 @@ beforeEach(() => {
 
 describe('GET /api/admin/data?tab=referidos', () => {
   it('returns the referral rows for an admin, read with the service client', async () => {
-    const rows = [{ code: 'KQ7M2Z', kind: 'lead', referrer: 'Ana', leads: 1, attended: 1, signups: 0, selfExcluded: 0 }];
+    const rows = [
+      { code: 'KQ7M2Z', kind: 'lead', referrer: 'Ana', leads: 1, attended: 1, signups: 0, selfExcluded: 0 },
+    ];
     vi.mocked(fetchReferralSummary).mockResolvedValue({ success: true, data: rows as never });
     const res = await GET(request('tab=referidos&days=30'));
     expect(res.status).toBe(200);

@@ -63,7 +63,14 @@ export default function SessionShareClient({ initialSession, sessionId }: Props)
       ]);
       setConfirmedCount((publicRes.data as { confirmed_count: number } | null)?.confirmed_count ?? 0);
       if (userRes.data?.user) setUserId(userRes.data.user.id);
-      trackEvent('session_viewed', { session_id: sessionId, source: 'public_share' });
+      trackEvent('session_viewed', {
+        session_id: sessionId,
+        source: 'public_share',
+        sport: session.sport,
+        // The share page's row carries price_cents, not is_paid.
+        is_paid: (session.price_cents ?? 0) > 0,
+        instructor_id: session.creator_id,
+      });
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId]);

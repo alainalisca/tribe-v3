@@ -42,6 +42,7 @@ import OSShellBell from './OSShellBell';
 import PwaInstallPrompt from './PwaInstallPrompt';
 import { useLanguage } from '@/lib/LanguageContext';
 import { createClient } from '@/lib/supabase/client';
+import { resetUser } from '@/lib/analytics';
 import { getTribeOSPremiumStatusForUser } from '@/lib/dal/tribeOSPremium';
 
 type ProfileProbe = {
@@ -182,6 +183,8 @@ export default function OSShell({ children }: { children: React.ReactNode }) {
 
   async function handleSignOut() {
     try {
+      // T-ANALYTICS1 part B: detach the PostHog identity before the session goes.
+      resetUser();
       const supabase = createClient();
       await supabase.auth.signOut();
     } finally {

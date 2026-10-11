@@ -6,7 +6,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Share2 } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
-import { getSessionShareUrl } from '@/lib/share';
+import { copyToClipboard, getSessionShareUrl, nativeShare } from '@/lib/share';
 import BottomNav from '@/components/BottomNav';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import AttendanceTracker from '@/components/AttendanceTracker';
@@ -44,6 +44,7 @@ import PostSessionConnect from '@/components/PostSessionConnect';
 import PostSessionFlow from '@/components/PostSessionFlow';
 import SessionQA from '@/components/session/SessionQA';
 import { trackEvent } from '@/lib/analytics';
+import { pathBefore, sessionViewSourceFrom } from '@/lib/navigationSource';
 import { downloadCalendarEvent, getGoogleCalendarUrl } from '@/lib/calendar';
 import { Calendar as CalendarIcon } from 'lucide-react';
 
@@ -63,12 +64,27 @@ export default function SessionDetailPage() {
     const shareUrl = getSessionShareUrl(d.session.id);
     const titleForShare = d.session.title || d.session.sport;
     const shareText = language === 'es' ? `${titleForShare} — Únete en Tribe` : `${titleForShare} — Join on Tribe`;
-    if (navigator.share) {
-      await navigator.share({ title: shareText, url: shareUrl });
-      trackEvent('session_shared', { session_id: d.session.id, method: 'native' });
-    } else {
-      await navigator.clipboard.writeText(shareUrl);
-      trackEvent('session_shared', { session_id: d.session.id, method: 'clipboard' });
+    // A cancelled share sheet is not an error and not a share: nativeShare
+    // reports it and nothing happens. It used to be an unhandled rejection
+    // that PostHog recorded as an exception on every cancel.
+    const native = await nativeShare({ title: shareText, url: shareUrl });
+    if (native === 'cancelled') return;
+    if (native === 'shared') {
+      trackEvent('session_shared', {
+        session_id: d.session.id,
+        content_type: 'session',
+        channel: 'native',
+        method: 'native',
+      });
+      return;
+    }
+    if (await copyToClipboard(shareUrl)) {
+      trackEvent('session_shared', {
+        session_id: d.session.id,
+        content_type: 'session',
+        channel: 'copy',
+        method: 'clipboard',
+      });
       showSuccess(language === 'es' ? '¡Enlace copiado!' : 'Link copied!');
     }
   }
@@ -78,11 +94,14 @@ export default function SessionDetailPage() {
     if (!d.session) return;
     trackEvent('session_viewed', {
       session_id: d.session.id,
+      // T-ANALYTICS1 part D: the in-app page this was opened from.
+      source: sessionViewSourceFrom(pathBefore(window.location.pathname)),
+      sport: d.session.sport ?? null,
+      is_paid: !!d.session.is_paid,
+      instructor_id: d.session.creator_id ?? null,
       session_type: d.session.is_paid ? 'paid' : 'free',
-      sport: d.session.sport,
       price_cents: d.session.price_cents,
       currency: d.session.currency,
-      instructor_id: d.session.creator_id,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- track once when session loads
   }, [d.session?.id]);

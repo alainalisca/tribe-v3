@@ -108,7 +108,5 @@ export function summarizeReferrals(
     row.signups += 1;
   }
 
-  return [...rows.values()].sort(
-    (a, b) => b.leads - a.leads || b.signups - a.signups || a.code.localeCompare(b.code)
-  );
+  return [...rows.values()].sort((a, b) => b.leads - a.leads || b.signups - a.signups || a.code.localeCompare(b.code));
 }

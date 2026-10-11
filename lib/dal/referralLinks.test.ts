@@ -26,7 +26,12 @@ describe('linkSignupReferral', () => {
     expect(lookup.eq).toHaveBeenCalledWith('referral_code', 'TRIBE-AB2CD');
     expect(lookup.is).toHaveBeenCalledWith('referred_id', null);
     expect(insert).toHaveBeenCalledWith(
-      expect.objectContaining({ referrer_id: 'ref-1', referred_id: 'new-1', referral_code: 'TRIBE-AB2CD', status: 'signed_up' })
+      expect.objectContaining({
+        referrer_id: 'ref-1',
+        referred_id: 'new-1',
+        referral_code: 'TRIBE-AB2CD',
+        status: 'signed_up',
+      })
     );
   });
 
