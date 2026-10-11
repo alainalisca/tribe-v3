@@ -1,5 +1,7 @@
 /**
- * Policy v1.1 (approved by Al in chat, 2026-10-09; T-GROW spec progress log).
+ * Policy v1.1 (approved by Al in chat, 2026-10-09; T-GROW spec progress log),
+ * and v1.2 (approved by Al in chat, 2026-10-11): the contact channel is
+ * info@tribelatam.com, the address Tribe's email is sent from.
  *
  * content.ts says hand-editing the policy breaks the guarantee that nothing was
  * dropped, because nothing in the repository catches a dropped sentence. v1.1
@@ -41,7 +43,7 @@ const APPROVED = {
   },
 } as const;
 
-describe.each(['es', 'en'] as const)('data policy v1.1 (%s)', (lang) => {
+describe.each(['es', 'en'] as const)('data policy v1.2 (%s)', (lang) => {
   const policy = DATA_POLICY[lang];
 
   it('section 3: the account-data bullet ends with the approved clause, joined by ";"', () => {
@@ -66,9 +68,21 @@ describe.each(['es', 'en'] as const)('data policy v1.1 (%s)', (lang) => {
     expect(allText(policy)).not.toContain('tribe-v3.vercel.app');
   });
 
-  it('the version line says 1.1, and nothing says 1.0', () => {
-    expect(policy.intro.some((l) => /^Versi[oó]n 1\.1 · /.test(l))).toBe(true);
-    expect(allText(policy)).not.toMatch(/Versi[oó]n 1\.0/);
+  it('the version line says 1.2, and nothing says 1.0 or 1.1', () => {
+    expect(policy.intro.some((l) => /^Versi[oó]n 1\.2 · /.test(l))).toBe(true);
+    expect(allText(policy)).not.toMatch(/Versi[oó]n 1\.[01]\b/);
+  });
+
+  it('v1.2: the contact channel is info@tribelatam.com in sections 1, 8 and 14, and the old address appears nowhere', () => {
+    for (const n of [1, 8, 14]) {
+      expect(sectionText(policy, n).join(' '), `section ${n}`).toContain('info@tribelatam.com');
+    }
+    expect(allText(policy).match(/info@tribelatam\.com/g)).toHaveLength(3);
+    expect(allText(policy)).not.toContain('aplusfitnessllc');
+  });
+
+  it('v1.2: A Plus Fitness LLC is still the controller (only the address changed)', () => {
+    expect(sectionText(policy, 1).join(' ')).toContain('A Plus Fitness LLC');
   });
 
   it('every other section is still present: 14 sections, numbered in order', () => {
@@ -82,7 +96,7 @@ describe.each(['es', 'en'] as const)('data policy v1.1 (%s)', (lang) => {
  * what stops the policy shipping with "PENDIENTE" as its effective date. The
  * fix is to set EFFECTIVE_DATE in content.ts, never to edit this test.
  */
-describe('data policy v1.1 effective date', () => {
+describe('data policy effective date', () => {
   it('is set (not the merge-day placeholder) in both languages', () => {
     expect(EFFECTIVE_DATE.es).not.toMatch(/PENDIENTE/);
     expect(EFFECTIVE_DATE.en).not.toMatch(/PENDIENTE/);

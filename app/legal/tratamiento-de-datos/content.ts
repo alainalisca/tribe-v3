@@ -1,6 +1,6 @@
 /**
- * Política de Tratamiento de Datos Personales, version 1.1 (v1.0 was effective
- * 2026-09-18). The approved legal text, in its own module.
+ * Política de Tratamiento de Datos Personales, version 1.2 (v1.0 was effective
+ * 2026-09-18, v1.1 2026-10-09). The approved legal text, in its own module.
  *
  * GENERATED FROM THE APPROVED SOURCE, NOT TYPED. T-LEGAL1 shipped the text as
  * T-LEGAL1_policy.json and this file was produced from it by a one-off script
@@ -37,12 +37,20 @@
  * It was a placeholder on the branch, and content.v1_1.test.ts failed while it
  * was, so the policy could not ship announcing "pending" as its effective date.
  * Set to 2026-10-09, the day Al merges PR #199.
+ *
+ * ── v1.2, approved by Al in chat on 2026-10-11 ("do it") ──
+ * One change, six occurrences: the contact channel tribe@aplusfitnessllc.com
+ * becomes info@tribelatam.com (sections 1, 8 and 14, both languages), so the
+ * policy names the same address Tribe's email is sent from. Nothing else in
+ * the text changed; A Plus Fitness LLC remains the controller. Hand-applied as
+ * an exact replacement asserted to match six times. The effective date is
+ * v1.2's merge date, on the same rule as v1.1.
  */
 
-/** The merge date of PR #199 (Al, 2026-10-09). A test fails if either says PENDIENTE. */
+/** v1.2's merge date (v1.1 was 2026-10-09, PR #199). A test fails if either says PENDIENTE. */
 export const EFFECTIVE_DATE = {
-  es: '9 de octubre de 2026',
-  en: 'October 9, 2026',
+  es: '11 de octubre de 2026',
+  en: 'October 11, 2026',
 } as const;
 
 /** A paragraph, or a bullet list. The source interleaves them inside a section. */
@@ -68,7 +76,7 @@ export const DATA_POLICY: Record<'en' | 'es', PolicyContent> = {
     intro: [
       'Tribe · Nunca Entrenes Solo',
       'Ley 1581 de 2012, Decreto 1377 de 2013 (compilado en el Decreto 1074 de 2015) y demás normas que las modifiquen o complementen.',
-      'Versión 1.1 · Vigente desde el ' + EFFECTIVE_DATE.es,
+      'Versión 1.2 · Vigente desde el ' + EFFECTIVE_DATE.es,
     ],
     sections: [
       {
@@ -76,7 +84,7 @@ export const DATA_POLICY: Record<'en' | 'es', PolicyContent> = {
         blocks: [
           {
             kind: 'p',
-            text: 'El responsable del tratamiento de los datos personales recogidos a través de la aplicación y el sitio web Tribe (en adelante, "Tribe") es A Plus Fitness LLC, sociedad constituida en el estado de Nueva York, Estados Unidos de América, que opera Tribe (en adelante, "nosotros"). Canal de contacto para todo lo relacionado con datos personales: tribe@aplusfitnessllc.com, asunto "Datos personales".',
+            text: 'El responsable del tratamiento de los datos personales recogidos a través de la aplicación y el sitio web Tribe (en adelante, "Tribe") es A Plus Fitness LLC, sociedad constituida en el estado de Nueva York, Estados Unidos de América, que opera Tribe (en adelante, "nosotros"). Canal de contacto para todo lo relacionado con datos personales: info@tribelatam.com, asunto "Datos personales".',
           },
         ],
       },
@@ -179,7 +187,7 @@ export const DATA_POLICY: Record<'en' | 'es', PolicyContent> = {
         blocks: [
           {
             kind: 'p',
-            text: 'Canal: tribe@aplusfitnessllc.com con el asunto "Datos personales", o desde la aplicación en la opción de eliminar cuenta. La solicitud debe indicar el nombre del titular, el correo o número de WhatsApp registrado, la descripción de lo que se solicita y, si aplica, los documentos que la sustenten.',
+            text: 'Canal: info@tribelatam.com con el asunto "Datos personales", o desde la aplicación en la opción de eliminar cuenta. La solicitud debe indicar el nombre del titular, el correo o número de WhatsApp registrado, la descripción de lo que se solicita y, si aplica, los documentos que la sustenten.',
           },
           {
             kind: 'p',
@@ -247,9 +255,7 @@ export const DATA_POLICY: Record<'en' | 'es', PolicyContent> = {
       },
       {
         heading: '14. Contacto',
-        blocks: [
-          { kind: 'p', text: 'A Plus Fitness LLC (Tribe) · tribe@aplusfitnessllc.com · Asunto: Datos personales' },
-        ],
+        blocks: [{ kind: 'p', text: 'A Plus Fitness LLC (Tribe) · info@tribelatam.com · Asunto: Datos personales' }],
       },
     ],
   },
@@ -258,7 +264,7 @@ export const DATA_POLICY: Record<'en' | 'es', PolicyContent> = {
     intro: [
       'Tribe · Never Train Alone',
       'Colombian Law 1581 of 2012, Decree 1377 of 2013 (compiled in Decree 1074 of 2015) and any rules that amend or supplement them. This English version is provided for convenience; the Spanish version governs.',
-      'Version 1.1 · Effective ' + EFFECTIVE_DATE.en,
+      'Version 1.2 · Effective ' + EFFECTIVE_DATE.en,
     ],
     sections: [
       {
@@ -266,7 +272,7 @@ export const DATA_POLICY: Record<'en' | 'es', PolicyContent> = {
         blocks: [
           {
             kind: 'p',
-            text: 'The controller of the personal data collected through the Tribe app and website ("Tribe") is A Plus Fitness LLC, a company organized under the laws of the State of New York, United States of America, which operates Tribe ("we"). Contact for anything related to personal data: tribe@aplusfitnessllc.com, subject "Personal data".',
+            text: 'The controller of the personal data collected through the Tribe app and website ("Tribe") is A Plus Fitness LLC, a company organized under the laws of the State of New York, United States of America, which operates Tribe ("we"). Contact for anything related to personal data: info@tribelatam.com, subject "Personal data".',
           },
         ],
       },
@@ -372,7 +378,7 @@ export const DATA_POLICY: Record<'en' | 'es', PolicyContent> = {
         blocks: [
           {
             kind: 'p',
-            text: 'Channel: tribe@aplusfitnessllc.com with the subject "Personal data", or from the app via the delete account option. The request must state the data subject\'s name, the registered email or WhatsApp number, a description of what is requested and, where applicable, supporting documents.',
+            text: 'Channel: info@tribelatam.com with the subject "Personal data", or from the app via the delete account option. The request must state the data subject\'s name, the registered email or WhatsApp number, a description of what is requested and, where applicable, supporting documents.',
           },
           {
             kind: 'p',
@@ -440,9 +446,7 @@ export const DATA_POLICY: Record<'en' | 'es', PolicyContent> = {
       },
       {
         heading: '14. Contact',
-        blocks: [
-          { kind: 'p', text: 'A Plus Fitness LLC (Tribe) · tribe@aplusfitnessllc.com · Subject: Personal data' },
-        ],
+        blocks: [{ kind: 'p', text: 'A Plus Fitness LLC (Tribe) · info@tribelatam.com · Subject: Personal data' }],
       },
     ],
   },

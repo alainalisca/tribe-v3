@@ -60,7 +60,7 @@ export default function AboutPage() {
               : 'Tribe is built by a small team with big ambitions for fitness in Medellín.'}
           </p>
           <a
-            href="mailto:tribe@aplusfitnessllc.com"
+            href="mailto:info@tribelatam.com"
             className="text-tribe-green font-semibold hover:text-tribe-green-hover transition-colors"
           >
             {es ? 'Contáctanos' : 'Get In Touch'}
