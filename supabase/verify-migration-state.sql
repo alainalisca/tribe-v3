@@ -2923,4 +2923,24 @@ select '216_t_auth3_google_avatar_backfill',
          else 'applied'
        end
 
+union all
+
+-- T-PARTNER-METRIC1. The narrow partner counter exists in its safe shape, and
+-- the generic incrementer it replaced does not. By to_regprocedure, so this
+-- reads MISSING (not an error) before 217 runs.
+select '217_t_partner_metric1_increment_partner_metric',
+       case
+         when to_regprocedure('public.increment_partner_metric(uuid, text)') is null
+           then 'MISSING -- increment_partner_metric is absent; banner impressions and clicks are not counted'
+         when not exists (select 1 from pg_proc
+                           where oid = to_regprocedure('public.increment_partner_metric(uuid, text)')
+                             and prosecdef and 'search_path=""' = any (proconfig))
+           then 'MISSING -- increment_partner_metric is not SECURITY DEFINER with search_path pinned'
+         when exists (select 1 from pg_proc where proname = 'increment_counter')
+           then 'MISSING -- a generic increment_counter exists; anon could bump any column of any table'
+         when not has_function_privilege('anon', to_regprocedure('public.increment_partner_metric(uuid, text)'), 'EXECUTE')
+           then 'MISSING -- anon cannot call increment_partner_metric; the signed-out banner counts nothing'
+         else 'applied'
+       end
+
 order by migration;
