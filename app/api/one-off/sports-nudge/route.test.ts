@@ -56,6 +56,7 @@ import { isValidCronAuth } from '@/lib/auth/cron';
 import { shouldSendNotification } from '@/lib/dal/notificationPreferences';
 import { claimOneOffSend, releaseOneOffClaim, recordOneOffOutcome } from '@/lib/dal/oneOffSends';
 import { isEmailSuppressed, unsubUrlFor } from '@/lib/dal/emailUnsubscribe';
+import { TRIBE_FROM } from '@/lib/email/sender';
 
 const ATHLETE = { id: 'u1', name: 'Ana', email: 'a@b.co', fcm_token: 'tok-1', preferred_language: 'es' };
 
@@ -225,19 +226,11 @@ describe('what actually goes out', () => {
     // A sender on an unverified domain is rejected by Resend at the API. The
     // first draft of this route used a plausible-looking hola@tribeapp.co and
     // would have failed all 34 with nothing visible to the recipients.
-    const { readFileSync } = await import('node:fs');
-    const nudge = readFileSync('app/api/one-off/sports-nudge/route.ts', 'utf8');
-    const existing = readFileSync('app/api/send-inactive-nudge/route.ts', 'utf8');
-    const addressIn = (src: string) =>
-      src
-        .match(/from:\s*'([^']+)'|const FROM = '([^']+)'/)
-        ?.slice(1)
-        .find(Boolean);
-    expect(addressIn(nudge)).toBeTruthy();
-    expect(addressIn(nudge)).toBe(addressIn(existing));
-
+    // Since 2026-10-10 every sender comes from lib/email/sender.ts, and
+    // lib/email/sender.test.ts fails if any file hard-codes one. So "the same
+    // address as the rest of the app" is TRIBE_FROM, asserted on what is SENT.
     await POST(req({ dryRun: false }));
-    expect(send.mock.calls[0][0].from).toBe(addressIn(existing));
+    expect(send.mock.calls[0][0].from).toBe(TRIBE_FROM);
   });
 
   it('both channels point at the sports step', async () => {

@@ -6,6 +6,7 @@ import { fetchSessionFields } from '@/lib/dal';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { getServiceRoleClient } from '@/lib/supabase/admin';
 import { SITE_URL } from '@/lib/http/siteUrl';
+import { TRIBE_SENDER_ADDRESS } from '@/lib/email/sender';
 
 /**
  * @description Generates a downloadable ICS calendar file for a given training session, including sport, location, time, and organizer details.
@@ -93,7 +94,7 @@ export async function GET(request: Request) {
       url: `${SITE_URL}/session/${sessionId}`,
       status: 'CONFIRMED' as const,
       busyStatus: 'BUSY' as const,
-      organizer: { name: session.creator_name || 'Tribe', email: 'tribe@aplusfitnessllc.com' },
+      organizer: { name: session.creator_name || 'Tribe', email: TRIBE_SENDER_ADDRESS },
     };
 
     const { error: icsError, value } = createEvents([event]);

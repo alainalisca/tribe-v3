@@ -15,9 +15,10 @@
  */
 
 import { getResendClient } from '@/lib/email/resendClient';
+import { TRIBE_FROM } from '@/lib/email/sender';
 
 const ADMIN_EMAIL = 'tribe@aplusfitnessllc.com';
-const FROM = 'Tribe <tribe@aplusfitnessllc.com>';
+const FROM = TRIBE_FROM;
 
 export const APP_STORE_URL = 'https://apps.apple.com/us/app/tribe-never-train-alone/id6458219258';
 export const GOOGLE_PLAY_URL = 'https://play.google.com/store/apps/details?id=prod.tribe.android';
