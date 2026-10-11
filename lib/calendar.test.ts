@@ -2,7 +2,7 @@
  * Unit tests for lib/calendar.ts
  * Focus: getGoogleCalendarUrl — correct UTC date range format + encoding (BUG-224)
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { getGoogleCalendarUrl } from './calendar';
 
 describe('getGoogleCalendarUrl', () => {
@@ -81,5 +81,30 @@ describe('getGoogleCalendarUrl', () => {
     const params = new URL(url).searchParams;
     // 23:00 + 90 min = 00:30 next day
     expect(params.get('dates')).toBe('20260801T230000Z/20260802T003000Z');
+  });
+});
+
+describe('downloadICS links to the canonical host', () => {
+  it('uses tribelatam.com, not the page origin (the native app runs on tribe-v3.vercel.app)', async () => {
+    const { downloadICS } = await import('./calendar');
+    let captured: Blob | undefined;
+    const create = vi.spyOn(URL, 'createObjectURL').mockImplementation((b) => {
+      captured = b as Blob;
+      return 'blob:test';
+    });
+    const revoke = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
+    try {
+      downloadICS({ sport: 'Running', date: '2026-10-20', start_time: '07:00', location: 'Parque', sessionId: 'abc' });
+      expect(captured, 'downloadICS never built the file').toBeDefined();
+      const ics = await captured!.text();
+      expect(ics).toContain('URL:https://tribelatam.com/session/abc/');
+      expect(window.location.origin).not.toBe('https://tribelatam.com');
+      expect(ics).not.toContain(window.location.origin);
+    } finally {
+      create.mockRestore();
+      revoke.mockRestore();
+      click.mockRestore();
+    }
   });
 });
