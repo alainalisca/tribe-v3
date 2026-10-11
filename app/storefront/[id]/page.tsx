@@ -262,7 +262,7 @@ export default function StorefrontPage() {
               <section className="mt-4 lg:mt-0 w-full max-w-xl mx-auto lg:mx-0 lg:max-w-none">
                 <div
                   id="storefront-tabs"
-                  className="sticky top-[calc(env(safe-area-inset-top,0px)+3.5rem)] z-30 bg-theme-page py-2"
+                  className="sticky top-[calc(var(--safe-area-inset-top,0px)+3.5rem)] z-30 bg-theme-page py-2"
                 >
                   <StorefrontTabs tabs={tabs} activeTab={activeTab} onSelect={setActiveTab} />
                 </div>

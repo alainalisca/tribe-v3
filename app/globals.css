@@ -249,7 +249,7 @@ body {
   /* Use max() to ensure at least 44px on mobile for status bar */
   /* !important needed to override Tailwind's p-4 utility class */
   .safe-area-top {
-    padding-top: max(env(safe-area-inset-top, 0px), 44px) !important;
+    padding-top: max(var(--safe-area-inset-top, 0px), 44px) !important;
   }
 
   /* Reset on desktop/tablet where status bar padding isn't needed */
@@ -276,7 +276,7 @@ body {
      floating CTA is lg:hidden, so it is live from 768 to 1023 where the nav
      has no inset padding at all. */
   :root {
-    --bottom-nav-h: calc(4rem + max(env(safe-area-inset-bottom, 0px), 34px));
+    --bottom-nav-h: calc(4rem + max(var(--safe-area-inset-bottom, 0px), 34px));
   }
 
   @media (min-width: 768px) {
@@ -296,7 +296,7 @@ body {
      The clearance actually needed is the nav's own height PLUS the 24px the
      Create button is raised above it by `-mt-6`:
 
-       88px + max(env(safe-area-inset-bottom), 34px)
+       88px + max(var(--safe-area-inset-bottom), 34px)
 
      which is 122px on an iPhone home indicator and more on Android gesture
      navigation. So pb-24 and pb-20 were short by 26px and 42px AT EVERY
@@ -318,7 +318,7 @@ body {
   /* Use max() to ensure at least 34px on mobile for home indicator */
   /* !important needed to override other padding styles */
   .safe-area-bottom {
-    padding-bottom: max(env(safe-area-inset-bottom, 0px), 34px) !important;
+    padding-bottom: max(var(--safe-area-inset-bottom, 0px), 34px) !important;
   }
 
   /* Reset on desktop/tablet where home indicator padding isn't needed */
@@ -330,7 +330,7 @@ body {
 
   /* Spacer for fixed header: safe-area-top + h-14 (56px) */
   .pt-header {
-    padding-top: calc(max(env(safe-area-inset-top, 0px), 44px) + 3.5rem + 0.5rem) !important;
+    padding-top: calc(max(var(--safe-area-inset-top, 0px), 44px) + 3.5rem + 0.5rem) !important;
   }
 
   @media (min-width: 768px) {
@@ -341,7 +341,7 @@ body {
 
   /* Spacer for fixed header with tabs: safe-area-top + title bar (56px) + tab bar (48px) + breathing room (16px) */
   .pt-header-tabs {
-    padding-top: calc(max(env(safe-area-inset-top, 0px), 44px) + 3.5rem + 3rem + 1rem) !important;
+    padding-top: calc(max(var(--safe-area-inset-top, 0px), 44px) + 3.5rem + 3rem + 1rem) !important;
   }
 
   @media (min-width: 768px) {
@@ -351,26 +351,26 @@ body {
   }
 
   .safe-area-left {
-    padding-left: env(safe-area-inset-left, 0px);
+    padding-left: var(--safe-area-inset-left, 0px);
   }
 
   .safe-area-right {
-    padding-right: env(safe-area-inset-right, 0px);
+    padding-right: var(--safe-area-inset-right, 0px);
   }
 
   .safe-area-x {
-    padding-left: env(safe-area-inset-left, 0px);
-    padding-right: env(safe-area-inset-right, 0px);
+    padding-left: var(--safe-area-inset-left, 0px);
+    padding-right: var(--safe-area-inset-right, 0px);
   }
 
   .safe-area-y {
-    padding-top: env(safe-area-inset-top, 0px);
-    padding-bottom: env(safe-area-inset-bottom, 0px);
+    padding-top: var(--safe-area-inset-top, 0px);
+    padding-bottom: var(--safe-area-inset-bottom, 0px);
   }
 
   .safe-area-all {
-    padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px)
-      env(safe-area-inset-left, 0px);
+    padding: var(--safe-area-inset-top, 0px) var(--safe-area-inset-right, 0px) var(--safe-area-inset-bottom, 0px)
+      var(--safe-area-inset-left, 0px);
   }
 
   /* Dark mode card elevation */

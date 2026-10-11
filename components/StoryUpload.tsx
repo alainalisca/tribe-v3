@@ -225,7 +225,7 @@ export default function StoryUpload({ sessionId, userId, onClose, onUploaded }: 
     >
       <div
         className="bg-white dark:bg-tribe-card w-full sm:max-w-md sm:mx-auto sm:rounded-xl rounded-t-2xl max-h-[85vh] overflow-y-auto"
-        style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 80px)' }}
+        style={{ paddingBottom: 'calc(var(--safe-area-inset-bottom, 0px) + 80px)' }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}

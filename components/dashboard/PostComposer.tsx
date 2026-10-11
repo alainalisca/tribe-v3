@@ -208,7 +208,7 @@ export default function PostComposer({ open, onClose, instructorId, language, on
     >
       <div
         className="w-full max-w-md bg-white dark:bg-tribe-card rounded-t-2xl sm:rounded-2xl p-5 max-h-[90dvh] overflow-y-auto overscroll-contain"
-        style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 1.25rem)' }}
+        style={{ paddingBottom: 'max(var(--safe-area-inset-bottom, 0px), 1.25rem)' }}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-3">
