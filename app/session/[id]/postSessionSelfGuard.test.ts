@@ -26,7 +26,7 @@ import * as path from 'node:path';
  * It also pins the SubscribeButton guard next to it, because the two are the
  * same rule and having one without the other is exactly how this happened.
  */
-const PAGE = path.join(__dirname, 'page.tsx');
+const PAGE = path.join(__dirname, 'SessionDetailClient.tsx');
 
 function source(): string {
   return fs.readFileSync(PAGE, 'utf-8');
