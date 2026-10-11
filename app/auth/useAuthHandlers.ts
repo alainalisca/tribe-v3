@@ -4,6 +4,7 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { opensOnSignIn } from './initialMode';
 import { upsertUserProfile } from '@/lib/auth-helpers';
 import { showError, showSuccess } from '@/lib/toast';
 import { getErrorMessage } from '@/lib/errorMessages';
@@ -21,7 +22,8 @@ export function useAuthHandlers(language: 'en' | 'es') {
   const supabase = createClient();
   const t = getAuthTranslations(language);
 
-  const [isLogin, setIsLogin] = useState(true);
+  // Invite links open on sign-up; see ./initialMode.ts.
+  const [isLogin, setIsLogin] = useState(() => opensOnSignIn(searchParams));
   const [isResetPassword, setIsResetPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');

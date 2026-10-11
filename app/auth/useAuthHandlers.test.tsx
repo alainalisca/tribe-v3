@@ -151,4 +151,22 @@ describe('useAuthHandlers — OTP verify', () => {
     expect(result!.result.current.message).toBe(getAuthTranslations('es').verifiedSignIn);
     mockSearchParams = new URLSearchParams(); // reset for other tests
   });
+
+  it('opens an invite link (?ref=) on sign-up, and a plain /auth on sign-in', async () => {
+    // The wiring, not the rule: initialMode.test.ts covers the rule, and would
+    // stay green if this hook stopped calling it.
+    mockSearchParams = new URLSearchParams('ref=TRIBE-HCHP7');
+    let invited: ReturnType<typeof renderHook<ReturnType<typeof useAuthHandlers>, unknown>>;
+    await act(async () => {
+      invited = renderHook(() => useAuthHandlers('es'));
+    });
+    expect(invited!.result.current.isLogin).toBe(false);
+
+    mockSearchParams = new URLSearchParams();
+    let plain: ReturnType<typeof renderHook<ReturnType<typeof useAuthHandlers>, unknown>>;
+    await act(async () => {
+      plain = renderHook(() => useAuthHandlers('es'));
+    });
+    expect(plain!.result.current.isLogin).toBe(true);
+  });
 });
