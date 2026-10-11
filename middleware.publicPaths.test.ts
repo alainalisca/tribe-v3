@@ -114,6 +114,17 @@ describe('existing public surfaces survive the change', () => {
     expect(isPublicPath('/api/attr/signup/')).toBe(true);
   });
 
+  it('lets a signed-out visitor reach /api/referral/inviter/ (the "Invitado por X" banner)', () => {
+    // The banner's whole audience is signed out. Without this entry the fetch
+    // is answered with a redirect to /auth, the banner stays hidden, and nothing
+    // errors: the same silent shape as the browser lookup it replaced.
+    expect(isPublicPath('/api/referral/inviter')).toBe(true);
+    expect(isPublicPath('/api/referral/inviter/')).toBe(true);
+    // Only this route: the rest of /api/referral keeps its session gate.
+    expect(isPublicPath('/api/referral')).toBe(false);
+    expect(isPublicPath('/api/referral/apply/')).toBe(false);
+  });
+
   it('keeps the one-off outreach route reachable by its cron caller', () => {
     // Found by the dry run, not by review: the route checks CRON_SECRET itself,
     // but middleware's cookie gate runs first and 307s it to /auth. The

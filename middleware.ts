@@ -75,6 +75,7 @@ const publicApiPaths = [
   '/api/health', // LR-02: monitoring probes don't carry session cookies
   '/api/tribe-os-waitlist', // Public marketing form on the landing page; rate-limited by IP in the handler.
   '/api/pase', // T-LEAD1 pass claim; unauthenticated by design, rate-limited by IP plus honeypot and time-on-page in the handler.
+  '/api/referral/inviter', // "Invitado por X" on /auth/?ref=: the visitor is signed out by definition. Returns one first name; rate-limited by IP in the handler.
   // T-GROW1 part D attribution beacon. Unauthenticated BY NECESSITY, not by
   // convenience: the event it records is a STRANGER ARRIVING off a printed QR,
   // so it is usually the first HTTP call a person ever makes to Tribe and nobody
