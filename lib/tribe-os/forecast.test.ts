@@ -3,6 +3,7 @@ import {
   monthlyValueCents,
   computeForecast,
   ownerReason,
+  humanizeReason,
   type PlanPrice,
   type MemberForForecast,
 } from './forecast';
@@ -203,5 +204,129 @@ describe('computeForecast', () => {
     ];
     const result = computeForecast(members, PLANS, 'COP', TODAY, MONTH_START);
     expect(result.monthlyIncomeCents).toBe(12000000);
+  });
+
+  it('replaces "Viene 100% menos" with "No ha vuelto desde el..." in reasons', () => {
+    const members = [
+      makeMember({
+        id: '1',
+        days_since_last_activity: 15,
+        last_activity_at: '2026-09-25T14:00:00Z',
+        reasons: ['Viene 100% menos que su promedio / Visiting 100% less than average'],
+        plan_ends_on: '2026-10-20',
+      }),
+    ];
+    const result = computeForecast(members, PLANS, 'COP', TODAY, MONTH_START);
+    expect(result.atRiskMembers[0].reasons[0]).toMatch(/No ha vuelto desde el 25 de sept\./);
+  });
+
+  it('keeps "Viene X% menos" when X < 100', () => {
+    const members = [
+      makeMember({
+        id: '1',
+        days_since_last_activity: 15,
+        reasons: ['Viene 60% menos que su promedio / Visiting 60% less than average'],
+        plan_ends_on: '2026-10-20',
+      }),
+    ];
+    const result = computeForecast(members, PLANS, 'COP', TODAY, MONTH_START);
+    expect(result.atRiskMembers[0].reasons[0]).toBe('Viene 60% menos que su promedio');
+  });
+
+  it('sorts touched members after untouched members at same urgency', () => {
+    const members = [
+      makeMember({
+        id: 'touched',
+        days_since_last_activity: 20,
+        last_touch_created_at: '2026-10-05T10:00:00Z',
+        membership_plan: 'Mensual',
+        plan_ends_on: '2026-10-20',
+        reasons: ['20 días sin venir / 20 days absent'],
+      }),
+      makeMember({
+        id: 'untouched',
+        days_since_last_activity: 20,
+        last_touch_created_at: null,
+        membership_plan: 'Mensual',
+        plan_ends_on: '2026-10-20',
+        reasons: ['20 días sin venir / 20 days absent'],
+      }),
+    ];
+    const result = computeForecast(members, PLANS, 'COP', TODAY, MONTH_START);
+    expect(result.atRiskMembers.map((m) => m.id)).toEqual(['untouched', 'touched']);
+  });
+
+  it('sets touchedDaysAgo only for touches within 14 days', () => {
+    const members = [
+      makeMember({
+        id: 'recent-touch',
+        days_since_last_activity: 15,
+        last_touch_created_at: '2026-10-05T10:00:00Z',
+        plan_ends_on: '2026-10-20',
+        reasons: ['15 días sin venir / 15 days absent'],
+      }),
+      makeMember({
+        id: 'old-touch',
+        days_since_last_activity: 15,
+        last_touch_created_at: '2026-09-20T10:00:00Z',
+        plan_ends_on: '2026-10-20',
+        reasons: ['15 días sin venir / 15 days absent'],
+      }),
+    ];
+    const result = computeForecast(members, PLANS, 'COP', TODAY, MONTH_START);
+    const recent = result.atRiskMembers.find((m) => m.id === 'recent-touch');
+    const old = result.atRiskMembers.find((m) => m.id === 'old-touch');
+    expect(recent?.touchedDaysAgo).toBe(5);
+    expect(old?.touchedDaysAgo).toBeNull();
+  });
+
+  it('sets cameBackAfterTouch from has_touch_then_visit', () => {
+    const members = [
+      makeMember({
+        id: '1',
+        days_since_last_activity: 10,
+        last_touch_created_at: '2026-10-03T10:00:00Z',
+        has_touch_then_visit: true,
+        visit_after_touch_at: '2026-10-06T10:00:00Z',
+        plan_ends_on: '2026-10-20',
+        reasons: ['10 días sin venir / 10 days absent'],
+      }),
+    ];
+    const result = computeForecast(members, PLANS, 'COP', TODAY, MONTH_START);
+    expect(result.atRiskMembers[0].cameBackAfterTouch).toBe(true);
+  });
+});
+
+describe('humanizeReason', () => {
+  it('replaces "Viene 100% menos" with last activity date (ES)', () => {
+    const result = humanizeReason(
+      'Viene 100% menos que su promedio',
+      '2026-09-15T14:00:00Z',
+      'es',
+    );
+    expect(result).toBe('No ha vuelto desde el 15 de sept.');
+  });
+
+  it('replaces "Visiting 100% less" with last activity date (EN)', () => {
+    const result = humanizeReason(
+      'Visiting 100% less than average',
+      '2026-09-15T14:00:00Z',
+      'en',
+    );
+    expect(result).toBe('Has not returned since Sep 15');
+  });
+
+  it('returns "No ha vuelto" when lastActivityAt is null', () => {
+    expect(humanizeReason('Viene 100% menos que su promedio', null, 'es')).toBe('No ha vuelto');
+  });
+
+  it('passes through reasons that are not 100%', () => {
+    const reason = 'Viene 60% menos que su promedio';
+    expect(humanizeReason(reason, '2026-09-15T14:00:00Z', 'es')).toBe(reason);
+  });
+
+  it('passes through reasons without a percentage', () => {
+    const reason = '15 días sin venir';
+    expect(humanizeReason(reason, '2026-09-15T14:00:00Z', 'es')).toBe(reason);
   });
 });

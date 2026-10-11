@@ -1,0 +1,73 @@
+-- refresh-test-gym.sql
+--
+-- Shifts source='mira_csv' visits and MIRA-#### clients' plan_ends_on
+-- forward so the latest mira_csv visit lands on yesterday (Bogota).
+-- Preserves relative date patterns across all rows.
+--
+-- USAGE:
+--   1. Compute shift_days (see below).
+--   2. Replace :shift_days with the computed value.
+--   3. Run inside a transaction. Review the dry-run SELECTs first.
+--
+-- The two-hop UPDATE avoids the unique (gym_id, client_id, visited_at)
+-- constraint collision by first shifting far forward (+1000 days),
+-- then shifting back to the final target (-1000 + shift_days).
+--
+-- SCOPED to gym d585af30-5ed5-448b-bd9c-ab82b2e99970 only.
+
+-- ── 0. Compute shift_days ──────────────────────────────────────────
+-- Run this first to get the value for :shift_days.
+--
+-- SELECT
+--   (current_date AT TIME ZONE 'America/Bogota')::date - interval '1 day'
+--     - (SELECT max(visited_at::date) FROM client_visits
+--        WHERE gym_id = 'd585af30-5ed5-448b-bd9c-ab82b2e99970'
+--          AND source = 'mira_csv')
+--   AS shift_days;
+
+-- ── 1. Dry-run: preview affected rows ─────────────────────────────
+--
+-- SELECT count(*) AS visit_rows
+-- FROM client_visits
+-- WHERE gym_id = 'd585af30-5ed5-448b-bd9c-ab82b2e99970'
+--   AND source = 'mira_csv';
+--
+-- SELECT count(*) AS client_rows
+-- FROM clients
+-- WHERE gym_id = 'd585af30-5ed5-448b-bd9c-ab82b2e99970'
+--   AND membership_plan LIKE 'MIRA-%'
+--   AND plan_ends_on IS NOT NULL;
+--
+-- SELECT id, visited_at,
+--        visited_at + interval ':shift_days days' AS new_visited_at
+-- FROM client_visits
+-- WHERE gym_id = 'd585af30-5ed5-448b-bd9c-ab82b2e99970'
+--   AND source = 'mira_csv'
+-- ORDER BY visited_at DESC
+-- LIMIT 5;
+
+-- ── 2. Apply ──────────────────────────────────────────────────────
+-- Replace :shift_days with the integer from step 0.
+
+-- BEGIN;
+--
+-- -- Hop 1: shift visits far forward to avoid unique constraint collision
+-- UPDATE client_visits
+-- SET visited_at = visited_at + interval '1000 days'
+-- WHERE gym_id = 'd585af30-5ed5-448b-bd9c-ab82b2e99970'
+--   AND source = 'mira_csv';
+--
+-- -- Hop 2: shift back to final target
+-- UPDATE client_visits
+-- SET visited_at = visited_at + interval ':shift_days days' - interval '1000 days'
+-- WHERE gym_id = 'd585af30-5ed5-448b-bd9c-ab82b2e99970'
+--   AND source = 'mira_csv';
+--
+-- -- Shift plan_ends_on for MIRA clients
+-- UPDATE clients
+-- SET plan_ends_on = (plan_ends_on::date + interval ':shift_days days')::date
+-- WHERE gym_id = 'd585af30-5ed5-448b-bd9c-ab82b2e99970'
+--   AND membership_plan LIKE 'MIRA-%'
+--   AND plan_ends_on IS NOT NULL;
+--
+-- COMMIT;

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLanguage } from '@/lib/LanguageContext';
 import { useTribeOSPremiumGate } from '@/hooks/useTribeOSPremiumGate';
 import { trackEvent } from '@/lib/analytics';
+import { humanizeReason } from '@/lib/tribe-os/forecast';
 import { buildWhatsAppUrl } from '@/lib/phone';
 import { StatCard, Badge, Button } from '@/components/tribe-os/ui';
 import DraftModal from '@/components/tribe-os/DraftModal';
@@ -547,7 +548,8 @@ function MemberCard({
   const reasonText = reasons
     .map((r) => {
       const parts = r.split(' / ');
-      return language === 'es' ? parts[0] : (parts[1] ?? parts[0]);
+      const localized = language === 'es' ? parts[0] : (parts[1] ?? parts[0]);
+      return humanizeReason(localized, m.last_activity_at, language);
     })
     .join(' · ');
 

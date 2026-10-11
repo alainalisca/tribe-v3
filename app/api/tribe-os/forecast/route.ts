@@ -145,6 +145,8 @@ export async function GET(): Promise<NextResponse> {
         last_activity_at: m.lastActivityAt,
         last_touch_created_at: m.lastTouchCreatedAt,
         plan_ends_on: m.planEndsOn,
+        touched_days_ago: m.touchedDaysAgo,
+        came_back_after_touch: m.cameBackAfterTouch,
       };
     }
 

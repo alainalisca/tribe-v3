@@ -13,6 +13,7 @@ import { logError } from '@/lib/logger';
 import { requireTribeOSPremium } from '@/lib/auth/premium';
 import { listGymMemberUserIds } from '@/lib/dal/gymCoaches';
 import { listUnpaidAttendance } from '@/lib/dal/clients';
+import { humanizeReason } from '@/lib/tribe-os/forecast';
 import { filterContactToday } from '@/lib/tribe-os/contactFilter';
 import { bogotaToday, bogotaDateLabel, addDays, planExpiryLabel } from '@/lib/tribe-os/dates';
 
@@ -178,7 +179,8 @@ export async function GET(): Promise<NextResponse> {
         lastActivityAt = v.visited_at;
       }
       const reasons: string[] = s.reasons ?? [];
-      const shortReason = reasons[0]?.split(' / ')[0] ?? null;
+      const rawShort = reasons[0]?.split(' / ')[0] ?? null;
+      const shortReason = rawShort ? humanizeReason(rawShort, lastActivityAt, 'es') : null;
 
       return {
         id: row.id,

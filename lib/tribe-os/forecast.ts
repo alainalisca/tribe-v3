@@ -47,6 +47,8 @@ export interface ForecastMember {
   lastActivityAt: string | null;
   lastTouchCreatedAt: string | null;
   planEndsOn: string | null;
+  touchedDaysAgo: number | null;
+  cameBackAfterTouch: boolean;
 }
 
 export interface RecoveredMember {
@@ -112,13 +114,45 @@ export function ownerReason(bilingual: string, language: 'en' | 'es'): string {
   return language === 'es' ? parts[0] : parts[1];
 }
 
+const BOGOTA_MONTHS_ES = [
+  'ene.', 'feb.', 'mar.', 'abr.', 'may.', 'jun.',
+  'jul.', 'ago.', 'sept.', 'oct.', 'nov.', 'dic.',
+];
+const BOGOTA_MONTHS_EN = [
+  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+];
+
+export function humanizeReason(
+  localized: string,
+  lastActivityAt: string | null,
+  language: 'en' | 'es',
+): string {
+  if (!localized.includes('100%')) return localized;
+  const is100Es = localized.startsWith('Viene 100% menos');
+  const is100En = localized.startsWith('Visiting 100% less');
+  if (!is100Es && !is100En) return localized;
+  if (!lastActivityAt) {
+    return language === 'es' ? 'No ha vuelto' : 'Has not returned';
+  }
+  const d = new Date(lastActivityAt);
+  const bogota = new Date(d.toLocaleString('en-US', { timeZone: 'America/Bogota' }));
+  const day = bogota.getDate();
+  const month = language === 'es'
+    ? BOGOTA_MONTHS_ES[bogota.getMonth()]
+    : BOGOTA_MONTHS_EN[bogota.getMonth()];
+  return language === 'es'
+    ? `No ha vuelto desde el ${day} de ${month}`
+    : `Has not returned since ${month} ${day}`;
+}
+
 function buildReasons(m: MemberForForecast, status: string, language: 'en' | 'es'): string[] {
   const out: string[] = [];
   for (const r of m.reasons) {
     const localized = ownerReason(r, language);
     if (localized.includes('Asistencia estable') || localized.includes('Stable attendance')) continue;
     if (localized.includes('Miembro nuevo') || localized.includes('New member')) continue;
-    out.push(localized);
+    out.push(humanizeReason(localized, m.last_activity_at, language));
   }
   if (out.length === 0) {
     if (status === 'expiring') out.push(language === 'es' ? 'Plan vence pronto' : 'Plan expiring soon');
@@ -139,6 +173,9 @@ function sortAtRisk(a: ForecastMember, b: ForecastMember): number {
   const sa = statusOrder[a.planStatus] ?? 3;
   const sb = statusOrder[b.planStatus] ?? 3;
   if (sa !== sb) return sa - sb;
+  const ta = a.touchedDaysAgo !== null ? 1 : 0;
+  const tb = b.touchedDaysAgo !== null ? 1 : 0;
+  if (ta !== tb) return ta - tb;
   const da = a.daysSinceLastActivity ?? 0;
   const db = b.daysSinceLastActivity ?? 0;
   if (da !== db) return db - da;
@@ -190,6 +227,13 @@ export function computeForecast(
 
     if (seen.has(m.id)) continue;
 
+    let touchedDaysAgo: number | null = null;
+    if (m.last_touch_created_at) {
+      const touchMs = new Date(m.last_touch_created_at).getTime();
+      const todayMs = new Date(today + 'T12:00:00Z').getTime();
+      touchedDaysAgo = Math.round((todayMs - touchMs) / 86_400_000);
+    }
+
     const entry: ForecastMember = {
       id: m.id,
       name: m.name,
@@ -203,6 +247,8 @@ export function computeForecast(
       lastActivityAt: m.last_activity_at,
       lastTouchCreatedAt: m.last_touch_created_at,
       planEndsOn: m.plan_ends_on,
+      touchedDaysAgo: touchedDaysAgo !== null && touchedDaysAgo <= 14 ? touchedDaysAgo : null,
+      cameBackAfterTouch: m.has_touch_then_visit,
     };
 
     if (isProbablyLost) {

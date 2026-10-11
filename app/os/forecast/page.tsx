@@ -34,6 +34,8 @@ const copy = {
     unpricedLink: 'Set prices',
     badge: 'Came back',
     perMonth: '/mo',
+    touchedAgo: (n: number) => `Contacted ${n}d ago`,
+    cameBack: 'Came back',
   },
   es: {
     title: 'Pronóstico',
@@ -58,6 +60,8 @@ const copy = {
     unpricedLink: 'Poner precios',
     badge: 'Volvió',
     perMonth: '/mes',
+    touchedAgo: (n: number) => `Contactado hace ${n} día${n > 1 ? 's' : ''}`,
+    cameBack: 'Volvió',
   },
 } as const;
 
@@ -74,6 +78,8 @@ interface RiskRow {
   last_activity_at: string | null;
   last_touch_created_at: string | null;
   plan_ends_on: string | null;
+  touched_days_ago: number | null;
+  came_back_after_touch: boolean;
 }
 
 interface RecoveredRow {
@@ -254,6 +260,16 @@ export default function ForecastPage() {
                         <span className="text-[10px] text-red-500 block">
                           {row.reasons.join(' · ')}
                         </span>
+                        {row.touched_days_ago !== null && (
+                          <span className="inline-flex items-center gap-1 mt-0.5">
+                            <span className="text-[10px] text-gray-400">
+                              {s.touchedAgo(row.touched_days_ago)}
+                            </span>
+                            {row.came_back_after_touch && (
+                              <span className="text-[10px] text-tribe-green font-medium">· {s.cameBack}</span>
+                            )}
+                          </span>
+                        )}
                       </div>
                       {row.phone && (
                         <button
