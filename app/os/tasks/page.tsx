@@ -320,10 +320,10 @@ export default function TasksPage() {
                         <button
                           type="button"
                           onClick={() => setDraftTarget(task)}
-                          className="p-2 rounded-tribe bg-tribe-green-50 hover:bg-tribe-green transition-colors"
-                          aria-label={s.write}
+                          className="flex items-center gap-1 px-3 py-2 text-xs font-medium rounded-tribe bg-tribe-green-50 hover:bg-tribe-green text-tribe-green-dark transition-colors"
                         >
-                          <MessageCircle className="h-4 w-4 text-tribe-green-dark" />
+                          <MessageCircle className="h-3.5 w-3.5" />
+                          {s.write}
                         </button>
                         <button
                           type="button"

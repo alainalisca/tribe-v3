@@ -164,6 +164,7 @@ export default function OSShell({ children }: { children: React.ReactNode }) {
   const [premiumStatus, setPremiumStatus] = useState<PremiumStatus>('unknown');
   const [user, setUser] = useState<{ email: string | null; name: string | null } | null>(null);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [taskCount, setTaskCount] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -197,6 +198,21 @@ export default function OSShell({ children }: { children: React.ReactNode }) {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (premiumStatus !== 'premium') return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch('/api/tribe-os/sequences/tasks');
+        const json = await res.json();
+        if (!cancelled && json.success) {
+          setTaskCount((json.data?.tasks ?? []).length);
+        }
+      } catch {}
+    })();
+    return () => { cancelled = true; };
+  }, [premiumStatus, pathname]);
 
   // Lock body scroll while the mobile drawer is open so the page
   // behind doesn't scroll under it.
@@ -293,6 +309,11 @@ export default function OSShell({ children }: { children: React.ReactNode }) {
                   >
                     <Icon className="w-5 h-5 shrink-0" />
                     <span className="truncate">{label}</span>
+                    {item.labelKey === 'tasks' && taskCount > 0 && (
+                      <span className="ml-auto inline-flex items-center justify-center h-5 min-w-[20px] px-1.5 rounded-full text-[10px] font-bold bg-tribe-green-dark text-white">
+                        {taskCount}
+                      </span>
+                    )}
                   </Link>
                 </li>
               );

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { logError } from '@/lib/logger';
 import { requireTribeOSPremium } from '@/lib/auth/premium';
+import { computeCurrentStep } from '@/lib/tribe-os/sequences/helpers';
 
 export async function GET(req: NextRequest): Promise<NextResponse> {
   const gate = await requireTribeOSPremium();
@@ -50,14 +51,17 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       .eq('enrollment_id', enrollment.id)
       .eq('gym_id', gymId);
 
+    const donePositions = (completions ?? []).map((c) => c.step_position);
+    const computed = computeCurrentStep(steps ?? [], donePositions);
+
     return NextResponse.json({
       success: true,
       data: {
         status: enrollment.status,
         sequenceName: seq?.name ?? '',
-        currentStep: enrollment.current_step,
+        currentStep: computed.position,
         totalSteps: steps?.length ?? 0,
-        completions: (completions ?? []).map((c) => c.step_position),
+        completions: donePositions,
       },
     });
   } catch (error) {

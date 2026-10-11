@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { logError } from '@/lib/logger';
 import { requireTribeOSPremium } from '@/lib/auth/premium';
 import { filterContactToday, type ContactFilterRow } from '@/lib/tribe-os/contactFilter';
+import { computeCurrentStep } from '@/lib/tribe-os/sequences/helpers';
 
 export async function POST(): Promise<NextResponse> {
   const gate = await requireTribeOSPremium();
@@ -59,7 +60,66 @@ export async function POST(): Promise<NextResponse> {
       }
     }
 
-    // --- b. Autonomy: suggest/auto enrollment ---
+    // --- b. Self-healing: repair current_step from completions ---
+    const { data: activeEnrollments } = await supabase
+      .from('tribe_os_sequence_enrollments')
+      .select('id, sequence_id, current_step, status')
+      .eq('gym_id', gymId)
+      .eq('status', 'active');
+
+    if (activeEnrollments && activeEnrollments.length > 0) {
+      const seqIds = [...new Set(activeEnrollments.map((e) => e.sequence_id))];
+      const enrollIds = activeEnrollments.map((e) => e.id);
+
+      const { data: allSteps } = await supabase
+        .from('tribe_os_sequence_steps')
+        .select('sequence_id, position')
+        .eq('gym_id', gymId)
+        .in('sequence_id', seqIds);
+
+      const stepsBySeq = new Map<string, { position: number }[]>();
+      for (const s of allSteps ?? []) {
+        const arr = stepsBySeq.get(s.sequence_id) ?? [];
+        arr.push({ position: s.position });
+        stepsBySeq.set(s.sequence_id, arr);
+      }
+
+      const { data: allComps } = await supabase
+        .from('tribe_os_step_completions')
+        .select('enrollment_id, step_position')
+        .eq('gym_id', gymId)
+        .in('enrollment_id', enrollIds);
+
+      const compsByEnroll = new Map<string, number[]>();
+      for (const c of allComps ?? []) {
+        const arr = compsByEnroll.get(c.enrollment_id) ?? [];
+        arr.push(c.step_position);
+        compsByEnroll.set(c.enrollment_id, arr);
+      }
+
+      for (const e of activeEnrollments) {
+        const steps = stepsBySeq.get(e.sequence_id) ?? [];
+        if (steps.length === 0) continue;
+        const done = compsByEnroll.get(e.id) ?? [];
+        const computed = computeCurrentStep(steps, done);
+
+        if (computed.finished && e.status === 'active') {
+          await supabase
+            .from('tribe_os_sequence_enrollments')
+            .update({ status: 'completed', current_step: computed.position, updated_at: new Date().toISOString() })
+            .eq('id', e.id)
+            .eq('gym_id', gymId);
+        } else if (computed.position !== e.current_step) {
+          await supabase
+            .from('tribe_os_sequence_enrollments')
+            .update({ current_step: computed.position, updated_at: new Date().toISOString() })
+            .eq('id', e.id)
+            .eq('gym_id', gymId);
+        }
+      }
+    }
+
+    // --- c. Autonomy: suggest/auto enrollment ---
     const { data: settings } = await supabase
       .from('tribe_os_gym_settings')
       .select('sequence_autonomy')

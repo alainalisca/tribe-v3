@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { dueDate, isDue, isOverdue, overdueDays, nextStep, isSequenceFinished, stepChannelToTouchChannel } from './helpers';
+import { dueDate, isDue, isOverdue, overdueDays, nextStep, isSequenceFinished, stepChannelToTouchChannel, computeCurrentStep } from './helpers';
 
 describe('dueDate', () => {
   it('day 0 is the same calendar day as started_at in Bogota', () => {
@@ -103,5 +103,46 @@ describe('stepChannelToTouchChannel', () => {
     expect(stepChannelToTouchChannel('call')).toBe('call');
     expect(stepChannelToTouchChannel('in_person')).toBe('in_person');
     expect(stepChannelToTouchChannel('other')).toBe('other');
+  });
+});
+
+describe('computeCurrentStep', () => {
+  const steps = [{ position: 1 }, { position: 2 }, { position: 3 }];
+
+  it('returns first step when nothing completed', () => {
+    expect(computeCurrentStep(steps, [])).toEqual({ position: 1, finished: false });
+  });
+
+  it('advances to step 2 after step 1 completed', () => {
+    expect(computeCurrentStep(steps, [1])).toEqual({ position: 2, finished: false });
+  });
+
+  it('advances to step 3 after steps 1 and 2 completed', () => {
+    expect(computeCurrentStep(steps, [1, 2])).toEqual({ position: 3, finished: false });
+  });
+
+  it('marks finished when all steps completed', () => {
+    expect(computeCurrentStep(steps, [1, 2, 3])).toEqual({ position: 3, finished: true });
+  });
+
+  it('handles non-contiguous completions (step 1 and 3 done, step 2 not done)', () => {
+    expect(computeCurrentStep(steps, [1, 3])).toEqual({ position: 2, finished: false });
+  });
+
+  it('handles unsorted step positions', () => {
+    const unsorted = [{ position: 3 }, { position: 1 }, { position: 2 }];
+    expect(computeCurrentStep(unsorted, [1])).toEqual({ position: 2, finished: false });
+  });
+
+  it('handles single step sequence', () => {
+    expect(computeCurrentStep([{ position: 1 }], [])).toEqual({ position: 1, finished: false });
+    expect(computeCurrentStep([{ position: 1 }], [1])).toEqual({ position: 1, finished: true });
+  });
+
+  it('works with gaps in positions (1, 3, 5)', () => {
+    const gapped = [{ position: 1 }, { position: 3 }, { position: 5 }];
+    expect(computeCurrentStep(gapped, [1])).toEqual({ position: 3, finished: false });
+    expect(computeCurrentStep(gapped, [1, 3])).toEqual({ position: 5, finished: false });
+    expect(computeCurrentStep(gapped, [1, 3, 5])).toEqual({ position: 5, finished: true });
   });
 });

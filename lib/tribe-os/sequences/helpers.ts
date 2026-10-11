@@ -56,6 +56,17 @@ export function isSequenceFinished<T extends StepPosition>(steps: T[], currentSt
   return nextStep(steps, currentStep) === null;
 }
 
+export function computeCurrentStep<T extends StepPosition>(
+  steps: T[],
+  completedPositions: number[],
+): { position: number; finished: boolean } {
+  const sorted = [...steps].sort((a, b) => a.position - b.position);
+  const doneSet = new Set(completedPositions);
+  const first = sorted.find((s) => !doneSet.has(s.position));
+  if (!first) return { position: sorted.at(-1)?.position ?? 1, finished: true };
+  return { position: first.position, finished: false };
+}
+
 export type StepChannel = 'whatsapp' | 'call' | 'in_person' | 'other';
 export type TouchChannel = 'whatsapp' | 'call' | 'in_person' | 'other';
 

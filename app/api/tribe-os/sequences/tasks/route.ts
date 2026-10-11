@@ -3,8 +3,7 @@ import { z } from 'zod';
 import { logError } from '@/lib/logger';
 import { requireTribeOSPremium } from '@/lib/auth/premium';
 import { getGym } from '@/lib/dal/gyms';
-import { dueDate, isDue, nextStep as findNextStep, isSequenceFinished } from '@/lib/tribe-os/sequences/helpers';
-import { todayBogota } from '@/lib/tribe-os/sequences/helpers';
+import { dueDate, todayBogota, computeCurrentStep } from '@/lib/tribe-os/sequences/helpers';
 
 export async function GET(): Promise<NextResponse> {
   const gate = await requireTribeOSPremium();
@@ -256,19 +255,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         touch_id: touchId,
       });
 
-      if (compErr) {
-        if (compErr.code === '23505') {
-          return NextResponse.json({ success: true, data: { dedupe: true } });
-        }
-        throw compErr;
-      }
-
-      const { data: steps } = await supabase
-        .from('tribe_os_sequence_steps')
-        .select('position')
-        .eq('sequence_id', body.sequence_id ?? '')
-        .eq('gym_id', gymId)
-        .order('position', { ascending: true });
+      const isDedupe = compErr?.code === '23505';
+      if (compErr && !isDedupe) throw compErr;
 
       const { data: enrollment } = await supabase
         .from('tribe_os_sequence_enrollments')
@@ -277,26 +265,58 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         .eq('gym_id', gymId)
         .single();
 
-      if (enrollment && steps) {
-        const seqSteps = steps;
-        const ns = findNextStep(seqSteps, step_position);
+      if (!enrollment) {
+        return NextResponse.json({ success: false, error: 'enrollment_not_found' }, { status: 404 });
+      }
 
-        if (ns) {
-          await supabase
-            .from('tribe_os_sequence_enrollments')
-            .update({ current_step: ns.position, updated_at: new Date().toISOString() })
-            .eq('id', enrollment_id)
-            .eq('gym_id', gymId);
-        } else {
-          await supabase
-            .from('tribe_os_sequence_enrollments')
-            .update({ status: 'completed', updated_at: new Date().toISOString() })
-            .eq('id', enrollment_id)
-            .eq('gym_id', gymId);
+      const { data: steps } = await supabase
+        .from('tribe_os_sequence_steps')
+        .select('position')
+        .eq('sequence_id', enrollment.sequence_id)
+        .eq('gym_id', gymId)
+        .order('position', { ascending: true });
+
+      if (!steps || steps.length === 0) {
+        return NextResponse.json({ success: false, error: 'no_steps' }, { status: 400 });
+      }
+
+      const { data: allCompletions } = await supabase
+        .from('tribe_os_step_completions')
+        .select('step_position')
+        .eq('enrollment_id', enrollment_id)
+        .eq('gym_id', gymId);
+
+      const donePositions = (allCompletions ?? []).map((c) => c.step_position);
+      const computed = computeCurrentStep(steps, donePositions);
+
+      const now = new Date().toISOString();
+      if (computed.finished) {
+        const { data: updated, error: upErr } = await supabase
+          .from('tribe_os_sequence_enrollments')
+          .update({ status: 'completed', current_step: computed.position, updated_at: now })
+          .eq('id', enrollment_id)
+          .eq('gym_id', gymId)
+          .select('id');
+        if (upErr) throw upErr;
+        if (!updated || updated.length === 0) {
+          logError('enrollment advance matched 0 rows', { enrollment_id, gymId });
+          return NextResponse.json({ success: false, error: 'advance_failed' }, { status: 500 });
+        }
+      } else {
+        const { data: updated, error: upErr } = await supabase
+          .from('tribe_os_sequence_enrollments')
+          .update({ current_step: computed.position, updated_at: now })
+          .eq('id', enrollment_id)
+          .eq('gym_id', gymId)
+          .select('id');
+        if (upErr) throw upErr;
+        if (!updated || updated.length === 0) {
+          logError('enrollment advance matched 0 rows', { enrollment_id, gymId });
+          return NextResponse.json({ success: false, error: 'advance_failed' }, { status: 500 });
         }
       }
 
-      return NextResponse.json({ success: true, data: { touchId } });
+      return NextResponse.json({ success: true, data: { touchId, dedupe: isDedupe } });
     }
 
     if (actionType === 'approve') {
