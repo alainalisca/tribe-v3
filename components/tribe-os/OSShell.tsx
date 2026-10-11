@@ -254,9 +254,14 @@ export default function OSShell({ children }: { children: React.ReactNode }) {
         }`}
       >
         {/* Wordmark + close-button on mobile */}
-        <div className="px-6 py-6 flex items-center gap-3 border-b border-tribe-dark-80">
-          <span className="text-xl font-black tracking-tight text-white">{s.wordmark}</span>
-          <span className="text-xs font-semibold tracking-widest text-tribe-dark-60 uppercase">{s.wordmarkSub}</span>
+        <div className="px-6 py-6 flex items-center border-b border-tribe-dark-80">
+          {/* Brand lockup: one image, /tribe-os-wordmark.png. It is the
+              official Tribe. wordmark with a white capital OS set in the
+              wordmark's own typeface (Fira Sans Bold) at full cap height,
+              lime only on the dot, same treatment as the Tribe.TV logo.
+              Do not rebuild any part of it as live text. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/tribe-os-wordmark.png" alt="Tribe.OS" className="h-8 w-auto block" />
           <button
             type="button"
             onClick={() => setMobileNavOpen(false)}
