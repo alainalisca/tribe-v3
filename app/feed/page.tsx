@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { appUrl } from '@/lib/http/siteUrl';
 import { logError } from '@/lib/logger';
 import { showError } from '@/lib/toast';
 import { useRouter } from 'next/navigation';
@@ -317,7 +318,7 @@ export default function FeedPage() {
   };
 
   const sharePost = async (postId: string) => {
-    const url = `${window.location.origin}/feed/${postId}/`;
+    const url = appUrl(`/feed/${postId}/`);
     try {
       await navigator.clipboard.writeText(url);
       setShareMessage(postId);

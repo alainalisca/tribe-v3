@@ -2,6 +2,7 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { athletesGateAllows, isAthletesGatedPath, GATED_NOT_FOUND_PATH } from '@/lib/features/athleteValueGate';
+import { legacyHostRedirect } from '@/lib/http/legacyHostRedirect';
 
 /**
  * Tribe middleware does three things, in order:
@@ -302,6 +303,20 @@ function applySecurityHeaders(response: NextResponse): NextResponse {
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  // T-DOMAIN1: old tribe-v3.vercel.app links 301 to the same page on
+  // tribelatam.com. First, so it never depends on auth. The native app,
+  // webhooks, AASA and preview bots are exempt; see lib/http/legacyHostRedirect.ts.
+  const legacyTarget = legacyHostRedirect({
+    host: request.headers.get('host'),
+    method: request.method,
+    pathname,
+    search: request.nextUrl.search,
+    userAgent: request.headers.get('user-agent'),
+  });
+  if (legacyTarget) {
+    return applySecurityHeaders(NextResponse.redirect(legacyTarget, 301));
+  }
 
   // Static asset short-circuit.
   if (pathname.match(/\.\w+$/)) {

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { appUrl } from '@/lib/http/siteUrl';
 import Link from 'next/link';
 import { LogOut, Trash2, MessageCircle, Lock } from 'lucide-react';
 import { downloadCalendarEvent, getGoogleCalendarUrl } from '@/lib/calendar';
@@ -266,7 +267,7 @@ export default function ActionButtons({
             <a
               href={getGoogleCalendarUrl({
                 ...calendarData,
-                url: `${typeof window !== 'undefined' ? window.location.origin : ''}/session/${session.id}/`,
+                url: appUrl(`/session/${session.id}/`),
               })}
               target="_blank"
               rel="noopener noreferrer"
@@ -286,7 +287,7 @@ export default function ActionButtons({
             {/* Secondary: Apple Calendar via .ics — desktop Safari / macOS */}
             <button
               onClick={() => {
-                downloadCalendarEvent({ ...calendarData, url: `${window.location.origin}/session/${session.id}/` });
+                downloadCalendarEvent({ ...calendarData, url: appUrl(`/session/${session.id}/`) });
                 showInfo(t('addToCalendarIcsDownloaded'));
                 trackEvent('session_calendar_added', {
                   session_id: session.id,

@@ -12,6 +12,7 @@
  * it in a bio is addressed to the owner.
  */
 import { useState } from 'react';
+import { appUrl } from '@/lib/http/siteUrl';
 import { Link2, Check } from 'lucide-react';
 import { useTranslations } from '@/lib/i18n/useTranslations';
 import { haptic } from '@/lib/haptics';
@@ -24,7 +25,7 @@ export default function GymPublicLinkButton({ slug }: { slug: string | null | un
   // copy, so nothing to show.
   if (!slug) return null;
 
-  const url = `${typeof window === 'undefined' ? '' : window.location.origin}/g/${slug}/`;
+  const url = appUrl(`/g/${slug}/`);
 
   async function copy() {
     haptic('light');

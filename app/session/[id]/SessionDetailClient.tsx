@@ -2,6 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { appUrl } from '@/lib/http/siteUrl';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Share2 } from 'lucide-react';
@@ -379,11 +380,11 @@ export default function SessionDetailPage() {
                   const sessionDate = new Date(`${d.session!.date}T${d.session!.start_time || '00:00'}`);
                   downloadCalendarEvent({
                     title: `${d.session!.sport} — ${d.session!.title || 'Tribe Session'}`,
-                    description: `Session with ${d.session!.creator?.name || 'Instructor'} on Tribe.\n${window.location.origin}/session/${d.session!.id}/`,
+                    description: `Session with ${d.session!.creator?.name || 'Instructor'} on Tribe.\n${appUrl(`/session/${d.session!.id}/`)}`,
                     startDate: sessionDate,
                     durationMinutes: d.session!.duration || 60,
                     location: d.session!.location || undefined,
-                    url: `${window.location.origin}/session/${d.session!.id}/`,
+                    url: appUrl(`/session/${d.session!.id}/`),
                   });
                   trackEvent('session_calendar_added', { session_id: d.session!.id, method: 'ics' });
                 }}

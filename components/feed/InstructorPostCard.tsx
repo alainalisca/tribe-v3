@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { appUrl } from '@/lib/http/siteUrl';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Heart, MessageCircle, Share2, Pin, ShieldCheck, Play } from 'lucide-react';
@@ -133,10 +134,7 @@ export default function InstructorPostCard({ post, viewerId, language }: Instruc
   };
 
   const handleShare = async () => {
-    const url =
-      typeof window !== 'undefined'
-        ? `${window.location.origin}/feed/#${post.id}`
-        : `https://tribe.app/feed/#${post.id}`;
+    const url = appUrl(`/feed/#${post.id}`);
     const nav: Navigator & {
       share?: (d: { title?: string; text?: string; url?: string }) => Promise<void>;
     } = typeof navigator !== 'undefined' ? (navigator as Navigator) : ({} as Navigator);

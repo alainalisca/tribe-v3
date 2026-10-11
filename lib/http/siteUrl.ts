@@ -6,6 +6,11 @@
  * it, and `tribe-v3.vercel.app` keeps serving production with NO redirect
  * because printed QR codes point at it and a printed code cannot be reissued.
  *
+ * 2026-10-11: superseded. Page views on tribe-v3.vercel.app now 301 to the same
+ * path and query on tribelatam.com, which keeps printed codes working. The
+ * native app, webhooks, the AASA and link-preview bots are still served in
+ * place; see lib/http/legacyHostRedirect.ts.
+ *
  * ── WHY THIS MODULE EXISTS: TWO ENV VARS, ONE OF THEM DEAD ──
  *
  * The repo read TWO variables for the same question.

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { appUrl } from '@/lib/http/siteUrl';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -123,8 +124,7 @@ export default function MyTrainingPage() {
     if (!stats) return;
     setSharing(true);
     const shareText = t.shareMessage(stats.totalSessions);
-    const shareUrl =
-      typeof window !== 'undefined' ? `${window.location.origin}/my-training/` : 'https://tribe.app/my-training/';
+    const shareUrl = appUrl('/my-training/');
     const nav = typeof navigator !== 'undefined' ? navigator : undefined;
 
     // Helper: copy to clipboard as the universal fallback.
