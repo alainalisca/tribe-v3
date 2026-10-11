@@ -47,6 +47,10 @@
     {
       "path": "/api/cron/tribe-os/reconcile-counters/",
       "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/cron/newsletter-contacts/",
+      "schedule": "41 6 * * *"
     }
   ]
 }
