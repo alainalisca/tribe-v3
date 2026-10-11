@@ -14,8 +14,8 @@ android {
         applicationId "prod.tribe.android"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 29
-        versionName "2.6.4"
+        versionCode 30
+        versionName "2.6.5"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
@@ -45,8 +45,15 @@ android {
     buildTypes {
         release {
             signingConfig signingConfigs.release
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            // R8 code shrinking. Google Play requires it for new releases from
+            // February 2027. Capacitor's own consumer rules keep every plugin
+            // class and its @PluginMethod methods, which the JS bridge calls by
+            // name; proguard-rules.pro adds what those rules do not cover.
+            // The bundle embeds the R8 map (BUNDLE-METADATA/.../proguard.map),
+            // so Play Console de-obfuscates crash reports automatically.
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
 }
