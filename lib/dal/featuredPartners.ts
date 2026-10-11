@@ -350,26 +350,39 @@ export async function updatePartnerTier(
 
 // --- Write operations ---
 
-type PartnerMetric = 'total_impressions' | 'total_clicks' | 'total_bookings';
+/**
+ * The two counters a client may bump (migration 217's whitelist). total_bookings
+ * is deliberately absent: a booking must be derived server-side from a real
+ * participation, not added by whoever loads the page.
+ */
+export type PartnerMetric = 'total_impressions' | 'total_clicks';
 
-/** Increment a partner metric (impressions, clicks, bookings) */
+/**
+ * +1 to one ACTIVE partner's impressions or clicks.
+ *
+ * T-PARTNER-METRIC1: this used to call rpc('increment_counter', {table_name,
+ * row_id, column_name}), a function that was never created, so every banner
+ * impression and click since April was lost and each one logged an error. A
+ * generic (table, column, row) incrementer callable by anon would let anyone
+ * bump any column of any table; increment_partner_metric (migration 217) names
+ * the table and the two columns itself and refuses anything else.
+ *
+ * Fire-and-forget at the call sites; a failure is logged, never surfaced.
+ */
 export async function incrementPartnerMetric(
   supabase: SupabaseClient,
   partnerId: string,
   metric: PartnerMetric
 ): Promise<DalResult<null>> {
   try {
-    const { error } = await supabase.rpc('increment_counter', {
-      table_name: 'featured_partners',
-      row_id: partnerId,
-      column_name: metric,
+    const { error } = await supabase.rpc('increment_partner_metric', {
+      p_partner_id: partnerId,
+      p_metric: metric,
     });
-
-    // Fallback: log and move on if RPC doesn't exist yet
     if (error) {
-      logError(error, { action: 'incrementPartnerMetric', sessionId: partnerId });
+      logError(error, { action: 'incrementPartnerMetric', partnerId, metric });
+      return { success: false, error: error.message };
     }
-
     return { success: true, data: null };
   } catch (error) {
     logError(error, { action: 'incrementPartnerMetric' });
