@@ -170,10 +170,15 @@ export function computeClassStats(visits: Visit[]): ClassStat[] {
     .sort((a, b) => b.visits - a.visits);
 }
 
+export function stripCoachPrefix(name: string | null): string {
+  if (name === null) return 'Sin coach asignado';
+  return name.replace(/^(Coach|Profe)\s+/i, '');
+}
+
 export function computeCoachStats(visits: Visit[]): CoachStat[] {
   const map = new Map<string, { visits: number; members: Set<string> }>();
   for (const v of visits) {
-    const name = v.coach_name ?? '(Sin coach)';
+    const name = stripCoachPrefix(v.coach_name);
     const entry = map.get(name) ?? { visits: 0, members: new Set<string>() };
     entry.visits++;
     entry.members.add(v.client_id);
@@ -185,7 +190,11 @@ export function computeCoachStats(visits: Visit[]): CoachStat[] {
       visits,
       uniqueMembers: members.size,
     }))
-    .sort((a, b) => b.visits - a.visits);
+    .sort((a, b) => {
+      if (a.coachName === 'Sin coach asignado') return 1;
+      if (b.coachName === 'Sin coach asignado') return -1;
+      return b.visits - a.visits;
+    });
 }
 
 export interface ContactEffect {
@@ -291,4 +300,28 @@ export function computeActiveMembers(
     newThisPeriod: newCount,
     returningThisPeriod: returningCount,
   };
+}
+
+export function niceAxisTicks(maxValue: number): number[] {
+  if (maxValue <= 0) return [0];
+  const rough = maxValue / 5;
+  const mag = Math.pow(10, Math.floor(Math.log10(rough)));
+  const step = Math.max(1, mag * (([1, 2, 5, 10] as const).find((s) => s * mag >= rough) ?? 10));
+  const ticks: number[] = [];
+  for (let v = 0; v <= maxValue + step * 0.01; v += step) {
+    ticks.push(Math.round(v));
+  }
+  if (ticks[ticks.length - 1] < maxValue) ticks.push(ticks[ticks.length - 1] + Math.round(step));
+  return ticks;
+}
+
+export function computeVisitChangePct(attendance: WeeklyAttendance[]): number | null {
+  if (attendance.length < 3) return null;
+  const completed = attendance.slice(0, -1);
+  const mid = Math.floor(completed.length / 2);
+  const currentHalf = completed.slice(mid);
+  const prevHalf = completed.slice(0, mid);
+  const currentTotal = currentHalf.reduce((s, w) => s + w.totalVisits, 0);
+  const prevTotal = prevHalf.reduce((s, w) => s + w.totalVisits, 0);
+  return prevTotal > 0 ? Math.round(((currentTotal - prevTotal) / prevTotal) * 100) : null;
 }

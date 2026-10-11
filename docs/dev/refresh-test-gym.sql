@@ -17,13 +17,17 @@
 
 -- ── 0. Compute shift_days ──────────────────────────────────────────
 -- Run this first to get the value for :shift_days.
+-- shift_days MUST be a multiple of 7 so that weekday patterns
+-- (e.g. the gym is closed on Sundays) land on the same weekday
+-- after the shift. Integer division by 7 then ×7 rounds DOWN.
 --
 -- SELECT
---   (current_date AT TIME ZONE 'America/Bogota')::date - interval '1 day'
+--   (
+--     ((current_date AT TIME ZONE 'America/Bogota')::date - 1)
 --     - (SELECT max(visited_at::date) FROM client_visits
 --        WHERE gym_id = 'd585af30-5ed5-448b-bd9c-ab82b2e99970'
 --          AND source = 'mira_csv')
---   AS shift_days;
+--   ) / 7 * 7 AS shift_days;
 
 -- ── 1. Dry-run: preview affected rows ─────────────────────────────
 --

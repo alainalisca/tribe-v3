@@ -11,6 +11,7 @@ import {
   computeCoachStats,
   computeContactEffect,
   computeActiveMembers,
+  computeVisitChangePct,
   type Visit,
   type Touch,
 } from '@/lib/tribe-os/analytics';
@@ -147,11 +148,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const contactEffect = computeContactEffect(touches, visits, planValues, buckets);
     const activeMembers = computeActiveMembers(visits, today, allClientIds, priorClients);
 
-    const currentHalf = attendance.slice(Math.floor(attendance.length / 2));
-    const prevHalf = attendance.slice(0, Math.floor(attendance.length / 2));
-    const currentTotal = currentHalf.reduce((s, w) => s + w.totalVisits, 0);
-    const prevTotal = prevHalf.reduce((s, w) => s + w.totalVisits, 0);
-    const visitChangePct = prevTotal > 0 ? Math.round(((currentTotal - prevTotal) / prevTotal) * 100) : null;
+    const visitChangePct = computeVisitChangePct(attendance);
 
     return NextResponse.json({
       success: true,

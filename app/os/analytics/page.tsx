@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { Fragment, useCallback, useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { AlertCircle, BarChart3, MessageCircle, Users, Clock, Dumbbell } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
@@ -46,6 +46,7 @@ const copy = {
     returningMembers: 'returning',
     contactsLabel: 'Contacts',
     cameBackLabel: 'Came back',
+    inProgress: 'In progress',
   },
   es: {
     title: 'Analítica',
@@ -79,6 +80,7 @@ const copy = {
     returningMembers: 'recurrentes',
     contactsLabel: 'Contactos',
     cameBackLabel: 'Volvieron',
+    inProgress: 'En curso',
   },
 } as const;
 
@@ -221,7 +223,7 @@ export default function AnalyticsPage() {
                 <MessageCircle className="w-4 h-4 text-[#B2E269]" />
                 {s.contactEffectTitle}
               </h2>
-              {data.contact_effect.touches < 5 ? (
+              {data.contact_effect.touches === 0 ? (
                 <p className="text-sm text-gray-500 italic py-4">{s.contactEmpty}</p>
               ) : (
                 <>
@@ -235,17 +237,22 @@ export default function AnalyticsPage() {
                       sub={s.perMonth}
                     />
                   </div>
-                  <AnalyticsCharts
-                    data={data.contact_effect.weekly.map((w) => ({
-                      label: w.label,
-                      value1: w.touches,
-                      value2: w.cameBack,
-                    }))}
-                    label1={s.contactsLabel}
-                    label2={s.cameBackLabel}
-                    color1="#B2E269"
-                    color2="#232A31"
-                  />
+                  {data.contact_effect.touches < 5 && (
+                    <p className="text-sm text-gray-500 italic">{s.contactEmpty}</p>
+                  )}
+                  {data.contact_effect.touches >= 5 && (
+                    <AnalyticsCharts
+                      data={data.contact_effect.weekly.map((w) => ({
+                        label: w.label,
+                        value1: w.touches,
+                        value2: w.cameBack,
+                      }))}
+                      label1={s.contactsLabel}
+                      label2={s.cameBackLabel}
+                      color1="#B2E269"
+                      color2="#232A31"
+                    />
+                  )}
                 </>
               )}
             </section>
@@ -269,10 +276,11 @@ export default function AnalyticsPage() {
                 </p>
               )}
               <AnalyticsCharts
-                data={data.attendance.weekly.map((w) => ({
-                  label: w.label,
+                data={data.attendance.weekly.map((w, i) => ({
+                  label: i === data!.attendance.weekly.length - 1 ? s.inProgress : w.label,
                   value1: w.totalVisits,
                   value2: w.uniqueMembers,
+                  isPartial: i === data!.attendance.weekly.length - 1,
                 }))}
                 label1={s.totalVisits}
                 label2={s.uniqueMembers}
@@ -298,8 +306,8 @@ export default function AnalyticsPage() {
                     </div>
                   ))}
                   {Array.from({ length: 7 }).map((_, dow) => (
-                    <>
-                      <div key={`dow-${dow}`} className="text-[10px] text-gray-500 font-medium leading-5 pr-1 text-right">
+                    <Fragment key={dow}>
+                      <div className="text-[10px] text-gray-500 font-medium leading-5 pr-1 text-right">
                         {dows[dow]}
                       </div>
                       {hours.map((h) => {
@@ -316,7 +324,7 @@ export default function AnalyticsPage() {
                           />
                         );
                       })}
-                    </>
+                    </Fragment>
                   ))}
                 </div>
               </div>

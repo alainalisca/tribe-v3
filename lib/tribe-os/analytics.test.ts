@@ -10,8 +10,12 @@ import {
   computeCoachStats,
   computeActiveMembers,
   computePeakHours,
+  stripCoachPrefix,
+  niceAxisTicks,
+  computeVisitChangePct,
   type Visit,
   type Touch,
+  type WeeklyAttendance,
 } from './analytics';
 
 function makeVisit(overrides: Partial<Visit> = {}): Visit {
@@ -216,6 +220,116 @@ describe('computeActiveMembers', () => {
     const result = computeActiveMembers(visits, '2026-10-10', allIds, priorIds);
     expect(result.newThisPeriod).toBe(1);
     expect(result.returningThisPeriod).toBe(0);
+  });
+});
+
+describe('stripCoachPrefix', () => {
+  it('strips "Coach " prefix', () => {
+    expect(stripCoachPrefix('Coach Leo')).toBe('Leo');
+  });
+
+  it('strips "Profe " prefix', () => {
+    expect(stripCoachPrefix('Profe Ana')).toBe('Ana');
+  });
+
+  it('strips case-insensitively', () => {
+    expect(stripCoachPrefix('coach María')).toBe('María');
+  });
+
+  it('returns name unchanged without prefix', () => {
+    expect(stripCoachPrefix('Leo')).toBe('Leo');
+  });
+
+  it('returns "Sin coach asignado" for null', () => {
+    expect(stripCoachPrefix(null)).toBe('Sin coach asignado');
+  });
+});
+
+describe('computeCoachStats with prefixes and null', () => {
+  it('strips prefixes and sorts null coach last', () => {
+    const visits: Visit[] = [
+      makeVisit({ client_id: 'c1', coach_name: 'Coach Leo' }),
+      makeVisit({ client_id: 'c2', coach_name: 'Profe Ana' }),
+      makeVisit({ client_id: 'c3', coach_name: null }),
+    ];
+    const result = computeCoachStats(visits);
+    expect(result[0].coachName).toBe('Leo');
+    expect(result[1].coachName).toBe('Ana');
+    expect(result[result.length - 1].coachName).toBe('Sin coach asignado');
+  });
+});
+
+describe('niceAxisTicks', () => {
+  it('returns [0] for zero max', () => {
+    expect(niceAxisTicks(0)).toEqual([0]);
+  });
+
+  it('produces ascending ticks for typical attendance', () => {
+    const ticks = niceAxisTicks(170);
+    expect(ticks).toEqual([0, 50, 100, 150, 200]);
+    for (let i = 1; i < ticks.length; i++) {
+      expect(ticks[i]).toBeGreaterThan(ticks[i - 1]);
+    }
+  });
+
+  it('covers the max value', () => {
+    const ticks = niceAxisTicks(155);
+    expect(ticks[ticks.length - 1]).toBeGreaterThanOrEqual(155);
+  });
+
+  it('handles small counts', () => {
+    const ticks = niceAxisTicks(3);
+    expect(ticks[0]).toBe(0);
+    expect(ticks[ticks.length - 1]).toBeGreaterThanOrEqual(3);
+    for (let i = 1; i < ticks.length; i++) {
+      expect(ticks[i]).toBeGreaterThan(ticks[i - 1]);
+    }
+  });
+});
+
+describe('computeVisitChangePct', () => {
+  it('excludes last (partial) week from comparison', () => {
+    const attendance: WeeklyAttendance[] = [
+      { weekStart: 'w1', label: 'w1', totalVisits: 100, uniqueMembers: 50 },
+      { weekStart: 'w2', label: 'w2', totalVisits: 120, uniqueMembers: 55 },
+      { weekStart: 'w3', label: 'w3', totalVisits: 110, uniqueMembers: 52 },
+      { weekStart: 'w4', label: 'w4', totalVisits: 30, uniqueMembers: 20 },
+    ];
+    const pct = computeVisitChangePct(attendance);
+    // completed = [w1(100), w2(120), w3(110)], mid=1
+    // prev = [w1] = 100, current = [w2, w3] = 230
+    expect(pct).toBe(130);
+  });
+
+  it('returns null with fewer than 3 weeks', () => {
+    const attendance: WeeklyAttendance[] = [
+      { weekStart: 'w1', label: 'w1', totalVisits: 100, uniqueMembers: 50 },
+      { weekStart: 'w2', label: 'w2', totalVisits: 30, uniqueMembers: 20 },
+    ];
+    expect(computeVisitChangePct(attendance)).toBeNull();
+  });
+});
+
+describe('computeContactEffect edge cases', () => {
+  const buckets = weekBuckets('2026-10-10', 4);
+  const planValues = new Map<string, number | null>([['c1', 12000000]]);
+
+  it('returns zero touches when no touches provided', () => {
+    const result = computeContactEffect([], [], planValues, buckets);
+    expect(result.touchesInRange).toBe(0);
+    expect(result.cameBackCount).toBe(0);
+    expect(result.weeklyTouches.every((w) => w.touches === 0)).toBe(true);
+  });
+
+  it('returns correct counts with 1–4 touches', () => {
+    const touches: Touch[] = [
+      makeTouch({ client_id: 'c1', created_at: '2026-10-01T12:00:00Z' }),
+      makeTouch({ client_id: 'c2', created_at: '2026-10-02T12:00:00Z' }),
+    ];
+    const visits: Visit[] = [makeVisit({ client_id: 'c1', visited_at: '2026-10-05T14:00:00Z' })];
+    const result = computeContactEffect(touches, visits, planValues, buckets);
+    expect(result.touchesInRange).toBe(2);
+    expect(result.cameBackCount).toBe(1);
   });
 });
 
