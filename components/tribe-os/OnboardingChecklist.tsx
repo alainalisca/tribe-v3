@@ -53,7 +53,7 @@ const copy = {
     addClient: 'Add your first client',
     addClientDone: 'First client added',
     addClientHint:
-      'Build your roster so attendance and revenue start tracking. Add manually or import from a CSV — works the same either way.',
+      'Build your roster so attendance and revenue start tracking. Add manually or import from a CSV, works the same either way.',
     addClientSecondaryLabel: 'Import CSV',
     addClientSecondaryHref: '/os/members',
     recordAttendance: 'Record your first attendance',
@@ -71,7 +71,7 @@ const copy = {
     addClient: 'Agrega tu primer cliente',
     addClientDone: 'Primer cliente agregado',
     addClientHint:
-      'Construye tu lista para empezar a registrar asistencia e ingresos. Agrega manualmente o importa desde un CSV — ambos funcionan igual.',
+      'Construye tu lista para empezar a registrar asistencia e ingresos. Agrega manualmente o importa desde un CSV, ambos funcionan igual.',
     addClientSecondaryLabel: 'Importar CSV',
     addClientSecondaryHref: '/os/members',
     recordAttendance: 'Registra tu primera asistencia',

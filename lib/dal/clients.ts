@@ -680,6 +680,10 @@ export {
   type RefundAttendanceInput,
   type RefundedAttendanceSnapshot,
   type RefundAttendanceError,
+  getClientVisitsSummary,
+  listVisitsForClient,
+  type ClientVisitRow,
+  type ClientVisitsSummary,
 } from './clients.attendance';
 
 // ------------------------------------------------------------------

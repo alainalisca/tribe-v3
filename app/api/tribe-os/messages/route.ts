@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { logError } from '@/lib/logger';
 import { requireTribeOSPremium } from '@/lib/auth/premium';
 import { bogotaToday } from '@/lib/tribe-os/dates';
+import { computeContactSummary28d } from '@/lib/tribe-os/analytics';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 const PAGE_SIZE = 1000;
@@ -171,10 +172,11 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       enriched = enriched.filter((t) => t.outcome === outcome);
     }
 
-    const monthTouches = enriched.filter((t) => t.created_at >= monthStart + 'T00:00:00Z');
-    const monthTotal = monthTouches.length;
-    const monthCameBack = monthTouches.filter((t) => t.outcome === 'came_back').length;
-    const conversionPct = monthTotal > 0 ? Math.round((monthCameBack / monthTotal) * 100) : 0;
+    const summary28d = computeContactSummary28d(
+      touches.map((t) => ({ client_id: t.client_id, created_at: t.created_at })),
+      visits.map((v) => ({ client_id: v.client_id, visited_at: v.visited_at })),
+      today,
+    );
 
     const totalFiltered = enriched.length;
     const paginated = enriched.slice(from, from + perPage);
@@ -187,9 +189,10 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         page,
         per_page: perPage,
         summary: {
-          month_total: monthTotal,
-          month_came_back: monthCameBack,
-          conversion_pct: conversionPct,
+          month_total: summary28d.total,
+          month_came_back: summary28d.came_back,
+          conversion_pct: summary28d.conversion_pct,
+          conversion_label: summary28d.conversion_label,
         },
       },
     });

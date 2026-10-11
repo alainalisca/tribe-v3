@@ -40,7 +40,7 @@ const stepsByLanguage = {
     {
       Icon: Tag,
       title: 'Status tells you who needs attention',
-      body: 'Set each client\'s status — Active, Lead, Lapsed, or Inactive. The dashboard automatically surfaces "Active" clients you haven\'t seen lately so you know who to check in with.',
+      body: 'Set each client\'s status (Active, Lead, Lapsed, or Inactive). The dashboard automatically surfaces "Active" clients you haven\'t seen lately so you know who to check in with.',
     },
     {
       Icon: Filter,
@@ -57,7 +57,7 @@ const stepsByLanguage = {
     {
       Icon: Tag,
       title: 'El estado te dice a quién atender',
-      body: 'Marca el estado de cada cliente — Activo, Prospecto, Suspendido o Inactivo. El panel resalta automáticamente los clientes "Activos" que no has visto últimamente para que sepas a quién contactar.',
+      body: 'Marca el estado de cada cliente (Activo, Prospecto, Suspendido o Inactivo). El panel resalta automáticamente los clientes "Activos" que no has visto últimamente para que sepas a quién contactar.',
     },
     {
       Icon: Filter,

@@ -23,7 +23,7 @@ const copy = {
     outcomeCameBack: (d: number) => `Came back in ${d}d`,
     outcomeWaiting: 'Waiting',
     outcomeNoResponse: 'No response',
-    summaryContacts: 'Contacts this month',
+    summaryContacts: 'Last 28 days',
     summaryCameBack: 'Came back',
     summaryConversion: 'Conversion',
     searchPlaceholder: 'Search member…',
@@ -48,7 +48,7 @@ const copy = {
     outcomeCameBack: (d: number) => `Volvió en ${d} días`,
     outcomeWaiting: 'Esperando',
     outcomeNoResponse: 'Sin respuesta',
-    summaryContacts: 'Contactos este mes',
+    summaryContacts: 'Últimos 28 días',
     summaryCameBack: 'Volvieron',
     summaryConversion: 'Conversión',
     searchPlaceholder: 'Buscar miembro…',
@@ -85,6 +85,7 @@ interface Summary {
   month_total: number;
   month_came_back: number;
   conversion_pct: number;
+  conversion_label: string | null;
 }
 
 interface MessagesData {
@@ -205,7 +206,9 @@ export default function MessagesPage() {
             <p className="text-[11px] text-gray-500">{s.summaryCameBack}</p>
           </div>
           <div className="bg-white rounded-xl border border-gray-200 p-3 text-center">
-            <p className="text-2xl font-bold text-gray-900">{data.summary.conversion_pct}%</p>
+            <p className="text-2xl font-bold text-gray-900">
+              {data.summary.conversion_label ?? `${data.summary.conversion_pct}%`}
+            </p>
             <p className="text-[11px] text-gray-500">{s.summaryConversion}</p>
           </div>
         </div>

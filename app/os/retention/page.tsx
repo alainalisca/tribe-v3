@@ -208,8 +208,12 @@ export default function RetentionPage() {
     }
   }, []);
 
+  const [sendingTouch, setSendingTouch] = useState<string | null>(null);
+
   const recordTouch = useCallback(
     async (clientId: string, channel: 'whatsapp' | 'call' | 'in_person' | 'other', note?: string) => {
+      if (sendingTouch) return;
+      setSendingTouch(clientId);
       try {
         const res = await fetch('/api/tribe-os/retention/touches', {
           method: 'POST',
@@ -221,9 +225,12 @@ export default function RetentionPage() {
           trackEvent(channel === 'whatsapp' ? 'tribe_os_retention_touch_whatsapp' : 'tribe_os_retention_touch_manual');
           await fetchScores();
         }
-      } catch {}
+      } catch {
+      } finally {
+        setSendingTouch(null);
+      }
     },
-    [fetchScores]
+    [fetchScores, sendingTouch]
   );
 
   const undoTouch = useCallback(
@@ -381,6 +388,7 @@ export default function RetentionPage() {
                       s={s}
                       onTouch={recordTouch}
                       onDraft={(member) => setDraftTarget({ member })}
+                      disabled={!!sendingTouch}
                     />
                   ))}
                 </div>
@@ -420,6 +428,7 @@ export default function RetentionPage() {
                         s={s}
                         onTouch={recordTouch}
                         onDraft={(member) => setDraftTarget({ member })}
+                        disabled={!!sendingTouch}
                       />
                     ))}
                   </div>
@@ -534,12 +543,14 @@ function MemberCard({
   s,
   onTouch,
   onDraft,
+  disabled,
 }: {
   member: MemberRow;
   language: 'en' | 'es';
   s: (typeof copy)['en'] | (typeof copy)['es'];
   onTouch: (clientId: string, channel: Channel, note?: string) => void;
   onDraft: (member: MemberRow) => void;
+  disabled?: boolean;
 }) {
   const [picking, setPicking] = useState(false);
   const [note, setNote] = useState('');
@@ -555,6 +566,7 @@ function MemberCard({
     .join(' · ');
 
   const pickChannel = (ch: Channel) => {
+    if (disabled) return;
     const trimmed = note.trim();
     setPicking(false);
     setNote('');
@@ -604,22 +616,25 @@ function MemberCard({
           <div className="flex items-center gap-1">
             <button
               type="button"
+              disabled={disabled}
               onClick={() => pickChannel('whatsapp')}
-              className="px-2 py-1 text-[11px] font-medium rounded-tribe bg-tribe-green-50 text-tribe-green-dark hover:bg-tribe-green transition-colors"
+              className="px-2 py-1 text-[11px] font-medium rounded-tribe bg-tribe-green-50 text-tribe-green-dark hover:bg-tribe-green transition-colors disabled:opacity-40"
             >
               {s.channelWhatsapp}
             </button>
             <button
               type="button"
+              disabled={disabled}
               onClick={() => pickChannel('call')}
-              className="px-2 py-1 text-[11px] font-medium rounded-tribe bg-gray-100 text-tribe-dark hover:bg-gray-200 transition-colors"
+              className="px-2 py-1 text-[11px] font-medium rounded-tribe bg-gray-100 text-tribe-dark hover:bg-gray-200 transition-colors disabled:opacity-40"
             >
               {s.channelCall}
             </button>
             <button
               type="button"
+              disabled={disabled}
               onClick={() => pickChannel('in_person')}
-              className="px-2 py-1 text-[11px] font-medium rounded-tribe bg-gray-100 text-tribe-dark hover:bg-gray-200 transition-colors"
+              className="px-2 py-1 text-[11px] font-medium rounded-tribe bg-gray-100 text-tribe-dark hover:bg-gray-200 transition-colors disabled:opacity-40"
             >
               {s.channelInPerson}
             </button>

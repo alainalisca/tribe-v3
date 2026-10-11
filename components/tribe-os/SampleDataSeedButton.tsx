@@ -52,7 +52,7 @@ const copy = {
       'Drops 10 sample clients + 12 sessions + ~50 attendance rows into your gym so you can demo Tribe.OS end-to-end. Refuses to run when your gym already has clients.',
     dialogTitle: 'Seed sample data?',
     dialogBody:
-      'This adds 10 clients (tagged "sample-data"), 12 sessions across 3 weekly series, and ~50 attendance rows distributed to exercise the AI engine. The pattern is deliberately shaped so all four insight types — churn risk, retention opportunity, revenue, growth — will fire when you run the intelligence engine afterward.',
+      'This adds 10 clients (tagged "sample-data"), 12 sessions across 3 weekly series, and ~50 attendance rows distributed to exercise the AI engine. The pattern is deliberately shaped so all four insight types (churn risk, retention opportunity, revenue, growth) will fire when you run the intelligence engine afterward.',
     dialogConfirm: 'Yes, seed it',
     dialogCancel: 'Cancel',
     running: 'Seeding…',
@@ -82,7 +82,7 @@ const copy = {
       'Crea 10 clientes + 12 sesiones + ~50 asistencias en tu gym para demostrar Tribe.OS de extremo a extremo. Se niega a ejecutarse si tu gym ya tiene clientes.',
     dialogTitle: '¿Generar datos de muestra?',
     dialogBody:
-      'Agrega 10 clientes (con la etiqueta "sample-data"), 12 sesiones en 3 series semanales, y ~50 asistencias diseñadas para ejercitar el motor de IA. El patrón está hecho para que los 4 tipos de insight — riesgo de abandono, oportunidad de retención, ingresos, crecimiento — disparen al ejecutar el motor.',
+      'Agrega 10 clientes (con la etiqueta "sample-data"), 12 sesiones en 3 series semanales, y ~50 asistencias diseñadas para ejercitar el motor de IA. El patrón está hecho para que los 4 tipos de insight (riesgo de abandono, oportunidad de retención, ingresos, crecimiento) disparen al ejecutar el motor.',
     dialogConfirm: 'Sí, generar',
     dialogCancel: 'Cancelar',
     running: 'Generando…',

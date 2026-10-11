@@ -325,7 +325,9 @@ export default function OSShell({ children }: { children: React.ReactNode }) {
           <h1 className="text-lg font-semibold text-tribe-dark">
             {NAV_ITEMS.find((n) => isActive(pathname, n.matchPrefix))
               ? s.nav[NAV_ITEMS.find((n) => isActive(pathname, n.matchPrefix))!.labelKey]
-              : s.topBarTitle}
+              : pathname?.startsWith('/os/clients')
+                ? s.nav.members
+                : s.topBarTitle}
           </h1>
           <div className="flex-1" />
           {/* Quick switch back to the consumer Tribe app. Premium

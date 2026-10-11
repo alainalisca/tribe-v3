@@ -25,7 +25,7 @@ const stepsByLanguage = {
     {
       Icon: Crown,
       title: 'Your gym, your roster',
-      body: "You're shown as the owner of this gym. The gym is the billing unit for Tribe.OS — clients, attendance, and revenue all belong to it rather than to a single coach.",
+      body: "You're shown as the owner of this gym. The gym is the billing unit for Tribe.OS: clients, attendance, and revenue all belong to it rather than to a single coach.",
     },
     {
       Icon: UserPlus,
@@ -37,7 +37,7 @@ const stepsByLanguage = {
     {
       Icon: Crown,
       title: 'Tu gym, tu equipo',
-      body: 'Apareces como propietario de este gym. El gym es la unidad de cobro de Tribe.OS — clientes, asistencias e ingresos le pertenecen a él, no a un solo entrenador.',
+      body: 'Apareces como propietario de este gym. El gym es la unidad de cobro de Tribe.OS: clientes, asistencias e ingresos le pertenecen a él, no a un solo entrenador.',
     },
     {
       Icon: UserPlus,

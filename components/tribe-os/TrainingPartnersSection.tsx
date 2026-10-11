@@ -32,13 +32,13 @@ type SectionState = { kind: 'loading' } | { kind: 'hidden' } | { kind: 'ready'; 
 const copy = {
   en: {
     title: 'Trains often with',
-    hint: 'Members this client has shown up alongside the most. Strong partners are a retention signal — if one drops off, the others often follow.',
+    hint: 'Members this client has shown up alongside the most. Strong partners are a retention signal; if one drops off, the others often follow.',
     sharedSessions: (n: number) => (n === 1 ? '1 session together' : `${n} sessions together`),
     lastTogether: (date: string) => `Last together ${date}`,
   },
   es: {
     title: 'Entrena con',
-    hint: 'Miembros con los que más ha coincidido en sesiones. Las parejas fuertes son una señal de retención — si una abandona, las otras suelen seguir.',
+    hint: 'Miembros con los que más ha coincidido en sesiones. Las parejas fuertes son una señal de retención; si una abandona, las otras suelen seguir.',
     sharedSessions: (n: number) => (n === 1 ? '1 sesión juntos' : `${n} sesiones juntos`),
     lastTogether: (date: string) => `Última vez ${date}`,
   },

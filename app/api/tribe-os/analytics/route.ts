@@ -10,6 +10,7 @@ import {
   computeClassStats,
   computeCoachStats,
   computeContactEffect,
+  computeContactSummary28d,
   computeActiveMembers,
   computeVisitChangePct,
   type Visit,
@@ -146,6 +147,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const classStats = computeClassStats(visits);
     const coachStats = computeCoachStats(visits);
     const contactEffect = computeContactEffect(touches, visits, planValues, buckets);
+    const contactSummary28d = computeContactSummary28d(touches, visits, today);
     const activeMembers = computeActiveMembers(visits, today, allClientIds, priorClients);
 
     const visitChangePct = computeVisitChangePct(attendance);
@@ -156,9 +158,10 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         weeks,
         currency: gymCurrency,
         contact_effect: {
-          touches: contactEffect.touchesInRange,
-          came_back: contactEffect.cameBackCount,
-          conversion_pct: contactEffect.conversionPct,
+          touches: contactSummary28d.total,
+          came_back: contactSummary28d.came_back,
+          conversion_pct: contactSummary28d.conversion_pct,
+          conversion_label: contactSummary28d.conversion_label,
           recovered_cents: contactEffect.recoveredCentsPerMonth,
           weekly: contactEffect.weeklyTouches,
         },

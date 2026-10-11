@@ -31,6 +31,23 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
     const { client_id, channel, note } = parsed.data;
 
+    const twoMinAgo = new Date(Date.now() - 2 * 60 * 1000).toISOString();
+    const { data: existing } = await supabase
+      .from('client_touches')
+      .select('id, created_at')
+      .eq('gym_id', gymId)
+      .eq('client_id', client_id)
+      .eq('channel', channel)
+      .eq('created_by', userId)
+      .gte('created_at', twoMinAgo)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (existing) {
+      return NextResponse.json({ success: true, data: existing, dedupe: true });
+    }
+
     const { data, error } = await supabase
       .from('client_touches')
       .insert({

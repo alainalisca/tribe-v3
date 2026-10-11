@@ -31,7 +31,7 @@ const stepsByLanguage = {
     {
       Icon: Calendar,
       title: 'Pick the period you want to see',
-      body: 'The pills at the top — This week, This month, Last month, Last 90 days, Year to date, All time, Custom — set the date range for everything on this page. Defaults to this month.',
+      body: 'The pills at the top (This week, This month, Last month, Last 90 days, Year to date, All time, Custom) set the date range for everything on this page. Defaults to this month.',
     },
     {
       Icon: BarChart3,
@@ -41,14 +41,14 @@ const stepsByLanguage = {
     {
       Icon: Download,
       title: 'Export to CSV when tax season hits',
-      body: 'The Export button hands you a spreadsheet with every payment in the selected period. Includes timestamps, amounts, fees, and Stripe IDs — everything an accountant asks for.',
+      body: 'The Export button hands you a spreadsheet with every payment in the selected period. Includes timestamps, amounts, fees, and Stripe IDs, everything an accountant asks for.',
     },
   ],
   es: [
     {
       Icon: Calendar,
       title: 'Elige el período que quieres ver',
-      body: 'Las píldoras de arriba — Esta semana, Este mes, Mes pasado, Últimos 90 días, Año en curso, Todo el tiempo, Personalizado — definen el rango de fechas para toda la página. Por defecto es este mes.',
+      body: 'Las píldoras de arriba (Esta semana, Este mes, Mes pasado, Últimos 90 días, Año en curso, Todo el tiempo, Personalizado) definen el rango de fechas para toda la página. Por defecto es este mes.',
     },
     {
       Icon: BarChart3,
@@ -58,7 +58,7 @@ const stepsByLanguage = {
     {
       Icon: Download,
       title: 'Exporta a CSV cuando llegue la temporada de impuestos',
-      body: 'El botón Exportar te entrega una hoja de cálculo con cada pago del período seleccionado. Incluye fechas, montos, comisiones e IDs de Stripe — todo lo que un contador pide.',
+      body: 'El botón Exportar te entrega una hoja de cálculo con cada pago del período seleccionado. Incluye fechas, montos, comisiones e IDs de Stripe, todo lo que un contador pide.',
     },
   ],
 } as const satisfies Record<'en' | 'es', readonly QuickGuideStep[]>;

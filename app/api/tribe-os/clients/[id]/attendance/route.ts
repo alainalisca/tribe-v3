@@ -13,9 +13,31 @@ import { logError } from '@/lib/logger';
 import { requireTribeOSPremium } from '@/lib/auth/premium';
 import { recordAttendance, listAttendanceForClient, type RecordAttendanceInput } from '@/lib/dal/clients';
 import { RecordAttendanceInputSchema } from '@/lib/validations/clients';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
 function firstZodMessage(error: ZodError): string {
   return error.issues[0]?.message ?? 'Invalid input';
+}
+
+async function mirrorToClientVisits(
+  supabase: SupabaseClient,
+  gymId: string,
+  clientId: string,
+  attendedAt: string,
+): Promise<'ok' | 'duplicate'> {
+  const { error } = await supabase
+    .from('client_visits')
+    .insert({
+      gym_id: gymId,
+      client_id: clientId,
+      visited_at: attendedAt,
+      source: 'manual',
+    });
+  if (error) {
+    if (error.code === '23505') return 'duplicate';
+    logError(error, { action: 'mirrorToClientVisits', clientId, gymId });
+  }
+  return 'ok';
 }
 
 export async function POST(
@@ -80,6 +102,14 @@ export async function POST(
     if (!result.success) {
       return NextResponse.json({ success: false, error: result.error ?? 'record_failed' }, { status: 500 });
     }
+
+    if (result.data && result.data.attended && result.data.attended_at) {
+      const visitResult = await mirrorToClientVisits(supabase, gate.gymId!, clientId, result.data.attended_at);
+      if (visitResult === 'duplicate') {
+        return NextResponse.json({ success: true, data: result.data, visit_note: 'Ya registrada' });
+      }
+    }
+
     return NextResponse.json({ success: true, data: result.data });
   } catch (error) {
     logError(error, { route: 'POST /api/tribe-os/clients/[id]/attendance' });

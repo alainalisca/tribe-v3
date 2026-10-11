@@ -394,6 +394,91 @@ export async function listAttendanceForSession(
   }
 }
 
+export interface ClientVisitRow {
+  id: string;
+  visited_at: string;
+  class_name: string | null;
+  coach_name: string | null;
+  source: string;
+}
+
+export interface ClientVisitsSummary {
+  total_visits: number;
+  last_visit_at: string | null;
+}
+
+export async function getClientVisitsSummary(
+  supabase: SupabaseClient,
+  clientId: string,
+): Promise<DalResult<ClientVisitsSummary>> {
+  try {
+    const { count, error: countErr } = await supabase
+      .from('client_visits')
+      .select('id', { count: 'exact', head: true })
+      .eq('client_id', clientId);
+    if (countErr) {
+      logError(countErr, { action: 'getClientVisitsSummary.count', clientId });
+      return { success: false, error: countErr.message };
+    }
+
+    const { data: lastRow, error: lastErr } = await supabase
+      .from('client_visits')
+      .select('visited_at')
+      .eq('client_id', clientId)
+      .order('visited_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (lastErr) {
+      logError(lastErr, { action: 'getClientVisitsSummary.last', clientId });
+      return { success: false, error: lastErr.message };
+    }
+
+    return {
+      success: true,
+      data: {
+        total_visits: count ?? 0,
+        last_visit_at: lastRow?.visited_at ?? null,
+      },
+    };
+  } catch (error) {
+    logError(error, { action: 'getClientVisitsSummary', clientId });
+    return { success: false, error: 'Failed to load visits summary' };
+  }
+}
+
+const VISITS_PAGE_SIZE = 25;
+
+export async function listVisitsForClient(
+  supabase: SupabaseClient,
+  clientId: string,
+  page: number = 1,
+): Promise<DalResult<{ visits: ClientVisitRow[]; total: number }>> {
+  try {
+    const from = (page - 1) * VISITS_PAGE_SIZE;
+    const { data, error, count } = await supabase
+      .from('client_visits')
+      .select('id, visited_at, class_name, coach_name, source', { count: 'exact' })
+      .eq('client_id', clientId)
+      .order('visited_at', { ascending: false })
+      .range(from, from + VISITS_PAGE_SIZE - 1);
+
+    if (error) {
+      logError(error, { action: 'listVisitsForClient', clientId, page });
+      return { success: false, error: error.message };
+    }
+    return {
+      success: true,
+      data: {
+        visits: (data ?? []) as ClientVisitRow[],
+        total: count ?? 0,
+      },
+    };
+  } catch (error) {
+    logError(error, { action: 'listVisitsForClient', clientId });
+    return { success: false, error: 'Failed to load visits' };
+  }
+}
+
 /**
  * Aggregate stats for one client. Used by the client detail page.
  * Returns a zero-row summary (counts + totals = 0, last attendance =

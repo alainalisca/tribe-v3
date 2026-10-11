@@ -49,7 +49,7 @@ const stepsByLanguage = {
     {
       Icon: Sparkles,
       title: 'Welcome to Tribe.OS',
-      body: "Tribe.OS is the business side of Tribe — for instructors who charge for sessions. Your free Tribe experience is unchanged. Here's what you can do here.",
+      body: "Tribe.OS is the business side of Tribe, for instructors who charge for sessions. Your free Tribe experience is unchanged. Here's what you can do here.",
     },
     {
       Icon: Users,
@@ -71,7 +71,7 @@ const stepsByLanguage = {
     {
       Icon: Sparkles,
       title: 'Bienvenido a Tribe.OS',
-      body: 'Tribe.OS es el lado del negocio de Tribe — para instructores que cobran por sus sesiones. Tu Tribe gratis no cambia. Esto es lo que puedes hacer aquí.',
+      body: 'Tribe.OS es el lado del negocio de Tribe, para instructores que cobran por sus sesiones. Tu Tribe gratis no cambia. Esto es lo que puedes hacer aquí.',
     },
     {
       Icon: Users,

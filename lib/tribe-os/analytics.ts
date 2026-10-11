@@ -302,6 +302,43 @@ export function computeActiveMembers(
   };
 }
 
+export interface ContactSummary28d {
+  total: number;
+  came_back: number;
+  conversion_pct: number;
+  conversion_label: string | null;
+}
+
+export function computeContactSummary28d(
+  touches: Touch[],
+  visits: { client_id: string; visited_at: string }[],
+  todayBogota: string,
+): ContactSummary28d {
+  const cutoff = new Date(todayBogota + 'T00:00:00Z');
+  cutoff.setUTCDate(cutoff.getUTCDate() - 28);
+  const cutoffIso = cutoff.toISOString();
+
+  const recentTouches = touches.filter((t) => t.created_at >= cutoffIso);
+  const FOURTEEN_DAYS_MS = 14 * 24 * 60 * 60 * 1000;
+
+  let cameBackCount = 0;
+  for (const t of recentTouches) {
+    const touchMs = new Date(t.created_at).getTime();
+    const visitedAfter = visits.some((v) => {
+      if (v.client_id !== t.client_id) return false;
+      const vMs = new Date(v.visited_at).getTime();
+      return vMs > touchMs && vMs <= touchMs + FOURTEEN_DAYS_MS;
+    });
+    if (visitedAfter) cameBackCount++;
+  }
+
+  const total = recentTouches.length;
+  const pct = total > 0 ? Math.round((cameBackCount / total) * 100) : 0;
+  const label = total > 0 && total < 5 ? `${cameBackCount} de ${total}` : null;
+
+  return { total, came_back: cameBackCount, conversion_pct: pct, conversion_label: label };
+}
+
 export function niceAxisTicks(maxValue: number): number[] {
   if (maxValue <= 0) return [0];
   const rough = maxValue / 5;

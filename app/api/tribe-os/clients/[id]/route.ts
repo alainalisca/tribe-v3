@@ -17,6 +17,7 @@ import {
   updateClient as dalUpdateClient,
   deleteClient as dalDeleteClient,
   getClientAttendanceSummary,
+  getClientVisitsSummary,
 } from '@/lib/dal/clients';
 import { writeAuditEntry } from '@/lib/dal/auditLog';
 import { UpdateClientInputSchema } from '@/lib/validations/clients';
@@ -47,7 +48,10 @@ export async function GET(
       return NextResponse.json({ success: false, error: 'not_found' }, { status: 404 });
     }
 
-    const summaryResult = await getClientAttendanceSummary(supabase, clientId);
+    const [summaryResult, visitsResult] = await Promise.all([
+      getClientAttendanceSummary(supabase, clientId),
+      getClientVisitsSummary(supabase, clientId),
+    ]);
     if (!summaryResult.success) {
       return NextResponse.json({ success: false, error: summaryResult.error ?? 'summary_failed' }, { status: 500 });
     }
@@ -57,6 +61,7 @@ export async function GET(
       data: {
         client: clientResult.data,
         summary: summaryResult.data,
+        visits_summary: visitsResult.success ? visitsResult.data : { total_visits: 0, last_visit_at: null },
       },
     });
   } catch (error) {

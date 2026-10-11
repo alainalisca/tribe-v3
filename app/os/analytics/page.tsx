@@ -94,6 +94,7 @@ interface AnalyticsData {
     touches: number;
     came_back: number;
     conversion_pct: number;
+    conversion_label: string | null;
     recovered_cents: number;
     weekly: { weekStart: string; label: string; touches: number; cameBack: number }[];
   };
@@ -219,10 +220,13 @@ export default function AnalyticsPage() {
           <>
             {/* 1. Contact effect */}
             <section className="rounded-xl bg-white border border-gray-200 p-4 sm:p-5 space-y-4">
-              <h2 className="text-sm font-bold text-gray-900 flex items-center gap-1.5">
-                <MessageCircle className="w-4 h-4 text-[#B2E269]" />
-                {s.contactEffectTitle}
-              </h2>
+              <div className="flex items-center justify-between">
+                <h2 className="text-sm font-bold text-gray-900 flex items-center gap-1.5">
+                  <MessageCircle className="w-4 h-4 text-[#B2E269]" />
+                  {s.contactEffectTitle}
+                </h2>
+                <span className="text-[11px] text-gray-400">{language === 'es' ? 'Últimos 28 días' : 'Last 28 days'}</span>
+              </div>
               {data.contact_effect.touches === 0 ? (
                 <p className="text-sm text-gray-500 italic py-4">{s.contactEmpty}</p>
               ) : (
@@ -230,7 +234,7 @@ export default function AnalyticsPage() {
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     <StatBox label={s.touches} value={String(data.contact_effect.touches)} />
                     <StatBox label={s.cameBack} value={String(data.contact_effect.came_back)} />
-                    <StatBox label={s.conversion} value={`${data.contact_effect.conversion_pct}%`} />
+                    <StatBox label={s.conversion} value={data.contact_effect.conversion_label ?? `${data.contact_effect.conversion_pct}%`} />
                     <StatBox
                       label={s.recovered}
                       value={formatCents(data.contact_effect.recovered_cents, cur, language)}

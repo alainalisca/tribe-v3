@@ -46,7 +46,7 @@ type State = { kind: 'loading' } | { kind: 'hidden' } | { kind: 'ready'; insight
 const copy = {
   en: {
     title: 'AI insight history',
-    hint: 'Every time the engine has flagged this member. Pattern beats single signal — if you see them here a lot, a phone call usually beats another message.',
+    hint: 'Every time the engine has flagged this member. Pattern beats single signal. If you see them here a lot, a phone call usually beats another message.',
     typeLabel: {
       CHURN_RISK: 'Churn risk',
       RETENTION_OPP: 'Retention',
@@ -61,7 +61,7 @@ const copy = {
   },
   es: {
     title: 'Historial de insights',
-    hint: 'Cada vez que el motor ha marcado a este miembro. Un patrón vale más que una alerta — si aparece mucho aquí, una llamada suele ganarle a otro mensaje.',
+    hint: 'Cada vez que el motor ha marcado a este miembro. Un patrón vale más que una alerta. Si aparece mucho aquí, una llamada suele ganarle a otro mensaje.',
     typeLabel: {
       CHURN_RISK: 'Riesgo de baja',
       RETENTION_OPP: 'Retención',

@@ -33,18 +33,19 @@ import AttendanceHeatmap from '@/components/tribe-os/AttendanceHeatmap';
 import TrainingPatternInsight from '@/components/tribe-os/TrainingPatternInsight';
 import DraftModal from '@/components/tribe-os/DraftModal';
 import type { DraftContext } from '@/lib/tribe-os/drafts/templates';
-import type { AttendanceWithSession, ClientAttendanceSummary, ClientRow } from '@/lib/dal/clients';
+import type { AttendanceWithSession, ClientAttendanceSummary, ClientRow, ClientVisitRow, ClientVisitsSummary } from '@/lib/dal/clients';
 
 interface DetailResponse {
   client: ClientRow;
   summary: ClientAttendanceSummary;
+  visits_summary: ClientVisitsSummary;
 }
 
 type DetailState =
   | { kind: 'loading' }
   | { kind: 'error'; message: string }
   | { kind: 'not_found' }
-  | { kind: 'ready'; client: ClientRow; summary: ClientAttendanceSummary; attendance: AttendanceWithSession[] };
+  | { kind: 'ready'; client: ClientRow; summary: ClientAttendanceSummary; visits_summary: ClientVisitsSummary; attendance: AttendanceWithSession[] };
 
 const copy = {
   en: {
@@ -62,13 +63,13 @@ const copy = {
     statsTitle: 'Stats',
     memberSince: (date: string, days: number) =>
       days === 1 ? `Member since ${date} · 1 day with you` : `Member since ${date} · ${days} days with you`,
-    sessionsAttended: 'Sessions attended',
+    sessionsAttended: 'Visits',
     sessions30d: 'Last 30 days',
     streak: 'Current streak',
     streakDays: (n: number) => (n === 1 ? '1 day' : `${n} days`),
     streakLongest: (n: number) => `Longest: ${n}`,
     totalPaid: 'Total paid',
-    lastAttendance: 'Last attendance',
+    lastAttendance: 'Last visit',
     noAttendanceShort: 'None yet',
     streakNone: '—',
 
@@ -116,9 +117,18 @@ const copy = {
     touchOutcomeNoResponse: 'No response',
     touchBy: 'by',
 
-    // History
-    historyTitle: 'Attendance history',
-    historyEmpty: 'No attendance recorded yet.',
+    // Visits history (client_visits)
+    visitsTitle: 'Attendance history',
+    visitsEmpty: 'No visits recorded yet.',
+    visitsEmptyHint: 'Tap "Record attendance" above to log the first session this client came to.',
+    visitsLoadMore: 'See more',
+    visitsLoading: 'Loading…',
+    visitsSource: (src: string) =>
+      src === 'manual' ? 'Manual' : src === 'mira_csv' ? 'MIRA' : src === 'csv' ? 'CSV' : src,
+
+    // History (legacy client_attendance)
+    historyTitle: 'Payment history',
+    historyEmpty: 'No payments recorded yet.',
     historyEmptyHint: 'Tap "Record attendance" above to log the first session this client came to.',
     attended: 'Attended',
     notAttended: 'Did not attend',
@@ -198,13 +208,13 @@ const copy = {
     statsTitle: 'Estadísticas',
     memberSince: (date: string, days: number) =>
       days === 1 ? `Miembro desde ${date} · 1 día contigo` : `Miembro desde ${date} · ${days} días contigo`,
-    sessionsAttended: 'Sesiones asistidas',
+    sessionsAttended: 'Visitas',
     sessions30d: 'Últimos 30 días',
     streak: 'Racha actual',
     streakDays: (n: number) => (n === 1 ? '1 día' : `${n} días`),
     streakLongest: (n: number) => `Mejor: ${n}`,
     totalPaid: 'Total pagado',
-    lastAttendance: 'Última asistencia',
+    lastAttendance: 'Última visita',
     noAttendanceShort: 'Ninguna aún',
     streakNone: '—',
 
@@ -246,8 +256,16 @@ const copy = {
     touchOutcomeNoResponse: 'Sin respuesta',
     touchBy: 'por',
 
-    historyTitle: 'Historial de asistencias',
-    historyEmpty: 'Aún no hay asistencias registradas.',
+    visitsTitle: 'Historial de asistencias',
+    visitsEmpty: 'Aún no hay visitas registradas.',
+    visitsEmptyHint: 'Toca "Registrar asistencia" arriba para registrar la primera sesión a la que vino este cliente.',
+    visitsLoadMore: 'Ver más',
+    visitsLoading: 'Cargando…',
+    visitsSource: (src: string) =>
+      src === 'manual' ? 'Manual' : src === 'mira_csv' ? 'MIRA' : src === 'csv' ? 'CSV' : src,
+
+    historyTitle: 'Historial de pagos',
+    historyEmpty: 'Aún no hay pagos registrados.',
     historyEmptyHint: 'Toca "Registrar asistencia" arriba para registrar la primera sesión a la que vino este cliente.',
     attended: 'Asistió',
     notAttended: 'No asistió',
@@ -382,6 +400,7 @@ export default function ClientDetailPage() {
           kind: 'ready',
           client: detailBody.data.client,
           summary: detailBody.data.summary,
+          visits_summary: detailBody.data.visits_summary ?? { total_visits: 0, last_visit_at: null },
           attendance: attendanceBody.data ?? [],
         });
       } catch {
@@ -594,7 +613,7 @@ export default function ClientDetailPage() {
                 );
               })()}
               <div className="grid grid-cols-3 gap-3">
-                <Stat label={s.sessionsAttended} value={String(state.summary.total_attended_count)} />
+                <Stat label={s.sessionsAttended} value={String(state.visits_summary.total_visits)} />
                 <Stat
                   label={s.totalPaid}
                   value={
@@ -605,8 +624,8 @@ export default function ClientDetailPage() {
                 <Stat
                   label={s.lastAttendance}
                   value={
-                    state.summary.last_attendance_at
-                      ? formatShortDate(state.summary.last_attendance_at, language)
+                    state.visits_summary.last_visit_at
+                      ? formatShortDate(state.visits_summary.last_visit_at, language)
                       : s.noAttendanceShort
                   }
                 />
@@ -803,22 +822,15 @@ export default function ClientDetailPage() {
 
             <ContactHistorySection clientId={state.client.id} language={language} s={s} onDraft={handleOpenDraft} />
 
-            {/* Attendance history */}
-            <section className="mt-6">
-              <div className="flex items-center justify-between gap-3 mb-3">
-                <h2 className="text-xs uppercase tracking-[0.1em] text-gray-500 font-semibold">{s.historyTitle}</h2>
-                {/* Quick attendance affordance — opens an inline form
-                    with a session picker + optional payment fields. On
-                    successful submit the parent's reloadKey bumps and
-                    the history below refreshes. */}
-                <RecordAttendanceInline clientId={state.client.id} onRecorded={() => setReloadKey((k) => k + 1)} />
-              </div>
-              {state.attendance.length === 0 ? (
-                <div className="py-8 text-center bg-white rounded-xl border border-gray-200 space-y-2">
-                  <p className="text-sm font-semibold text-gray-900">{s.historyEmpty}</p>
-                  <p className="text-xs text-gray-500 max-w-xs mx-auto leading-relaxed">{s.historyEmptyHint}</p>
+            {/* Visits history (from client_visits) */}
+            <VisitsHistorySection clientId={state.client.id} language={language} s={s} reloadKey={reloadKey} onRecorded={() => setReloadKey((k) => k + 1)} />
+
+            {/* Payment history (from client_attendance) */}
+            {state.attendance.length > 0 && (
+              <section className="mt-6">
+                <div className="flex items-center justify-between gap-3 mb-3">
+                  <h2 className="text-xs uppercase tracking-[0.1em] text-gray-500 font-semibold">{s.historyTitle}</h2>
                 </div>
-              ) : (
                 <ul className="space-y-2">
                   {state.attendance.map((a) => (
                     <AttendanceListItem
@@ -830,8 +842,8 @@ export default function ClientDetailPage() {
                     />
                   ))}
                 </ul>
-              )}
-            </section>
+              </section>
+            )}
           </>
         )}
       </div>
@@ -1469,6 +1481,134 @@ interface TouchHistoryItem {
   created_at: string;
   outcome: 'came_back' | 'waiting' | 'no_response';
   came_back_days: number | null;
+}
+
+function formatVisitTime(iso: string): string {
+  const d = new Date(iso);
+  return d.toLocaleTimeString('es-CO', {
+    timeZone: 'America/Bogota',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  });
+}
+
+function formatVisitDate(iso: string, lang: 'en' | 'es'): string {
+  const d = new Date(iso);
+  return d.toLocaleDateString(lang === 'es' ? 'es-CO' : 'en-US', {
+    timeZone: 'America/Bogota',
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+}
+
+interface VisitItem {
+  id: string;
+  visited_at: string;
+  class_name: string | null;
+  coach_name: string | null;
+  source: string;
+}
+
+function VisitsHistorySection({
+  clientId,
+  language,
+  s,
+  reloadKey,
+  onRecorded,
+}: {
+  clientId: string;
+  language: 'en' | 'es';
+  s: (typeof copy)['en'] | (typeof copy)['es'];
+  reloadKey: number;
+  onRecorded: () => void;
+}) {
+  const [visits, setVisits] = useState<VisitItem[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    (async () => {
+      try {
+        const res = await fetch(`/api/tribe-os/clients/${clientId}/visits?page=${page}`);
+        const json = await res.json();
+        if (cancelled) return;
+        if (json.success && json.data) {
+          if (page === 1) {
+            setVisits(json.data.visits);
+          } else {
+            setVisits((prev) => [...prev, ...json.data.visits]);
+          }
+          setTotal(json.data.total);
+        }
+      } catch {
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [clientId, page, reloadKey]);
+
+  useEffect(() => {
+    setVisits([]);
+    setPage(1);
+  }, [reloadKey]);
+
+  const hasMore = visits.length < total;
+
+  return (
+    <section className="mt-6">
+      <div className="flex items-center justify-between gap-3 mb-3">
+        <h2 className="text-xs uppercase tracking-[0.1em] text-gray-500 font-semibold">{s.visitsTitle}</h2>
+        <RecordAttendanceInline clientId={clientId} onRecorded={onRecorded} />
+      </div>
+      {!loading && visits.length === 0 ? (
+        <div className="py-8 text-center bg-white rounded-xl border border-gray-200 space-y-2">
+          <p className="text-sm font-semibold text-gray-900">{s.visitsEmpty}</p>
+          <p className="text-xs text-gray-500 max-w-xs mx-auto leading-relaxed">{s.visitsEmptyHint}</p>
+        </div>
+      ) : (
+        <>
+          <ul className="space-y-2">
+            {visits.map((v) => (
+              <li key={v.id} className="bg-white rounded-xl border border-gray-200 px-4 py-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-gray-900">
+                      {formatVisitDate(v.visited_at, language)}
+                      <span className="text-gray-500 font-normal ml-1.5">{formatVisitTime(v.visited_at)}</span>
+                    </p>
+                    <div className="flex items-center gap-2 mt-0.5 text-xs text-gray-500">
+                      {v.coach_name && <span>{v.coach_name}</span>}
+                      {v.class_name && <span>{v.coach_name ? '·' : ''} {v.class_name}</span>}
+                    </div>
+                  </div>
+                  <span className="shrink-0 text-[10px] text-gray-400 uppercase tracking-wide">
+                    {s.visitsSource(v.source)}
+                  </span>
+                </div>
+              </li>
+            ))}
+          </ul>
+          {loading && <p className="text-xs text-gray-500 text-center mt-2">{s.visitsLoading}</p>}
+          {hasMore && !loading && (
+            <button
+              type="button"
+              onClick={() => setPage((p) => p + 1)}
+              className="mt-3 w-full py-2 text-xs font-medium text-tribe-green hover:text-tribe-green-dark transition-colors"
+            >
+              {s.visitsLoadMore}
+            </button>
+          )}
+        </>
+      )}
+    </section>
+  );
 }
 
 function ContactHistorySection({
