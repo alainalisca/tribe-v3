@@ -2938,8 +2938,25 @@ select '217_t_partner_metric1_increment_partner_metric',
            then 'MISSING -- increment_partner_metric is not SECURITY DEFINER with search_path pinned'
          when exists (select 1 from pg_proc where proname = 'increment_counter')
            then 'MISSING -- a generic increment_counter exists; anon could bump any column of any table'
-         when not has_function_privilege('anon', to_regprocedure('public.increment_partner_metric(uuid, text)'), 'EXECUTE')
-           then 'MISSING -- anon cannot call increment_partner_metric; the signed-out banner counts nothing'
+         -- authenticated, not anon: the banner is signed-in only, and 218 takes
+         -- anon's grant away (T-PARTNER-METRIC2). This arm read anon until then.
+         when not has_function_privilege('authenticated', to_regprocedure('public.increment_partner_metric(uuid, text)'), 'EXECUTE')
+           then 'MISSING -- authenticated cannot call increment_partner_metric; the signed-in banner counts nothing'
+         else 'applied'
+       end
+
+union all
+
+-- T-PARTNER-METRIC2. Signed-out callers cannot bump partner counters; the
+-- signed-in banner still can.
+select '218_t_partner_metric2_revoke_anon',
+       case
+         when to_regprocedure('public.increment_partner_metric(uuid, text)') is null
+           then 'MISSING -- increment_partner_metric is absent (217 not applied)'
+         when has_function_privilege('anon', to_regprocedure('public.increment_partner_metric(uuid, text)'), 'EXECUTE')
+           then 'MISSING -- anon can still call increment_partner_metric and inflate partner counters'
+         when not has_function_privilege('authenticated', to_regprocedure('public.increment_partner_metric(uuid, text)'), 'EXECUTE')
+           then 'MISSING -- authenticated lost EXECUTE; the signed-in banner counts nothing'
          else 'applied'
        end
 
