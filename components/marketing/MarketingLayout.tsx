@@ -197,7 +197,7 @@ function MarketingFooter() {
               </Link>
             </li>
             <li>
-              <a href="mailto:tribe@aplusfitnessllc.com" className="hover:text-white transition-colors">
+              <a href="mailto:info@tribelatam.com" className="hover:text-white transition-colors">
                 {t('Contact', 'Contacto')}
               </a>
             </li>
