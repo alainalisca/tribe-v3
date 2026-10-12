@@ -8,6 +8,7 @@ import { useLanguage } from '@/lib/LanguageContext';
 import BottomNav from '@/components/BottomNav';
 import { trackEvent } from '@/lib/analytics';
 import { showInfo } from '@/lib/toast';
+import { isCoachPlansEnabled } from '@/lib/subscription/coachPlans';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import {
   Megaphone,
@@ -366,8 +367,9 @@ export default function PromotePage() {
           </Link>
         </div>
 
-        {/* Pro Storefront Upgrade Banner */}
-        {stats.storefront_tier === 'free' && (
+        {/* Pro Storefront Upgrade Banner. Hidden once coach plans are on (T-PLAN1)
+            so coaches see one "Pro" only; storefront_tier itself is untouched. */}
+        {stats.storefront_tier === 'free' && !isCoachPlansEnabled() && (
           <div className="bg-gradient-to-br from-tribe-green/10 to-lime-50 dark:from-tribe-green/5 dark:to-green-900/20 rounded-2xl p-5 border border-tribe-green/30">
             <div className="flex flex-col gap-4">
               <div className="flex items-start gap-3">

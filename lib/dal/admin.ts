@@ -1,6 +1,7 @@
 /** DAL: admin-specific aggregate queries for the admin dashboard */
 import { SupabaseClient } from '@supabase/supabase-js';
 import { logError } from '@/lib/logger';
+import { isCoachPlansEnabled } from '@/lib/subscription/coachPlans';
 import type { DalResult } from './types';
 import type { AdminReport, AdminFeedback, AdminBug, AdminSession, AdminMessage } from '@/app/admin/types';
 
@@ -127,7 +128,10 @@ export async function fetchAdminUsersWithCounts(
       .select(
         // is_test_account added by ADMIN-01: the panel could not tell a real
         // signup from a seeded one, which is the first question asked of this list.
-        'id, name, email, avatar_url, bio, location, sports, preferred_sports, specialties, is_instructor, is_verified_instructor, is_admin, is_test_account, banned, created_at, updated_at, last_login_at, sessions_completed, average_rating, total_reviews, follower_count, following_count'
+        'id, name, email, avatar_url, bio, location, sports, preferred_sports, specialties, is_instructor, is_verified_instructor, is_admin, is_test_account, banned, created_at, updated_at, last_login_at, sessions_completed, average_rating, total_reviews, follower_count, following_count' +
+          // T-PLAN1: the plan, for the comp control. Service role; flag-gated so
+          // the list reads exactly what it did while coach plans are off.
+          (isCoachPlansEnabled() ? ', coach_plan, coach_plan_source' : '')
       )
       // Exclude deleted accounts. The admin delete button runs
       // lib/account/deleteAccount, which sets deleted_at (T-DEL1).

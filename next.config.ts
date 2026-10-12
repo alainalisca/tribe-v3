@@ -39,6 +39,10 @@ const nextConfig: NextConfig = {
   // set at build time on every Vercel deployment; a local build reports 'local'.
   env: {
     NEXT_PUBLIC_APP_VERSION: (process.env.VERCEL_GIT_COMMIT_SHA ?? 'local').slice(0, 7),
+    // T-PLAN1: the one coach-plans flag, copied so client and server read the
+    // same value (lib/subscription/coachPlans.ts isCoachPlansEnabled). Anything
+    // but 'true' is off. Flipping COACH_PLANS_ENABLED needs a redeploy.
+    NEXT_PUBLIC_COACH_PLANS_ENABLED: process.env.COACH_PLANS_ENABLED === 'true' ? 'true' : 'false',
   },
   trailingSlash: true,
   // T-SHARE1: the site's share cards (lib/og/card.tsx) read their fonts, photos
