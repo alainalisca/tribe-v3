@@ -806,8 +806,8 @@ function CreateSessionPageInner() {
                         rows={3}
                         placeholder={
                           language === 'es'
-                            ? 'Ej: Nequi: 300-123-4567 o efectivo en el lugar'
-                            : 'E.g. Nequi: 300-123-4567, Venmo: @coach-maria, or cash at venue'
+                            ? 'Ej: Nequi 300 123 4567, o pega tu link de pago de Bold, Wompi o Mercado Pago'
+                            : 'E.g. Nequi 300 123 4567, or paste your Bold, Wompi or Mercado Pago payment link'
                         }
                         className={`py-3 bg-theme-card text-theme-primary resize-none ${errors.payment_instructions ? 'border-red-500' : 'border-theme'}`}
                       />
