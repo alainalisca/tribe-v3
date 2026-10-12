@@ -4,6 +4,7 @@
  *
  *   npm run av:guard          # standalone
  *   node scripts/av-guard.mjs --db     # db/seed context: prod URL is fatal
+ *   node scripts/av-guard.mjs --test   # test context (what pretest runs)
  *
  * Wired as `predev:av`, `pretest`, `pretest:complete`, and inside every
  * `db:*` / `av:*` script. Also run by .githooks/pre-push. T-AV0's hard line
@@ -188,12 +189,30 @@ const DB_CONTEXT =
   argv.includes('--db') || /^(pre)?(db:|av:seed|seed)/.test(lifecycle) || /seed/.test(lifecycle);
 
 /**
+ * ADDENDUM 2026-10-12: THE LIFECYCLE TEST NEVER FIRED THROUGH NPM.
+ *
+ * `pretest:complete` was `npm run av:guard`. The nested `npm run` sets
+ * npm_lifecycle_event to "av:guard" for the child, so the regex below never
+ * matched on a real `npm test` or `npm run test:complete`, and the 2026-10-09
+ * scope relaxation could only fire when the guard was invoked by hand with the
+ * variable set, which is how it was checked. Every out-of-program branch was
+ * still blocked (reproduced: feature/resend-contact-sync, chore/android-r8).
+ * The same diagnosis was made on 2026-10-09 (branch fix/av-guard-test-context,
+ * found on feature/analytics-v1) and fixed by calling the guard directly, but
+ * that branch was never merged, so the bug outlived its own fix by three days.
+ *
+ * The test hooks now call this file directly with an explicit `--test`, so the
+ * context is something the caller SAYS rather than something inferred from a
+ * variable an intermediate process can overwrite. The regex stays as a second
+ * route. avGuard.testContext.test.ts runs the hooks exactly as npm writes them
+ * and fails if either goes back through a nested `npm run`.
+ *
  * A test run, and nothing else. `predev:av`, every `db:*`, `av:*` and the
  * pre-push hook are deliberately absent: this is the only context the scope
  * relaxation applies to, so the list is spelled out rather than inferred from
  * what is NOT a db context.
  */
-const TEST_CONTEXT = /^(pre)?test(:complete)?$/.test(lifecycle);
+const TEST_CONTEXT = argv.includes('--test') || /^(pre)?test(:complete)?$/.test(lifecycle);
 
 /**
  * Scope: does this branch touch the athlete-value program at all?
@@ -203,8 +222,11 @@ const changed = TEST_CONTEXT && !DB_CONTEXT ? changedFiles() : null;
 const athleteTouched = changed === null ? null : athleteFilesIn(changed);
 const OUT_OF_SCOPE = TEST_CONTEXT && !DB_CONTEXT && athleteTouched !== null && athleteTouched.length === 0;
 
+/** Which context the guard believes it is in, printed on every outcome. */
+const CONTEXT_LABEL = DB_CONTEXT ? 'db' : TEST_CONTEXT ? 'test' : 'other';
+
 const fail = (lines) => {
-  console.error(`av-guard FAILED\n\n${lines.map((l) => `  - ${l}`).join('\n')}\n`);
+  console.error(`av-guard FAILED (context=${CONTEXT_LABEL})\n\n${lines.map((l) => `  - ${l}`).join('\n')}\n`);
   console.error(
     `  T-AV0's hard line: all athlete-value work lives on athlete/main and\n` +
       `  ticket branches cut from it, migrations run on the LOCAL stack only,\n` +
@@ -358,5 +380,5 @@ console.log(
     `push=${resolved.push.mode}(${resolved.push.reason}) email=${resolved.email.mode}(${resolved.email.reason})` +
     `${scope}` +
     `  [url:${url.source} push:${modes.PUSH_MODE.source} email:${modes.EMAIL_MODE.source}` +
-    `${DB_CONTEXT ? ' context:db' : ''}]`
+    ` context:${CONTEXT_LABEL}]`
 );
