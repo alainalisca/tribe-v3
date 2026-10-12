@@ -223,6 +223,7 @@ export default function RetentionPage() {
   const fetchScores = useCallback(async () => {
     setLoading(true);
     try {
+      await fetch('/api/tribe-os/sequences/reconcile', { method: 'POST' }).catch(() => {});
       const [scoresRes, tasksRes] = await Promise.all([
         fetch('/api/tribe-os/retention/scores'),
         fetch('/api/tribe-os/sequences/tasks'),

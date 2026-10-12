@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { logError } from '@/lib/logger';
+import { log, logError } from '@/lib/logger';
 import { requireTribeOSPremium } from '@/lib/auth/premium';
 import { filterContactToday, type ContactFilterRow } from '@/lib/tribe-os/contactFilter';
 import { computeCurrentStep } from '@/lib/tribe-os/sequences/helpers';
@@ -14,6 +14,8 @@ export async function POST(): Promise<NextResponse> {
   }
 
   try {
+    const counts = { auto_stopped: 0, repaired_steps: 0, completed: 0, suggested: 0, auto_enrolled: 0 };
+
     // --- a. Auto-stop: visit after started_at => came_back ---
     const { data: openEnrollments } = await supabase
       .from('tribe_os_sequence_enrollments')
@@ -56,6 +58,7 @@ export async function POST(): Promise<NextResponse> {
             })
             .eq('id', e.id)
             .eq('gym_id', gymId);
+          counts.auto_stopped++;
         }
       }
     }
@@ -109,12 +112,14 @@ export async function POST(): Promise<NextResponse> {
             .update({ status: 'completed', current_step: computed.position, updated_at: new Date().toISOString() })
             .eq('id', e.id)
             .eq('gym_id', gymId);
+          counts.completed++;
         } else if (computed.position !== e.current_step) {
           await supabase
             .from('tribe_os_sequence_enrollments')
             .update({ current_step: computed.position, updated_at: new Date().toISOString() })
             .eq('id', e.id)
             .eq('gym_id', gymId);
+          counts.repaired_steps++;
         }
       }
     }
@@ -216,14 +221,21 @@ export async function POST(): Promise<NextResponse> {
             approved_at: null,
           });
 
-          if (error && error.code !== '23505') {
-            logError(error, { route: 'POST /api/tribe-os/sequences/reconcile', step: 'enroll' });
+          if (error) {
+            if (error.code !== '23505') {
+              logError(error, { route: 'POST /api/tribe-os/sequences/reconcile', step: 'enroll' });
+            }
+          } else {
+            if (enrollStatus === 'active') counts.auto_enrolled++;
+            else counts.suggested++;
           }
         }
       }
     }
 
-    return NextResponse.json({ success: true });
+    log('info', 'reconcile completed', { route: 'POST /api/tribe-os/sequences/reconcile', ...counts });
+
+    return NextResponse.json({ success: true, data: counts });
   } catch (error) {
     logError(error, { route: 'POST /api/tribe-os/sequences/reconcile' });
     return NextResponse.json({ success: false, error: 'internal_error' }, { status: 500 });

@@ -9,7 +9,7 @@ import { Button, Badge } from '@/components/tribe-os/ui';
 import DraftModal from '@/components/tribe-os/DraftModal';
 import type { DraftContext } from '@/lib/tribe-os/drafts/templates';
 import { STEP_CHANNEL_LABELS, STOP_REASONS } from '@/lib/tribe-os/sequences/helpers';
-import { showError } from '@/lib/toast';
+import { showError, showInfo } from '@/lib/toast';
 import { Check, MessageCircle, Square, RefreshCw } from 'lucide-react';
 
 const copy = {
@@ -42,6 +42,7 @@ const copy = {
     errorComplete: 'Could not mark as done. Try again.',
     errorStop: 'Could not stop sequence. Try again.',
     errorApprove: 'Could not process approval. Try again.',
+    reconcileWarning: 'Background sync failed. Data may be stale.',
   },
   es: {
     pageTitle: 'Tareas de hoy',
@@ -71,6 +72,7 @@ const copy = {
     completing: 'Guardando...',
     errorComplete: 'No se pudo marcar como hecho. Intenta de nuevo.',
     errorStop: 'No se pudo detener la secuencia. Intenta de nuevo.',
+    reconcileWarning: 'No se pudo sincronizar. Los datos pueden estar desactualizados.',
     errorApprove: 'No se pudo procesar la aprobación. Intenta de nuevo.',
   },
 } as const;
@@ -125,6 +127,16 @@ export default function TasksPage() {
     if (isRefresh) setRefreshing(true);
     else setLoading(true);
     try {
+      const rc = await fetch('/api/tribe-os/sequences/reconcile', { method: 'POST' });
+      if (!rc.ok) {
+        console.error('[reconcile]', rc.status);
+        showInfo(s.reconcileWarning);
+      }
+    } catch (err) {
+      console.error('[reconcile]', err);
+      showInfo(s.reconcileWarning);
+    }
+    try {
       const res = await fetch('/api/tribe-os/sequences/tasks');
       const json = await res.json();
       if (json.success) setData(json.data);
@@ -132,7 +144,7 @@ export default function TasksPage() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [s.reconcileWarning]);
 
   useEffect(() => {
     if (gate.state === 'allowed') {
