@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import CoachPlanBadge from '@/components/CoachPlanBadge';
 import { useLanguage } from '@/lib/LanguageContext';
-import { formatTime12Hour, parseSessionDate } from '@/lib/utils';
+import { formatSessionDate, formatTime12Hour } from '@/lib/utils';
 import { translateSport } from '@/lib/translations';
 import { selectCoachesDestacados } from '@/lib/coachesDestacados';
 import { isCoachPlansEnabled } from '@/lib/subscription/coachPlans';
@@ -28,8 +28,6 @@ export default function CoachesDestacadosRow({ sessions }: CoachesDestacadosRowP
   const picks = selectCoachesDestacados(sessions);
   if (picks.length === 0) return null;
 
-  const locale = language === 'es' ? 'es-CO' : 'en-US';
-
   return (
     <section className="mb-6" aria-label={language === 'es' ? 'Coaches destacados' : 'Featured coaches'}>
       <h2 className="text-lg font-bold text-theme-primary mb-3">
@@ -37,11 +35,9 @@ export default function CoachesDestacadosRow({ sessions }: CoachesDestacadosRowP
       </h2>
       <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory pb-2 -mx-4 px-4 scrollbar-hide">
         {picks.map((s) => {
-          const day = parseSessionDate(s.date).toLocaleDateString(locale, {
-            weekday: 'short',
-            day: 'numeric',
-            month: 'short',
-          });
+          // formatSessionDate pins the UTC frame; a plain toLocaleDateString on
+          // the parsed date showed the day before in Bogota (found 2026-10-12).
+          const day = formatSessionDate(s.date, language, { weekday: 'short', day: 'numeric', month: 'short' });
           const coachName = s.creator?.name ?? '';
           return (
             <Link

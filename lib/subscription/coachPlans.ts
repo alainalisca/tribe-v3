@@ -67,9 +67,15 @@ export function getCoachPlan(user: { coach_plan?: string | null } | null | undef
  * - basico: never.
  * - a comp (embajador, or a comped pro/crecimiento): yes, until an admin removes it.
  * - Stripe active: yes.
- * - Stripe past_due: yes for PAST_DUE_GRACE_DAYS after current_period_end, then no.
+ * - Stripe past_due: yes for PAST_DUE_GRACE_DAYS after the unpaid renewal, then no.
  *   Stripe's dunning cancels at 7 days and the webhook moves the coach back to
  *   basico; this is the backstop for a missed webhook.
+ *
+ *   The renewal is the START of the current period, not current_period_end:
+ *   when a renewal charge fails Stripe has already advanced the period, so
+ *   current_period_end is a month AHEAD. Measured in Stripe test mode on
+ *   2026-10-12 (failed renewal: status past_due, period end +1 month). Plans are
+ *   monthly, so the start is current_period_end minus one calendar month.
  * - canceled: no.
  */
 export function hasProBenefits(state: CoachPlanState | null | undefined, now: Date = new Date()): boolean {
@@ -80,9 +86,11 @@ export function hasProBenefits(state: CoachPlanState | null | undefined, now: Da
   if (state.coach_plan_status === 'active') return true;
   if (state.coach_plan_status === 'past_due') {
     if (!state.coach_plan_current_period_end) return false;
-    const end = Date.parse(state.coach_plan_current_period_end);
-    if (Number.isNaN(end)) return false;
-    return now.getTime() <= end + PAST_DUE_GRACE_DAYS * DAY_MS;
+    const end = new Date(state.coach_plan_current_period_end);
+    if (Number.isNaN(end.getTime())) return false;
+    const renewal = new Date(end.getTime());
+    renewal.setUTCMonth(renewal.getUTCMonth() - 1);
+    return now.getTime() <= renewal.getTime() + PAST_DUE_GRACE_DAYS * DAY_MS;
   }
   return false;
 }

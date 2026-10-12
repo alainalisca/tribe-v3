@@ -50,6 +50,15 @@ describe('with COACH_PLANS_ENABLED on', () => {
     const { container, rerender } = render(<CoachesDestacadosRow sessions={[proSession]} />);
     expect(screen.getByText('Coaches destacados')).toBeTruthy();
     expect(screen.getByText('Funcional')).toBeTruthy();
+    // The session's own calendar day, never the day before (Bogota is UTC-5).
+    const [y, m, d] = tomorrow.split('-').map(Number);
+    const expected = new Date(Date.UTC(y, m - 1, d)).toLocaleDateString('es-CO', {
+      timeZone: 'UTC',
+      weekday: 'short',
+      day: 'numeric',
+      month: 'short',
+    });
+    expect(container.textContent).toContain(expected);
     rerender(<CoachesDestacadosRow sessions={[]} />);
     expect(container.innerHTML).toBe('');
   });
