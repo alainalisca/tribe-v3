@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { logError } from '@/lib/logger';
 import { requireTribeOSPremium } from '@/lib/auth/premium';
 import { daysSinceVisit } from '@/lib/tribe-os/daysSinceVisit';
+import { buildLiveReasons } from '@/lib/tribe-os/forecast';
 
 export async function GET(): Promise<NextResponse> {
   const gate = await requireTribeOSPremium();
@@ -106,7 +107,12 @@ export async function GET(): Promise<NextResponse> {
         plan_ends_on: m.plan_ends_on ?? null,
         score: s?.score ?? null,
         level: s?.level ?? null,
-        reasons: s?.reasons ?? [],
+        reasons: buildLiveReasons({
+          daysSinceLastActivity: freshDaysSince,
+          lastActivityAt,
+          planEndsOn: m.plan_ends_on ?? null,
+          language: 'bilingual',
+        }),
         days_since_last_activity: freshDaysSince,
         last_activity_at: lastActivityAt,
         visits_last_14d: s?.signals?.visits_last_14d ?? 0,

@@ -138,6 +138,7 @@ const copy = {
     manualVisitSuccess: 'Visit saved',
     manualVisitDuplicate: "There's already a visit registered near that time.",
     manualVisitError: 'Could not save the visit. Try again.',
+    recordWithClass: 'Record with class',
 
     // History (legacy client_attendance)
     historyTitle: 'Payment history',
@@ -286,6 +287,7 @@ const copy = {
     manualVisitSuccess: 'Visita registrada',
     manualVisitDuplicate: 'Ya hay una visita registrada cerca de esa hora.',
     manualVisitError: 'No se pudo guardar la visita. Intenta de nuevo.',
+    recordWithClass: 'Registrar con clase',
 
     historyTitle: 'Historial de pagos',
     historyEmpty: 'Aún no hay pagos registrados.',
@@ -1726,9 +1728,9 @@ function RecordVisitManual({
       <button
         type="button"
         onClick={() => { reset(); setOpen(true); }}
-        className="inline-flex items-center gap-1 px-2.5 py-1 bg-tribe-green/15 text-tribe-green text-[11px] font-bold rounded-full border border-tribe-green/30 hover:bg-tribe-green/25 transition-colors"
+        className="w-full flex items-center justify-center gap-1.5 py-2 bg-tribe-green/10 text-tribe-green text-xs font-bold rounded-xl border border-dashed border-tribe-green/30 hover:bg-tribe-green/20 transition-colors mb-3"
       >
-        <Plus className="w-3 h-3" />
+        <Plus className="w-3.5 h-3.5" />
         {s.manualVisitBtn}
       </button>
     );
@@ -1846,11 +1848,9 @@ function VisitsHistorySection({
     <section className="mt-6">
       <div className="flex items-center justify-between gap-3 mb-3">
         <h2 className="text-xs uppercase tracking-[0.1em] text-gray-500 font-semibold">{s.visitsTitle}</h2>
-        <div className="flex items-center gap-2">
-          <RecordVisitManual clientId={clientId} s={s} onRecorded={onRecorded} />
-          <RecordAttendanceInline clientId={clientId} onRecorded={onRecorded} />
-        </div>
+        <RecordAttendanceInline clientId={clientId} onRecorded={onRecorded} label={s.recordWithClass} />
       </div>
+      <RecordVisitManual clientId={clientId} s={s} onRecorded={onRecorded} />
       {!loading && visits.length === 0 ? (
         <div className="py-8 text-center bg-white rounded-xl border border-gray-200 space-y-2">
           <p className="text-sm font-semibold text-gray-900">{s.visitsEmpty}</p>

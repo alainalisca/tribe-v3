@@ -15,7 +15,6 @@ import { useLanguage } from '@/lib/LanguageContext';
 import { useTribeOSPremiumGate } from '@/hooks/useTribeOSPremiumGate';
 import { formatCents, type Currency } from '@/lib/format/currency';
 import { buildWhatsAppUrl } from '@/lib/phone';
-import { ownerReason, humanizeReason } from '@/lib/tribe-os/forecast';
 import { trackEvent } from '@/lib/analytics';
 import {
   weekLabel,
@@ -307,9 +306,7 @@ export default function WeeklyPage() {
             ) : (
               <ul className="space-y-3">
                 {data.to_contact.map((m) => {
-                  const reason = m.reasons.length > 0
-                    ? humanizeReason(ownerReason(m.reasons[0], language), null, language)
-                    : '';
+                  const reason = m.reasons[0] ?? '';
                   const waUrl = buildWhatsAppUrl(m.phone);
                   return (
                     <li key={m.id} className="flex items-center justify-between gap-2">

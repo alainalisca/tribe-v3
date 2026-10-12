@@ -138,20 +138,19 @@ describe('computeForecast', () => {
     expect(result.atRiskMembers[0].planStatus).toBe('expired');
   });
 
-  it('uses specific retention reasons instead of generic labels', () => {
+  it('uses live absence reason instead of stored reasons', () => {
     const members = [
       makeMember({
         id: '1',
         days_since_last_activity: 15,
+        last_activity_at: '2026-09-25T14:00:00Z',
         retention_level: 'high',
-        reasons: ['15 días sin venir / 15 days absent', 'Viene 40% menos que su promedio / Visiting 40% less than average'],
         plan_ends_on: '2026-10-20',
       }),
     ];
     const result = computeForecast(members, PLANS, 'COP', TODAY, MONTH_START);
     const reasons = result.atRiskMembers[0].reasons;
-    expect(reasons).toContain('15 días sin venir');
-    expect(reasons).toContain('Viene 40% menos que su promedio');
+    expect(reasons[0]).toMatch(/No ha vuelto desde el 25 de sep\./);
     expect(reasons.some((r) => r.includes('Riesgo alto'))).toBe(false);
   });
 
@@ -220,17 +219,17 @@ describe('computeForecast', () => {
     expect(result.atRiskMembers[0].reasons[0]).toMatch(/No ha vuelto desde el 25 de sep\./);
   });
 
-  it('keeps "Viene X% menos" when X < 100', () => {
+  it('generates live absence reason from last_activity_at', () => {
     const members = [
       makeMember({
         id: '1',
         days_since_last_activity: 15,
-        reasons: ['Viene 60% menos que su promedio / Visiting 60% less than average'],
+        last_activity_at: '2026-09-25T14:00:00Z',
         plan_ends_on: '2026-10-20',
       }),
     ];
     const result = computeForecast(members, PLANS, 'COP', TODAY, MONTH_START);
-    expect(result.atRiskMembers[0].reasons[0]).toBe('Viene 60% menos que su promedio');
+    expect(result.atRiskMembers[0].reasons[0]).toMatch(/No ha vuelto desde el 25 de sep\./);
   });
 
   it('sorts touched members after untouched members at same urgency', () => {

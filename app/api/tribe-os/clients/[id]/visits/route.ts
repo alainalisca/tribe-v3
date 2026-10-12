@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { logError } from '@/lib/logger';
 import { requireTribeOSPremium } from '@/lib/auth/premium';
 import { listVisitsForClient } from '@/lib/dal/clients';
+import { scoreRetention } from '@/lib/tribe-os/retention';
 
 const ManualVisitSchema = z.object({
   visited_at: z.string().datetime(),
@@ -73,6 +74,66 @@ export async function POST(
         return NextResponse.json({ success: false, error: 'duplicate_visit' }, { status: 409 });
       }
       throw insertErr;
+    }
+
+    try {
+      const { data: member } = await supabase
+        .from('clients')
+        .select('joined_on, plan_ends_on')
+        .eq('id', clientId)
+        .eq('gym_id', gymId)
+        .single();
+
+      if (member) {
+        const since = new Date();
+        since.setDate(since.getDate() - 70);
+        const { data: memberActivities } = await supabase
+          .from('client_activity_v2')
+          .select('activity_at')
+          .eq('gym_id', gymId)
+          .eq('client_id', clientId)
+          .gte('activity_at', since.toISOString());
+
+        const result = scoreRetention({
+          client_id: clientId,
+          gym_id: gymId,
+          joined_on: member.joined_on,
+          plan_ends_on: member.plan_ends_on,
+          activities: (memberActivities ?? []).map((a) => ({ activity_at: a.activity_at })),
+        });
+
+        await supabase.from('client_retention_v2').upsert({
+          client_id: result.client_id,
+          gym_id: result.gym_id,
+          score: result.score,
+          level: result.level,
+          reasons: result.reasons,
+          signals: result.signals,
+          computed_at: new Date().toISOString(),
+        }, { onConflict: 'client_id' });
+
+        if (result.level === 'low' || result.level === 'new') {
+          const { data: openInsights } = await supabase
+            .from('community_insight_members')
+            .select('insight:community_insights!inner(id, type, is_actioned)')
+            .eq('client_id', clientId)
+            .eq('community_insights.type', 'CHURN_RISK')
+            .eq('community_insights.is_actioned', false);
+
+          const insightIds = (openInsights ?? [])
+            .map((r) => (r.insight as unknown as { id: string })?.id)
+            .filter(Boolean);
+
+          if (insightIds.length > 0) {
+            await supabase
+              .from('community_insights')
+              .update({ is_actioned: true })
+              .in('id', insightIds);
+          }
+        }
+      }
+    } catch (recomputeErr) {
+      logError(recomputeErr, { route: 'POST /api/tribe-os/clients/[id]/visits', step: 'recompute' });
     }
 
     return NextResponse.json({ success: true, data: { id: visit.id } });

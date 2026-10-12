@@ -47,6 +47,8 @@ interface RecordAttendanceInlineProps {
   /** Called after a successful submission so the parent can refresh
    *  its attendance history. */
   onRecorded?: () => void;
+  /** Override the collapsed-state button text and render as a small text link. */
+  label?: string;
 }
 
 // ES PENDING VERONICA REVIEW
@@ -107,7 +109,7 @@ const copy = {
   },
 } as const;
 
-export default function RecordAttendanceInline({ clientId, onRecorded }: RecordAttendanceInlineProps) {
+export default function RecordAttendanceInline({ clientId, onRecorded, label }: RecordAttendanceInlineProps) {
   const { language } = useLanguage();
   const s = copy[language];
 
@@ -244,6 +246,17 @@ export default function RecordAttendanceInline({ clientId, onRecorded }: RecordA
   }
 
   if (!open) {
+    if (label) {
+      return (
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="text-[11px] text-tribe-green font-medium underline underline-offset-2 hover:text-tribe-green-dark transition-colors"
+        >
+          {label}
+        </button>
+      );
+    }
     return (
       <button
         type="button"

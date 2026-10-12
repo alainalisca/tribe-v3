@@ -13,7 +13,7 @@ import { logError } from '@/lib/logger';
 import { requireTribeOSPremium } from '@/lib/auth/premium';
 import { listGymMemberUserIds } from '@/lib/dal/gymCoaches';
 import { listUnpaidAttendance } from '@/lib/dal/clients';
-import { humanizeReason } from '@/lib/tribe-os/forecast';
+import { buildLiveReasons } from '@/lib/tribe-os/forecast';
 import { filterContactToday } from '@/lib/tribe-os/contactFilter';
 import { bogotaToday, bogotaDateLabel, addDays, planExpiryLabel } from '@/lib/tribe-os/dates';
 import { daysSinceVisit } from '@/lib/tribe-os/daysSinceVisit';
@@ -197,9 +197,13 @@ export async function GET(): Promise<NextResponse> {
       if (v && (!lastActivityAt || new Date(v.visited_at) > new Date(lastActivityAt))) {
         lastActivityAt = v.visited_at;
       }
-      const reasons: string[] = s.reasons ?? [];
-      const rawShort = reasons[0]?.split(' / ')[0] ?? null;
-      const shortReason = rawShort ? humanizeReason(rawShort, lastActivityAt, 'es') : null;
+      const liveReasons = buildLiveReasons({
+        daysSinceLastActivity: days,
+        lastActivityAt,
+        planEndsOn: m?.plan_ends_on ?? null,
+        language: 'es',
+      });
+      const shortReason = liveReasons[0] ?? null;
 
       return {
         id: row.id,
@@ -213,7 +217,7 @@ export async function GET(): Promise<NextResponse> {
         planEndsOn: m?.plan_ends_on ?? null,
         daysSinceLastActivity: days,
         lastActivityAt,
-        reasons,
+        reasons: liveReasons,
         cameBack: false,
       };
     });
@@ -255,7 +259,12 @@ export async function GET(): Promise<NextResponse> {
           classStartTime: v?.visited_at ?? null,
           daysSinceLastActivity: days,
           lastActivityAt,
-          reasons: s?.reasons ?? [],
+          reasons: buildLiveReasons({
+            daysSinceLastActivity: days,
+            lastActivityAt,
+            planEndsOn: m.plan_ends_on,
+            language: 'es',
+          }),
         });
       }
     }
@@ -275,15 +284,13 @@ export async function GET(): Promise<NextResponse> {
         const p = planMap.get(c.id);
         if (!p) continue;
         c.planEndsOn = p.planEndsOn;
-        const planReason = p.planEndsOn <= today
-          ? `Su plan venció / Plan expired`
-          : `Su plan vence / Plan expires`;
-        if (!c.reasons.some((r) => r.includes('plan venc') || r.includes('Plan expir'))) {
-          c.reasons = [...c.reasons, planReason];
-        }
-        const days = c.daysSinceLastActivity;
-        const planLabel = p.label;
-        c.reason = days !== null ? `${days} días sin venir · ${planLabel}` : planLabel;
+        c.reasons = buildLiveReasons({
+          daysSinceLastActivity: c.daysSinceLastActivity,
+          lastActivityAt: c.lastActivityAt,
+          planEndsOn: p.planEndsOn,
+          language: 'es',
+        });
+        c.reason = c.reasons[0] ?? p.label;
       }
       // Remove dupes from planExpiry
       planExpiry.splice(0, planExpiry.length, ...planExpiry.filter((p) => !dupeIds.has(p.id)));

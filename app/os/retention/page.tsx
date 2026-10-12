@@ -4,7 +4,6 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLanguage } from '@/lib/LanguageContext';
 import { useTribeOSPremiumGate } from '@/hooks/useTribeOSPremiumGate';
 import { trackEvent } from '@/lib/analytics';
-import { humanizeReason } from '@/lib/tribe-os/forecast';
 import { buildWhatsAppUrl } from '@/lib/phone';
 import { StatCard, Badge, Button } from '@/components/tribe-os/ui';
 import DraftModal from '@/components/tribe-os/DraftModal';
@@ -147,18 +146,6 @@ const levelBadge: Record<
 function firstName(name: string | null): string {
   if (!name) return '';
   return name.split(' ')[0];
-}
-
-function deduplicateReasons(reasons: string[]): string[] {
-  const hasDaysAbsent = reasons.some((r) => r.includes('días sin venir') || r.includes('days absent'));
-  if (!hasDaysAbsent) return reasons;
-  return reasons.filter(
-    (r) =>
-      !r.includes('menos que su promedio') &&
-      !r.includes('less than average') &&
-      !r.includes('Sin visitas en 14') &&
-      !r.includes('No visits in 14d')
-  );
 }
 
 function daysSinceJoined(joinedOn: string | null): number | null {
@@ -645,12 +632,10 @@ function MemberCard({
   const [note, setNote] = useState('');
   const badge = levelBadge[m.level ?? 'insufficient_data'] ?? levelBadge.insufficient_data;
 
-  const reasons = deduplicateReasons(m.reasons);
-  const reasonText = reasons
+  const reasonText = m.reasons
     .map((r) => {
       const parts = r.split(' / ');
-      const localized = language === 'es' ? parts[0] : (parts[1] ?? parts[0]);
-      return humanizeReason(localized, m.last_activity_at, language);
+      return language === 'es' ? parts[0] : (parts[1] ?? parts[0]);
     })
     .join(' · ');
 

@@ -19,6 +19,7 @@ import {
 } from '@/lib/tribe-os/touch-outcome';
 import { filterContactToday, type ContactFilterRow } from '@/lib/tribe-os/contactFilter';
 import { daysSinceVisit } from '@/lib/tribe-os/daysSinceVisit';
+import { buildLiveReasons } from '@/lib/tribe-os/forecast';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 const PAGE_SIZE = 1000;
@@ -260,7 +261,12 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         score: s?.signals?.score ?? null,
         days_since_last_activity: days,
         last_touch: latestTouchMap.get(m.id) ?? null,
-        reasons: s?.reasons ?? [],
+        reasons: buildLiveReasons({
+          daysSinceLastActivity: days,
+          lastActivityAt: lastVisit,
+          planEndsOn: m.plan_ends_on ?? null,
+          language: 'es',
+        }),
         monthlyValueCents: planValueMap.get(m.id) ?? null,
       };
     });

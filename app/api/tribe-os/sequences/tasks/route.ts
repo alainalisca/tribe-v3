@@ -6,7 +6,7 @@ import { getGym } from '@/lib/dal/gyms';
 import { dueDate, todayBogota, bogotaStartOfDayUTC, computeCurrentStep } from '@/lib/tribe-os/sequences/helpers';
 import { SYSTEM_DAILY_ENROLL_CAP } from '@/lib/tribe-os/sequences/constants';
 import { daysSinceVisit } from '@/lib/tribe-os/daysSinceVisit';
-import { monthlyValueCents, ownerReason, type PlanPrice } from '@/lib/tribe-os/forecast';
+import { monthlyValueCents, buildLiveReasons, type PlanPrice } from '@/lib/tribe-os/forecast';
 
 export async function GET(): Promise<NextResponse> {
   const gate = await requireTribeOSPremium();
@@ -64,14 +64,6 @@ export async function GET(): Promise<NextResponse> {
       .in('id', allClientIds.length > 0 ? allClientIds : ['00000000-0000-0000-0000-000000000000']);
 
     const clientMap = new Map((clients ?? []).map((c) => [c.id, c]));
-
-    const { data: scores } = await supabase
-      .from('client_retention_v2')
-      .select('client_id, reasons, signals')
-      .eq('gym_id', gymId)
-      .in('client_id', allClientIds.length > 0 ? allClientIds : ['00000000-0000-0000-0000-000000000000']);
-
-    const scoreMap = new Map((scores ?? []).map((s) => [s.client_id, s]));
 
     const { data: latestVisits } = await supabase
       .from('client_visits')
@@ -145,22 +137,24 @@ export async function GET(): Promise<NextResponse> {
       if (!seq) continue;
       const steps = stepsBySeq.get(e.sequence_id) ?? [];
       const client = clientMap.get(e.client_id);
-      const score = scoreMap.get(e.client_id);
 
       if (e.status === 'pending_approval') {
         const memberPlan = client?.membership_plan ?? null;
-        const retScore = scoreMap.get(e.client_id);
-        const localizedReasons = (retScore?.reasons ?? [])
-          .map((r: string) => ownerReason(r, 'es'))
-          .filter((r: string) => !r.includes('Asistencia estable') && !r.includes('Miembro nuevo'));
+        const latestVisitAt = visitMap.get(e.client_id) ?? null;
+        const freshDays = daysSinceVisit(latestVisitAt);
         pending.push({
           enrollmentId: e.id,
           clientId: e.client_id,
           clientName: client?.name ?? null,
           sequenceName: seq.name,
           enrolledByType: e.enrolled_by_type,
-          daysSinceLastActivity: daysSinceVisit(visitMap.get(e.client_id) ?? null),
-          reasons: localizedReasons,
+          daysSinceLastActivity: freshDays,
+          reasons: buildLiveReasons({
+            daysSinceLastActivity: freshDays,
+            lastActivityAt: latestVisitAt,
+            planEndsOn: client?.plan_ends_on ?? null,
+            language: 'es',
+          }),
           planName: memberPlan,
           monthlyValue: monthlyValueCents(memberPlan, plans, gymCurrency),
           currency: gymCurrency,

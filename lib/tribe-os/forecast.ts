@@ -146,26 +146,76 @@ export function humanizeReason(
     : `Has not returned since ${month} ${day}`;
 }
 
-function buildReasons(m: MemberForForecast, status: string, language: 'en' | 'es'): string[] {
-  const out: string[] = [];
-  for (const r of m.reasons) {
-    const localized = ownerReason(r, language);
-    if (localized.includes('Asistencia estable') || localized.includes('Stable attendance')) continue;
-    if (localized.includes('Miembro nuevo') || localized.includes('New member')) continue;
-    out.push(humanizeReason(localized, m.last_activity_at, language));
+function buildAbsenceReason(lastActivityAt: string | null, language: 'en' | 'es'): string {
+  if (!lastActivityAt) {
+    return language === 'es' ? 'No ha vuelto' : 'Has not returned';
   }
-  if (out.length === 0) {
-    if (status === 'expiring') out.push(language === 'es' ? 'Plan vence pronto' : 'Plan expiring soon');
-    else if (status === 'expired') out.push(language === 'es' ? 'Plan vencido' : 'Plan expired');
-    else if (m.days_since_last_activity !== null && m.days_since_last_activity > 30) {
-      out.push(
-        language === 'es'
-          ? `${m.days_since_last_activity} días sin venir`
-          : `${m.days_since_last_activity} days absent`,
-      );
+  const d = new Date(lastActivityAt);
+  const bogota = new Date(d.toLocaleString('en-US', { timeZone: 'America/Bogota' }));
+  const day = bogota.getDate();
+  const monthEs = BOGOTA_MONTHS_ES[bogota.getMonth()];
+  const monthEn = BOGOTA_MONTHS_EN[bogota.getMonth()];
+  return language === 'es'
+    ? `No ha vuelto desde el ${day} de ${monthEs}`
+    : `Has not returned since ${monthEn} ${day}`;
+}
+
+function buildPlanReason(planEndsOn: string, diffDays: number, language: 'en' | 'es'): string {
+  if (diffDays < 0) {
+    const abs = Math.abs(diffDays);
+    return language === 'es'
+      ? `Su plan venció hace ${abs} días`
+      : `Plan expired ${abs} days ago`;
+  }
+  if (diffDays === 0) {
+    return language === 'es' ? 'Su plan vence hoy' : 'Plan expires today';
+  }
+  return language === 'es'
+    ? `Su plan vence en ${diffDays} días`
+    : `Plan expires in ${diffDays} days`;
+}
+
+export function buildLiveReasons(opts: {
+  daysSinceLastActivity: number | null;
+  lastActivityAt: string | null;
+  planEndsOn: string | null;
+  language: 'en' | 'es' | 'bilingual';
+}): string[] {
+  const { daysSinceLastActivity: days, lastActivityAt, planEndsOn, language } = opts;
+  const out: string[] = [];
+
+  if (days !== null && days > 0) {
+    if (language === 'bilingual') {
+      out.push(`${buildAbsenceReason(lastActivityAt, 'es')} / ${buildAbsenceReason(lastActivityAt, 'en')}`);
+    } else {
+      out.push(buildAbsenceReason(lastActivityAt, language));
     }
   }
+
+  if (planEndsOn) {
+    const now = new Date();
+    const bogotaToday = now.toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
+    const diffMs = new Date(planEndsOn).getTime() - new Date(bogotaToday).getTime();
+    const diffDays = Math.round(diffMs / 86_400_000);
+    if (diffDays <= 7) {
+      if (language === 'bilingual') {
+        out.push(`${buildPlanReason(planEndsOn, diffDays, 'es')} / ${buildPlanReason(planEndsOn, diffDays, 'en')}`);
+      } else {
+        out.push(buildPlanReason(planEndsOn, diffDays, language));
+      }
+    }
+  }
+
   return out;
+}
+
+function buildReasons(m: MemberForForecast, _status: string, language: 'en' | 'es'): string[] {
+  return buildLiveReasons({
+    daysSinceLastActivity: m.days_since_last_activity,
+    lastActivityAt: m.last_activity_at,
+    planEndsOn: m.plan_ends_on,
+    language,
+  });
 }
 
 function sortAtRisk(a: ForecastMember, b: ForecastMember): number {
