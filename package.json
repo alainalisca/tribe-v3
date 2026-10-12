@@ -20,7 +20,7 @@
     "test:complete": "vitest run --reporter=json --outputFile=.vitest-results.json; node scripts/assertSuiteComplete.mjs",
     "av:guard": "node scripts/av-guard.mjs",
     "av:migrations": "node scripts/av-migration-check.mjs",
-    "predev:av": "node scripts/av-guard.mjs",
+    "predev:av": "node scripts/av-guard.mjs --dev",
     "dev:av": "node scripts/av-dev.mjs",
     "pretest": "node scripts/av-guard.mjs --test",
     "pretest:complete": "node scripts/av-guard.mjs --test",
