@@ -10,6 +10,7 @@ import { verifyStripeWebhookSignature, mapStripeStatus, getStripePaymentIntent }
 import { notifyAfterFinalize, notifyTipReceived } from '@/lib/payments/notifyAfterFinalize';
 import { syncFromStripeSubscription, clearTribeOSSubscription } from '@/lib/dal/tribeOSSubscription';
 import { recordPaymentRefund } from '@/lib/dal/payments';
+import { handleCoachPlanEvent } from '@/lib/payments/coachPlanWebhook';
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
@@ -43,6 +44,25 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         // Non-conflict failure — log but fall through so we don't drop the event.
         logError(dedupErr, { action: 'stripe_webhook_dedup', eventId });
       }
+    }
+
+    // T-PLAN1: coach-plan events (tribe_purpose = 'coach_plan') are handled
+    // here and never reach the switch below; every other event returns null
+    // and carries on exactly as before. On a 500, and ONLY for this branch,
+    // the dedup row is released so Stripe's retry runs the handler again
+    // instead of being answered "duplicate". The existing branches keep the
+    // old behaviour; that gap is ticket T-STRIPE-RETRY.
+    const coachPlan = await handleCoachPlanEvent(supabase, event);
+    if (coachPlan) {
+      if (coachPlan.status === 500 && eventId) {
+        const { error: releaseErr } = await supabase
+          .from('processed_webhook_events')
+          .delete()
+          .eq('gateway', 'stripe')
+          .eq('event_id', eventId);
+        if (releaseErr) logError(releaseErr, { action: 'stripe_webhook_coach_plan_release', eventId });
+      }
+      return NextResponse.json(coachPlan.body, { status: coachPlan.status });
     }
 
     // Notifications after finalize_payment — shared helper module.

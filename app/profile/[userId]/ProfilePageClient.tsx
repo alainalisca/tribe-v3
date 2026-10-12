@@ -27,6 +27,7 @@ import ReviewsList from '@/components/instructor/ReviewsList';
 import TribePlusBadge from '@/components/TribePlusBadge';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/lib/LanguageContext';
+import CoachPlanBadge from '@/components/CoachPlanBadge';
 import { sportTranslations } from '@/lib/translations';
 import type { User } from '@supabase/supabase-js';
 import type { Database } from '@/lib/database.types';
@@ -295,6 +296,7 @@ export default function ProfilePageClient({ userId, initialProfile, statsSlot }:
               <h2 className="text-3xl font-extrabold tracking-tight text-theme-primary">{profile?.name}</h2>
               {(profile as any)?.is_trailblazer && <TrailblazerBadge language={language} />}
               <TribePlusBadge user={profile as any} />
+              <CoachPlanBadge plan={(profile as { coach_plan?: string | null } | null)?.coach_plan} />
             </div>
             <div className="flex items-center gap-3 mt-2">
               {profile?.username && <span className="text-sm text-theme-secondary">@{profile.username}</span>}

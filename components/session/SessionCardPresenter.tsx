@@ -15,10 +15,16 @@ import { Star } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { PresenterGymTag, PendingVenueTag, GymHostRow } from '@/components/partner/SessionGymBits';
 import { presenterGymMark, type SessionGymIdentity } from '@/lib/sessionGym';
+import CoachPlanBadge from '@/components/CoachPlanBadge';
 
 interface SessionCardPresenterProps {
   gym: SessionGymIdentity;
-  creator: { name?: string | null; avatar_url?: string | null; average_rating?: number | string | null } | null;
+  creator: {
+    name?: string | null;
+    avatar_url?: string | null;
+    average_rating?: number | string | null;
+    coach_plan?: string | null;
+  } | null;
   instructorName: string;
   sessionsHosted: number;
   coachCount: number;
@@ -55,6 +61,7 @@ export default function SessionCardPresenter({
           {creator.name?.[0]?.toUpperCase() || 'U'}
         </AvatarFallback>
       </Avatar>
+      <CoachPlanBadge plan={creator.coach_plan} />
       {Number(creator.average_rating) > 0 && (
         <span className="text-xs text-yellow-500 font-semibold flex items-center gap-0.5">
           <Star className="w-3 h-3 fill-yellow-500" />
