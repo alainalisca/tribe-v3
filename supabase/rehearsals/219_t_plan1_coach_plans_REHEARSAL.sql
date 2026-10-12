@@ -543,12 +543,22 @@ BEGIN
          (k_other, 'reh-219-other@example.com', now(), '{"name":"Reh Other"}'::jsonb),
          (k_ins,   'reh-219-ins@example.com',   now(), '{"name":"Reh Ins"}'::jsonb),
          (k_adm,   'reh-219-adm@example.com',   now(), '{"name":"Reh Admin"}'::jsonb);
+  -- The local Supabase stack loads production's PUBLIC schema only, so it has
+  -- no on_auth_user_created trigger on auth.users and a signup makes no profile
+  -- row there (measured 2026-10-12). Production has the trigger. Create any
+  -- missing row the way handle_new_user would, and say which path ran.
+  SELECT count(*) INTO v_n FROM public.users WHERE id IN (k_coach, k_other, k_ins, k_adm);
+  v_txt := CASE WHEN v_n = 4 THEN 'by handle_new_user' ELSE (4 - v_n) || ' by hand (no auth trigger here)' END;
+  INSERT INTO public.users (id, email, name)
+  SELECT au.id, au.email, au.raw_user_meta_data->>'name' FROM auth.users au
+   WHERE au.id IN (k_coach, k_other, k_ins, k_adm)
+  ON CONFLICT (id) DO NOTHING;
   UPDATE public.users SET is_admin = true WHERE id = k_adm;
   INSERT INTO public.sessions (id, creator_id, title, sport, date, start_time, duration, location,
                                max_participants, join_policy)
   VALUES (k_sess, k_coach, 'Reh 219', 'running', current_date + 1, '07:00', 60, 'Reh park', 10, 'open');
   SELECT count(*) INTO v_n FROM public.users WHERE id IN (k_coach, k_other, k_ins, k_adm);
-  a2_state := v_n || ' of 4 throwaway users rows created by handle_new_user; admin actor '
+  a2_state := v_n || ' of 4 throwaway users rows, created ' || v_txt || '; admin actor '
     || CASE WHEN public.is_app_admin_uid(k_adm) THEN 'is admin' ELSE 'NOT admin' END
     || '; session ' || CASE WHEN EXISTS (SELECT 1 FROM public.sessions WHERE id = k_sess) THEN 'created' ELSE 'MISSING' END;
   a2_ok := v_n = 4 AND public.is_app_admin_uid(k_adm) AND EXISTS (SELECT 1 FROM public.sessions WHERE id = k_sess);
