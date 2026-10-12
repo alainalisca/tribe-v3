@@ -57,6 +57,7 @@ const publicPaths = [
   '/s', // public session share pages (/s/[id]) — must be viewable + scrapable without auth
   '/i', // public instructor share pages (/i/[id]) — must be viewable + scrapable without auth
   '/g', // public gym share pages (/g/[slug]) — bio-link destination; must be viewable + scrapable without auth
+  '/planes', // T-PLAN1 coach plans pricing: must be readable signed out (the page 404s while COACH_PLANS_ENABLED is off)
   '/pase', // T-LEAD1 digital pass (/pase/[slug]) -- the QR on a printed voucher; the visitor has no account and may never make one
   '/about',
   '/faq',

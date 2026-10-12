@@ -32,6 +32,7 @@ import LazyMount from '@/components/LazyMount';
 import FilterBar from '@/components/home/FilterBar';
 import CityGreeting from '@/components/home/CityGreeting';
 import LiveNowSection from '@/components/home/LiveNowSection';
+import CoachesDestacadosRow from '@/components/home/CoachesDestacadosRow';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import FeaturedInstructors from '@/components/FeaturedInstructors';
 import FeaturedPartnerBanner from '@/components/FeaturedPartnerBanner';
@@ -174,6 +175,9 @@ export default function HomePage() {
 
           {/* T-AV24: only with the athletes flag on AND an active program row. */}
           {f.user && <AthletesEntryCard where="home" />}
+
+          {/* T-PLAN1: Coaches destacados (flag-gated, hidden when empty, derived from the feed). */}
+          <CoachesDestacadosRow sessions={f.sessions} />
 
           {/* ── Live Now (only when sessions exist) ── */}
           <LiveNowSection liveNowSessions={f.liveNowSessions} userLocation={f.userLocation} language={f.language} />

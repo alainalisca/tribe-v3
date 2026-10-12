@@ -6,6 +6,7 @@ import { Calendar, Clock, MapPin, Users, Star, DollarSign, Repeat } from 'lucide
 import LocationMap from '@/components/LocationMap';
 import { Badge } from '@/components/ui/badge';
 import type { Session } from '@/lib/database.types';
+import type { SessionWithRelations } from '@/lib/dal/sessions';
 import { useLanguage } from '@/lib/LanguageContext';
 import type { Currency } from '@/lib/payments/config';
 import { translateSport } from '@/lib/translations';
@@ -13,14 +14,10 @@ import { useUserCurrency } from '@/lib/useUserCurrency';
 import { formatPriceForUser } from '@/lib/userCurrency';
 import { SessionDetailVenueLine, SessionDetailGymHost } from '@/components/session/SessionDetailVenue';
 import type { SessionGymIdentity } from '@/lib/sessionGym';
+import CoachPlanBadge from '@/components/CoachPlanBadge';
 
-interface CreatorInfo {
-  id: string;
-  name: string;
-  avatar_url: string | null;
-  average_rating: number | null;
-  total_reviews: number | null;
-}
+/** The host as the session DAL returns it (coach_plan only while COACH_PLANS_ENABLED). */
+type CreatorInfo = NonNullable<SessionWithRelations['creator']>;
 
 interface ParticipantInfo {
   user_id: string | null;
@@ -256,6 +253,7 @@ export default function SessionDetails({
                 <span className="truncate">
                   {t('hostedBy')} {creator.name}
                 </span>
+                <CoachPlanBadge plan={creator.coach_plan} />
                 {gym && <SessionDetailGymHost gym={gym} coachCount={coachCount} />}
               </span>
             </div>

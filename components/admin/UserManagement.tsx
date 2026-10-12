@@ -6,6 +6,8 @@ import { useLanguage } from '@/lib/LanguageContext';
 import { lastSeenLabel } from '@/lib/lastSeen';
 import { ADMIN_USER_FILTERS, type AdminUserFilter, type AdminUserSort } from '@/lib/dal/admin';
 import type { Database } from '@/lib/database.types';
+import CoachPlanControl from '@/components/admin/CoachPlanControl';
+import { isCoachPlansEnabled } from '@/lib/subscription/coachPlans';
 
 type UserRow = Database['public']['Tables']['users']['Row'];
 /** is_test_account is `boolean NOT NULL DEFAULT false` in production (migration
@@ -251,7 +253,7 @@ export default function UserManagement({
                 </div>
 
                 {menuOpen && (
-                  <div className="px-3 pb-2 flex items-center gap-2">
+                  <div className="px-3 pb-2 flex flex-wrap items-center gap-2">
                     {u.banned ? (
                       <button
                         onClick={() => onUnban(u.id)}
@@ -283,6 +285,7 @@ export default function UserManagement({
                         {isEs ? 'Eliminar cuenta' : 'Delete account'}
                       </button>
                     )}
+                    {isCoachPlansEnabled() && <CoachPlanControl user={u} />}
                   </div>
                 )}
               </div>

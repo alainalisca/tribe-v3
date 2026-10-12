@@ -3,7 +3,8 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { Camera, MapPin, X, Settings, Store, HeartHandshake, BarChart3 } from 'lucide-react';
+import { Camera, MapPin, X, Settings, Store, HeartHandshake, BarChart3, Crown } from 'lucide-react';
+import { isCoachPlansEnabled } from '@/lib/subscription/coachPlans';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import BottomNav from '@/components/BottomNav';
 import LoadingSpinner from '@/components/LoadingSpinner';
@@ -271,6 +272,17 @@ export default function ProfilePage() {
               an athlete or an ordinary instructor. */}
           <AthletesEntryCard where="profile" />
           <PartnerDashboardEntryCard />
+
+          {/* T-PLAN1: Planes (instructors only, flag-gated). A link, never a popup. */}
+          {profile?.is_instructor && profile?.id && isCoachPlansEnabled() && (
+            <Link
+              href="/planes"
+              className="mt-3 flex items-center justify-center gap-3 w-full px-5 py-5 bg-white dark:bg-tribe-surface rounded-2xl border border-tribe-mid text-tribe-gray-60 hover:border-tribe-green hover:text-tribe-green transition text-center"
+            >
+              <Crown className="w-6 h-6 flex-shrink-0" />
+              <span className="font-bold text-base text-center">{language === 'es' ? 'Planes' : 'Plans'}</span>
+            </Link>
+          )}
 
           {/* Become a Featured Affiliate (instructors who are NOT already affiliates) */}
           {profile?.is_instructor && profile?.id && (

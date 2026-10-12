@@ -73,6 +73,15 @@ describe('existing public surfaces survive the change', () => {
     expect(isPublicPath('/s/abc/')).toBe(true);
   });
 
+  it('keeps /planes readable signed out (T-PLAN1), without opening neighbours', () => {
+    // The page itself 404s while COACH_PLANS_ENABLED is off.
+    expect(isPublicPath('/planes')).toBe(true);
+    expect(isPublicPath('/planes/')).toBe(true);
+    expect(isPublicPath('/planesx')).toBe(false);
+    // The checkout and portal routes authenticate themselves; they are not public.
+    expect(isPublicPath('/api/coach-plans/checkout/')).toBe(false);
+  });
+
   it('keeps the unsubscribe link reachable from an inbox', () => {
     // No session cookie exists when a link is clicked from an email client.
     // If this gate catches /api/unsubscribe the link 302s to /auth and the
