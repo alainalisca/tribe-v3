@@ -11,7 +11,7 @@ import type { DraftContext } from '@/lib/tribe-os/drafts/templates';
 import { STEP_CHANNEL_LABELS, STOP_REASONS } from '@/lib/tribe-os/sequences/helpers';
 import { showError, showInfo } from '@/lib/toast';
 import { formatCents } from '@/lib/format/currency';
-import { Check, MessageCircle, Square, RefreshCw } from 'lucide-react';
+import { Check, MessageCircle, Square, RefreshCw, UserPlus } from 'lucide-react';
 
 const copy = {
   en: {
@@ -46,6 +46,9 @@ const copy = {
     reconcileWarning: 'Background sync failed. Data may be stale.',
     suggestedToday: (n: number, cap: number) => `Suggested today: ${n} of ${cap}`,
     autoStartedToday: (n: number, cap: number) => `Auto-started today: ${n} of ${cap}`,
+    leadsTitle: 'Lead follow-ups',
+    leadsEmpty: 'No lead follow-ups for today.',
+    leadsView: 'View',
   },
   es: {
     pageTitle: 'Tareas de hoy',
@@ -79,6 +82,9 @@ const copy = {
     errorApprove: 'No se pudo procesar la aprobación. Intenta de nuevo.',
     suggestedToday: (n: number, cap: number) => `Sugeridos hoy: ${n} de ${cap}`,
     autoStartedToday: (n: number, cap: number) => `Iniciados automáticamente hoy: ${n} de ${cap}`,
+    leadsTitle: 'Seguimiento de leads',
+    leadsEmpty: 'Sin seguimientos de leads para hoy.',
+    leadsView: 'Ver',
   },
 } as const;
 
@@ -123,6 +129,16 @@ interface TasksData {
   systemDailyCap: number;
 }
 
+interface LeadTask {
+  id: string;
+  full_name: string;
+  phone: string | null;
+  status: string;
+  next_follow_up_at: string | null;
+  source: string;
+  created_at: string;
+}
+
 export default function TasksPage() {
   const { language } = useLanguage();
   const s = copy[language];
@@ -134,6 +150,7 @@ export default function TasksPage() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [draftTarget, setDraftTarget] = useState<TaskItem | null>(null);
   const [stopTarget, setStopTarget] = useState<TaskItem | null>(null);
+  const [leadTasks, setLeadTasks] = useState<LeadTask[]>([]);
 
   const fetchTasks = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
@@ -149,9 +166,14 @@ export default function TasksPage() {
       showInfo(s.reconcileWarning);
     }
     try {
-      const res = await fetch('/api/tribe-os/sequences/tasks');
+      const [res, leadsRes] = await Promise.all([
+        fetch('/api/tribe-os/sequences/tasks'),
+        fetch('/api/tribe-os/leads/tasks'),
+      ]);
       const json = await res.json();
       if (json.success) setData(json.data);
+      const leadsJson = await leadsRes.json();
+      if (leadsJson.success) setLeadTasks(leadsJson.data);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -290,7 +312,7 @@ export default function TasksPage() {
 
         {loading ? (
           <p className="text-tribe-dark-80 text-sm py-12 text-center">{s.loading}...</p>
-        ) : tasks.length === 0 && pending.length === 0 ? (
+        ) : tasks.length === 0 && pending.length === 0 && leadTasks.length === 0 ? (
           <div className="py-12 text-center bg-white rounded-tribe shadow-tribe">
             <Square className="h-10 w-10 text-tribe-dark-80 mx-auto mb-3 opacity-40" />
             <p className="text-sm font-semibold text-tribe-dark">{s.emptyTitle}</p>
@@ -378,6 +400,38 @@ export default function TasksPage() {
                   ? s.suggestedToday(data.systemEnrolledToday, data.systemDailyCap)
                   : s.autoStartedToday(data.systemEnrolledToday, data.systemDailyCap)}
               </p>
+            )}
+
+            {leadTasks.length > 0 && (
+              <section>
+                <h2 className="text-lg font-bold text-tribe-dark mb-3 flex items-center gap-2">
+                  <UserPlus className="h-5 w-5" />
+                  {s.leadsTitle}
+                </h2>
+                <div className="space-y-2">
+                  {leadTasks.map((lt) => (
+                    <div key={lt.id} className="bg-white rounded-tribe shadow-tribe px-4 py-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-semibold text-tribe-dark truncate">{lt.full_name}</span>
+                            <span className="text-xs text-tribe-dark-80">{lt.status}</span>
+                          </div>
+                          {lt.phone && (
+                            <p className="text-xs text-tribe-dark-80 mt-0.5">{lt.phone}</p>
+                          )}
+                        </div>
+                        <Link
+                          href={`/os/leads/${lt.id}`}
+                          className="shrink-0 px-3 py-1.5 text-xs font-medium rounded-tribe bg-tribe-green-50 hover:bg-tribe-green text-tribe-green-dark transition-colors"
+                        >
+                          {s.leadsView}
+                        </Link>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
             )}
 
             {pending.length > 0 && data?.isOwner && (

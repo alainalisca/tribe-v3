@@ -254,6 +254,13 @@ type EventName =
   | 'tribe_os_sequence_updated'
   | 'tribe_os_autonomy_changed'
   | 'tribe_os_retention_enroll'
+  | 'tribe_os_leads_viewed'
+  | 'tribe_os_lead_created'
+  | 'tribe_os_lead_detail_viewed'
+  | 'tribe_os_lead_status_changed'
+  | 'tribe_os_lead_lost'
+  | 'tribe_os_lead_converted'
+  | 'tribe_os_lead_activity_added'
 
   // Demand signal for not-yet-built paid flows (honest "notify me")
   | 'tribe_plus_interest' // user tapped Tribe+ subscribe before billing is live
