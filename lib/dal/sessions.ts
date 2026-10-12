@@ -388,6 +388,42 @@ export async function fetchSessionPaymentInstructions(
 }
 
 /**
+ * T-PAY2: the CALLER's own most recent non-empty payment_instructions, used to
+ * prefill /create when an instructor turns on a paid session.
+ *
+ * The caller is resolved from the auth session, not passed in, so this can only
+ * ever return instructions from sessions the caller created. Returns data: null
+ * when signed out or when no earlier session has instructions.
+ */
+export async function fetchMyLatestPaymentInstructions(supabase: SupabaseClient): Promise<DalResult<string | null>> {
+  try {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return { success: true, data: null };
+
+    // A few rows rather than one: a whitespace-only value passes the SQL filter
+    // but is not worth prefilling, so skip to the next one.
+    const { data, error } = await supabase
+      .from('sessions')
+      .select('payment_instructions')
+      .eq('creator_id', user.id)
+      .not('payment_instructions', 'is', null)
+      .neq('payment_instructions', '')
+      .order('created_at', { ascending: false, nullsFirst: false })
+      .limit(5);
+    if (error) return { success: false, error: error.message };
+
+    const rows = (data ?? []) as { payment_instructions: string | null }[];
+    const latest = rows.find((r) => r.payment_instructions?.trim());
+    return { success: true, data: latest?.payment_instructions ?? null };
+  } catch (error) {
+    logError(error, { action: 'fetchMyLatestPaymentInstructions' });
+    return { success: false, error: 'Failed to fetch payment instructions' };
+  }
+}
+
+/**
  * Fetches upcoming active sessions with participants and creator info.
  * Used by the home page feed.
  */

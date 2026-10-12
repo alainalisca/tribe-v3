@@ -7,7 +7,7 @@ import { haptic } from '@/lib/haptics';
 import { celebrateSessionCreated } from '@/lib/confetti';
 import { trackEvent } from '@/lib/analytics';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter, useSearchParams } from 'next/navigation';
 import BottomNav from '@/components/BottomNav';
@@ -18,7 +18,7 @@ import { ArrowLeft, Zap, ChevronDown, ChevronUp, Share2, Copy, Check } from 'luc
 import Link from 'next/link';
 import { useLanguage } from '@/lib/LanguageContext';
 import { sportTranslations } from '@/lib/translations';
-import { insertSession, fetchUserProfile } from '@/lib/dal';
+import { insertSession, fetchUserProfile, fetchMyLatestPaymentInstructions } from '@/lib/dal';
 import { ACTIVE_CITY, locationMatchesNeighborhood } from '@/lib/city-config';
 import { formatDisplayAmount } from '@/lib/formatCurrency';
 import type { Currency } from '@/lib/payments/config';
@@ -31,6 +31,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import TemplateSection from './TemplateSection';
 import PhotoUploadSection from './PhotoUploadSection';
+import { prefillPaymentInstructions } from './prefillPaymentInstructions';
 import RecurringSessionToggle from '@/components/RecurringSessionToggle';
 import { shareSession, getSessionShareUrl, copyToClipboard } from '@/lib/share';
 import { useTranslations } from '@/lib/i18n/useTranslations';
@@ -157,6 +158,29 @@ function CreateSessionPageInner() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- mount only
   }, []);
+
+  // T-PAY2: when a paid session is on and the instructions field is empty,
+  // prefill it from this instructor's most recent session that had instructions.
+  // Tried once per visit, and re-checked when the read lands so it never
+  // overwrites anything the instructor typed in the meantime.
+  const paymentPrefillTried = useRef(false);
+  useEffect(() => {
+    if (!user || !formData.is_paid || formData.payment_instructions.trim() || paymentPrefillTried.current) return;
+    paymentPrefillTried.current = true;
+    fetchMyLatestPaymentInstructions(supabase).then((result) => {
+      if (!result.success) {
+        logError(new Error(result.error), { action: 'create.prefillPaymentInstructions' });
+        return;
+      }
+      const previous = result.data ?? null;
+      setFormData((prev) => ({
+        ...prev,
+        payment_instructions: prefillPaymentInstructions(prev.payment_instructions, previous),
+      }));
+    });
+    // supabase is a fresh client each render; the ref makes this run once anyway.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, formData.is_paid, formData.payment_instructions]);
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) {
     const { name, value } = e.target;
