@@ -44,6 +44,14 @@ const ROW_COLUMNS =
 
 /** Rows a Stripe event may change: never a comp. */
 const NOT_COMP = 'coach_plan_source.is.null,coach_plan_source.eq.stripe';
+/**
+ * What an update filtered by NOT_COMP must return. PostgREST applies an or=
+ * filter to the RETURNING rows as well as to the UPDATE, so the column the
+ * filter names has to be in the returned set: with select('id') alone every
+ * one of these updates failed with 42703 "column users.coach_plan_source does
+ * not exist". Found on the local stack 2026-10-12; mocked tests cannot see it.
+ */
+const NOT_COMP_RETURNING = 'id, coach_plan_source';
 
 function toRow(data: Record<string, unknown>): CoachPlanRow {
   return { ...(data as unknown as CoachPlanRow), coach_plan: getCoachPlan(data as { coach_plan?: string | null }) };
@@ -141,7 +149,7 @@ export async function applyStripeCoachPlan(
       })
       .eq('id', userId)
       .or(NOT_COMP)
-      .select('id');
+      .select(NOT_COMP_RETURNING);
     if (error) {
       logError(error, { action: 'applyStripeCoachPlan', userId, subscriptionId: update.subscriptionId });
       return { success: false, error: error.message };
@@ -167,7 +175,7 @@ export async function markCoachPlanPastDue(
       .eq('coach_plan_stripe_subscription_id', subscriptionId)
       .neq('coach_plan', 'basico')
       .or(NOT_COMP)
-      .select('id');
+      .select(NOT_COMP_RETURNING);
     if (error) {
       logError(error, { action: 'markCoachPlanPastDue', userId, subscriptionId });
       return { success: false, error: error.message };
@@ -192,7 +200,7 @@ export async function cancelStripeCoachPlan(
       .eq('id', userId)
       .eq('coach_plan_stripe_subscription_id', subscriptionId)
       .or(NOT_COMP)
-      .select('id');
+      .select(NOT_COMP_RETURNING);
     if (error) {
       logError(error, { action: 'cancelStripeCoachPlan', userId, subscriptionId });
       return { success: false, error: error.message };
