@@ -178,9 +178,10 @@ export default function HeroSection() {
             {neighborhoods.map((hood) => (
               <span
                 key={hood.id}
-                className="px-4 py-2 bg-white/[0.06] border border-white/[0.08] rounded-full text-sm text-gray-300 hover:bg-white/[0.1] transition-colors cursor-default"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-white/[0.06] border border-white/[0.08] rounded-full text-sm text-gray-300 hover:bg-white/[0.1] transition-colors cursor-default"
               >
-                {hood.emoji} {hood.name}
+                <span className="w-1.5 h-1.5 rounded-full bg-tribe-green" aria-hidden="true" />
+                {hood.name}
               </span>
             ))}
           </div>

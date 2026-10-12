@@ -46,6 +46,13 @@ describe('buildCsp media and Cloudflare Stream hosts', () => {
     expect(frameSrc).toContain("'self'");
   });
 
+  it('allows the privacy-enhanced YouTube player for Tribe.TV in frame-src', () => {
+    const frameSrc = directive(csp, 'frame-src');
+    expect(frameSrc).toContain('https://www.youtube-nocookie.com');
+    // Only the no-cookie host: the regular youtube.com embed sets cookies on load.
+    expect(frameSrc).not.toContain('https://www.youtube.com');
+  });
+
   it('leaves the unrelated directives as they were', () => {
     expect(directive(csp, 'default-src')).toBe("'self'");
     expect(directive(csp, 'style-src')).toBe("'self' 'unsafe-inline' https://unpkg.com https://fonts.googleapis.com");

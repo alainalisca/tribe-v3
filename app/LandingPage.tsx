@@ -2,6 +2,7 @@
 
 import MarketingLayout from '@/components/marketing/MarketingLayout';
 import HeroSection from '@/components/marketing/landing/HeroSection';
+import TribeTVSection from '@/components/marketing/landing/TribeTVSection';
 import HowItWorksSection from '@/components/marketing/landing/HowItWorksSection';
 import ForAthletesSection from '@/components/marketing/landing/ForAthletesSection';
 import TribeOSSection from '@/components/marketing/landing/TribeOSSection';
@@ -14,6 +15,7 @@ export default function LandingPage(): JSX.Element {
   return (
     <MarketingLayout fullBleed>
       <HeroSection />
+      <TribeTVSection />
       <HowItWorksSection />
       <ForAthletesSection />
       <TribeOSSection />
