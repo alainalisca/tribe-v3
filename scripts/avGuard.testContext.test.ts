@@ -32,7 +32,27 @@
  * Mutation proof (run by hand): put `"pretest:complete": "npm run av:guard"`
  * back and both cases go red; the second because the guard's output no longer
  * carries a scope verdict.
+ *
+ * ═══════════════════════════════════════════════════════════════════════════
+ * ADDENDUM 2026-10-12
+ * ═══════════════════════════════════════════════════════════════════════════
+ *
+ * The fix above was right and was never merged; the bug was rediscovered on
+ * two more branches three days later. On merging it, two things changed:
+ *
+ *   1. The hooks also pass `--test`, and the guard accepts it, so the test
+ *      context is something the caller SAYS rather than something inferred
+ *      from a variable an intermediate process can overwrite. The lifecycle
+ *      regex remains as a second route.
+ *   2. The guard prints the context it detected on EVERY outcome
+ *      (`FAILED (context=test)` / `context:test`). The earlier second case
+ *      had to infer recognition from a scope line, which main never prints,
+ *      so it skipped on main and went red on any unrelated failure (its own
+ *      comment says so). Asserting the printed context removes both gaps.
+ *
+ * predev:av is deliberately NOT given --test: a dev server is never relaxed.
  */
+
 import { describe, it, expect } from 'vitest';
 import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
@@ -40,9 +60,6 @@ import path from 'node:path';
 
 const ROOT = path.resolve(__dirname, '..');
 const scripts: Record<string, string> = JSON.parse(readFileSync(path.join(ROOT, 'package.json'), 'utf8')).scripts;
-
-/** The guard's own test-context rule, restated here so a drift shows up as a failure. */
-const TEST_CONTEXT = /^(pre)?test(:complete)?$/;
 
 /**
  * Same rule as avGuard.sendMode.test.ts (Node 22.6 for --experimental-strip-types).
@@ -53,37 +70,54 @@ function nodeCanStripTypes(version: string): boolean {
   return major > 22 || (major === 22 && minor >= 6);
 }
 
-const branch = spawnSync('git', ['rev-parse', '--abbrev-ref', 'HEAD'], { cwd: ROOT, encoding: 'utf8' }).stdout.trim();
+function guard(args: string[], lifecycle: string): string {
+  const r = spawnSync(process.execPath, [path.join(ROOT, 'scripts', 'av-guard.mjs'), ...args], {
+    cwd: ROOT,
+    encoding: 'utf8',
+    env: { ...process.env, npm_lifecycle_event: lifecycle },
+  });
+  return `${r.stdout}\n${r.stderr}`;
+}
+
+/** The context the guard reports, from either its OK line or its FAILED line. */
+const contextOf = (out: string) => /context[=:](\w+)/.exec(out)?.[1] ?? null;
 
 describe('av-guard is wired so it can see a test run', () => {
-  it.each(['pretest', 'pretest:complete'])('%s runs the guard directly, under a name it recognises', (name) => {
-    expect(TEST_CONTEXT.test(name)).toBe(true);
-    // Directly: `node scripts/av-guard.mjs`, never `npm run ...`, which would
-    // replace npm_lifecycle_event with the nested script's name.
-    expect(scripts[name]).toMatch(/^node scripts\/av-guard\.mjs(\s|$)/);
+  it.each(['pretest', 'pretest:complete'])('%s calls the guard directly, with --test', (name) => {
+    expect(scripts[name], `${name} missing`).toMatch(/^node scripts\/av-guard\.mjs\b.*--test\b/);
+    // The defect: a nested npm run replaces npm_lifecycle_event.
+    expect(scripts[name]).not.toMatch(/\bnpm run\b/);
   });
 
-  // Skipped where the guard cannot start (Node < 22.6, see avGuard.sendMode.test.ts)
-  // and on main, where rule 1 fails before any scope is computed and so the
-  // output carries no scope verdict either way.
-  it.skipIf(!nodeCanStripTypes(process.versions.node) || branch === 'main')(
-    'through npm, the guard reaches a scope verdict, which it only does in a test context',
-    () => {
-      const r = spawnSync('npm', ['run', '--silent', 'pretest:complete'], {
+  it('predev:av is never given the test relaxation', () => {
+    expect(scripts['predev:av']).toMatch(/^node scripts\/av-guard\.mjs\b/);
+    expect(scripts['predev:av']).not.toMatch(/--test\b/);
+  });
+});
+
+describe.skipIf(!nodeCanStripTypes(process.versions.node))('av-guard reports the context it detected', () => {
+  it('--test is a test run even when npm says "av:guard" (the nested-npm case)', () => {
+    expect(contextOf(guard(['--test'], 'av:guard'))).toBe('test');
+  });
+
+  it('without --test, "av:guard" is not a test run (the state the bug left every npm test in)', () => {
+    expect(contextOf(guard([], 'av:guard'))).toBe('other');
+  });
+
+  it('--db outranks --test: a db context is never relaxed', () => {
+    expect(contextOf(guard(['--test', '--db'], ''))).toBe('db');
+  });
+
+  it.each(['pretest', 'pretest:complete'])(
+    'real npm: `npm run %s` reaches the guard as a test run',
+    (hook) => {
+      const r = spawnSync('npm', ['run', '--silent', hook], {
         cwd: ROOT,
         encoding: 'utf8',
         env: { ...process.env, npm_lifecycle_event: '' },
       });
       const out = `${r.stdout}\n${r.stderr}`;
-      // Every scope line the guard can print. It computes scope only when
-      // TEST_CONTEXT is true, so seeing any of them proves npm handed it the
-      // pre-script's name. Pass or fail does not matter here; the env decides that.
-      // One gap, stated: an out-of-program branch that fails for ANOTHER reason
-      // (av-migration-check) prints no scope line, so this would go red there
-      // too. The failure output says which, and that branch is broken anyway.
-      expect(out).toMatch(
-        /scope=out-of-program|scope=in-program|scope: this branch changes|scope: could not be computed/
-      );
+      expect(contextOf(out), out.slice(0, 600)).toBe('test');
     },
     60_000
   );
