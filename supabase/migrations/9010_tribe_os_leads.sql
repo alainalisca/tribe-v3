@@ -104,6 +104,14 @@ CREATE POLICY "tribe_os_leads_insert"
       )
     )
     AND (
+      tribe_os_leads.converted_client_id IS NULL
+      OR EXISTS (
+        SELECT 1 FROM public.clients c
+        WHERE c.id = tribe_os_leads.converted_client_id
+          AND c.gym_id = tribe_os_leads.gym_id
+      )
+    )
+    AND (
       tribe_os_leads.assigned_to IS NULL
       OR EXISTS (
         SELECT 1 FROM public.gyms g
