@@ -2,6 +2,7 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { athletesGateAllows, isAthletesGatedPath, GATED_NOT_FOUND_PATH } from '@/lib/features/athleteValueGate';
+import { canonicalLinkHeader } from '@/lib/seo/canonicalLink';
 
 /**
  * Tribe middleware does three things, in order:
@@ -290,7 +291,16 @@ export function buildCsp(): string {
     .join('; ');
 }
 
-function applySecurityHeaders(response: NextResponse): NextResponse {
+/**
+ * Security headers on every response, plus the rel="canonical" Link header on
+ * every SUCCESSFUL page response (see lib/seo/canonicalLink.ts). A redirect or
+ * a 404 gets no canonical: neither is a page Google should index.
+ */
+export function applySecurityHeaders(response: NextResponse, pathname?: string): NextResponse {
+  if (pathname !== undefined && response.status === 200) {
+    const link = canonicalLinkHeader(pathname);
+    if (link) response.headers.set('Link', link);
+  }
   response.headers.set('Content-Security-Policy', buildCsp());
   response.headers.set('X-Frame-Options', 'DENY');
   response.headers.set('X-Content-Type-Options', 'nosniff');
@@ -305,7 +315,7 @@ export async function middleware(request: NextRequest) {
 
   // Static asset short-circuit.
   if (pathname.match(/\.\w+$/)) {
-    return applySecurityHeaders(NextResponse.next());
+    return applySecurityHeaders(NextResponse.next(), pathname);
   }
 
   // T-AV24: /atletas and /pase/verificar are gated on the athletes flag HERE,
@@ -316,7 +326,7 @@ export async function middleware(request: NextRequest) {
 
   // Public routes don't need auth but still need security headers.
   if (isPublicPath(pathname) && !gated) {
-    return applySecurityHeaders(NextResponse.next());
+    return applySecurityHeaders(NextResponse.next(), pathname);
   }
 
   // Auth-gated routes: check Supabase session cookie.
@@ -362,10 +372,13 @@ export async function middleware(request: NextRequest) {
     if (!allowed && !signedOutOnPrivatePath) {
       // A real 404, with the body an unknown URL gets: the rewrite target
       // matches no route, so Next renders app/not-found.tsx.
-      return applySecurityHeaders(NextResponse.rewrite(new URL(GATED_NOT_FOUND_PATH, request.url), { status: 404 }));
+      return applySecurityHeaders(
+        NextResponse.rewrite(new URL(GATED_NOT_FOUND_PATH, request.url), { status: 404 }),
+        pathname
+      );
     }
     // /pase/verificar is public: past the flag, its page handles the session.
-    if (allowed && isPublicPath(pathname)) return applySecurityHeaders(response);
+    if (allowed && isPublicPath(pathname)) return applySecurityHeaders(response, pathname);
   } else {
     const {
       data: { user },
@@ -376,10 +389,10 @@ export async function middleware(request: NextRequest) {
   if (!userId) {
     const returnTo = encodeURIComponent(request.nextUrl.pathname + request.nextUrl.search);
     const redirectUrl = new URL(`/auth?returnTo=${returnTo}`, request.url);
-    return applySecurityHeaders(NextResponse.redirect(redirectUrl));
+    return applySecurityHeaders(NextResponse.redirect(redirectUrl), pathname);
   }
 
-  return applySecurityHeaders(response);
+  return applySecurityHeaders(response, pathname);
 }
 
 export const config = {
