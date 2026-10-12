@@ -279,7 +279,9 @@ export function buildCsp(): string {
       "'self' blob: https://*.supabase.co https://*.cloudflarestream.com https://videodelivery.net"
     ),
     // *.cloudflarestream.com so the Stream iframe player remains an option.
-    'frame-src': "'self' https://vercel.live https://*.cloudflarestream.com",
+    // youtube-nocookie.com for the Tribe.TV player on the landing page
+    // (privacy-enhanced embed, mounted only after the visitor taps play).
+    'frame-src': "'self' https://vercel.live https://*.cloudflarestream.com https://www.youtube-nocookie.com",
     'object-src': "'none'",
     'base-uri': "'self'",
     'form-action': "'self'",
