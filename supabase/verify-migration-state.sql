@@ -1041,7 +1041,13 @@ where a.attrelid = 'public.users'::regclass
     -- them. Admin reads it with the service role.
     'signup_src', 'signup_code', 'signup_ref', 'signup_utm_source',
     'signup_utm_medium', 'signup_utm_campaign', 'signup_utm_content',
-    'signup_landing_path', 'signup_first_touch', 'signup_attributed_at'
+    'signup_landing_path', 'signup_first_touch', 'signup_attributed_at',
+    -- 219: coach-plan billing state. coach_plan itself IS granted (the badge);
+    -- these would publish each coach's Stripe ids, status and renewal date to
+    -- every signed-in user. The server reads them with the service role.
+    'coach_plan_status', 'coach_plan_source', 'coach_plan_stripe_customer_id',
+    'coach_plan_stripe_subscription_id', 'coach_plan_current_period_end',
+    'coach_plan_granted_by', 'coach_plan_granted_at'
   )
   and not has_column_privilege('authenticated', a.attrelid, a.attnum, 'SELECT')
 union all
@@ -1067,7 +1073,10 @@ from (values
     ('email'),
     ('signup_src'), ('signup_code'), ('signup_ref'), ('signup_utm_source'),
     ('signup_utm_medium'), ('signup_utm_campaign'), ('signup_utm_content'),
-    ('signup_landing_path'), ('signup_first_touch'), ('signup_attributed_at')
+    ('signup_landing_path'), ('signup_first_touch'), ('signup_attributed_at'),
+    ('coach_plan_status'), ('coach_plan_source'), ('coach_plan_stripe_customer_id'),
+    ('coach_plan_stripe_subscription_id'), ('coach_plan_current_period_end'),
+    ('coach_plan_granted_by'), ('coach_plan_granted_at')
 ) as r(column_name)
 where exists (
         select 1 from information_schema.columns c
@@ -2961,6 +2970,52 @@ select '218_t_partner_metric2_revoke_anon',
            then 'MISSING -- anon can still call increment_partner_metric and inflate partner counters'
          when not has_function_privilege('authenticated', to_regprocedure('public.increment_partner_metric(uuid, text)'), 'EXECUTE')
            then 'MISSING -- authenticated lost EXECUTE; the signed-in banner counts nothing'
+         else 'applied'
+       end
+
+union all
+
+-- T-PLAN1. The eight coach_plan columns exist; coach_plan is readable by
+-- signed-in users and nothing else is readable by any client; the server-only
+-- guard trigger is attached and enabled; one Stripe customer per account; and
+-- sessions_public carries creator_coach_plan as its last column. Every lookup
+-- by to_regclass and (oid, attnum), so this reads MISSING (not an error) before
+-- 219 runs.
+select '219_t_plan1_coach_plans',
+       case
+         when (select count(*) from pg_attribute
+                where attrelid = to_regclass('public.users') and attnum > 0 and not attisdropped
+                  and attname in ('coach_plan', 'coach_plan_status', 'coach_plan_source',
+                                  'coach_plan_stripe_customer_id', 'coach_plan_stripe_subscription_id',
+                                  'coach_plan_current_period_end', 'coach_plan_granted_by',
+                                  'coach_plan_granted_at')) <> 8
+           then 'MISSING -- not all eight users.coach_plan* columns exist'
+         when not coalesce((select has_column_privilege('authenticated', a.attrelid, a.attnum, 'SELECT')
+                              from pg_attribute a
+                             where a.attrelid = to_regclass('public.users')
+                               and a.attname = 'coach_plan' and not a.attisdropped), false)
+           then 'MISSING -- authenticated cannot read users.coach_plan; every signed-in badge query fails with 42501'
+         when exists (select 1 from pg_attribute a
+                       where a.attrelid = to_regclass('public.users') and a.attnum > 0 and not a.attisdropped
+                         and a.attname like 'coach\_plan\_%'
+                         and (has_column_privilege('anon', a.attrelid, a.attnum, 'SELECT')
+                              or has_column_privilege('authenticated', a.attrelid, a.attnum, 'SELECT')))
+           then 'MISSING -- a client role can read a coach_plan billing column; Stripe ids and renewal dates would be public'
+         when not exists (select 1 from pg_trigger t
+                           where t.tgrelid = to_regclass('public.users')
+                             and t.tgname = 'users_coach_plan_guard'
+                             and not t.tgisinternal and t.tgenabled = 'O'
+                             and (t.tgtype & 2) <> 0 and (t.tgtype & 4) <> 0 and (t.tgtype & 16) <> 0)
+           then 'MISSING -- users_coach_plan_guard is absent, disabled, or not BEFORE INSERT OR UPDATE; any coach could make themselves Pro'
+         when not exists (select 1 from pg_index i
+                           where i.indexrelid = to_regclass('public.users_coach_plan_stripe_customer_id_key')
+                             and i.indisunique and i.indisvalid)
+           then 'MISSING -- coach-plan Stripe customer ids are not unique; the webhook could match two accounts'
+         when coalesce((select a.attname::text from pg_attribute a
+                         where a.attrelid = to_regclass('public.sessions_public') and a.attnum > 0
+                           and not a.attisdropped
+                         order by a.attnum desc limit 1), '') <> 'creator_coach_plan'
+           then 'MISSING -- sessions_public does not end with creator_coach_plan; signed-out session pages show no badge'
          else 'applied'
        end
 
