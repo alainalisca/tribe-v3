@@ -107,6 +107,31 @@ function formatDateEn(dateStr: string): string {
   return `${EN_MONTHS_ABBR[d.getUTCMonth()]} ${d.getUTCDate()}`;
 }
 
+export function bogotaNowLocal(): string {
+  return new Date().toLocaleString('sv-SE', { timeZone: BOGOTA }).slice(0, 16).replace(' ', 'T');
+}
+
+export function bogotaTomorrowLocal(hour = 18, minute = 0): string {
+  const nowStr = new Date().toLocaleString('en-US', { timeZone: BOGOTA });
+  const bogotaNow = new Date(nowStr);
+  bogotaNow.setDate(bogotaNow.getDate() + 1);
+  bogotaNow.setHours(hour, minute, 0, 0);
+  const y = bogotaNow.getFullYear();
+  const m = String(bogotaNow.getMonth() + 1).padStart(2, '0');
+  const d = String(bogotaNow.getDate()).padStart(2, '0');
+  const h = String(bogotaNow.getHours()).padStart(2, '0');
+  const min = String(bogotaNow.getMinutes()).padStart(2, '0');
+  return `${y}-${m}-${d}T${h}:${min}`;
+}
+
+export function bogotaLocalToUtc(localStr: string): string {
+  return new Date(localStr + ':00-05:00').toISOString();
+}
+
+export function utcToBogotaLocal(iso: string): string {
+  return new Date(iso).toLocaleString('sv-SE', { timeZone: BOGOTA }).slice(0, 16).replace(' ', 'T');
+}
+
 export function formatShortDateBi(iso: string, lang: 'en' | 'es'): string {
   const d = new Date(iso);
   const bogota = new Date(d.toLocaleString('en-US', { timeZone: BOGOTA }));

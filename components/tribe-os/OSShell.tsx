@@ -169,6 +169,13 @@ export default function OSShell({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<{ email: string | null; name: string | null } | null>(null);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [taskCount, setTaskCount] = useState(0);
+  const [badgeKey, setBadgeKey] = useState(0);
+
+  useEffect(() => {
+    const handler = () => setBadgeKey((k) => k + 1);
+    window.addEventListener('tribe:leads-changed', handler);
+    return () => window.removeEventListener('tribe:leads-changed', handler);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -222,7 +229,7 @@ export default function OSShell({ children }: { children: React.ReactNode }) {
       } catch {}
     })();
     return () => { cancelled = true; };
-  }, [premiumStatus, pathname]);
+  }, [premiumStatus, pathname, badgeKey]);
 
   // Lock body scroll while the mobile drawer is open so the page
   // behind doesn't scroll under it.

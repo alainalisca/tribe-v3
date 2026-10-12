@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { addDays, relativeDateLabel, planExpiryLabel, bogotaWeekdayName, bogotaDateLabel } from './dates';
+import { addDays, relativeDateLabel, planExpiryLabel, bogotaWeekdayName, bogotaDateLabel, bogotaLocalToUtc, utcToBogotaLocal } from './dates';
 
 const WED = '2026-10-07';
 
@@ -96,5 +96,32 @@ describe('planExpiryLabel (today = Wednesday 2026-10-07)', () => {
 
   it('expired 8+ days ago → "venció" + full date', () => {
     expect(planExpiryLabel(WED, '2026-09-28')).toBe('venció lunes 28 de septiembre');
+  });
+});
+
+describe('bogotaLocalToUtc', () => {
+  it('converts Bogota wall time to UTC (standard case)', () => {
+    expect(bogotaLocalToUtc('2026-10-13T18:00')).toBe('2026-10-13T23:00:00.000Z');
+  });
+
+  it('late-night Bogota crosses to next UTC day', () => {
+    expect(bogotaLocalToUtc('2026-10-13T23:30')).toBe('2026-10-14T04:30:00.000Z');
+  });
+
+  it('midnight Bogota → 05:00 UTC', () => {
+    expect(bogotaLocalToUtc('2026-10-14T00:00')).toBe('2026-10-14T05:00:00.000Z');
+  });
+});
+
+describe('utcToBogotaLocal', () => {
+  it('round trip: 2026-10-13T18:00 Bogota → UTC → Bogota', () => {
+    const utc = bogotaLocalToUtc('2026-10-13T18:00');
+    expect(utc).toBe('2026-10-13T23:00:00.000Z');
+    expect(utcToBogotaLocal(utc)).toBe('2026-10-13T18:00');
+  });
+
+  it('round trip: late-night 23:30 Bogota', () => {
+    const utc = bogotaLocalToUtc('2026-10-13T23:30');
+    expect(utcToBogotaLocal(utc)).toBe('2026-10-13T23:30');
   });
 });

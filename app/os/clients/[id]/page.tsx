@@ -25,6 +25,7 @@ import { formatCents, formatPaidTotal, formatShortDate } from '@/lib/format/curr
 import { isValidUuid } from '@/lib/validations/uuid';
 import { buildWhatsAppUrl } from '@/lib/phone';
 import { trackEvent } from '@/lib/analytics';
+import { bogotaNowLocal, bogotaLocalToUtc } from '@/lib/tribe-os/dates';
 import RecordAttendanceInline from '@/components/tribe-os/RecordAttendanceInline';
 import ChurnRiskPanel from '@/components/tribe-os/ChurnRiskPanel';
 import TrainingPartnersSection from '@/components/tribe-os/TrainingPartnersSection';
@@ -1673,10 +1674,6 @@ interface VisitItem {
   source: string;
 }
 
-function bogotaNowLocal(): string {
-  const bogota = new Date().toLocaleString('sv-SE', { timeZone: 'America/Bogota' });
-  return bogota.slice(0, 16);
-}
 
 function RecordVisitManual({
   clientId,
@@ -1707,7 +1704,7 @@ function RecordVisitManual({
     setSaving(true);
     setFeedback(null);
 
-    const bogotaIso = new Date(visitedAt + ':00-05:00').toISOString();
+    const bogotaIso = bogotaLocalToUtc(visitedAt);
     try {
       const res = await fetch(`/api/tribe-os/clients/${clientId}/visits`, {
         method: 'POST',

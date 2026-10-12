@@ -243,6 +243,19 @@ describe('retention scoring', () => {
     expect(result.reasons.some((r) => r.includes('vence hoy'))).toBe(true);
   });
 
+  it('new member with 0 visits → insufficient_data, not at_risk', () => {
+    const result = scoreRetention({
+      client_id: 'c-new-zero',
+      gym_id: GYM,
+      joined_on: '2026-09-10',
+      plan_ends_on: '2027-01-10',
+      activities: [],
+      now: NOW,
+    });
+    expect(result.level).toBe('insufficient_data');
+    expect(result.level).not.toBe('high');
+  });
+
   it('score is between 0 and 1', () => {
     const activities = makeActivities({ startDaysAgo: 180, endDaysAgo: 30, perWeek: 4 });
     const result = scoreRetention({

@@ -20,7 +20,12 @@ import { trackEvent } from '@/lib/analytics';
 import { showError, showSuccess } from '@/lib/toast';
 import { Badge, Button } from '@/components/tribe-os/ui';
 import { nextStatusOptions } from '@/lib/tribe-os/leads/helpers';
-import { formatShortDateBi, formatDateTimeBi } from '@/lib/tribe-os/dates';
+import {
+  formatShortDateBi,
+  formatDateTimeBi,
+  bogotaTomorrowLocal,
+  bogotaLocalToUtc,
+} from '@/lib/tribe-os/dates';
 import {
   ACTIVITY_BODY_MAX,
   LOST_REASON_PRESETS,
@@ -133,6 +138,9 @@ const copy = {
     trialDefault: 'Default: tomorrow at 6:00 PM (Bogota)',
     bookTrial: 'Book trial',
     converting: 'Converting…',
+    member: 'Member',
+    viewMember: 'View member',
+    conversionSuccess: 'Lead converted to member',
   },
   es: {
     loading: 'Cargando',
@@ -204,6 +212,9 @@ const copy = {
     trialDefault: 'Por defecto: mañana a las 6:00 p. m. (Bogotá)',
     bookTrial: 'Agendar prueba',
     converting: 'Convirtiendo…',
+    member: 'Miembro',
+    viewMember: 'Ver miembro',
+    conversionSuccess: 'Lead convertido a miembro',
   },
 } as const;
 
@@ -242,38 +253,6 @@ interface ConversionPreview {
   existing_client: { id: string; name: string } | null;
 }
 
-function getDefaultTrialAt(): string {
-  const now = new Date();
-  const bogota = new Date(now.toLocaleString('en-US', { timeZone: 'America/Bogota' }));
-  const tomorrow = new Date(bogota);
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  tomorrow.setHours(18, 0, 0, 0);
-  const offset = -5 * 60;
-  const utc = new Date(tomorrow.getTime() - offset * 60 * 1000);
-  return utc.toISOString();
-}
-
-function toLocalDatetimeValue(iso: string): string {
-  const d = new Date(iso);
-  const bogota = new Date(d.toLocaleString('en-US', { timeZone: 'America/Bogota' }));
-  const y = bogota.getFullYear();
-  const m = String(bogota.getMonth() + 1).padStart(2, '0');
-  const day = String(bogota.getDate()).padStart(2, '0');
-  const h = String(bogota.getHours()).padStart(2, '0');
-  const min = String(bogota.getMinutes()).padStart(2, '0');
-  return `${y}-${m}-${day}T${h}:${min}`;
-}
-
-function fromLocalDatetimeValue(localStr: string): string {
-  const [datePart, timePart] = localStr.split('T');
-  const [y, m, d] = datePart.split('-').map(Number);
-  const [h, min] = timePart.split(':').map(Number);
-  const bogotaMs = new Date(y, m - 1, d, h, min, 0, 0).getTime();
-  const offset = -5 * 60;
-  const utc = new Date(bogotaMs - offset * 60 * 1000);
-  return utc.toISOString();
-}
-
 function phoneDigits(phone: string): string {
   return phone.replace(/[^0-9]/g, '');
 }
@@ -299,7 +278,7 @@ export default function LeadDetailPage() {
   const [conversionLoading, setConversionLoading] = useState(false);
 
   const [showTrialModal, setShowTrialModal] = useState(false);
-  const [trialAtLocal, setTrialAtLocal] = useState(() => toLocalDatetimeValue(getDefaultTrialAt()));
+  const [trialAtLocal, setTrialAtLocal] = useState(bogotaTomorrowLocal);
 
   const [quickLogKind, setQuickLogKind] = useState<LeadActivityKind | null>(null);
   const [quickLogBody, setQuickLogBody] = useState('');
@@ -357,7 +336,7 @@ export default function LeadDetailPage() {
       return;
     }
     if (newStatus === 'trial_booked') {
-      setTrialAtLocal(toLocalDatetimeValue(getDefaultTrialAt()));
+      setTrialAtLocal(bogotaTomorrowLocal());
       setShowTrialModal(true);
       return;
     }
@@ -376,6 +355,7 @@ export default function LeadDetailPage() {
       if (json.success) {
         trackEvent('tribe_os_lead_status_changed');
         showSuccess(s.successUpdate);
+        window.dispatchEvent(new Event('tribe:leads-changed'));
         await fetchLead();
       } else {
         showError(s.errorUpdate);
@@ -388,7 +368,7 @@ export default function LeadDetailPage() {
   };
 
   const handleTrialConfirm = async () => {
-    const iso = fromLocalDatetimeValue(trialAtLocal);
+    const iso = bogotaLocalToUtc(trialAtLocal);
     await doStatusChange('trial_booked', { trial_at: iso });
     setShowTrialModal(false);
   };
@@ -411,9 +391,10 @@ export default function LeadDetailPage() {
       const json = await res.json();
       if (json.success) {
         trackEvent('tribe_os_lead_converted');
-        showSuccess(s.successUpdate);
+        showSuccess(s.conversionSuccess);
         setShowJoinedModal(false);
         setConversionPreview(null);
+        window.dispatchEvent(new Event('tribe:leads-changed'));
         await fetchLead();
       } else {
         showError(s.errorUpdate);
@@ -589,6 +570,19 @@ export default function LeadDetailPage() {
             <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-tribe">
               {lead.lost_reason}
             </p>
+          )}
+
+          {currentStatus === 'joined' && lead.converted_client_id && (
+            <div className="flex items-center gap-2 text-sm bg-green-50 px-3 py-2 rounded-tribe">
+              <Users className="h-4 w-4 text-green-700" />
+              <span className="font-medium text-green-800">{s.member}: {lead.full_name}</span>
+              <Link
+                href={`/os/clients/${lead.converted_client_id}`}
+                className="text-green-700 underline hover:text-green-900 ml-1"
+              >
+                {s.viewMember}
+              </Link>
+            </div>
           )}
 
           {/* Status Action Buttons */}

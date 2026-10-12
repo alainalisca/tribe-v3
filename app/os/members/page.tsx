@@ -75,7 +75,7 @@ const copy = {
       sessions30d: 'Sessions',
       actions: 'Actions',
     },
-    badge: { active: 'Active', watch: 'Watch', atRisk: 'At Risk', churned: 'Churned', lead: 'Lead' },
+    badge: { active: 'Active', watch: 'Watch', atRisk: 'At Risk', churned: 'Churned', lead: 'Lead', new: 'New' },
     actionViewAria: 'View member',
     actionMessageAria: 'Message member',
     daysAgo: (n: number) => (n === 1 ? '1d' : `${n}d`),
@@ -125,6 +125,7 @@ const copy = {
       atRisk: 'En riesgo',
       churned: 'Baja',
       lead: 'Prospecto',
+      new: 'Nuevo',
     },
     actionViewAria: 'Ver miembro',
     actionMessageAria: 'Enviar mensaje',
@@ -514,9 +515,11 @@ function MemberRow({ row, copy: s }: { row: ClientWithStats; copy: typeof copy.e
   //   4. Default → Active
   const seenMs = row.last_attendance_at ? new Date(row.last_attendance_at).getTime() : null;
   const ageDays = seenMs ? Math.floor((Date.now() - seenMs) / (24 * 60 * 60 * 1000)) : null;
-  const heuristicAtRisk = row.status === 'active' && (ageDays == null || ageDays > 14);
+  const memberAgeDays = Math.floor((Date.now() - new Date(row.created_at).getTime()) / (24 * 60 * 60 * 1000));
+  const isNewMember = memberAgeDays < 30;
+  const heuristicAtRisk = row.status === 'active' && !isNewMember && (ageDays == null || ageDays > 14);
 
-  let displayStatus: 'active' | 'watch' | 'atRisk' | 'churned' | 'lead';
+  let displayStatus: 'active' | 'watch' | 'atRisk' | 'churned' | 'lead' | 'new';
   if (row.health_status === 'AT_RISK') {
     displayStatus = 'atRisk';
   } else if (row.health_status === 'WATCH') {
@@ -527,6 +530,8 @@ function MemberRow({ row, copy: s }: { row: ClientWithStats; copy: typeof copy.e
     displayStatus = 'churned';
   } else if (row.status === 'lead') {
     displayStatus = 'lead';
+  } else if (isNewMember) {
+    displayStatus = 'new';
   } else if (heuristicAtRisk) {
     displayStatus = 'atRisk';
   } else {
@@ -616,7 +621,7 @@ function StatusBadge({
   kind,
   copy: s,
 }: {
-  kind: 'active' | 'watch' | 'atRisk' | 'churned' | 'lead';
+  kind: 'active' | 'watch' | 'atRisk' | 'churned' | 'lead' | 'new';
   copy: typeof copy.en | typeof copy.es;
 }) {
   const styles = {
@@ -625,6 +630,7 @@ function StatusBadge({
     atRisk: 'bg-red-100 text-red-700 border-red-200',
     churned: 'bg-gray-100 text-gray-600 border-gray-200',
     lead: 'bg-blue-50 text-blue-700 border-blue-200',
+    new: 'bg-purple-100 text-purple-700 border-purple-200',
   } as const;
   return (
     <span
