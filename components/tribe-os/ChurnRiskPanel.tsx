@@ -32,11 +32,12 @@
  *      state, so we render that instead of the persisted top-line.
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Brain, RefreshCw, ShieldAlert, ShieldCheck, ShieldQuestion, ChevronDown, ChevronUp } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
 import { Card, CardContent, CardHeader, CardTitle, Badge, Button } from '@/components/tribe-os/ui';
 import { trackEvent } from '@/lib/analytics';
+import { buildLiveReasons } from '@/lib/tribe-os/forecast';
 import type { HealthStatus, ScoreOutput } from '@/lib/ai/types';
 
 interface ChurnRiskPanelProps {
@@ -45,6 +46,9 @@ interface ChurnRiskPanelProps {
   initialHealthStatus: HealthStatus;
   initialUpdatedAt: string | null;
   retentionV2?: { score: number | null; level: string | null; computed_at: string | null } | null;
+  daysSinceLastActivity?: number | null;
+  lastActivityAt?: string | null;
+  planEndsOn?: string | null;
 }
 
 // ES PENDING VERONICA REVIEW
@@ -157,6 +161,9 @@ export default function ChurnRiskPanel({
   initialHealthStatus,
   initialUpdatedAt,
   retentionV2,
+  daysSinceLastActivity,
+  lastActivityAt,
+  planEndsOn,
 }: ChurnRiskPanelProps) {
   const { language } = useLanguage();
   const s = copy[language];
@@ -223,6 +230,17 @@ export default function ChurnRiskPanel({
     }
   }
 
+  const liveReasons = useMemo(
+    () =>
+      buildLiveReasons({
+        daysSinceLastActivity: daysSinceLastActivity ?? null,
+        lastActivityAt: lastActivityAt ?? null,
+        planEndsOn: planEndsOn ?? null,
+        language,
+      }),
+    [daysSinceLastActivity, lastActivityAt, planEndsOn, language],
+  );
+
   const HealthIcon = HEALTH_ICON[healthStatus];
   const hasScore = score != null;
 
@@ -266,6 +284,17 @@ export default function ChurnRiskPanel({
               </div>
               <HealthIcon className={`w-6 h-6 ml-auto ${SCORE_TEXT_COLOR[healthStatus]}`} />
             </div>
+
+            {liveReasons.length > 0 ? (
+              <ul className="space-y-1">
+                {liveReasons.map((r) => (
+                  <li key={r} className="text-xs text-tribe-dark-80 flex items-start gap-1.5">
+                    <span className="text-tribe-warning mt-0.5 shrink-0">•</span>
+                    {r}
+                  </li>
+                ))}
+              </ul>
+            ) : null}
 
             {breakdown ? (
               <div className="space-y-2">

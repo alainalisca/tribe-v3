@@ -611,7 +611,7 @@ export default function ClientDetailPage() {
               </div>
             </header>
 
-            <EnrollmentSection clientId={state.client.id} language={language} />
+            <EnrollmentSection clientId={state.client.id} language={language} reloadKey={reloadKey} />
 
             {/* Churn-risk intelligence panel — the AI's view of this
                 member's health. Surfaces churn_risk_score + health_status
@@ -625,6 +625,15 @@ export default function ClientDetailPage() {
                 initialHealthStatus={state.client.health_status}
                 initialUpdatedAt={state.client.churn_risk_updated_at}
                 retentionV2={state.retention_v2}
+                daysSinceLastActivity={
+                  state.visits_summary.last_visit_at
+                    ? daysSinceVisitFn(state.visits_summary.last_visit_at)
+                    : state.client.last_seen_at
+                      ? daysSinceVisitFn(state.client.last_seen_at)
+                      : null
+                }
+                lastActivityAt={state.visits_summary.last_visit_at ?? state.client.last_seen_at}
+                planEndsOn={state.client.plan_ends_on}
               />
             </div>
 
@@ -1538,7 +1547,7 @@ const enrollmentCopy = {
   },
 } as const;
 
-function EnrollmentSection({ clientId, language }: { clientId: string; language: 'en' | 'es' }) {
+function EnrollmentSection({ clientId, language, reloadKey }: { clientId: string; language: 'en' | 'es'; reloadKey: number }) {
   const ec = enrollmentCopy[language];
   const [enrollment, setEnrollment] = useState<{
     status: string;
@@ -1562,7 +1571,7 @@ function EnrollmentSection({ clientId, language }: { clientId: string; language:
       if (!cancelled) setLoading(false);
     })();
     return () => { cancelled = true; };
-  }, [clientId]);
+  }, [clientId, reloadKey]);
 
   if (loading) return null;
   if (!enrollment) return null;

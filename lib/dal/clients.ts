@@ -89,6 +89,7 @@ export interface ClientRow {
   sessions_last_30_days: number;
   current_streak_days: number;
   longest_streak_days: number;
+  plan_ends_on: string | null;
 }
 
 /**
@@ -287,7 +288,7 @@ const MAX_LIST_LIMIT = 200;
 const DEFAULT_LIST_LIMIT = 100;
 
 const CLIENT_SELECT =
-  'id, instructor_user_id, gym_id, name, email, phone, contact_info, notes, tags, status, health_notes, last_seen_at, archived, archived_at, created_at, updated_at, churn_risk_score, churn_risk_updated_at, health_status, total_sessions, sessions_last_30_days, current_streak_days, longest_streak_days';
+  'id, instructor_user_id, gym_id, name, email, phone, contact_info, notes, tags, status, health_notes, last_seen_at, archived, archived_at, created_at, updated_at, churn_risk_score, churn_risk_updated_at, health_status, total_sessions, sessions_last_30_days, current_streak_days, longest_streak_days, plan_ends_on';
 
 const ATTENDANCE_SELECT =
   'id, client_id, session_id, attended, paid, attended_at, amount_paid_cents, currency, payment_method, notes, refunded_amount_cents, refunded_at, refund_reason, created_at, updated_at';
