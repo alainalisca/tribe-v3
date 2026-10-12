@@ -67,12 +67,16 @@ describe('hasProBenefits', () => {
     expect(hasProBenefits({ ...comp, coach_plan_status: 'canceled' }, NOW)).toBe(false);
   });
 
-  it('past_due keeps benefits up to 7 days after the period ends, then stops', () => {
-    const end = NOW.getTime() - 3 * DAY;
-    const pastDue = state({ coach_plan_status: 'past_due', coach_plan_current_period_end: iso(end) });
-    expect(hasProBenefits(pastDue, NOW)).toBe(true);
-    expect(hasProBenefits(pastDue, new Date(end + 7 * DAY))).toBe(true);
-    expect(hasProBenefits(pastDue, new Date(end + 7 * DAY + 1))).toBe(false);
+  it('past_due keeps benefits for 7 days after the failed renewal, then stops', () => {
+    // A failed renewal on 2026-10-20: Stripe has already moved the period end
+    // to 2026-11-20, so the grace runs from 10-20, not from 11-20.
+    const renewal = Date.parse('2026-10-20T12:00:00Z');
+    const pastDue = state({ coach_plan_status: 'past_due', coach_plan_current_period_end: '2026-11-20T12:00:00.000Z' });
+    expect(hasProBenefits(pastDue, new Date(renewal + 3 * DAY))).toBe(true);
+    expect(hasProBenefits(pastDue, new Date(renewal + 7 * DAY))).toBe(true);
+    expect(hasProBenefits(pastDue, new Date(renewal + 7 * DAY + 1))).toBe(false);
+    // Not a month of free benefits measured from the advanced period end.
+    expect(hasProBenefits(pastDue, new Date(Date.parse('2026-11-25T00:00:00Z')))).toBe(false);
   });
 
   it('past_due without a period end gets nothing (cannot compute the grace)', () => {
