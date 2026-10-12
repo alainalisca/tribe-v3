@@ -164,15 +164,15 @@ function buildPlanReason(planEndsOn: string, diffDays: number, language: 'en' | 
   if (diffDays < 0) {
     const abs = Math.abs(diffDays);
     return language === 'es'
-      ? `Su plan venció hace ${abs} días`
-      : `Plan expired ${abs} days ago`;
+      ? `Su plan venció hace ${abs} ${abs === 1 ? 'día' : 'días'}`
+      : `Plan expired ${abs} ${abs === 1 ? 'day' : 'days'} ago`;
   }
   if (diffDays === 0) {
     return language === 'es' ? 'Su plan vence hoy' : 'Plan expires today';
   }
   return language === 'es'
-    ? `Su plan vence en ${diffDays} días`
-    : `Plan expires in ${diffDays} days`;
+    ? `Su plan vence en ${diffDays} ${diffDays === 1 ? 'día' : 'días'}`
+    : `Plan expires in ${diffDays} ${diffDays === 1 ? 'day' : 'days'}`;
 }
 
 export function buildLiveReasons(opts: {

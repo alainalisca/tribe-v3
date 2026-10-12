@@ -37,17 +37,24 @@ import { daysSinceVisit as daysSinceVisitFn } from '@/lib/tribe-os/daysSinceVisi
 import type { DraftContext } from '@/lib/tribe-os/drafts/templates';
 import type { AttendanceWithSession, ClientAttendanceSummary, ClientRow, ClientVisitRow, ClientVisitsSummary } from '@/lib/dal/clients';
 
+interface RetentionV2 {
+  score: number | null;
+  level: string | null;
+  computed_at: string | null;
+}
+
 interface DetailResponse {
   client: ClientRow;
   summary: ClientAttendanceSummary;
   visits_summary: ClientVisitsSummary;
+  retention_v2?: RetentionV2 | null;
 }
 
 type DetailState =
   | { kind: 'loading' }
   | { kind: 'error'; message: string }
   | { kind: 'not_found' }
-  | { kind: 'ready'; client: ClientRow; summary: ClientAttendanceSummary; visits_summary: ClientVisitsSummary; attendance: AttendanceWithSession[] };
+  | { kind: 'ready'; client: ClientRow; summary: ClientAttendanceSummary; visits_summary: ClientVisitsSummary; attendance: AttendanceWithSession[]; retention_v2: RetentionV2 | null };
 
 const copy = {
   en: {
@@ -138,6 +145,7 @@ const copy = {
     manualVisitSuccess: 'Visit saved',
     manualVisitDuplicate: "There's already a visit registered near that time.",
     manualVisitError: 'Could not save the visit. Try again.',
+    manualVisitRecomputeWarn: 'Visit saved, but the risk score could not be updated.',
     recordWithClass: 'Record with class',
 
     // History (legacy client_attendance)
@@ -287,6 +295,7 @@ const copy = {
     manualVisitSuccess: 'Visita registrada',
     manualVisitDuplicate: 'Ya hay una visita registrada cerca de esa hora.',
     manualVisitError: 'No se pudo guardar la visita. Intenta de nuevo.',
+    manualVisitRecomputeWarn: 'La visita se guardó, pero no se pudo actualizar el riesgo.',
     recordWithClass: 'Registrar con clase',
 
     historyTitle: 'Historial de pagos',
@@ -427,6 +436,7 @@ export default function ClientDetailPage() {
           summary: detailBody.data.summary,
           visits_summary: detailBody.data.visits_summary ?? { total_visits: 0, last_visit_at: null },
           attendance: attendanceBody.data ?? [],
+          retention_v2: detailBody.data.retention_v2 ?? null,
         });
       } catch {
         if (!cancelled) setState({ kind: 'error', message: s.errorTitle });
@@ -614,6 +624,7 @@ export default function ClientDetailPage() {
                 initialScore={state.client.churn_risk_score}
                 initialHealthStatus={state.client.health_status}
                 initialUpdatedAt={state.client.churn_risk_updated_at}
+                retentionV2={state.retention_v2}
               />
             </div>
 
@@ -1698,7 +1709,11 @@ function RecordVisitManual({
           ...(className.trim() ? { class_name: className.trim() } : {}),
         }),
       });
-      const body = await res.json().catch(() => ({})) as { success?: boolean; error?: string };
+      const body = await res.json().catch(() => ({})) as {
+        success?: boolean;
+        error?: string;
+        recompute?: { ok: boolean };
+      };
       if (!res.ok || !body.success) {
         setFeedback({
           kind: 'err',
@@ -1707,10 +1722,11 @@ function RecordVisitManual({
         setSaving(false);
         return;
       }
-      setFeedback({ kind: 'ok', msg: s.manualVisitSuccess });
+      const msg = body.recompute && !body.recompute.ok
+        ? s.manualVisitRecomputeWarn
+        : s.manualVisitSuccess;
+      setFeedback({ kind: body.recompute?.ok === false ? 'err' : 'ok', msg });
       setSaving(false);
-
-      fetch('/api/tribe-os/sequences/reconcile', { method: 'POST' }).catch(() => {});
 
       setTimeout(() => {
         reset();

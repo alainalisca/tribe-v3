@@ -13,6 +13,7 @@ import { logError } from '@/lib/logger';
 import { requireTribeOSPremium } from '@/lib/auth/premium';
 import { recordAttendance, listAttendanceForClient, type RecordAttendanceInput } from '@/lib/dal/clients';
 import { RecordAttendanceInputSchema } from '@/lib/validations/clients';
+import { recomputeMemberRetention } from '@/lib/tribe-os/retention/recompute-member';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 function firstZodMessage(error: ZodError): string {
@@ -103,14 +104,21 @@ export async function POST(
       return NextResponse.json({ success: false, error: result.error ?? 'record_failed' }, { status: 500 });
     }
 
+    let recompute = null;
     if (result.data && result.data.attended && result.data.attended_at) {
       const visitResult = await mirrorToClientVisits(supabase, gate.gymId!, clientId, result.data.attended_at);
       if (visitResult === 'duplicate') {
         return NextResponse.json({ success: true, data: result.data, visit_note: 'Ya registrada' });
       }
+      recompute = await recomputeMemberRetention(
+        supabase,
+        gate.gymId!,
+        clientId,
+        'POST /api/tribe-os/clients/[id]/attendance',
+      );
     }
 
-    return NextResponse.json({ success: true, data: result.data });
+    return NextResponse.json({ success: true, data: result.data, recompute });
   } catch (error) {
     logError(error, { route: 'POST /api/tribe-os/clients/[id]/attendance' });
     return NextResponse.json({ success: false, error: 'internal_error' }, { status: 500 });

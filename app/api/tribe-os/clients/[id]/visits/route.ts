@@ -3,13 +3,15 @@ import { z } from 'zod';
 import { logError } from '@/lib/logger';
 import { requireTribeOSPremium } from '@/lib/auth/premium';
 import { listVisitsForClient } from '@/lib/dal/clients';
-import { scoreRetention } from '@/lib/tribe-os/retention';
+import { recomputeMemberRetention } from '@/lib/tribe-os/retention/recompute-member';
 
 const ManualVisitSchema = z.object({
   visited_at: z.string().datetime(),
   coach_name: z.string().max(200).optional(),
   class_name: z.string().max(200).optional(),
 });
+
+const ROUTE = 'POST /api/tribe-os/clients/[id]/visits';
 
 export async function POST(
   request: NextRequest,
@@ -76,69 +78,17 @@ export async function POST(
       throw insertErr;
     }
 
-    try {
-      const { data: member } = await supabase
-        .from('clients')
-        .select('joined_on, plan_ends_on')
-        .eq('id', clientId)
-        .eq('gym_id', gymId)
-        .single();
+    const recompute = await recomputeMemberRetention(supabase, gymId, clientId, ROUTE);
 
-      if (member) {
-        const since = new Date();
-        since.setDate(since.getDate() - 70);
-        const { data: memberActivities } = await supabase
-          .from('client_activity_v2')
-          .select('activity_at')
-          .eq('gym_id', gymId)
-          .eq('client_id', clientId)
-          .gte('activity_at', since.toISOString());
+    fetch('/api/tribe-os/sequences/reconcile', { method: 'POST' }).catch(() => {});
 
-        const result = scoreRetention({
-          client_id: clientId,
-          gym_id: gymId,
-          joined_on: member.joined_on,
-          plan_ends_on: member.plan_ends_on,
-          activities: (memberActivities ?? []).map((a) => ({ activity_at: a.activity_at })),
-        });
-
-        await supabase.from('client_retention_v2').upsert({
-          client_id: result.client_id,
-          gym_id: result.gym_id,
-          score: result.score,
-          level: result.level,
-          reasons: result.reasons,
-          signals: result.signals,
-          computed_at: new Date().toISOString(),
-        }, { onConflict: 'client_id' });
-
-        if (result.level === 'low' || result.level === 'new') {
-          const { data: openInsights } = await supabase
-            .from('community_insight_members')
-            .select('insight:community_insights!inner(id, type, is_actioned)')
-            .eq('client_id', clientId)
-            .eq('community_insights.type', 'CHURN_RISK')
-            .eq('community_insights.is_actioned', false);
-
-          const insightIds = (openInsights ?? [])
-            .map((r) => (r.insight as unknown as { id: string })?.id)
-            .filter(Boolean);
-
-          if (insightIds.length > 0) {
-            await supabase
-              .from('community_insights')
-              .update({ is_actioned: true })
-              .in('id', insightIds);
-          }
-        }
-      }
-    } catch (recomputeErr) {
-      logError(recomputeErr, { route: 'POST /api/tribe-os/clients/[id]/visits', step: 'recompute' });
-    }
-
-    return NextResponse.json({ success: true, data: { id: visit.id } });
+    return NextResponse.json({
+      success: true,
+      data: { id: visit.id },
+      recompute,
+    });
   } catch (error) {
-    logError(error, { route: 'POST /api/tribe-os/clients/[id]/visits' });
+    logError(error, { route: ROUTE });
     return NextResponse.json({ success: false, error: 'internal_error' }, { status: 500 });
   }
 }

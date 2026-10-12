@@ -48,9 +48,14 @@ export async function GET(
       return NextResponse.json({ success: false, error: 'not_found' }, { status: 404 });
     }
 
-    const [summaryResult, visitsResult] = await Promise.all([
+    const [summaryResult, visitsResult, retentionResult] = await Promise.all([
       getClientAttendanceSummary(supabase, clientId),
       getClientVisitsSummary(supabase, clientId),
+      supabase
+        .from('client_retention_v2')
+        .select('score, level, computed_at')
+        .eq('client_id', clientId)
+        .maybeSingle(),
     ]);
     if (!summaryResult.success) {
       return NextResponse.json({ success: false, error: summaryResult.error ?? 'summary_failed' }, { status: 500 });
@@ -62,6 +67,7 @@ export async function GET(
         client: clientResult.data,
         summary: summaryResult.data,
         visits_summary: visitsResult.success ? visitsResult.data : { total_visits: 0, last_visit_at: null },
+        retention_v2: retentionResult.data ?? null,
       },
     });
   } catch (error) {

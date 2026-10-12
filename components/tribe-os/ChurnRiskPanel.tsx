@@ -32,7 +32,7 @@
  *      state, so we render that instead of the persisted top-line.
  */
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Brain, RefreshCw, ShieldAlert, ShieldCheck, ShieldQuestion, ChevronDown, ChevronUp } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
 import { Card, CardContent, CardHeader, CardTitle, Badge, Button } from '@/components/tribe-os/ui';
@@ -44,6 +44,7 @@ interface ChurnRiskPanelProps {
   initialScore: number | null;
   initialHealthStatus: HealthStatus;
   initialUpdatedAt: string | null;
+  retentionV2?: { score: number | null; level: string | null; computed_at: string | null } | null;
 }
 
 // ES PENDING VERONICA REVIEW
@@ -143,22 +144,42 @@ function formatRelative(iso: string, s: typeof copy.en | typeof copy.es): string
   return s.lastScoredDaysAgo(diffDay);
 }
 
+function levelToHealth(level: string | null): HealthStatus | null {
+  if (!level) return null;
+  if (level === 'high') return 'AT_RISK';
+  if (level === 'medium') return 'WATCH';
+  return 'HEALTHY';
+}
+
 export default function ChurnRiskPanel({
   clientId,
   initialScore,
   initialHealthStatus,
   initialUpdatedAt,
+  retentionV2,
 }: ChurnRiskPanelProps) {
   const { language } = useLanguage();
   const s = copy[language];
 
-  // Local state takes over after a fresh rescore so the user sees
-  // the updated score immediately without waiting for the parent
-  // to refetch. The persisted columns get updated server-side; the
-  // page will pick them up on next reload.
-  const [score, setScore] = useState<number | null>(initialScore);
-  const [healthStatus, setHealthStatus] = useState<HealthStatus>(initialHealthStatus);
-  const [updatedAt, setUpdatedAt] = useState<string | null>(initialUpdatedAt);
+  const v2Health = levelToHealth(retentionV2?.level ?? null);
+  const useV2 =
+    retentionV2?.score != null &&
+    retentionV2.computed_at &&
+    (!initialUpdatedAt || new Date(retentionV2.computed_at) >= new Date(initialUpdatedAt));
+
+  const effectiveScore = useV2 ? retentionV2!.score : initialScore;
+  const effectiveHealth = useV2 && v2Health ? v2Health : initialHealthStatus;
+  const effectiveUpdatedAt = useV2 ? retentionV2!.computed_at : initialUpdatedAt;
+
+  const [score, setScore] = useState<number | null>(effectiveScore);
+  const [healthStatus, setHealthStatus] = useState<HealthStatus>(effectiveHealth);
+  const [updatedAt, setUpdatedAt] = useState<string | null>(effectiveUpdatedAt);
+
+  useEffect(() => {
+    setScore(effectiveScore);
+    setHealthStatus(effectiveHealth);
+    setUpdatedAt(effectiveUpdatedAt);
+  }, [effectiveScore, effectiveHealth, effectiveUpdatedAt]);
   const [breakdown, setBreakdown] = useState<Record<string, number> | null>(null);
   const [showBreakdown, setShowBreakdown] = useState(false);
   const [rescoring, setRescoring] = useState(false);

@@ -4,6 +4,7 @@ import {
   computeForecast,
   ownerReason,
   humanizeReason,
+  buildLiveReasons,
   type PlanPrice,
   type MemberForForecast,
 } from './forecast';
@@ -327,5 +328,117 @@ describe('humanizeReason', () => {
   it('passes through reasons without a percentage', () => {
     const reason = '15 días sin venir';
     expect(humanizeReason(reason, '2026-09-15T14:00:00Z', 'es')).toBe(reason);
+  });
+});
+
+describe('buildLiveReasons', () => {
+  it('generates absence reason from last_activity_at', () => {
+    const reasons = buildLiveReasons({
+      daysSinceLastActivity: 10,
+      lastActivityAt: '2026-09-25T14:00:00Z',
+      planEndsOn: null,
+      language: 'es',
+    });
+    expect(reasons).toHaveLength(1);
+    expect(reasons[0]).toBe('No ha vuelto desde el 25 de sep.');
+  });
+
+  it('returns empty array when days is 0', () => {
+    const reasons = buildLiveReasons({
+      daysSinceLastActivity: 0,
+      lastActivityAt: '2026-10-10T10:00:00Z',
+      planEndsOn: null,
+      language: 'es',
+    });
+    expect(reasons).toEqual([]);
+  });
+
+  it('returns empty array when days is null', () => {
+    const reasons = buildLiveReasons({
+      daysSinceLastActivity: null,
+      lastActivityAt: null,
+      planEndsOn: null,
+      language: 'es',
+    });
+    expect(reasons).toEqual([]);
+  });
+
+  it('uses singular "día" for 1 day plan expiry', () => {
+    const reasons = buildLiveReasons({
+      daysSinceLastActivity: null,
+      lastActivityAt: null,
+      planEndsOn: new Date(Date.now() + 86_400_000).toISOString().slice(0, 10),
+      language: 'es',
+    });
+    expect(reasons).toHaveLength(1);
+    expect(reasons[0]).toMatch(/en 1 día$/);
+  });
+
+  it('uses plural "días" for N days plan expiry', () => {
+    const reasons = buildLiveReasons({
+      daysSinceLastActivity: null,
+      lastActivityAt: null,
+      planEndsOn: new Date(Date.now() + 3 * 86_400_000).toISOString().slice(0, 10),
+      language: 'es',
+    });
+    expect(reasons).toHaveLength(1);
+    expect(reasons[0]).toMatch(/en 3 días$/);
+  });
+
+  it('uses singular "día" for 1 day expired plan', () => {
+    const reasons = buildLiveReasons({
+      daysSinceLastActivity: null,
+      lastActivityAt: null,
+      planEndsOn: new Date(Date.now() - 86_400_000).toISOString().slice(0, 10),
+      language: 'es',
+    });
+    expect(reasons).toHaveLength(1);
+    expect(reasons[0]).toMatch(/hace 1 día$/);
+  });
+
+  it('uses plural "días" for N days expired plan', () => {
+    const reasons = buildLiveReasons({
+      daysSinceLastActivity: null,
+      lastActivityAt: null,
+      planEndsOn: new Date(Date.now() - 5 * 86_400_000).toISOString().slice(0, 10),
+      language: 'es',
+    });
+    expect(reasons).toHaveLength(1);
+    expect(reasons[0]).toMatch(/hace 5 días$/);
+  });
+
+  it('generates bilingual reasons with " / " separator', () => {
+    const reasons = buildLiveReasons({
+      daysSinceLastActivity: 10,
+      lastActivityAt: '2026-09-25T14:00:00Z',
+      planEndsOn: null,
+      language: 'bilingual',
+    });
+    expect(reasons).toHaveLength(1);
+    expect(reasons[0]).toContain(' / ');
+    expect(reasons[0]).toMatch(/^No ha vuelto desde el 25 de sep\./);
+    expect(reasons[0]).toMatch(/Has not returned since Sep 25$/);
+  });
+
+  it('generates EN singular "day" for 1 day expiry', () => {
+    const reasons = buildLiveReasons({
+      daysSinceLastActivity: null,
+      lastActivityAt: null,
+      planEndsOn: new Date(Date.now() + 86_400_000).toISOString().slice(0, 10),
+      language: 'en',
+    });
+    expect(reasons).toHaveLength(1);
+    expect(reasons[0]).toMatch(/in 1 day$/);
+  });
+
+  it('generates EN plural "days" for N days expiry', () => {
+    const reasons = buildLiveReasons({
+      daysSinceLastActivity: null,
+      lastActivityAt: null,
+      planEndsOn: new Date(Date.now() + 4 * 86_400_000).toISOString().slice(0, 10),
+      language: 'en',
+    });
+    expect(reasons).toHaveLength(1);
+    expect(reasons[0]).toMatch(/in 4 days$/);
   });
 });
