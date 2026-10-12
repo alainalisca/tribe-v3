@@ -14,7 +14,7 @@ export async function GET(): Promise<NextResponse> {
 
     const { data, error } = await supabase
       .from('tribe_os_leads')
-      .select('id, full_name, phone, status, next_follow_up_at, source, created_at')
+      .select('id, full_name, phone, status, next_follow_up_at, source, interest, trial_at, created_at')
       .eq('gym_id', gymId)
       .not('status', 'in', '("joined","lost")')
       .not('next_follow_up_at', 'is', null)

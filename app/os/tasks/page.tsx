@@ -11,7 +11,8 @@ import type { DraftContext } from '@/lib/tribe-os/drafts/templates';
 import { STEP_CHANNEL_LABELS, STOP_REASONS } from '@/lib/tribe-os/sequences/helpers';
 import { showError, showInfo } from '@/lib/toast';
 import { formatCents } from '@/lib/format/currency';
-import { Check, MessageCircle, Square, RefreshCw, UserPlus } from 'lucide-react';
+import { Check, MessageCircle, Square, RefreshCw, UserPlus, Phone } from 'lucide-react';
+import { formatDateTimeBi } from '@/lib/tribe-os/dates';
 
 const copy = {
   en: {
@@ -48,7 +49,16 @@ const copy = {
     autoStartedToday: (n: number, cap: number) => `Auto-started today: ${n} of ${cap}`,
     leadsTitle: 'Lead follow-ups',
     leadsEmpty: 'No lead follow-ups for today.',
-    leadsView: 'View',
+    leadsView: 'Open',
+    leadsWhatsApp: 'WhatsApp',
+    leadsDueToday: 'Due today',
+    leadsOverdue: (d: number) => d === 1 ? 'Overdue by 1 day' : `Overdue by ${d} days`,
+    leadsStatusLabels: {
+      new: 'New',
+      contacted: 'Contacted',
+      trial_booked: 'Trial Booked',
+      trial_done: 'Trial Done',
+    } as Record<string, string>,
   },
   es: {
     pageTitle: 'Tareas de hoy',
@@ -84,7 +94,16 @@ const copy = {
     autoStartedToday: (n: number, cap: number) => `Iniciados automáticamente hoy: ${n} de ${cap}`,
     leadsTitle: 'Seguimiento de leads',
     leadsEmpty: 'Sin seguimientos de leads para hoy.',
-    leadsView: 'Ver',
+    leadsView: 'Abrir',
+    leadsWhatsApp: 'WhatsApp',
+    leadsDueToday: 'Para hoy',
+    leadsOverdue: (d: number) => d === 1 ? 'Vencido hace 1 día' : `Vencido hace ${d} días`,
+    leadsStatusLabels: {
+      new: 'Nuevo',
+      contacted: 'Contactado',
+      trial_booked: 'Prueba agendada',
+      trial_done: 'Prueba hecha',
+    } as Record<string, string>,
   },
 } as const;
 
@@ -136,6 +155,8 @@ interface LeadTask {
   status: string;
   next_follow_up_at: string | null;
   source: string;
+  interest: string | null;
+  trial_at: string | null;
   created_at: string;
 }
 
@@ -409,27 +430,71 @@ export default function TasksPage() {
                   {s.leadsTitle}
                 </h2>
                 <div className="space-y-2">
-                  {leadTasks.map((lt) => (
-                    <div key={lt.id} className="bg-white rounded-tribe shadow-tribe px-4 py-3">
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-semibold text-tribe-dark truncate">{lt.full_name}</span>
-                            <span className="text-xs text-tribe-dark-80">{lt.status}</span>
+                  {leadTasks.map((lt) => {
+                    const now = new Date();
+                    const followUp = lt.next_follow_up_at ? new Date(lt.next_follow_up_at) : null;
+                    const overdueDays = followUp
+                      ? Math.floor((now.getTime() - followUp.getTime()) / (1000 * 60 * 60 * 24))
+                      : 0;
+                    const isOverdue = overdueDays > 0;
+                    const waDigits = lt.phone ? lt.phone.replace(/[^0-9]/g, '') : null;
+
+                    return (
+                      <div
+                        key={lt.id}
+                        className={`bg-white rounded-tribe shadow-tribe px-4 py-3 ${
+                          isOverdue ? 'border-l-4 border-l-red-400' : ''
+                        }`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-semibold text-tribe-dark truncate">{lt.full_name}</span>
+                              <Badge variant="default">
+                                {s.leadsStatusLabels[lt.status] ?? lt.status}
+                              </Badge>
+                              {isOverdue ? (
+                                <Badge variant="danger">{s.leadsOverdue(overdueDays)}</Badge>
+                              ) : (
+                                <Badge variant="info">{s.leadsDueToday}</Badge>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-3 mt-1 text-xs text-tribe-dark-80 flex-wrap">
+                              {lt.phone && (
+                                <span className="flex items-center gap-1">
+                                  <Phone className="h-3 w-3" />
+                                  {lt.phone}
+                                </span>
+                              )}
+                              {lt.interest && <span>{lt.interest}</span>}
+                              {lt.trial_at && (
+                                <span>{formatDateTimeBi(lt.trial_at, language)}</span>
+                              )}
+                            </div>
                           </div>
-                          {lt.phone && (
-                            <p className="text-xs text-tribe-dark-80 mt-0.5">{lt.phone}</p>
-                          )}
+                          <div className="shrink-0 flex items-center gap-1.5">
+                            {waDigits && (
+                              <a
+                                href={`https://wa.me/${waDigits}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-tribe bg-green-100 text-green-700 hover:bg-green-200 transition-colors"
+                              >
+                                <MessageCircle className="h-3.5 w-3.5" />
+                                {s.leadsWhatsApp}
+                              </a>
+                            )}
+                            <Link
+                              href={`/os/leads/${lt.id}`}
+                              className="px-3 py-1.5 text-xs font-medium rounded-tribe bg-tribe-green-50 hover:bg-tribe-green text-tribe-green-dark transition-colors"
+                            >
+                              {s.leadsView}
+                            </Link>
+                          </div>
                         </div>
-                        <Link
-                          href={`/os/leads/${lt.id}`}
-                          className="shrink-0 px-3 py-1.5 text-xs font-medium rounded-tribe bg-tribe-green-50 hover:bg-tribe-green text-tribe-green-dark transition-colors"
-                        >
-                          {s.leadsView}
-                        </Link>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </section>
             )}

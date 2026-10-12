@@ -18,11 +18,11 @@ export function isValidPhone(phone: string): boolean {
 export function nextStatusOptions(current: LeadStatus): LeadStatus[] {
   switch (current) {
     case 'new':
-      return ['contacted', 'trial_booked', 'lost'];
+      return ['contacted', 'trial_booked', 'joined', 'lost'];
     case 'contacted':
-      return ['trial_booked', 'lost'];
+      return ['trial_booked', 'joined', 'lost'];
     case 'trial_booked':
-      return ['trial_done', 'lost'];
+      return ['trial_done', 'joined', 'lost'];
     case 'trial_done':
       return ['joined', 'lost'];
     case 'joined':

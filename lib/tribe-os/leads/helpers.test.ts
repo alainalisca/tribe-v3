@@ -46,16 +46,16 @@ describe('isValidPhone', () => {
 });
 
 describe('nextStatusOptions', () => {
-  it('new -> contacted, trial_booked, lost', () => {
-    expect(nextStatusOptions('new')).toEqual(['contacted', 'trial_booked', 'lost']);
+  it('new -> contacted, trial_booked, joined, lost', () => {
+    expect(nextStatusOptions('new')).toEqual(['contacted', 'trial_booked', 'joined', 'lost']);
   });
 
-  it('contacted -> trial_booked, lost', () => {
-    expect(nextStatusOptions('contacted')).toEqual(['trial_booked', 'lost']);
+  it('contacted -> trial_booked, joined, lost', () => {
+    expect(nextStatusOptions('contacted')).toEqual(['trial_booked', 'joined', 'lost']);
   });
 
-  it('trial_booked -> trial_done, lost', () => {
-    expect(nextStatusOptions('trial_booked')).toEqual(['trial_done', 'lost']);
+  it('trial_booked -> trial_done, joined, lost', () => {
+    expect(nextStatusOptions('trial_booked')).toEqual(['trial_done', 'joined', 'lost']);
   });
 
   it('trial_done -> joined, lost', () => {

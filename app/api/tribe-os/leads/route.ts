@@ -110,7 +110,18 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     if (error) {
       logError(error, { route: 'POST /api/tribe-os/leads', gymId, userId });
       if (error.code === '23505') {
-        return NextResponse.json({ success: false, error: 'duplicate_phone' }, { status: 409 });
+        let existingId: string | null = null;
+        if (phone) {
+          const { data: dup } = await supabase
+            .from('tribe_os_leads')
+            .select('id')
+            .eq('gym_id', gymId)
+            .eq('phone', phone)
+            .not('status', 'in', '("joined","lost")')
+            .limit(1);
+          if (dup && dup.length > 0) existingId = dup[0].id;
+        }
+        return NextResponse.json({ success: false, error: 'duplicate_phone', existing_lead_id: existingId }, { status: 409 });
       }
       return NextResponse.json({ success: false, error: 'create_failed' }, { status: 500 });
     }

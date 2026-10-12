@@ -106,3 +106,23 @@ function formatDateEn(dateStr: string): string {
   const d = new Date(dateStr + 'T12:00:00Z');
   return `${EN_MONTHS_ABBR[d.getUTCMonth()]} ${d.getUTCDate()}`;
 }
+
+export function formatShortDateBi(iso: string, lang: 'en' | 'es'): string {
+  const d = new Date(iso);
+  const bogota = new Date(d.toLocaleString('en-US', { timeZone: BOGOTA }));
+  const day = bogota.getDate();
+  const months = lang === 'es' ? ES_MONTHS_ABBR : EN_MONTHS_ABBR;
+  return `${day} ${months[bogota.getMonth()]}`;
+}
+
+export function formatDateTimeBi(iso: string, lang: 'en' | 'es'): string {
+  const d = new Date(iso);
+  const bogota = new Date(d.toLocaleString('en-US', { timeZone: BOGOTA }));
+  const day = bogota.getDate();
+  const months = lang === 'es' ? ES_MONTHS_ABBR : EN_MONTHS_ABBR;
+  let hours = bogota.getHours();
+  const minutes = bogota.getMinutes().toString().padStart(2, '0');
+  const ampm = hours >= 12 ? (lang === 'es' ? 'p. m.' : 'PM') : (lang === 'es' ? 'a. m.' : 'AM');
+  hours = hours % 12 || 12;
+  return `${day} ${months[bogota.getMonth()]}, ${hours}:${minutes} ${ampm}`;
+}

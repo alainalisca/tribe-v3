@@ -15,7 +15,7 @@ import {
 import type { LeadStatus } from '@/lib/tribe-os/leads/constants';
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ): Promise<NextResponse> {
   const gate = await requireTribeOSPremium();
@@ -24,6 +24,51 @@ export async function GET(
 
   try {
     const { id } = await params;
+    const url = new URL(request.url);
+    const preview = url.searchParams.get('preview');
+
+    if (preview === 'conversion') {
+      const { data: lead, error: leadErr } = await supabase
+        .from('tribe_os_leads')
+        .select('full_name, phone, email')
+        .eq('id', id)
+        .eq('gym_id', gymId)
+        .single();
+
+      if (leadErr || !lead) {
+        logError(leadErr, { route: 'GET /api/tribe-os/leads/[id]?preview=conversion', id, gymId });
+        return NextResponse.json({ success: false, error: 'not_found' }, { status: 404 });
+      }
+
+      const phone = lead.phone ? normalizePhone(lead.phone) : null;
+      let existingClient: { id: string; name: string } | null = null;
+
+      if (phone) {
+        const { data: clients, error: clientErr } = await supabase
+          .from('clients')
+          .select('id, name')
+          .eq('gym_id', gymId)
+          .eq('phone', phone)
+          .limit(1);
+
+        if (clientErr) {
+          logError(clientErr, { route: 'GET /api/tribe-os/leads/[id]?preview=conversion', id, gymId });
+        }
+        if (clients && clients.length > 0) {
+          existingClient = { id: clients[0].id, name: clients[0].name };
+        }
+      }
+
+      return NextResponse.json({
+        success: true,
+        data: {
+          lead_name: lead.full_name,
+          lead_phone: phone,
+          lead_email: lead.email,
+          existing_client: existingClient,
+        },
+      });
+    }
 
     const { data, error } = await supabase
       .from('tribe_os_leads')
@@ -128,7 +173,7 @@ export async function PATCH(
 
       const { data: current, error: fetchErr } = await supabase
         .from('tribe_os_leads')
-        .select('status, trial_at')
+        .select('status, trial_at, full_name, phone, email')
         .eq('id', id)
         .eq('gym_id', gymId)
         .single();
@@ -143,6 +188,14 @@ export async function PATCH(
         return NextResponse.json({ success: false, error: 'invalid_transition' }, { status: 400 });
       }
 
+      if (newStatus === 'trial_booked') {
+        const trialAt = typeof b.trial_at === 'string' ? b.trial_at : null;
+        if (!trialAt) {
+          return NextResponse.json({ success: false, error: 'trial_at_required' }, { status: 400 });
+        }
+        updates.trial_at = trialAt;
+      }
+
       if (newStatus === 'lost') {
         const reason = typeof b.lost_reason === 'string' ? b.lost_reason.trim() : '';
         if (reason.length < LOST_REASON_MIN || reason.length > LOST_REASON_MAX) {
@@ -152,10 +205,49 @@ export async function PATCH(
       }
 
       if (newStatus === 'joined') {
-        if (typeof b.converted_client_id !== 'string' || !b.converted_client_id) {
-          return NextResponse.json({ success: false, error: 'converted_client_id_required' }, { status: 400 });
+        const phone = current.phone ? normalizePhone(current.phone) : null;
+        let clientId: string | null = null;
+
+        if (phone) {
+          const { data: existing, error: lookupErr } = await supabase
+            .from('clients')
+            .select('id')
+            .eq('gym_id', gymId)
+            .eq('phone', phone)
+            .limit(1);
+
+          if (lookupErr) {
+            logError(lookupErr, { route: 'PATCH /api/tribe-os/leads/[id] conversion lookup', id, gymId });
+            return NextResponse.json({ success: false, error: 'conversion_failed' }, { status: 500 });
+          }
+
+          if (existing && existing.length > 0) {
+            clientId = existing[0].id;
+          }
         }
-        updates.converted_client_id = b.converted_client_id;
+
+        if (!clientId) {
+          const { data: newClient, error: createErr } = await supabase
+            .from('clients')
+            .insert({
+              gym_id: gymId,
+              instructor_user_id: userId,
+              name: current.full_name,
+              phone: phone || null,
+              email: current.email || null,
+              status: 'active',
+            })
+            .select('id')
+            .single();
+
+          if (createErr || !newClient) {
+            logError(createErr, { route: 'PATCH /api/tribe-os/leads/[id] conversion create', id, gymId });
+            return NextResponse.json({ success: false, error: 'conversion_failed' }, { status: 500 });
+          }
+          clientId = newClient.id;
+        }
+
+        updates.converted_client_id = clientId;
       }
 
       updates.status = newStatus;
@@ -165,7 +257,7 @@ export async function PATCH(
         : (current.trial_at as string | null);
       updates.next_follow_up_at = computeFollowUp(newStatus, now, trialAt);
 
-      await supabase.from('tribe_os_lead_activities').insert({
+      const { error: actErr } = await supabase.from('tribe_os_lead_activities').insert({
         lead_id: id,
         gym_id: gymId,
         kind: 'status_change',
@@ -173,6 +265,9 @@ export async function PATCH(
         to_status: newStatus,
         created_by: userId,
       });
+      if (actErr) {
+        logError(actErr, { route: 'PATCH /api/tribe-os/leads/[id] activity insert', id, gymId });
+      }
     }
 
     if (Object.keys(updates).length === 0) {

@@ -27,7 +27,28 @@ export async function GET(
       return NextResponse.json({ success: false, error: 'list_failed' }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true, data: data ?? [] });
+    const rows = data ?? [];
+    const userIds = [...new Set(rows.map((r) => r.created_by).filter(Boolean))] as string[];
+    const nameMap: Record<string, string> = {};
+    if (userIds.length > 0) {
+      const { data: users, error: usersErr } = await supabase
+        .from('users')
+        .select('id, name')
+        .in('id', userIds);
+      if (usersErr) {
+        logError(usersErr, { route: 'GET /api/tribe-os/leads/[id]/activities users', id, gymId });
+      }
+      for (const u of users ?? []) {
+        nameMap[u.id] = u.name ?? '';
+      }
+    }
+
+    const enriched = rows.map((r) => ({
+      ...r,
+      created_by_name: r.created_by ? (nameMap[r.created_by] ?? null) : null,
+    }));
+
+    return NextResponse.json({ success: true, data: enriched });
   } catch (error) {
     logError(error, { route: 'GET /api/tribe-os/leads/[id]/activities' });
     return NextResponse.json({ success: false, error: 'internal_error' }, { status: 500 });

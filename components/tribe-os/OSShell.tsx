@@ -208,10 +208,16 @@ export default function OSShell({ children }: { children: React.ReactNode }) {
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch('/api/tribe-os/sequences/tasks');
+        const [res, leadsRes] = await Promise.all([
+          fetch('/api/tribe-os/sequences/tasks'),
+          fetch('/api/tribe-os/leads/tasks'),
+        ]);
         const json = await res.json();
-        if (!cancelled && json.success) {
-          setTaskCount((json.data?.tasks ?? []).length);
+        const leadsJson = await leadsRes.json();
+        if (!cancelled) {
+          const seqCount = json.success ? (json.data?.tasks ?? []).length : 0;
+          const leadCount = leadsJson.success ? (leadsJson.data ?? []).length : 0;
+          setTaskCount(seqCount + leadCount);
         }
       } catch {}
     })();

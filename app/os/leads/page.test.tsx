@@ -37,7 +37,12 @@ beforeEach(() => {
   fetchSpy.mockImplementation((url: string) => {
     if (url.includes('/stats')) {
       return Promise.resolve({
-        json: () => Promise.resolve({ success: true, data: { total: 0, by_status: {}, new_last_30d: 0 } }),
+        json: () => Promise.resolve({ success: true, data: { total: 0, by_status: {}, by_source: {}, trial_reached: 0, trial_completed: 0, new_last_30d: 0 } }),
+      });
+    }
+    if (url.includes('/coaches')) {
+      return Promise.resolve({
+        json: () => Promise.resolve({ success: true, data: { coaches: [] } }),
       });
     }
     return Promise.resolve({
