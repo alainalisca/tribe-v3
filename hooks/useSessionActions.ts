@@ -17,7 +17,7 @@ import {
   deleteParticipantBySessionAndUser,
 } from '@/lib/dal';
 import type { UseSessionActionsParams, ConfirmAction, GuestData } from './sessionActionTypes';
-import { getJoinErrorMessages } from './sessionActionTypes';
+import { getJoinErrorMessages, paidRequestSentMessage } from './sessionActionTypes';
 import {
   insertGuestParticipant,
   storeGuestLocally,
@@ -41,6 +41,7 @@ export function useSessionActions({
   onNavigate,
   setParticipants,
   setSession,
+  onPaidRequestSent,
 }: UseSessionActionsParams) {
   const [joining, setJoining] = useState(false);
   const [joiningAsGuest, setJoiningAsGuest] = useState(false);
@@ -93,21 +94,27 @@ export function useSessionActions({
         );
         return;
       }
+      // T-PAY2 Step 5: set when the page's payment sheet replaces the toast.
+      let paidSheetAfterReload = false;
       if (result.status === 'pending') {
         haptic('light');
         trackSessionJoinRequested(session);
         // T-PAY1: a paid session's request is "awaiting payment" — tell the
         // athlete to pay the instructor directly so the instructor can confirm.
         const paidRequest = !!session.is_paid && (session.price_cents ?? 0) > 0;
-        showSuccess(
-          paidRequest
-            ? language === 'es'
-              ? '¡Solicitud enviada! Paga al instructor directamente y confirmará tu lugar.'
-              : 'Request sent! Pay the instructor directly and they will confirm your spot.'
-            : language === 'es'
-              ? '¡Solicitud enviada! El organizador revisará tu perfil.'
-              : 'Request sent! The host will review your profile and decide.'
-        );
+        if (paidRequest && onPaidRequestSent) {
+          // The sheet needs the reloaded pending state and the gated
+          // instructions, so it is signalled after onSessionUpdated below.
+          paidSheetAfterReload = true;
+        } else {
+          showSuccess(
+            paidRequest
+              ? paidRequestSentMessage(language)
+              : language === 'es'
+                ? '¡Solicitud enviada! El organizador revisará tu perfil.'
+                : 'Request sent! The host will review your profile and decide.'
+          );
+        }
       } else {
         haptic('success');
         // LR-04 funnel: dual-emit the legacy `session_joined` and the
@@ -130,6 +137,7 @@ export function useSessionActions({
         sessionStorage.setItem('tribe_sessions_dirty', '1');
       }
       await onSessionUpdated();
+      if (paidSheetAfterReload) onPaidRequestSent?.();
 
       // DEFER THE SPORTS STEP TO HERE, rather than skipping it.
       //

@@ -20,6 +20,7 @@ import {
 } from '@/lib/dal';
 import { useLiveStatus } from '@/hooks/useLiveStatus';
 import { useSessionActions } from '@/hooks/useSessionActions';
+import { usePaySheet } from './usePaySheet';
 import type { User as AuthUser } from '@supabase/supabase-js';
 import type { RecapPhotoWithUser, SessionStoryJoined } from './types';
 import { fetchPartnersByIds, fetchRosterCount, type GymIdentity } from '@/lib/dal/gymVenue';
@@ -71,6 +72,9 @@ export function useSessionDetail(sessionId: string, language: 'en' | 'es', onNav
     language,
   });
 
+  // T-PAY2 Step 5: the post-request payment sheet (opens once per request).
+  const paySheet = usePaySheet({ isPending, paymentInstructions, language, sessionId });
+
   const sessionActions = useSessionActions({
     supabase,
     sessionId,
@@ -81,6 +85,7 @@ export function useSessionDetail(sessionId: string, language: 'en' | 'es', onNav
     onNavigate,
     setParticipants,
     setSession,
+    onPaidRequestSent: paySheet.onPaidRequestSent,
   });
 
   // --- Effects ---
@@ -362,6 +367,7 @@ export function useSessionDetail(sessionId: string, language: 'en' | 'es', onNav
     hasJoined,
     isPending,
     paymentInstructions,
+    paySheet,
     lightboxOpen,
     currentPhotoIndex,
     photoType,

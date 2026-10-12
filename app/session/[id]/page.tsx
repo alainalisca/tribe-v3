@@ -24,7 +24,8 @@ import RecapPhotos from '@/components/session/RecapPhotos';
 import ReviewsList from '@/components/instructor/ReviewsList';
 import WaitlistPanel from '@/components/session/WaitlistPanel';
 import PendingRequestsPanel from '@/components/session/PendingRequestsPanel';
-import { shouldShowPayNow } from '@/components/session/PayNowButton';
+import PendingPayBar, { shouldShowPendingPayBar, PENDING_PAY_BAR_CLEARANCE } from '@/components/session/PendingPayBar';
+import PaymentSheet from '@/components/session/PaymentSheet';
 import LiveStatusSection from '@/components/session/LiveStatusSection';
 import ConfirmDialog from '@/components/ConfirmDialog';
 
@@ -224,11 +225,23 @@ export default function SessionDetailPage() {
   // included deliberately: with no enforced payment step there is no reason to
   // withhold it from someone who has already requested.
   const canViewPaymentInstructions = !!d.user && (isCreator || d.hasJoined || d.isPending);
+  // T-PAY2 Step 5: pinned pay bar and post-request sheet, pending athlete on a
+  // paid session only. Both drop away once the athlete is confirmed, cancels or
+  // is declined, because isPending goes false on the reload.
+  const showPendingPayBar = shouldShowPendingPayBar({
+    canViewPaymentInstructions,
+    isCreator,
+    isPending: d.isPending,
+    isPaidSession: !!d.session.is_paid && d.session.price_cents > 0,
+  });
   const currentPhotos =
     d.photoType === 'location' ? d.session.photos : d.recapPhotos.map((p: RecapPhotoWithUser) => p.photo_url);
 
   return (
-    <div className="min-h-screen bg-theme-page pb-nav">
+    <div
+      className="min-h-screen bg-theme-page pb-nav"
+      style={showPendingPayBar ? { paddingBottom: PENDING_PAY_BAR_CLEARANCE } : undefined}
+    >
       {d.lightboxOpen && currentPhotos && (
         <PhotoLightbox photos={currentPhotos} initialIndex={d.currentPhotoIndex} onClose={() => history.back()} />
       )}
@@ -254,7 +267,6 @@ export default function SessionDetailPage() {
           isCreator={isCreator}
           canViewPaymentInstructions={canViewPaymentInstructions}
           paymentInstructions={d.paymentInstructions}
-          showPayNow={shouldShowPayNow({ canViewPaymentInstructions, isCreator, isPending: d.isPending })}
           onOpenLightbox={d.openLightbox}
         />
 
@@ -593,6 +605,27 @@ export default function SessionDetailPage() {
           sessionTime={d.session.start_time}
           locationName={d.session.location}
           price={d.session.price_cents ? String(d.session.price_cents / 100) : undefined}
+        />
+      )}
+
+      {showPendingPayBar && (
+        <PendingPayBar
+          priceCents={d.session.price_cents}
+          currency={d.session.currency}
+          paymentInstructions={d.paymentInstructions}
+          language={language}
+        />
+      )}
+      {showPendingPayBar && d.paymentInstructions && (
+        <PaymentSheet
+          open={d.paySheet.open}
+          onClose={d.paySheet.close}
+          sport={d.session.sport}
+          date={d.session.date}
+          priceCents={d.session.price_cents}
+          currency={d.session.currency}
+          paymentInstructions={d.paymentInstructions}
+          language={language}
         />
       )}
 

@@ -14,7 +14,7 @@ import { formatPriceForUser } from '@/lib/userCurrency';
 import { SessionDetailVenueLine, SessionDetailGymHost } from '@/components/session/SessionDetailVenue';
 import type { SessionGymIdentity } from '@/lib/sessionGym';
 import PaymentInstructionsText from '@/components/session/PaymentInstructionsText';
-import PayNowButton from '@/components/session/PayNowButton';
+import { PAYMENT_BOX_ID } from '@/components/session/PendingPayBar';
 
 interface CreatorInfo {
   id: string;
@@ -65,11 +65,6 @@ interface SessionDetailsProps {
    * reaches an anonymous visitor's page payload.
    */
   paymentInstructions?: string | null;
-  /**
-   * T-PAY2: show "Pagar ahora" under the instructions. The page computes it with
-   * shouldShowPayNow (pending athlete only, never the host or a confirmed athlete).
-   */
-  showPayNow?: boolean;
   onOpenLightbox: (index: number, type: 'location' | 'recap') => void;
 }
 
@@ -83,7 +78,6 @@ export default function SessionDetails({
   language,
   canViewPaymentInstructions = false,
   paymentInstructions = null,
-  showPayNow = false,
   onOpenLightbox,
 }: SessionDetailsProps) {
   const { t } = useLanguage();
@@ -220,7 +214,10 @@ export default function SessionDetails({
         )}
 
         {session.is_paid && session.price_cents != null && (
-          <div className="p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-200 dark:border-emerald-800">
+          <div
+            id={PAYMENT_BOX_ID}
+            className="p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-200 dark:border-emerald-800"
+          >
             <div className="flex items-center gap-2 mb-2">
               <DollarSign className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
               <span className="font-bold text-emerald-800 dark:text-emerald-300 text-lg">
@@ -242,7 +239,6 @@ export default function SessionDetails({
                   text={paymentInstructions}
                   className="text-sm text-emerald-900 dark:text-emerald-200 whitespace-pre-wrap break-words"
                 />
-                {showPayNow && <PayNowButton paymentInstructions={paymentInstructions} language={language} />}
               </div>
             )}
             {/* Earnings/fee breakdown intentionally hidden: Tribe does not take a
