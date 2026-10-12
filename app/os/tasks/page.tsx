@@ -10,6 +10,7 @@ import DraftModal from '@/components/tribe-os/DraftModal';
 import type { DraftContext } from '@/lib/tribe-os/drafts/templates';
 import { STEP_CHANNEL_LABELS, STOP_REASONS } from '@/lib/tribe-os/sequences/helpers';
 import { showError, showInfo } from '@/lib/toast';
+import { formatCents } from '@/lib/format/currency';
 import { Check, MessageCircle, Square, RefreshCw } from 'lucide-react';
 
 const copy = {
@@ -105,6 +106,11 @@ interface PendingItem {
   clientName: string | null;
   sequenceName: string;
   enrolledByType: string;
+  daysSinceLastActivity: number | null;
+  reasons: string[];
+  planName: string | null;
+  monthlyValue: number | null;
+  currency: string;
 }
 
 interface TasksData {
@@ -380,7 +386,7 @@ export default function TasksPage() {
                 <div className="space-y-2">
                   {pending.map((p) => (
                     <div key={p.enrollmentId} className="bg-white rounded-tribe shadow-tribe px-4 py-3">
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-start gap-3">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
                             <Link
@@ -391,8 +397,22 @@ export default function TasksPage() {
                             </Link>
                             <span className="text-xs text-tribe-dark-80">{p.sequenceName}</span>
                           </div>
+                          <div className="flex items-center gap-3 mt-1 text-xs text-tribe-dark-80 flex-wrap">
+                            {p.daysSinceLastActivity != null && (
+                              <span>{s.daysSinceVisit(p.daysSinceLastActivity)}</span>
+                            )}
+                            {p.planName && (
+                              <span>
+                                {s.plan}: {p.planName}
+                                {p.monthlyValue != null && ` · ${formatCents(p.monthlyValue, p.currency as 'COP' | 'USD', language)}/mes`}
+                              </span>
+                            )}
+                          </div>
+                          {p.reasons.length > 0 && (
+                            <p className="text-xs text-tribe-dark-80 mt-0.5 line-clamp-2">{p.reasons.join(' · ')}</p>
+                          )}
                           {p.enrolledByType === 'system' && (
-                            <p className="text-xs text-tribe-dark-80 mt-0.5">{s.approvalSystem}</p>
+                            <p className="text-[10px] text-tribe-dark-80 mt-0.5 uppercase tracking-wider">{s.approvalSystem}</p>
                           )}
                         </div>
                         <div className="shrink-0 flex items-center gap-1.5">

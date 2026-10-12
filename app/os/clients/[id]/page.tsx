@@ -15,6 +15,7 @@ import {
   DollarSign,
   MessageCircle,
   PenLine,
+  Plus,
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { useLanguage } from '@/lib/LanguageContext';
@@ -32,6 +33,7 @@ import StreakMilestoneChip from '@/components/tribe-os/StreakMilestoneChip';
 import AttendanceHeatmap from '@/components/tribe-os/AttendanceHeatmap';
 import TrainingPatternInsight from '@/components/tribe-os/TrainingPatternInsight';
 import DraftModal from '@/components/tribe-os/DraftModal';
+import { daysSinceVisit as daysSinceVisitFn } from '@/lib/tribe-os/daysSinceVisit';
 import type { DraftContext } from '@/lib/tribe-os/drafts/templates';
 import type { AttendanceWithSession, ClientAttendanceSummary, ClientRow, ClientVisitRow, ClientVisitsSummary } from '@/lib/dal/clients';
 
@@ -125,6 +127,17 @@ const copy = {
     visitsLoading: 'Loading…',
     visitsSource: (src: string) =>
       src === 'manual' ? 'Manual' : src === 'mira_csv' ? 'MIRA' : src === 'csv' ? 'CSV' : src,
+
+    // Manual visit form
+    manualVisitBtn: 'Log visit',
+    manualVisitDate: 'Date & time',
+    manualVisitCoach: 'Coach (optional)',
+    manualVisitClass: 'Class (optional)',
+    manualVisitSave: 'Save',
+    manualVisitSaving: 'Saving…',
+    manualVisitSuccess: 'Visit saved',
+    manualVisitDuplicate: "There's already a visit registered near that time.",
+    manualVisitError: 'Could not save the visit. Try again.',
 
     // History (legacy client_attendance)
     historyTitle: 'Payment history',
@@ -263,6 +276,16 @@ const copy = {
     visitsLoading: 'Cargando…',
     visitsSource: (src: string) =>
       src === 'manual' ? 'Manual' : src === 'mira_csv' ? 'MIRA' : src === 'csv' ? 'CSV' : src,
+
+    manualVisitBtn: 'Registrar visita',
+    manualVisitDate: 'Fecha y hora',
+    manualVisitCoach: 'Coach (opcional)',
+    manualVisitClass: 'Clase (opcional)',
+    manualVisitSave: 'Guardar',
+    manualVisitSaving: 'Guardando…',
+    manualVisitSuccess: 'Visita registrada',
+    manualVisitDuplicate: 'Ya hay una visita registrada cerca de esa hora.',
+    manualVisitError: 'No se pudo guardar la visita. Intenta de nuevo.',
 
     historyTitle: 'Historial de pagos',
     historyEmpty: 'Aún no hay pagos registrados.',
@@ -443,8 +466,11 @@ export default function ClientDetailPage() {
   async function handleOpenDraft() {
     if (state.kind !== 'ready') return;
     try {
-      const res = await fetch('/api/tribe-os/retention/scores');
-      const body = (await res.json().catch(() => ({}))) as {
+      const [scoresRes, visitsRes] = await Promise.all([
+        fetch('/api/tribe-os/retention/scores'),
+        fetch(`/api/tribe-os/clients/${clientId}/visits?page=1`),
+      ]);
+      const body = (await scoresRes.json().catch(() => ({}))) as {
         success?: boolean;
         data?: {
           coachDisplayName: string | null;
@@ -461,14 +487,22 @@ export default function ClientDetailPage() {
           }>;
         };
       };
+      const visitsBody = (await visitsRes.json().catch(() => ({}))) as {
+        success?: boolean;
+        data?: { visits: Array<{ visited_at: string }> };
+      };
+      const latestVisitAt = visitsBody.data?.visits?.[0]?.visited_at ?? null;
       const match = body.data?.members.find((m) => m.id === clientId);
+      const freshDays = latestVisitAt != null
+        ? daysSinceVisitFn(latestVisitAt)
+        : match?.days_since_last_activity ?? null;
       setDraftCtx({
         memberId: state.client.id,
         memberName: state.client.name,
         phone: state.client.phone,
         reasons: match?.reasons ?? [],
-        daysSinceLastActivity: match?.days_since_last_activity ?? null,
-        lastActivityAt: match?.last_activity_at ?? state.client.last_seen_at,
+        daysSinceLastActivity: freshDays,
+        lastActivityAt: latestVisitAt ?? match?.last_activity_at ?? state.client.last_seen_at,
         lastTouchCreatedAt: match?.last_touch?.created_at ?? null,
         coachName: match?.last_visit_coach ?? null,
         className: match?.last_visit_class ?? null,
@@ -703,11 +737,11 @@ export default function ClientDetailPage() {
                         // edit the WhatsApp draft before sending — wa.me
                         // pre-fills, it doesn't auto-send.
                         const streak = state.client.current_streak_days ?? 0;
-                        const lastSeenMs = state.client.last_seen_at
-                          ? new Date(state.client.last_seen_at).getTime()
-                          : null;
-                        const daysSinceLastSeen =
-                          lastSeenMs != null ? Math.floor((Date.now() - lastSeenMs) / 86_400_000) : null;
+                        const daysSinceLastSeen = state.visits_summary?.last_visit_at
+                          ? daysSinceVisitFn(state.visits_summary.last_visit_at)
+                          : (state.client.last_seen_at
+                            ? Math.floor((Date.now() - new Date(state.client.last_seen_at).getTime()) / 86_400_000)
+                            : null);
                         let message: string;
                         let template: 'streak' | 'come_back' | 'check_in';
                         if (streak >= 7) {
@@ -1617,6 +1651,148 @@ interface VisitItem {
   source: string;
 }
 
+function bogotaNowLocal(): string {
+  const bogota = new Date().toLocaleString('sv-SE', { timeZone: 'America/Bogota' });
+  return bogota.slice(0, 16);
+}
+
+function RecordVisitManual({
+  clientId,
+  s,
+  onRecorded,
+}: {
+  clientId: string;
+  s: (typeof copy)['en'] | (typeof copy)['es'];
+  onRecorded: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [visitedAt, setVisitedAt] = useState(bogotaNowLocal);
+  const [coachName, setCoachName] = useState('');
+  const [className, setClassName] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [feedback, setFeedback] = useState<{ kind: 'ok' | 'err'; msg: string } | null>(null);
+
+  function reset() {
+    setVisitedAt(bogotaNowLocal());
+    setCoachName('');
+    setClassName('');
+    setFeedback(null);
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (saving) return;
+    setSaving(true);
+    setFeedback(null);
+
+    const bogotaIso = new Date(visitedAt + ':00-05:00').toISOString();
+    try {
+      const res = await fetch(`/api/tribe-os/clients/${clientId}/visits`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          visited_at: bogotaIso,
+          ...(coachName.trim() ? { coach_name: coachName.trim() } : {}),
+          ...(className.trim() ? { class_name: className.trim() } : {}),
+        }),
+      });
+      const body = await res.json().catch(() => ({})) as { success?: boolean; error?: string };
+      if (!res.ok || !body.success) {
+        setFeedback({
+          kind: 'err',
+          msg: body.error === 'duplicate_visit' ? s.manualVisitDuplicate : s.manualVisitError,
+        });
+        setSaving(false);
+        return;
+      }
+      setFeedback({ kind: 'ok', msg: s.manualVisitSuccess });
+      setSaving(false);
+
+      fetch('/api/tribe-os/sequences/reconcile', { method: 'POST' }).catch(() => {});
+
+      setTimeout(() => {
+        reset();
+        setOpen(false);
+        onRecorded();
+      }, 800);
+    } catch {
+      setFeedback({ kind: 'err', msg: s.manualVisitError });
+      setSaving(false);
+    }
+  }
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => { reset(); setOpen(true); }}
+        className="inline-flex items-center gap-1 px-2.5 py-1 bg-tribe-green/15 text-tribe-green text-[11px] font-bold rounded-full border border-tribe-green/30 hover:bg-tribe-green/25 transition-colors"
+      >
+        <Plus className="w-3 h-3" />
+        {s.manualVisitBtn}
+      </button>
+    );
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="bg-gray-50 rounded-xl border border-gray-200 p-3 mb-3 space-y-2">
+      <div>
+        <label className="block text-[11px] font-medium text-gray-500 mb-0.5">{s.manualVisitDate}</label>
+        <input
+          type="datetime-local"
+          value={visitedAt}
+          onChange={(e) => setVisitedAt(e.target.value)}
+          required
+          className="w-full rounded-lg border border-gray-300 px-2.5 py-1.5 text-sm"
+        />
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <label className="block text-[11px] font-medium text-gray-500 mb-0.5">{s.manualVisitCoach}</label>
+          <input
+            type="text"
+            value={coachName}
+            onChange={(e) => setCoachName(e.target.value)}
+            maxLength={200}
+            className="w-full rounded-lg border border-gray-300 px-2.5 py-1.5 text-sm"
+          />
+        </div>
+        <div>
+          <label className="block text-[11px] font-medium text-gray-500 mb-0.5">{s.manualVisitClass}</label>
+          <input
+            type="text"
+            value={className}
+            onChange={(e) => setClassName(e.target.value)}
+            maxLength={200}
+            className="w-full rounded-lg border border-gray-300 px-2.5 py-1.5 text-sm"
+          />
+        </div>
+      </div>
+      {feedback && (
+        <p className={`text-xs ${feedback.kind === 'ok' ? 'text-green-600' : 'text-red-600'}`}>
+          {feedback.msg}
+        </p>
+      )}
+      <div className="flex items-center gap-2 pt-1">
+        <button
+          type="submit"
+          disabled={saving}
+          className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-tribe-green text-white hover:bg-tribe-green-dark disabled:opacity-50 transition-colors"
+        >
+          {saving ? s.manualVisitSaving : s.manualVisitSave}
+        </button>
+        <button
+          type="button"
+          onClick={() => setOpen(false)}
+          className="px-3 py-1.5 text-xs font-medium text-gray-500 hover:text-gray-700 transition-colors"
+        >
+          {s.cancel}
+        </button>
+      </div>
+    </form>
+  );
+}
+
 function VisitsHistorySection({
   clientId,
   language,
@@ -1670,7 +1846,10 @@ function VisitsHistorySection({
     <section className="mt-6">
       <div className="flex items-center justify-between gap-3 mb-3">
         <h2 className="text-xs uppercase tracking-[0.1em] text-gray-500 font-semibold">{s.visitsTitle}</h2>
-        <RecordAttendanceInline clientId={clientId} onRecorded={onRecorded} />
+        <div className="flex items-center gap-2">
+          <RecordVisitManual clientId={clientId} s={s} onRecorded={onRecorded} />
+          <RecordAttendanceInline clientId={clientId} onRecorded={onRecorded} />
+        </div>
       </div>
       {!loading && visits.length === 0 ? (
         <div className="py-8 text-center bg-white rounded-xl border border-gray-200 space-y-2">

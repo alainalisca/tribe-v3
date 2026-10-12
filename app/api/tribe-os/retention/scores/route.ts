@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { logError } from '@/lib/logger';
 import { requireTribeOSPremium } from '@/lib/auth/premium';
+import { daysSinceVisit } from '@/lib/tribe-os/daysSinceVisit';
 
 export async function GET(): Promise<NextResponse> {
   const gate = await requireTribeOSPremium();
@@ -54,13 +55,10 @@ export async function GET(): Promise<NextResponse> {
     }
 
     // Fetch latest visit per client from client_visits (imported visits)
-    const thirtyDaysAgo = new Date(now);
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
     const { data: recentVisits } = await supabase
       .from('client_visits')
       .select('client_id, visited_at, coach_name, class_name')
       .eq('gym_id', gymId)
-      .gte('visited_at', thirtyDaysAgo.toISOString())
       .order('visited_at', { ascending: false });
 
     const latestVisitMap = new Map<
@@ -79,7 +77,7 @@ export async function GET(): Promise<NextResponse> {
 
     const rows = (members ?? []).map((m) => {
       const s = scoreMap.get(m.id);
-      const lastActivity = s?.signals?.days_since_last_activity;
+      const staleLastActivity = s?.signals?.days_since_last_activity ?? null;
       const touch = touchMap.get(m.id);
 
       // Best last_activity_at: from signals (if recomputed), or from client_visits
@@ -91,9 +89,12 @@ export async function GET(): Promise<NextResponse> {
         }
       }
       // Fallback: derive from computed_at - days_since_last_activity (approximate)
-      if (!lastActivityAt && lastActivity !== null && s?.computed_at) {
-        lastActivityAt = new Date(new Date(s.computed_at).getTime() - lastActivity * 86_400_000).toISOString();
+      if (!lastActivityAt && staleLastActivity !== null && s?.computed_at) {
+        lastActivityAt = new Date(new Date(s.computed_at).getTime() - staleLastActivity * 86_400_000).toISOString();
       }
+
+      // Compute fresh days_since_last_activity from lastActivityAt via daysSinceVisit
+      const freshDaysSince = daysSinceVisit(lastActivityAt, now);
 
       return {
         id: m.id,
@@ -106,7 +107,7 @@ export async function GET(): Promise<NextResponse> {
         score: s?.score ?? null,
         level: s?.level ?? null,
         reasons: s?.reasons ?? [],
-        days_since_last_activity: lastActivity ?? null,
+        days_since_last_activity: freshDaysSince,
         last_activity_at: lastActivityAt,
         visits_last_14d: s?.signals?.visits_last_14d ?? 0,
         visits_last_28d: s?.signals?.visits_last_28d ?? 0,

@@ -18,6 +18,7 @@ import {
   type VisitRow,
 } from '@/lib/tribe-os/touch-outcome';
 import { filterContactToday, type ContactFilterRow } from '@/lib/tribe-os/contactFilter';
+import { daysSinceVisit } from '@/lib/tribe-os/daysSinceVisit';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 const PAGE_SIZE = 1000;
@@ -70,6 +71,33 @@ async function fetchFirstVisitBefore(
     from += PAGE_SIZE;
   }
   return ids;
+}
+
+async function fetchLatestVisitPerClient(
+  supabase: SupabaseClient,
+  gymId: string,
+): Promise<Map<string, string>> {
+  const map = new Map<string, string>();
+  let from = 0;
+  for (;;) {
+    const { data, error } = await supabase
+      .from('client_visits')
+      .select('client_id, visited_at')
+      .eq('gym_id', gymId)
+      .order('visited_at', { ascending: false })
+      .range(from, from + PAGE_SIZE - 1);
+    if (error) throw error;
+    if (!data || data.length === 0) break;
+    for (const r of data) {
+      // Since ordered desc, first occurrence per client is the latest
+      if (!map.has(r.client_id)) {
+        map.set(r.client_id, r.visited_at as string);
+      }
+    }
+    if (data.length < PAGE_SIZE) break;
+    from += PAGE_SIZE;
+  }
+  return map;
 }
 
 interface TouchWithClient extends TouchRow {
@@ -125,6 +153,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     if (membersRes.error) throw membersRes.error;
     if (scoresRes.error) throw scoresRes.error;
 
+    const latestVisitMap = await fetchLatestVisitPerClient(supabase, gymId);
+
     const gymRes = await supabase.from('gyms').select('default_currency').eq('id', gymId).single();
     const gymCurrency = gymRes.data?.default_currency ?? 'COP';
 
@@ -176,8 +206,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     }
 
     const atRiskCents = (membersRes.data ?? []).reduce((sum, m) => {
-      const score = (scoresRes.data ?? []).find((s) => s.client_id === m.id);
-      const days = score?.signals?.days_since_last_activity ?? null;
+      const lastVisit = latestVisitMap.get(m.id) ?? null;
+      const days = daysSinceVisit(lastVisit);
       if (days !== null && days >= 7 && days <= 30) {
         return sum + (planValueMap.get(m.id) ?? 0);
       }
@@ -219,7 +249,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       monthlyValueCents: number | null;
     })[] = (membersRes.data ?? []).map((m) => {
       const s = scoreMap.get(m.id);
-      const days = s?.signals?.days_since_last_activity ?? null;
+      const lastVisit = latestVisitMap.get(m.id) ?? null;
+      const days = daysSinceVisit(lastVisit);
       return {
         id: m.id,
         name: m.name ?? null,

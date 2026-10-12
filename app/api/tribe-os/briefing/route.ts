@@ -16,6 +16,7 @@ import { listUnpaidAttendance } from '@/lib/dal/clients';
 import { humanizeReason } from '@/lib/tribe-os/forecast';
 import { filterContactToday } from '@/lib/tribe-os/contactFilter';
 import { bogotaToday, bogotaDateLabel, addDays, planExpiryLabel } from '@/lib/tribe-os/dates';
+import { daysSinceVisit } from '@/lib/tribe-os/daysSinceVisit';
 
 const BOGOTA = 'America/Bogota';
 
@@ -93,7 +94,7 @@ export async function GET(): Promise<NextResponse> {
     const sevenDaysAgo = addDays(today, -7);
     const sevenDaysFromNow = addDays(today, 7);
 
-    const [membersRes, scoresRes, touchesRes, visitsRes, unpaidRes, sessionsRes] = await Promise.all([
+    const [membersRes, scoresRes, touchesRes, visitsRes, latestVisitsRes, unpaidRes, sessionsRes] = await Promise.all([
       supabase.from('clients').select('id, name, phone, plan_ends_on').eq('gym_id', gymId),
       supabase
         .from('client_retention_v2')
@@ -110,6 +111,12 @@ export async function GET(): Promise<NextResponse> {
         .select('client_id, visited_at, coach_name, class_name')
         .eq('gym_id', gymId)
         .gte('visited_at', new Date(addDays(today, -30) + 'T00:00:00Z').toISOString())
+        .order('visited_at', { ascending: false }),
+      // Latest visit per member (no date filter) — used to compute fresh daysSinceLastActivity
+      supabase
+        .from('client_visits')
+        .select('client_id, visited_at')
+        .eq('gym_id', gymId)
         .order('visited_at', { ascending: false }),
       listUnpaidAttendance(supabase, { windowDays: 60 }),
       (async () => {
@@ -136,14 +143,24 @@ export async function GET(): Promise<NextResponse> {
     const scores = scoresRes.data ?? [];
     const touches = touchesRes.data ?? [];
     const visits = visitsRes.data ?? [];
+    const latestVisits = latestVisitsRes.data ?? [];
 
     const scoreMap = new Map(scores.map((s) => [s.client_id, s]));
     const memberMap = new Map(members.map((m) => [m.id, m]));
 
+    // Recent visits (last 30 days) — used for coach/class display info
     const visitMap = new Map<string, { visited_at: string; coach_name: string | null; class_name: string | null }>();
     for (const v of visits) {
       if (!visitMap.has(v.client_id)) {
         visitMap.set(v.client_id, { visited_at: v.visited_at, coach_name: v.coach_name, class_name: v.class_name });
+      }
+    }
+
+    // Latest visit per member (no date restriction) — used for fresh daysSince computation
+    const latestVisitMap = new Map<string, string>();
+    for (const v of latestVisits) {
+      if (!latestVisitMap.has(v.client_id)) {
+        latestVisitMap.set(v.client_id, v.visited_at);
       }
     }
 
@@ -156,11 +173,12 @@ export async function GET(): Promise<NextResponse> {
     // Build rows compatible with ContactFilterRow
     const filterRows = scores.map((s) => {
       const m = memberMap.get(s.client_id);
+      const freshDays = daysSinceVisit(latestVisitMap.get(s.client_id) ?? null);
       return {
         id: s.client_id,
         level: s.level,
         score: s.score,
-        days_since_last_activity: s.signals?.days_since_last_activity ?? null,
+        days_since_last_activity: freshDays ?? (s.signals?.days_since_last_activity ?? null),
         last_touch: touchMap.has(s.client_id) ? { created_at: touchMap.get(s.client_id)! } : null,
         _score: s,
         _member: m,
@@ -173,8 +191,9 @@ export async function GET(): Promise<NextResponse> {
       const s = row._score;
       const m = row._member;
       const v = visitMap.get(row.id);
-      const days = s.signals?.days_since_last_activity ?? null;
-      let lastActivityAt: string | null = s.signals?.last_activity_at ?? null;
+      const latestVisitedAt = latestVisitMap.get(row.id) ?? null;
+      const days = daysSinceVisit(latestVisitedAt) ?? (s.signals?.days_since_last_activity ?? null);
+      let lastActivityAt: string | null = latestVisitedAt ?? (s.signals?.last_activity_at ?? null);
       if (v && (!lastActivityAt || new Date(v.visited_at) > new Date(lastActivityAt))) {
         lastActivityAt = v.visited_at;
       }
@@ -202,7 +221,8 @@ export async function GET(): Promise<NextResponse> {
     // ── 2. Came back (returned after a touch in last 7 days) ──
     const cameBack: BriefingCameBack[] = [];
     for (const s of scores) {
-      const days = s.signals?.days_since_last_activity ?? null;
+      const freshDays = daysSinceVisit(latestVisitMap.get(s.client_id) ?? null);
+      const days = freshDays ?? (s.signals?.days_since_last_activity ?? null);
       if (days !== null && days <= 7 && touchMap.has(s.client_id)) {
         const m = memberMap.get(s.client_id);
         cameBack.push({ id: s.client_id, name: m?.name ?? null });
@@ -217,8 +237,9 @@ export async function GET(): Promise<NextResponse> {
         const label = planExpiryLabel(today, m.plan_ends_on);
         const s = scoreMap.get(m.id);
         const v = visitMap.get(m.id);
-        const days = s?.signals?.days_since_last_activity ?? null;
-        let lastActivityAt: string | null = s?.signals?.last_activity_at ?? null;
+        const latestVisitedAt = latestVisitMap.get(m.id) ?? null;
+        const days = daysSinceVisit(latestVisitedAt) ?? (s?.signals?.days_since_last_activity ?? null);
+        let lastActivityAt: string | null = latestVisitedAt ?? (s?.signals?.last_activity_at ?? null);
         if (v && (!lastActivityAt || new Date(v.visited_at) > new Date(lastActivityAt))) {
           lastActivityAt = v.visited_at;
         }

@@ -10,6 +10,7 @@ import { logError } from '@/lib/logger';
 import { requireTribeOSPremium } from '@/lib/auth/premium';
 import { getGym } from '@/lib/dal/gyms';
 import { bogotaToday } from '@/lib/tribe-os/dates';
+import { daysSinceVisit } from '@/lib/tribe-os/daysSinceVisit';
 import {
   computeForecast,
   type MemberForForecast,
@@ -103,12 +104,12 @@ export async function GET(): Promise<NextResponse> {
 
     const members: MemberForForecast[] = (membersRes.data ?? []).map((m) => {
       const s = scoreMap.get(m.id);
-      const days = s?.signals?.days_since_last_activity ?? null;
       let lastActivityAt: string | null = s?.signals?.last_activity_at ?? null;
       const visit = latestVisitMap.get(m.id);
       if (visit && (!lastActivityAt || visit > lastActivityAt)) {
         lastActivityAt = visit;
       }
+      const days = daysSinceVisit(lastActivityAt) ?? s?.signals?.days_since_last_activity ?? null;
 
       const touchAt = latestTouchMap.get(m.id) ?? null;
       const visitAfterTouch = latestVisitAfterTouchMap.get(m.id) ?? null;

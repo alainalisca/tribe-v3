@@ -5,6 +5,8 @@ import { requireTribeOSPremium } from '@/lib/auth/premium';
 import { getGym } from '@/lib/dal/gyms';
 import { dueDate, todayBogota, bogotaStartOfDayUTC, computeCurrentStep } from '@/lib/tribe-os/sequences/helpers';
 import { SYSTEM_DAILY_ENROLL_CAP } from '@/lib/tribe-os/sequences/constants';
+import { daysSinceVisit } from '@/lib/tribe-os/daysSinceVisit';
+import { monthlyValueCents, ownerReason, type PlanPrice } from '@/lib/tribe-os/forecast';
 
 export async function GET(): Promise<NextResponse> {
   const gate = await requireTribeOSPremium();
@@ -65,11 +67,37 @@ export async function GET(): Promise<NextResponse> {
 
     const { data: scores } = await supabase
       .from('client_retention_v2')
-      .select('client_id, signals')
+      .select('client_id, reasons, signals')
       .eq('gym_id', gymId)
       .in('client_id', allClientIds.length > 0 ? allClientIds : ['00000000-0000-0000-0000-000000000000']);
 
     const scoreMap = new Map((scores ?? []).map((s) => [s.client_id, s]));
+
+    const { data: latestVisits } = await supabase
+      .from('client_visits')
+      .select('client_id, visited_at')
+      .eq('gym_id', gymId)
+      .in('client_id', allClientIds.length > 0 ? allClientIds : ['00000000-0000-0000-0000-000000000000'])
+      .order('visited_at', { ascending: false });
+
+    const visitMap = new Map<string, string>();
+    for (const v of latestVisits ?? []) {
+      if (!visitMap.has(v.client_id)) visitMap.set(v.client_id, v.visited_at);
+    }
+
+    const { data: gymData } = await supabase.from('gyms').select('default_currency').eq('id', gymId).single();
+    const gymCurrency = (gymData?.default_currency as string) ?? 'COP';
+
+    const { data: rawPlans } = await supabase
+      .from('gym_plans')
+      .select('name, price_cents, currency, duration_months')
+      .eq('gym_id', gymId);
+    const plans: PlanPrice[] = (rawPlans ?? []).map((p) => ({
+      name: p.name as string,
+      price_cents: p.price_cents as number,
+      currency: p.currency as string,
+      duration_months: p.duration_months as number,
+    }));
 
     const { data: settings } = await supabase
       .from('tribe_os_gym_settings')
@@ -103,6 +131,11 @@ export async function GET(): Promise<NextResponse> {
       clientName: string | null;
       sequenceName: string;
       enrolledByType: string;
+      daysSinceLastActivity: number | null;
+      reasons: string[];
+      planName: string | null;
+      monthlyValue: number | null;
+      currency: string;
     }> = [];
 
     const today = todayBogota();
@@ -115,12 +148,22 @@ export async function GET(): Promise<NextResponse> {
       const score = scoreMap.get(e.client_id);
 
       if (e.status === 'pending_approval') {
+        const memberPlan = client?.membership_plan ?? null;
+        const retScore = scoreMap.get(e.client_id);
+        const localizedReasons = (retScore?.reasons ?? [])
+          .map((r: string) => ownerReason(r, 'es'))
+          .filter((r: string) => !r.includes('Asistencia estable') && !r.includes('Miembro nuevo'));
         pending.push({
           enrollmentId: e.id,
           clientId: e.client_id,
           clientName: client?.name ?? null,
           sequenceName: seq.name,
           enrolledByType: e.enrolled_by_type,
+          daysSinceLastActivity: daysSinceVisit(visitMap.get(e.client_id) ?? null),
+          reasons: localizedReasons,
+          planName: memberPlan,
+          monthlyValue: monthlyValueCents(memberPlan, plans, gymCurrency),
+          currency: gymCurrency,
         });
         continue;
       }
@@ -150,7 +193,7 @@ export async function GET(): Promise<NextResponse> {
         dueDateStr: stepDue,
         overdue: od > 0,
         overdueDaysCount: od,
-        daysSinceLastActivity: score?.signals?.days_since_last_activity ?? null,
+        daysSinceLastActivity: daysSinceVisit(visitMap.get(e.client_id) ?? null),
         planValue: client?.membership_plan ?? null,
       });
     }
