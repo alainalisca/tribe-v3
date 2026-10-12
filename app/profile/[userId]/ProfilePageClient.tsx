@@ -14,7 +14,7 @@
 'use client';
 import { showSuccess } from '@/lib/toast';
 import { trackEvent } from '@/lib/analytics';
-import { getInstructorShareUrl } from '@/lib/share';
+import { copyToClipboard, getInstructorShareUrl, nativeShare } from '@/lib/share';
 
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
@@ -140,12 +140,25 @@ export default function ProfilePageClient({ userId, initialProfile, statsSlot }:
     const shareUrl = getInstructorShareUrl(userId);
     const shareText =
       language === 'es' ? `${profile?.name} — Instructor en Tribe` : `${profile?.name} — Instructor on Tribe`;
-    if (navigator.share) {
-      await navigator.share({ title: shareText, url: shareUrl });
-      trackEvent('share_link_created', { type: 'instructor', instructor_id: userId });
-    } else {
-      await navigator.clipboard.writeText(shareUrl);
-      trackEvent('share_link_created', { type: 'instructor', instructor_id: userId });
+    // Cancelling the sheet is silent: no event, no exception (see lib/share.ts).
+    const native = await nativeShare({ title: shareText, url: shareUrl });
+    if (native === 'cancelled') return;
+    if (native === 'shared') {
+      trackEvent('share_link_created', {
+        content_type: 'instructor',
+        content_id: userId,
+        channel: 'native',
+        type: 'instructor',
+        instructor_id: userId,
+      });
+    } else if (await copyToClipboard(shareUrl)) {
+      trackEvent('share_link_created', {
+        content_type: 'instructor',
+        content_id: userId,
+        channel: 'copy',
+        type: 'instructor',
+        instructor_id: userId,
+      });
       showSuccess(language === 'es' ? '¡Enlace copiado!' : 'Link copied!');
     }
   }

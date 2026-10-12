@@ -256,7 +256,7 @@ describe('POST /api/invites/session', () => {
         type: 'session_invite',
         entity_type: 'session',
         entity_id: SESSION_ID,
-        message: 'Al Alisca te invito a Basketball el 2026-04-15',
+        message: 'Al Alisca te invitó a Basketball el 2026-04-15', // copy owned by lib/notification-i18n.ts
       })
     );
   });

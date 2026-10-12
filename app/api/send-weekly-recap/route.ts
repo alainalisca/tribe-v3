@@ -10,6 +10,7 @@ import { isEmailSuppressed, unsubUrlFor, unsubHeaders } from '@/lib/dal/emailUns
 import { bogotaDateOffset } from '@/lib/time/bogotaDate';
 import { dateLocale } from '@/lib/dateLocale';
 import { SITE_URL } from '@/lib/http/siteUrl';
+import { TRIBE_FROM } from '@/lib/email/sender';
 
 /**
  * @description Sends weekly recap emails to all users who participated in or hosted sessions during the past week, summarizing their activity.
@@ -181,7 +182,7 @@ export async function POST(request: Request) {
         }
 
         await resend.emails.send({
-          from: 'Tribe <tribe@aplusfitnessllc.com>',
+          from: TRIBE_FROM,
           to: user.email,
           subject: subject,
           headers: unsubHeaders(unsubUrl),

@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { isPublicPath, config } from './middleware';
+import nextConfig from './next.config';
 import { isPublicShareRoute, shouldSuppressInstallPrompt } from '@/lib/publicShareRoutes';
 
 /**
@@ -104,6 +105,27 @@ describe('existing public surfaces survive the change', () => {
     expect(isPublicPath('/api/attr/')).toBe(true);
   });
 
+  it('lets /api/attr/signup/ reach its handler, which authenticates itself (T-GROW1 part C)', () => {
+    // Public here by the /api/attr prefix, and that is fine rather than an
+    // accident: the route calls getUser() and answers 401 itself (route.test.ts
+    // "refuses a signed-out caller"). What must NOT happen is a 307 to /auth,
+    // because the client fires it with keepalive during the post-sign-in
+    // navigation and never reads the answer, so a redirect would lose the
+    // account's attribution silently, which is this file's running theme.
+    expect(isPublicPath('/api/attr/signup/')).toBe(true);
+  });
+
+  it('lets a signed-out visitor reach /api/referral/inviter/ (the "Invitado por X" banner)', () => {
+    // The banner's whole audience is signed out. Without this entry the fetch
+    // is answered with a redirect to /auth, the banner stays hidden, and nothing
+    // errors: the same silent shape as the browser lookup it replaced.
+    expect(isPublicPath('/api/referral/inviter')).toBe(true);
+    expect(isPublicPath('/api/referral/inviter/')).toBe(true);
+    // Only this route: the rest of /api/referral keeps its session gate.
+    expect(isPublicPath('/api/referral')).toBe(false);
+    expect(isPublicPath('/api/referral/apply/')).toBe(false);
+  });
+
   it('keeps the one-off outreach route reachable by its cron caller', () => {
     // Found by the dry run, not by review: the route checks CRON_SECRET itself,
     // but middleware's cookie gate runs first and 307s it to /auth. The
@@ -182,5 +204,61 @@ describe('/pase is public (T-LEAD1)', () => {
     expect(shouldSuppressInstallPrompt('/pase/bullbox/')).toBe(true);
     // and still does not sweep up a route that merely starts the same way
     expect(isPublicShareRoute('/pases')).toBe(false);
+  });
+});
+
+describe('/ingest is public (T-ANALYTICS1 part E)', () => {
+  // The PostHog reverse proxy. A signed-out visitor is most of the traffic it
+  // carries, and the SDK fires and forgets: a 307 to /auth would look exactly
+  // like success from the browser while PostHog received nothing. T-GROW1 shipped
+  // that bug once (/api/attr), caught only on the preview.
+  it.each([
+    '/ingest/e/',
+    '/ingest/i/v0/e/',
+    '/ingest/flags/',
+    '/ingest/s/',
+    '/ingest/array/phc_abc/config',
+    '/ingest/decide/',
+  ])('%s skips the auth cookie gate', (path) => {
+    expect(matcher.test(path)).toBe(true);
+    expect(isPublicPath(path)).toBe(true);
+  });
+
+  it('serves the SDK assets without the gate either', () => {
+    const asset = '/ingest/static/array.js';
+    expect(STATIC_ASSET.test(asset) || isPublicPath(asset)).toBe(true);
+  });
+
+  it('does not open neighbouring routes that merely start with the same letters', () => {
+    expect(isPublicPath('/ingestion-report')).toBe(false);
+    expect(isPublicPath('/ingest-admin/')).toBe(false);
+  });
+});
+
+describe('the /ingest rewrites (T-ANALYTICS1 part E)', () => {
+  async function ingestRewrites() {
+    const rewrites = await nextConfig.rewrites!();
+    const list = Array.isArray(rewrites)
+      ? rewrites
+      : [...(rewrites.beforeFiles ?? []), ...(rewrites.afterFiles ?? []), ...(rewrites.fallback ?? [])];
+    return list.filter((r) => r.source.startsWith('/ingest'));
+  }
+
+  it('sends assets and remote config to the assets host, everything else to ingestion', async () => {
+    const byPath = Object.fromEntries((await ingestRewrites()).map((r) => [r.source, r.destination]));
+    expect(byPath['/ingest/static/:path*']).toBe('https://us-assets.i.posthog.com/static/:path*');
+    expect(byPath['/ingest/array/:path*']).toBe('https://us-assets.i.posthog.com/array/:path*');
+    expect(byPath['/ingest/:path*']).toBe('https://us.i.posthog.com/:path*');
+  });
+
+  it('lists the catch-all LAST, or it would swallow the asset routes', async () => {
+    const sources = (await ingestRewrites()).map((r) => r.source);
+    expect(sources[sources.length - 1]).toBe('/ingest/:path*');
+  });
+
+  it('every rewritten path is also public in middleware (the two must stay in sync)', async () => {
+    for (const r of await ingestRewrites()) {
+      expect(isPublicPath(r.source.replace(':path*', 'x/'))).toBe(true);
+    }
   });
 });

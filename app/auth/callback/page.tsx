@@ -6,7 +6,6 @@ import { useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { upsertUserProfile } from '@/lib/auth-helpers';
 import { logError } from '@/lib/logger';
-import { applyReferralCode } from '@/lib/dal/referrals';
 import { trackEvent } from '@/lib/analytics';
 import { decodeReturnToParam, sanitizeReturnTo, storePendingReturnTo } from '@/lib/pendingReturnTo';
 import LoadingSpinner from '@/components/LoadingSpinner';
@@ -96,13 +95,11 @@ export default function AuthCallbackPage() {
         if (isNewUser) {
           trackEvent('signup_email_verified', { user_id: data.user.id });
 
-          // Apply referral code if stored during auth page visit
-          const refCode = localStorage.getItem('tribe_referral_code');
-          if (refCode) {
-            await applyReferralCode(supabase, refCode, data.user.id);
-            localStorage.removeItem('tribe_referral_code');
-            trackEvent('referral_sent', { referral_code: refCode, referred_user_id: data.user.id });
-          }
+          // T-GROW2: the referral is credited SERVER SIDE now, by /api/attr/signup
+          // from the ?ref= that lib/attribution captured (upsertUserProfile sends
+          // it). The applyReferralCode call that stood here never succeeded on
+          // production: RLS refused a new user writing a row naming someone else
+          // as referrer, and its 'referral_sent' event counted the attempts.
           // T-C1 Gate 2: OAuth signups had the same returnTo drop as the
           // email path — park the destination for onboarding to consume.
           storePendingReturnTo(decodeReturnToParam(returnTo));

@@ -38,7 +38,7 @@ const copy = {
     submitting: 'Adding',
     successTitle: 'Coach added',
     errorTitle: 'Could not add coach',
-    notOnTribe: "That email isn't on Tribe yet. Ask them to sign up at tribe-v3.vercel.app first, then try again.",
+    notOnTribe: "That email isn't on Tribe yet. Ask them to sign up at tribelatam.com first, then try again.",
     cannotInviteSelf: "You're already the gym owner.",
     ownerOnly: 'Only the gym owner can add coaches.',
     genericError: 'Something went wrong. Please try again.',
@@ -56,7 +56,7 @@ const copy = {
     successTitle: 'Entrenador agregado',
     errorTitle: 'No se pudo agregar al entrenador',
     notOnTribe:
-      'Ese correo aún no está en Tribe. Pídele que se registre en tribe-v3.vercel.app primero, luego intenta de nuevo.',
+      'Ese correo aún no está en Tribe. Pídele que se registre en tribelatam.com primero, luego intenta de nuevo.',
     cannotInviteSelf: 'Ya eres el propietario del gym.',
     ownerOnly: 'Solo el propietario del gym puede agregar entrenadores.',
     genericError: 'Algo salió mal. Por favor intenta de nuevo.',

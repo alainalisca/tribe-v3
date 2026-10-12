@@ -1,5 +1,6 @@
 import { getResendClient } from '@/lib/email/resendClient';
 import { logError } from '@/lib/logger';
+import { TRIBE_FROM } from '@/lib/email/sender';
 
 interface SendWelcomeEmailParams {
   email: string;
@@ -87,7 +88,7 @@ export async function sendWelcomeEmail(params: SendWelcomeEmailParams): Promise<
     `;
 
     const { error } = await resend.emails.send({
-      from: 'Tribe <tribe@aplusfitnessllc.com>',
+      from: TRIBE_FROM,
       to: email,
       subject,
       html,

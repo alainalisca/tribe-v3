@@ -28,6 +28,7 @@ import { getServiceRoleClient } from '@/lib/supabase/admin';
 import { fetchPassConfig, insertPassLead, markPassLeadNotified, type PassConfig } from '@/lib/dal/passLeads';
 import { normalizeWhatsApp, waMeDigits } from '@/lib/pase/phone';
 import { generatePassCode } from '@/lib/pase/passCode';
+import { generateLeadRefCode } from '@/lib/referral/leadRefCode';
 import { resolveAthleteAttribution, consentForAttribution, renderVoucherQr } from '@/lib/pase/athleteAttribution';
 import { sendPartnerLeadNotification, sendLeadPassEmail } from '@/lib/email/passLead';
 import { claimLeadNotification } from '@/lib/dal/athleteNotify';
@@ -257,9 +258,13 @@ export async function POST(request: NextRequest) {
 
     // Retry on collision rather than checking first: a check-then-insert is a
     // race, and the unique index is the only authority on what is taken.
-    let inserted: { id: string; passCode: string } | null = null;
+    let inserted: { id: string; passCode: string; leadRefCode: string } | null = null;
     for (let attempt = 0; attempt < PASS_CODE_ATTEMPTS; attempt++) {
       const passCode = generatePassCode(config.slug);
+      // T-GROW2: regenerated with the pass code on every attempt. Either unique
+      // index can raise the 23505 this loop retries on, and a fresh pair costs
+      // nothing.
+      const leadRefCode = generateLeadRefCode();
       const result = await insertPassLead(admin, {
         slug: config.slug,
         partner_id: config.partnerId,
@@ -287,9 +292,10 @@ export async function POST(request: NextRequest) {
         landing_path: landingPath,
         first_touch: firstTouch,
         ...(referredByAthleteId ? { referred_by_athlete_id: referredByAthleteId } : {}),
+        lead_ref_code: leadRefCode,
       });
       if (result.ok) {
-        inserted = { id: result.id, passCode: result.passCode };
+        inserted = { id: result.id, passCode: result.passCode, leadRefCode };
         break;
       }
       if (result.reason !== 'duplicate_code') {
@@ -387,6 +393,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         pass_code: inserted.passCode,
+        // T-GROW2: the confirmation screen's "Trae a un amigo" card shares it.
+        ref_code: inserted.leadRefCode,
         whatsapp_url: whatsappUrl,
         storefront_url: storefrontUrl,
         ...(qrSvg ? { qr_svg: qrSvg } : {}),

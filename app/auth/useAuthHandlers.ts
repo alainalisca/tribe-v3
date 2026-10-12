@@ -4,12 +4,12 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { opensOnSignIn } from './initialMode';
 import { upsertUserProfile } from '@/lib/auth-helpers';
 import { showError, showSuccess } from '@/lib/toast';
 import { getErrorMessage } from '@/lib/errorMessages';
 import { logError } from '@/lib/logger';
-import { trackEvent } from '@/lib/analytics';
-import { applyReferralCode } from '@/lib/dal/referrals';
+import { resetUser, trackEvent } from '@/lib/analytics';
 import { haptic } from '@/lib/haptics';
 import { decodeReturnToParam, sanitizeReturnTo, storePendingReturnTo } from '@/lib/pendingReturnTo';
 import { getAuthTranslations } from './translations';
@@ -22,7 +22,8 @@ export function useAuthHandlers(language: 'en' | 'es') {
   const supabase = createClient();
   const t = getAuthTranslations(language);
 
-  const [isLogin, setIsLogin] = useState(true);
+  // Invite links open on sign-up; see ./initialMode.ts.
+  const [isLogin, setIsLogin] = useState(() => opensOnSignIn(searchParams));
   const [isResetPassword, setIsResetPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -174,6 +175,10 @@ export function useAuthHandlers(language: 'en' | 'es') {
         if (!data.user?.email_confirmed_at) {
           setMessage(t.verifyEmail);
           setNeedsVerification(true);
+          // The password was right, so SIGNED_IN fired and PostHogProvider may
+          // already have identified this account on the device. Undo that
+          // before the session goes (T-ANALYTICS1 part B).
+          resetUser();
           await supabase.auth.signOut();
           return;
         }
@@ -203,7 +208,7 @@ export function useAuthHandlers(language: 'en' | 'es') {
         // LR-04 funnel: emit both `signup_started` (legacy) and
         // `signup_email_submitted` (canonical) at the form-POST moment so
         // the new funnel has clean naming while existing dashboards keep
-        // working. Same dual emit on the success side.
+        // working.
         trackEvent('signup_started', { method: 'email' });
         trackEvent('signup_email_submitted', { method: 'email' });
         const response = await fetch('/api/auth/signup', {
@@ -213,7 +218,10 @@ export function useAuthHandlers(language: 'en' | 'es') {
         });
         const result = await response.json();
         if (!response.ok) throw new Error(result.error);
-        trackEvent('signup_completed', { method: 'email' });
+        // signup_completed no longer fires here (T-ANALYTICS1 part B). This was
+        // the form POST, before the email was verified and before any role
+        // existed, and Google/Apple sign-ups never fired it at all. It now
+        // fires on /onboarding/role once the role is saved, for every method.
         // Move to in-app code entry instead of asking the user to click an
         // email link. A typed code can't be consumed by email scanners and
         // works regardless of which browser opens the inbox.
@@ -293,12 +301,8 @@ export function useAuthHandlers(language: 'en' | 'es') {
       if (data.user) {
         const { isNewUser } = await upsertUserProfile(data.user);
         trackEvent('signup_email_verified', { user_id: data.user.id });
-        const refCode = localStorage.getItem('tribe_referral_code');
-        if (refCode) {
-          await applyReferralCode(supabase, refCode, data.user.id);
-          localStorage.removeItem('tribe_referral_code');
-          trackEvent('referral_sent', { referral_code: refCode, referred_user_id: data.user.id });
-        }
+        // T-GROW2: referral credit is server side now (/api/attr/signup, from the
+        // captured ?ref=). The client applyReferralCode call here never succeeded.
         await haptic('success');
         // T-C1 Gate 2: same as the native Google path — a new user's returnTo
         // is parked for the final onboarding step instead of being dropped.

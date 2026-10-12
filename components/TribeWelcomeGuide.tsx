@@ -136,9 +136,11 @@ export default function TribeWelcomeGuide({
     if (guide.seen && startedRef.current && !finishedRef.current) {
       finishedRef.current = true;
       trackEvent('onboarding_finished'); // legacy
-      trackEvent('onboarding_completed'); // LR-04 canonical
+      // LR-04 canonical. role is is_instructor's reading (a gym owner is an
+      // instructor row too); identify carries the finer role.
+      trackEvent('onboarding_completed', { role: showInstructorStep ? 'instructor' : 'athlete' });
     }
-  }, [guide.open, guide.seen]);
+  }, [guide.open, guide.seen, showInstructorStep]);
 
   // The Tribe.OS step is last in every language, so dropping it is a slice.
   const allSteps = stepsByLanguage[language];

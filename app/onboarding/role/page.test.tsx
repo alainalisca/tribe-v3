@@ -19,6 +19,9 @@ vi.mock('@/lib/LanguageContext', () => ({ useLanguage: () => ({ language: 'en' }
 vi.mock('@/lib/toast', () => ({ showError: vi.fn() }));
 vi.mock('@/lib/logger', () => ({ logError: vi.fn() }));
 vi.mock('@/components/LoadingSpinner', () => ({ default: () => <div data-testid="spinner" /> }));
+// T-ANALYTICS1: signup_completed is covered in signupCompleted.test.tsx; keep it
+// (and the posthog-js load it would trigger) out of these tests.
+vi.mock('@/lib/analyticsIdentity', () => ({ recordSignupCompleted: vi.fn().mockResolvedValue(undefined) }));
 
 import OnboardingRolePage from './page';
 

@@ -36,7 +36,11 @@ import { RULE_CANNOT_DECIDE, LEAVE_UNACCENTED, accentWordPattern, deaccent } fro
  */
 
 const ROOT = path.resolve(__dirname, '../..');
-const SKIP_DIRS = new Set(['node_modules', '.next', '.git', '.claude', 'scripts']);
+// .worktrees: full second copies of the repo (in .git/info/exclude), stale by
+// definition. Walking them made this guard compare today's Spanish with old
+// copies' (te invitó here, te invito there) and fail on a clean tree. Same
+// exclusion as vitest.config.ts and scripts/assertSuiteComplete.mjs.
+const SKIP_DIRS = new Set(['node_modules', '.next', '.git', '.claude', '.worktrees', 'scripts']);
 
 function sourceFiles(dir: string, acc: string[] = []): string[] {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {

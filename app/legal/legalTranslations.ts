@@ -19,7 +19,7 @@ export function getTermsContent(language: 'en' | 'es'): TermsContent {
   if (language === 'es') {
     return {
       title: 'Términos de Servicio',
-      lastUpdated: 'Última actualización: 24 de noviembre de 2025',
+      lastUpdated: 'Última actualización: 11 de octubre de 2026',
       businessName: 'Razón social: A Plus Fitness LLC',
       sections: [
         {
@@ -130,7 +130,7 @@ export function getTermsContent(language: 'en' | 'es'): TermsContent {
 
   return {
     title: 'Terms of Service',
-    lastUpdated: 'Last Updated: November 24, 2025',
+    lastUpdated: 'Last Updated: October 11, 2026',
     businessName: 'Business Name: A Plus Fitness LLC',
     sections: [
       {
@@ -255,7 +255,7 @@ export function getPrivacyContent(language: 'en' | 'es'): PrivacyContent {
   if (language === 'es') {
     return {
       title: 'Política de Privacidad',
-      lastUpdated: 'Última actualización: 24 de noviembre de 2025',
+      lastUpdated: 'Última actualización: 11 de octubre de 2026',
       businessName: 'Razón social: A Plus Fitness LLC',
       sections: [
         {
@@ -343,7 +343,7 @@ export function getPrivacyContent(language: 'en' | 'es'): PrivacyContent {
 
   return {
     title: 'Privacy Policy',
-    lastUpdated: 'Last Updated: November 24, 2025',
+    lastUpdated: 'Last Updated: October 11, 2026',
     businessName: 'Business Name: A Plus Fitness LLC',
     sections: [
       {

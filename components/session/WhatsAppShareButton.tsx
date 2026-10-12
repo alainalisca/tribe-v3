@@ -75,6 +75,7 @@ export default function WhatsAppShareButton({ session, language, isCreator = fal
 
     trackEvent('session_shared', {
       session_id: session.id,
+      content_type: 'session',
       sport: session.sport,
       channel: 'whatsapp',
       is_creator: isCreator,

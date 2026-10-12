@@ -62,6 +62,10 @@ export const metadata: Metadata = {
     icon: [
       { url: '/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
       { url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
+      // Google Search shows a site's icon only when one is a multiple of 48px.
+      // public/favicon.ico (16, 32, 48) is the fallback crawlers fetch directly.
+      { url: '/favicon-48x48.png', sizes: '48x48', type: 'image/png' },
+      { url: '/favicon-192x192.png', sizes: '192x192', type: 'image/png' },
     ],
     apple: '/apple-touch-icon.png',
   },
@@ -176,7 +180,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <Toaster
                   position="top-center"
                   containerStyle={{
-                    top: 'calc(max(env(safe-area-inset-top, 0px), 20px) + 12px)',
+                    top: 'calc(max(var(--safe-area-inset-top, 0px), 20px) + 12px)',
                   }}
                   toastOptions={{
                     style: {

@@ -275,6 +275,9 @@ export function useSettings(language: 'en' | 'es') {
       const result = (await res.json().catch(() => ({ success: false }))) as { success?: boolean; error?: string };
       if (!res.ok || !result.success) throw new Error(result.error ?? 'delete_failed');
 
+      // The account is gone; the next person on this device must not inherit
+      // its PostHog identity (T-ANALYTICS1 part B).
+      resetUser();
       await supabase.auth.signOut();
       showSuccess(language === 'es' ? 'Cuenta eliminada' : 'Account deleted');
       setShowDeleteConfirm(false);

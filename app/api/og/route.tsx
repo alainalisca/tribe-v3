@@ -1,5 +1,7 @@
 import { ImageResponse } from 'next/og';
 import { NextRequest } from 'next/server';
+import { initialsOf } from '@/lib/text/initials';
+import { splitMonogram } from '@/lib/og/monogram';
 
 export const runtime = 'edge';
 
@@ -329,6 +331,8 @@ async function renderCard(request: NextRequest): Promise<Response> {
   const venue = searchParams.get('venue') ?? '';
   const neighborhood = searchParams.get('neighborhood') ?? '';
   const image = searchParams.get('image') ?? '';
+  // T-OG2: whose letters the split card's hero shows when there is no logo.
+  const monogram = searchParams.get('monogram') ?? '';
 
   // The DARK wordmark (dark letterforms + lime dot) — the white-card counterpart
   // of /tribe-wordmark.png, which is the white-on-dark cut and would be
@@ -377,6 +381,7 @@ async function renderCard(request: NextRequest): Promise<Response> {
     const logo = await loadImage(logoUrl, 300);
     return renderSplit({
       headline: title || (type === 'instructor' ? instructor : 'Tribe'),
+      monogram,
       sub1: subtitle,
       sub2,
       hero,
@@ -520,16 +525,6 @@ function InitialsWell({
   );
 }
 
-/** First letters of up to `n` words, uppercased. "CrossFit BullBox" -> "CB". */
-function initials(name: string, n: number): string {
-  return name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, n)
-    .map((w) => w[0]?.toUpperCase() ?? '')
-    .join('');
-}
-
 /**
  * Mean advance width of a Plus Jakarta Sans ExtraBold glyph as a fraction of
  * the font size, over mixed-case Spanish. Measured from the cut this route
@@ -654,7 +649,7 @@ async function renderSession(p: SessionParams) {
         <PhotoWell src={heroSrc} width={510} height={552} radius={28} />
       ) : (
         <InitialsWell
-          text={initials(p.instructor || headline, 2)}
+          text={initialsOf(p.instructor || headline, 2)}
           width={510}
           height={552}
           radius={28}
@@ -738,7 +733,7 @@ async function renderSession(p: SessionParams) {
               {p.avatar && p.image ? (
                 <PhotoWell src={p.avatar} width={58} height={58} radius={29} />
               ) : (
-                <InitialsWell text={initials(p.instructor, 1)} width={58} height={58} radius={29} fontSize={26} />
+                <InitialsWell text={initialsOf(p.instructor, 1)} width={58} height={58} radius={29} fontSize={26} />
               )}
               <div style={{ display: 'flex', flexDirection: 'column', marginLeft: '18px' }}>
                 <span style={{ fontSize: '21px', fontWeight: 500, color: MUTED, lineHeight: 1.2 }}>Con</span>
@@ -762,6 +757,8 @@ async function renderSession(p: SessionParams) {
 
 interface SplitParams {
   headline: string;
+  /** The name the hero's initials stand for. Empty: fall back to the headline. */
+  monogram: string;
   sub1: string;
   sub2: string;
   hero: string;
@@ -796,7 +793,13 @@ async function renderSplit(p: SplitParams) {
         {p.hero ? (
           <PhotoWell src={p.hero} width={400} height={400} radius={radius} fit={p.fit} />
         ) : (
-          <InitialsWell text={initials(p.headline, 2)} width={400} height={400} radius={radius} fontSize={130} />
+          <InitialsWell
+            text={splitMonogram(p.monogram, p.headline)}
+            width={400}
+            height={400}
+            radius={radius}
+            fontSize={130}
+          />
         )}
       </div>
 

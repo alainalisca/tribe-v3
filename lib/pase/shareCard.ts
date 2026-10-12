@@ -45,6 +45,8 @@ export function passShareCard(config: PassConfig): Pick<Metadata, 'openGraph' | 
     subtitle: (config.sub ?? '').slice(0, 60),
     sub2: config.address ?? '',
     avatar: config.logoUrl ?? '',
+    // T-OG2: the partner's letters when there is no logo, never the headline's.
+    monogram: config.partnerName,
   });
   // Trailing slashes match next.config trailingSlash:true so a scraper that
   // does not follow the 308 still gets the image (same as /g/[id]).

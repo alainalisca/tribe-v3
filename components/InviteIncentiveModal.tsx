@@ -6,7 +6,7 @@ import { useState } from 'react';
 import { useLanguage } from '@/lib/LanguageContext';
 import { logError } from '@/lib/logger';
 import { showError } from '@/lib/toast';
-import { copyToClipboard, getSessionShareUrl } from '@/lib/share';
+import { copyToClipboard, getSessionShareUrl, nativeShare } from '@/lib/share';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 
 interface InviteIncentiveModalProps {
@@ -77,17 +77,15 @@ export default function InviteIncentiveModal({
   };
 
   const handleShare = async () => {
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: sessionTitle,
-          text: language === 'es' ? `Únete a mi sesión de ${sessionTitle}` : `Join my ${sessionTitle} session`,
-          url: inviteLink,
-        });
-      } catch (err) {
-        logError(err, { action: 'shareInvite' });
-      }
-    }
+    // A cancelled sheet used to be logged as an error here, which the logger
+    // forwards to PostHog as error_occurred. nativeShare reports it as
+    // 'cancelled' and only a real failure is logged.
+    const native = await nativeShare({
+      title: sessionTitle,
+      text: language === 'es' ? `Únete a mi sesión de ${sessionTitle}` : `Join my ${sessionTitle} session`,
+      url: inviteLink,
+    });
+    if (native === 'failed') logError(new Error('native share failed'), { action: 'shareInvite' });
   };
 
   return (

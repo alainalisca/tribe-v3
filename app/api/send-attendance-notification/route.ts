@@ -9,6 +9,7 @@ import { formatSessionLocation } from '@/lib/sessionLocation';
 import { shouldSendNotification } from '@/lib/dal/notificationPreferences';
 import { isEmailSuppressed, unsubUrlFor, unsubHeaders } from '@/lib/dal/emailUnsubscribe';
 import { SITE_URL } from '@/lib/http/siteUrl';
+import { TRIBE_FROM } from '@/lib/email/sender';
 
 /**
  * @description Sends a post-session attendance notification email prompting the user to upload photos from their training session.
@@ -161,7 +162,7 @@ export async function POST(request: Request) {
 
     // Send email
     await resend.emails.send({
-      from: 'Tribe <tribe@aplusfitnessllc.com>',
+      from: TRIBE_FROM,
       to: user.email,
       subject: subject,
       headers: unsubHeaders(unsubUrl),

@@ -209,7 +209,7 @@ export default function InterestButton({
             // focused field lifts above the keyboard (safe-area as the fallback).
             className="w-full max-w-md max-h-[90dvh] overflow-y-auto bg-theme-card rounded-t-2xl sm:rounded-2xl p-5 border border-theme"
             style={{
-              paddingBottom: 'max(env(keyboard-inset-height, 0px), env(safe-area-inset-bottom, 0px), 1.25rem)',
+              paddingBottom: 'max(env(keyboard-inset-height, 0px), var(--safe-area-inset-bottom, 0px), 1.25rem)',
             }}
             onClick={(e) => e.stopPropagation()}
           >

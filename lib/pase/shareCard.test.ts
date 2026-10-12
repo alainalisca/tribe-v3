@@ -80,6 +80,17 @@ describe('passShareCard', () => {
     const params = imageParams(passShareCard({ ...bullbox, logoUrl: null }));
     expect(params.get('avatar')).toBe('');
   });
+
+  /**
+   * T-OG2. Without a logo the card draws initials, and they must be the
+   * PARTNER's. The image used to build them from the headline, so every
+   * logo-less pass previewed in WhatsApp as "TP" (Tu Primera).
+   */
+  it('tells the image whose initials to draw: the partner, never the headline', () => {
+    const params = imageParams(passShareCard({ ...bullbox, logoUrl: null }));
+    expect(params.get('monogram')).toBe('CrossFit BullBox');
+    expect(params.get('monogram')).not.toBe(params.get('title'));
+  });
 });
 
 describe('passShareDescription', () => {

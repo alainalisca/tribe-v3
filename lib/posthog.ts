@@ -3,7 +3,69 @@ import type { Attribution } from './attribution';
 import { ATTR_TAG_FIELDS } from './attribution';
 
 let posthogInstance: PostHog | null = null;
-let initPromise: Promise<PostHog> | null = null;
+let initPromise: Promise<PostHog | null> | null = null;
+
+/**
+ * T-ANALYTICS1. Calls made before posthog-js has loaded, replayed in order once
+ * it has.
+ *
+ * The SDK is a dynamic import, so for the first few hundred milliseconds of
+ * every page load there is no instance. Every helper used to read
+ * getPostHog(), get null, and return -- so whatever fired in that window was
+ * dropped without a trace. That window is exactly where the landing pageview,
+ * an identify() for a returning user and the first event on a share link all
+ * live. The cap is a backstop for a page where the SDK never loads (an ad
+ * blocker on the chunk, a failed deploy): the queue must not grow forever.
+ */
+type PostHogCall = (ph: PostHog) => void;
+const MAX_PENDING_CALLS = 200;
+const pendingCalls: PostHogCall[] = [];
+
+function runCall(ph: PostHog, call: PostHogCall): void {
+  try {
+    call(ph);
+  } catch {
+    // Analytics is never allowed to surface. Deliberately not logError():
+    // logger forwards errors to analytics, which would loop back here.
+  }
+}
+
+export type AnalyticsPlatform = 'ios' | 'android' | 'web';
+
+/** Capacitor.getPlatform() folded to the three values PostHog sees. */
+export function platformOf(capacitorPlatform: string | undefined | null): AnalyticsPlatform {
+  return capacitorPlatform === 'ios' || capacitorPlatform === 'android' ? capacitorPlatform : 'web';
+}
+
+/**
+ * The web build this page came from: the short commit SHA, injected at build
+ * time by next.config.ts from VERCEL_GIT_COMMIT_SHA. The native apps load the
+ * remote site (capacitor.config server.url), so this is also what an iOS or
+ * Android user is running; the store version only changes the shell.
+ */
+export function appVersion(): string {
+  return process.env.NEXT_PUBLIC_APP_VERSION || 'unknown';
+}
+
+/**
+ * T-ANALYTICS1 part C. Super properties, attached to every event. Registered
+ * inside `loaded`, which posthog-js calls synchronously inside init() BEFORE it
+ * schedules the landing $pageview (setTimeout after loaded, verified in the
+ * installed 1.434.14 source), so the first pageview carries them too.
+ */
+export function superPropertiesFor(capacitorPlatform: string | undefined | null) {
+  return { platform: platformOf(capacitorPlatform), app_version: appVersion() };
+}
+
+async function capacitorPlatform(): Promise<string | null> {
+  try {
+    const { Capacitor } = await import('@capacitor/core');
+    return Capacitor.getPlatform();
+  } catch {
+    // No Capacitor bridge: a plain browser. 'web' is the right answer.
+    return null;
+  }
+}
 
 /**
  * Lazily loads and initializes PostHog.
@@ -15,22 +77,55 @@ export async function initPostHog(): Promise<PostHog | null> {
   if (posthogInstance) return posthogInstance;
 
   if (!initPromise) {
-    initPromise = import('posthog-js').then((mod) => {
-      const ph = mod.default;
-      ph.init(process.env.NEXT_PUBLIC_POSTHOG_KEY!, {
-        api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST,
-        loaded: (posthog) => {
-          if (process.env.NODE_ENV === 'development') posthog.debug();
-        },
-        capture_pageview: false, // We'll capture manually
-        // LR-01 (revised): auto-capture browser exceptions into PostHog's
-        // Activity → Exceptions view. Pairs with lib/captureError.ts on
-        // the server side. No separate Sentry vendor required.
-        capture_exceptions: true,
+    initPromise = Promise.all([import('posthog-js'), capacitorPlatform()])
+      .then(([mod, platform]) => {
+        const ph = mod.default;
+        ph.init(process.env.NEXT_PUBLIC_POSTHOG_KEY!, {
+          // T-ANALYTICS1 part E: same-origin reverse proxy (next.config.ts
+          // rewrites), so ad blockers do not drop events. ui_host keeps links
+          // into the PostHog app (toolbar, replay) pointing at PostHog itself.
+          // The native apps load the remote site, so the relative path works
+          // there too. lib/captureError.ts (server, posthog-node) still talks
+          // to PostHog directly: no ad blocker sits between Vercel and PostHog.
+          api_host: '/ingest',
+          ui_host: 'https://us.posthog.com',
+          loaded: (posthog) => {
+            posthog.register(superPropertiesFor(platform));
+            if (process.env.NODE_ENV === 'development') posthog.debug();
+          },
+          // T-ANALYTICS1 part A. The SDK captures the initial pageview and one
+          // per pathname change (it patches pushState/replaceState, which is
+          // how the App Router navigates). This replaced a usePathname effect in
+          // PostHogProvider that dropped the landing pageview to the init race.
+          //
+          // Set explicitly rather than through `defaults: '<date>'`: every
+          // defaults date after 2025-05-24 also changes session replay
+          // behaviour (streamNetworkBody, captureJsonLd, the minimum duration
+          // gate), and replay configuration is out of scope for this ticket.
+          capture_pageview: 'history_change',
+          // Rides on capture_pageview: the SDK sends $pageleave on unload only
+          // when capture_pageview is truthy. With it off, as it was, PostHog
+          // never received one. Spelled out so the dependency is visible.
+          capture_pageleave: 'if_capture_pageview',
+          // The library default, pinned: anonymous visitors stay eventless on
+          // the person side and only identify() creates a profile.
+          person_profiles: 'identified_only',
+          // LR-01 (revised): auto-capture browser exceptions into PostHog's
+          // Activity → Exceptions view. Pairs with lib/captureError.ts on
+          // the server side. No separate Sentry vendor required.
+          capture_exceptions: true,
+        });
+        posthogInstance = ph;
+        for (const call of pendingCalls.splice(0)) runCall(ph, call);
+        return ph;
+      })
+      .catch(() => {
+        // The chunk failed to load. Nothing queued can ever be sent, so drop it,
+        // and clear the promise so a later call can try again.
+        pendingCalls.length = 0;
+        initPromise = null;
+        return null;
       });
-      posthogInstance = ph;
-      return ph;
-    });
   }
 
   return initPromise;
@@ -39,10 +134,31 @@ export async function initPostHog(): Promise<PostHog | null> {
 /**
  * Returns the PostHog instance if already initialized, or null.
  * Use this for synchronous access (e.g., capturing events after init).
- * For guaranteed access, use initPostHog() instead.
+ * For anything that must not be lost to the init race, use withPostHog().
  */
 export function getPostHog(): PostHog | null {
   return posthogInstance;
+}
+
+/**
+ * Run `call` against PostHog now if it is loaded, otherwise once it is.
+ * Starts the load if nothing has yet. A no-op on the server.
+ */
+export function withPostHog(call: PostHogCall): void {
+  if (typeof window === 'undefined') return;
+  if (posthogInstance) {
+    runCall(posthogInstance, call);
+    return;
+  }
+  if (pendingCalls.length < MAX_PENDING_CALLS) pendingCalls.push(call);
+  void initPostHog();
+}
+
+/** Test-only: forget the loaded instance and anything queued. */
+export function __resetPostHogForTests(): void {
+  posthogInstance = null;
+  initPromise = null;
+  pendingCalls.length = 0;
 }
 
 /**
@@ -76,6 +192,11 @@ export function getPostHog(): PostHog | null {
  * recording arrival against an ACCOUNT. Both are v1.1 items. So this sends the
  * campaign dimensions a measurement purpose already covers and nothing that
  * makes the profile richer than that.
+ *
+ * 2026-10-09: policy v1.1 names PostHog as a processor and covers recording
+ * arrival on an account, so both reasons above are now satisfied. The payload
+ * is deliberately NOT widened by that: v1.1 makes these properties permitted,
+ * and nothing here needed more than it already sends.
  *
  * ═══════════════════════════════════════════════════════════════════════════
  * ONE THING TO VERIFY IN THE DASHBOARD, STATED RATHER THAN ASSUMED

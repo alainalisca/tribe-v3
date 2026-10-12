@@ -143,7 +143,7 @@ export default function QuickGuide({ id, open, onClose, steps }: QuickGuideProps
       {/* Panel — mobile: bottom sheet. Desktop: centered card.
           BUG-020: switched from hardcoded bg-tribe-dark/text-white to
           theme tokens so the guide respects light/dark mode. */}
-      <div className="relative w-full sm:max-w-md max-h-[92dvh] sm:max-h-[85dvh] overflow-y-auto bg-theme-card border border-theme rounded-t-3xl sm:rounded-3xl shadow-[0_20px_60px_rgba(0,0,0,0.5)] pt-6 pb-[max(env(safe-area-inset-bottom),1.5rem)] sm:pb-6 px-6">
+      <div className="relative w-full sm:max-w-md max-h-[92dvh] sm:max-h-[85dvh] overflow-y-auto bg-theme-card border border-theme rounded-t-3xl sm:rounded-3xl shadow-[0_20px_60px_rgba(0,0,0,0.5)] pt-6 pb-[max(var(--safe-area-inset-bottom),1.5rem)] sm:pb-6 px-6">
         {/* Top row: progress + close */}
         <div className="flex items-center justify-between mb-5">
           <p

@@ -216,7 +216,7 @@ export default function WhatsNewBadge() {
               } transition-all`}
               style={{
                 transitionDuration: `${closing ? EXIT_MS : ENTER_MS}ms`,
-                paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 1rem)',
+                paddingBottom: 'calc(var(--safe-area-inset-bottom, 0px) + 1rem)',
               }}
             >
               {/* Drag handle */}

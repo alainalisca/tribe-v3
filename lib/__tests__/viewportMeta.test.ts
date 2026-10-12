@@ -34,7 +34,8 @@ function stripComments(src: string): string {
 
 function sourceFiles(dir: string, acc: string[] = []): string[] {
   for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
-    if (['node_modules', '.next', '.git', '.claude'].includes(e.name)) continue;
+    // .worktrees holds stale full copies of the repo (see vitest.config.ts).
+    if (['node_modules', '.next', '.git', '.claude', '.worktrees'].includes(e.name)) continue;
     const p = path.join(dir, e.name);
     if (e.isDirectory()) sourceFiles(p, acc);
     else if (/\.(ts|tsx)$/.test(e.name) && !/\.test\.(ts|tsx)$/.test(e.name)) acc.push(p);

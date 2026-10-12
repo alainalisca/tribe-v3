@@ -689,6 +689,13 @@
     "incomplete": "Elige un destino para armar el enlace.",
     "hintUnconventional": "Funciona, pero la convención es CANAL-DETALLE-NN, como RUNCLUB-SAT0927.",
     "hintUncapturable": "Este código no se puede rastrear: usa solo letras, números, guiones y guiones bajos, hasta 40 caracteres.",
-    "conventionNote": "Nombra los códigos CANAL-DETALLE-NN para que un año de códigos se lea de un vistazo: RUNCLUB-SAT0927, IG-REEL-01, EAFIT-TABLE-01, BULLBOX-01."
+    "conventionNote": "Nombra los códigos CANAL-DETALLE-NN para que un año de códigos se lea de un vistazo: RUNCLUB-SAT0927, IG-REEL-01, EAFIT-TABLE-01, BULLBOX-01.",
+    "referidosTitle": "Referidos",
+    "referidosNote": "Quién trajo a quién en este período. Un lead o registro con el mismo teléfono o correo de quien refiere no cuenta y aparece en Propios. Las recompensas las decide el aliado.",
+    "colReferrer": "Quién refiere",
+    "colSignups": "Registros",
+    "colSelf": "Propios",
+    "unknownReferrer": "Código desconocido",
+    "referidosEmpty": "No hay referidos en este período."
   }
 }

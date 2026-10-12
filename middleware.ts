@@ -2,6 +2,7 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { athletesGateAllows, isAthletesGatedPath, GATED_NOT_FOUND_PATH } from '@/lib/features/athleteValueGate';
+import { canonicalLinkHeader } from '@/lib/seo/canonicalLink';
 
 /**
  * Tribe middleware does three things, in order:
@@ -64,6 +65,13 @@ const publicPaths = [
   '/_next',
   '/sw.js',
   '/manifest.json',
+  // T-ANALYTICS1 part E: the PostHog reverse proxy (next.config.ts rewrites).
+  // Every visitor sends analytics, signed in or not; behind the cookie gate a
+  // signed-out visitor's POST /ingest/e/ would 307 to /auth and record nothing,
+  // silently -- the /api/attr bug T-GROW1 found on its preview, again. The
+  // .js assets under /ingest/static would pass the static-asset short-circuit
+  // anyway; /ingest/e/, /ingest/flags/ and /ingest/array/... would not.
+  '/ingest',
 ];
 
 const publicApiPaths = [
@@ -75,6 +83,7 @@ const publicApiPaths = [
   '/api/health', // LR-02: monitoring probes don't carry session cookies
   '/api/tribe-os-waitlist', // Public marketing form on the landing page; rate-limited by IP in the handler.
   '/api/pase', // T-LEAD1 pass claim; unauthenticated by design, rate-limited by IP plus honeypot and time-on-page in the handler.
+  '/api/referral/inviter', // "Invitado por X" on /auth/?ref=: the visitor is signed out by definition. Returns one first name; rate-limited by IP in the handler.
   // T-GROW1 part D attribution beacon. Unauthenticated BY NECESSITY, not by
   // convenience: the event it records is a STRANGER ARRIVING off a printed QR,
   // so it is usually the first HTTP call a person ever makes to Tribe and nobody
@@ -282,7 +291,16 @@ export function buildCsp(): string {
     .join('; ');
 }
 
-function applySecurityHeaders(response: NextResponse): NextResponse {
+/**
+ * Security headers on every response, plus the rel="canonical" Link header on
+ * every SUCCESSFUL page response (see lib/seo/canonicalLink.ts). A redirect or
+ * a 404 gets no canonical: neither is a page Google should index.
+ */
+export function applySecurityHeaders(response: NextResponse, pathname?: string): NextResponse {
+  if (pathname !== undefined && response.status === 200) {
+    const link = canonicalLinkHeader(pathname);
+    if (link) response.headers.set('Link', link);
+  }
   response.headers.set('Content-Security-Policy', buildCsp());
   response.headers.set('X-Frame-Options', 'DENY');
   response.headers.set('X-Content-Type-Options', 'nosniff');
@@ -297,7 +315,7 @@ export async function middleware(request: NextRequest) {
 
   // Static asset short-circuit.
   if (pathname.match(/\.\w+$/)) {
-    return applySecurityHeaders(NextResponse.next());
+    return applySecurityHeaders(NextResponse.next(), pathname);
   }
 
   // T-AV24: /atletas and /pase/verificar are gated on the athletes flag HERE,
@@ -308,7 +326,7 @@ export async function middleware(request: NextRequest) {
 
   // Public routes don't need auth but still need security headers.
   if (isPublicPath(pathname) && !gated) {
-    return applySecurityHeaders(NextResponse.next());
+    return applySecurityHeaders(NextResponse.next(), pathname);
   }
 
   // Auth-gated routes: check Supabase session cookie.
@@ -354,10 +372,13 @@ export async function middleware(request: NextRequest) {
     if (!allowed && !signedOutOnPrivatePath) {
       // A real 404, with the body an unknown URL gets: the rewrite target
       // matches no route, so Next renders app/not-found.tsx.
-      return applySecurityHeaders(NextResponse.rewrite(new URL(GATED_NOT_FOUND_PATH, request.url), { status: 404 }));
+      return applySecurityHeaders(
+        NextResponse.rewrite(new URL(GATED_NOT_FOUND_PATH, request.url), { status: 404 }),
+        pathname
+      );
     }
     // /pase/verificar is public: past the flag, its page handles the session.
-    if (allowed && isPublicPath(pathname)) return applySecurityHeaders(response);
+    if (allowed && isPublicPath(pathname)) return applySecurityHeaders(response, pathname);
   } else {
     const {
       data: { user },
@@ -368,10 +389,10 @@ export async function middleware(request: NextRequest) {
   if (!userId) {
     const returnTo = encodeURIComponent(request.nextUrl.pathname + request.nextUrl.search);
     const redirectUrl = new URL(`/auth?returnTo=${returnTo}`, request.url);
-    return applySecurityHeaders(NextResponse.redirect(redirectUrl));
+    return applySecurityHeaders(NextResponse.redirect(redirectUrl), pathname);
   }
 
-  return applySecurityHeaders(response);
+  return applySecurityHeaders(response, pathname);
 }
 
 export const config = {

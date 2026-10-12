@@ -10,6 +10,7 @@ import { showError } from '@/lib/toast';
 import { consumePendingReturnTo } from '@/lib/pendingReturnTo';
 import { enableInstructorAccount } from '@/lib/dal';
 import { useTranslations } from '@/lib/i18n/useTranslations';
+import { recordSignupCompleted } from '@/lib/analyticsIdentity';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import {
   Dumbbell,
@@ -109,6 +110,9 @@ export default function OnboardingRolePage() {
           return;
         }
 
+        // The role is saved: this is the moment signup is complete.
+        void recordSignupCompleted(supabase, user, selectedRole);
+
         // Trailing slash: next.config has trailingSlash: true, so /partners/apply
         // would otherwise 308 on the way in.
         router.push(selectedRole === 'gym' ? '/partners/apply/' : '/onboarding/instructor');
@@ -127,6 +131,8 @@ export default function OnboardingRolePage() {
         // A pending returnTo still wins: someone who followed a session link
         // to sign up is mid-task, and interrupting that to ask about sports
         // loses the thing they actually came for.
+        // An athlete's role is the default, so choosing it IS saving it.
+        void recordSignupCompleted(supabase, user, 'athlete');
         const pending = consumePendingReturnTo();
         router.push(pending ?? '/onboarding/sports');
       }

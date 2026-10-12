@@ -28,8 +28,9 @@
 import { getResendClient } from '@/lib/email/resendClient';
 import { APP_STORE_URL, GOOGLE_PLAY_URL, INSTAGRAM_HANDLE } from './tribeOsWaitlist';
 import { renderTemplate, extractTemplate } from '@/lib/ai/insight-templates';
+import { TRIBE_FROM } from '@/lib/email/sender';
 
-const FROM = 'Tribe <tribe@aplusfitnessllc.com>';
+const FROM = TRIBE_FROM;
 const INLINE_INSIGHT_CAP = 8;
 
 export interface DigestInsight {
