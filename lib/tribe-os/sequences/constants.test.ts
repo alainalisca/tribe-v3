@@ -11,6 +11,8 @@ import {
   DAY_OFFSET_MIN,
   DAY_OFFSET_MAX,
   SEQUENCE_NAME_MAX,
+  SYSTEM_DAILY_ENROLL_CAP,
+  PENDING_EXPIRY_DAYS,
 } from './constants';
 
 const sql = readFileSync(
@@ -78,5 +80,15 @@ describe('constants match 9009 migration CHECK constraints', () => {
     const m = sql.match(/char_length\(name\)\s+BETWEEN\s+\d+\s+AND\s+(\d+)/i);
     expect(m).toBeTruthy();
     expect(SEQUENCE_NAME_MAX).toBe(Number(m![1]));
+  });
+});
+
+describe('application-level constants', () => {
+  it('SYSTEM_DAILY_ENROLL_CAP is 5', () => {
+    expect(SYSTEM_DAILY_ENROLL_CAP).toBe(5);
+  });
+
+  it('PENDING_EXPIRY_DAYS is 7', () => {
+    expect(PENDING_EXPIRY_DAYS).toBe(7);
   });
 });

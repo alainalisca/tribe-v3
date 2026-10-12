@@ -15,3 +15,6 @@ export const STEP_POSITION_MAX = 20;
 export const DAY_OFFSET_MIN = 0;
 export const DAY_OFFSET_MAX = 60;
 export const SEQUENCE_NAME_MAX = 120;
+
+export const SYSTEM_DAILY_ENROLL_CAP = 5;
+export const PENDING_EXPIRY_DAYS = 7;

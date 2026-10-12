@@ -3,7 +3,8 @@ import { z } from 'zod';
 import { logError } from '@/lib/logger';
 import { requireTribeOSPremium } from '@/lib/auth/premium';
 import { getGym } from '@/lib/dal/gyms';
-import { dueDate, todayBogota, computeCurrentStep } from '@/lib/tribe-os/sequences/helpers';
+import { dueDate, todayBogota, bogotaStartOfDayUTC, computeCurrentStep } from '@/lib/tribe-os/sequences/helpers';
+import { SYSTEM_DAILY_ENROLL_CAP } from '@/lib/tribe-os/sequences/constants';
 
 export async function GET(): Promise<NextResponse> {
   const gate = await requireTribeOSPremium();
@@ -162,6 +163,18 @@ export async function GET(): Promise<NextResponse> {
 
     const activeCount = (enrollments ?? []).filter((e) => e.status === 'active').length;
 
+    let systemEnrolledToday = 0;
+    if (autonomy === 'suggest' || autonomy === 'auto') {
+      const todayStart = bogotaStartOfDayUTC();
+      const { count } = await supabase
+        .from('tribe_os_sequence_enrollments')
+        .select('id', { count: 'exact', head: true })
+        .eq('gym_id', gymId)
+        .eq('enrolled_by_type', 'system')
+        .gte('created_at', todayStart);
+      systemEnrolledToday = count ?? 0;
+    }
+
     return NextResponse.json({
       success: true,
       data: {
@@ -170,6 +183,8 @@ export async function GET(): Promise<NextResponse> {
         activeCount,
         autonomy,
         isOwner,
+        systemEnrolledToday,
+        systemDailyCap: SYSTEM_DAILY_ENROLL_CAP,
       },
     });
   } catch (error) {

@@ -43,6 +43,8 @@ const copy = {
     errorStop: 'Could not stop sequence. Try again.',
     errorApprove: 'Could not process approval. Try again.',
     reconcileWarning: 'Background sync failed. Data may be stale.',
+    suggestedToday: (n: number, cap: number) => `Suggested today: ${n} of ${cap}`,
+    autoStartedToday: (n: number, cap: number) => `Auto-started today: ${n} of ${cap}`,
   },
   es: {
     pageTitle: 'Tareas de hoy',
@@ -74,6 +76,8 @@ const copy = {
     errorStop: 'No se pudo detener la secuencia. Intenta de nuevo.',
     reconcileWarning: 'No se pudo sincronizar. Los datos pueden estar desactualizados.',
     errorApprove: 'No se pudo procesar la aprobación. Intenta de nuevo.',
+    suggestedToday: (n: number, cap: number) => `Sugeridos hoy: ${n} de ${cap}`,
+    autoStartedToday: (n: number, cap: number) => `Iniciados automáticamente hoy: ${n} de ${cap}`,
   },
 } as const;
 
@@ -109,6 +113,8 @@ interface TasksData {
   activeCount: number;
   autonomy: string;
   isOwner: boolean;
+  systemEnrolledToday: number;
+  systemDailyCap: number;
 }
 
 export default function TasksPage() {
@@ -358,6 +364,14 @@ export default function TasksPage() {
                   </div>
                 ))}
               </section>
+            )}
+
+            {data && (data.autonomy === 'suggest' || data.autonomy === 'auto') && (
+              <p className="text-xs text-tribe-dark-80">
+                {data.autonomy === 'suggest'
+                  ? s.suggestedToday(data.systemEnrolledToday, data.systemDailyCap)
+                  : s.autoStartedToday(data.systemEnrolledToday, data.systemDailyCap)}
+              </p>
             )}
 
             {pending.length > 0 && data?.isOwner && (

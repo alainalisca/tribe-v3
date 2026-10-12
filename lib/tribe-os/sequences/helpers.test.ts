@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { dueDate, isDue, isOverdue, overdueDays, nextStep, isSequenceFinished, stepChannelToTouchChannel, computeCurrentStep } from './helpers';
+import { dueDate, isDue, isOverdue, overdueDays, nextStep, isSequenceFinished, stepChannelToTouchChannel, computeCurrentStep, bogotaStartOfDayUTC } from './helpers';
 
 describe('dueDate', () => {
   it('day 0 is the same calendar day as started_at in Bogota', () => {
@@ -144,5 +144,22 @@ describe('computeCurrentStep', () => {
     expect(computeCurrentStep(gapped, [1])).toEqual({ position: 3, finished: false });
     expect(computeCurrentStep(gapped, [1, 3])).toEqual({ position: 5, finished: false });
     expect(computeCurrentStep(gapped, [1, 3, 5])).toEqual({ position: 5, finished: true });
+  });
+});
+
+describe('bogotaStartOfDayUTC', () => {
+  it('returns 05:00 UTC for any Bogota date (COT = UTC-5)', () => {
+    const noon = new Date('2026-10-12T17:00:00Z');
+    expect(bogotaStartOfDayUTC(noon)).toBe('2026-10-12T05:00:00.000Z');
+  });
+
+  it('before 05:00 UTC is still previous Bogota day', () => {
+    const earlyUTC = new Date('2026-10-12T04:30:00Z');
+    expect(bogotaStartOfDayUTC(earlyUTC)).toBe('2026-10-11T05:00:00.000Z');
+  });
+
+  it('at exactly 05:00 UTC is next Bogota day', () => {
+    const exactMidnight = new Date('2026-10-12T05:00:00Z');
+    expect(bogotaStartOfDayUTC(exactMidnight)).toBe('2026-10-12T05:00:00.000Z');
   });
 });

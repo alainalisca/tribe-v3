@@ -18,6 +18,11 @@ export function todayBogota(now?: Date): string {
   return (now ?? new Date()).toLocaleDateString('en-CA', { timeZone: BOGOTA });
 }
 
+export function bogotaStartOfDayUTC(now?: Date): string {
+  const dateStr = todayBogota(now);
+  return `${dateStr}T05:00:00.000Z`;
+}
+
 export function dueDate(startedAt: string, dayOffset: number): string {
   const startDate = toBogotaDateStr(startedAt);
   return addCalendarDays(startDate, dayOffset);
