@@ -13,6 +13,7 @@ import { useUserCurrency } from '@/lib/useUserCurrency';
 import { formatPriceForUser } from '@/lib/userCurrency';
 import { SessionDetailVenueLine, SessionDetailGymHost } from '@/components/session/SessionDetailVenue';
 import type { SessionGymIdentity } from '@/lib/sessionGym';
+import PaymentInstructionsText from '@/components/session/PaymentInstructionsText';
 
 interface CreatorInfo {
   id: string;
@@ -230,9 +231,10 @@ export default function SessionDetails({
                 <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 mb-1">
                   {language === 'es' ? 'Instrucciones de pago:' : 'Payment Instructions:'}
                 </p>
-                <p className="text-sm text-emerald-900 dark:text-emerald-200 whitespace-pre-line">
-                  {paymentInstructions}
-                </p>
+                <PaymentInstructionsText
+                  text={paymentInstructions}
+                  className="text-sm text-emerald-900 dark:text-emerald-200 whitespace-pre-wrap break-words"
+                />
               </div>
             )}
             {/* Earnings/fee breakdown intentionally hidden: Tribe does not take a

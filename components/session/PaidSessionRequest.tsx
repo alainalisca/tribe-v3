@@ -17,6 +17,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '@/components/ui/button';
 import { formatPrice } from '@/lib/formatCurrency';
 import type { Currency } from '@/lib/payments/config';
+import PaymentInstructionsText from '@/components/session/PaymentInstructionsText';
 
 interface PaidSessionRequestProps {
   priceCents: number;
@@ -107,9 +108,10 @@ export default function PaidSessionRequest({
             <div>
               <p className="text-sm font-semibold text-theme-primary mb-1">{copy.howToPay}</p>
               {paymentInstructions && paymentInstructions.trim() ? (
-                <p className="text-sm text-theme-secondary whitespace-pre-wrap rounded-lg bg-stone-100 dark:bg-tribe-mid px-3 py-2">
-                  {paymentInstructions}
-                </p>
+                <PaymentInstructionsText
+                  text={paymentInstructions}
+                  className="text-sm text-theme-secondary whitespace-pre-wrap break-words rounded-lg bg-stone-100 dark:bg-tribe-mid px-3 py-2"
+                />
               ) : canViewPaymentInstructions ? (
                 // Visible to this viewer, and genuinely empty.
                 <p className="text-sm text-theme-tertiary">{copy.noInstructions}</p>
