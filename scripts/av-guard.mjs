@@ -5,6 +5,7 @@
  *   npm run av:guard          # standalone
  *   node scripts/av-guard.mjs --db     # db/seed context: prod URL is fatal
  *   node scripts/av-guard.mjs --test   # test context (what pretest runs)
+ *   node scripts/av-guard.mjs --dev    # dev context (what predev:av runs)
  *
  * Wired as `predev:av`, `pretest`, `pretest:complete`, and inside every
  * `db:*` / `av:*` script. Also run by .githooks/pre-push. T-AV0's hard line
@@ -54,6 +55,33 @@
  *     a check that goes quiet for the same reason it would go wrong.
  *
  * ═══════════════════════════════════════════════════════════════════════════
+ * ADDENDUM 2026-10-12: RULE 1 IN A DB OR DEV CONTEXT, OUT OF PROGRAM
+ * ═══════════════════════════════════════════════════════════════════════════
+ *
+ * Al's instruction, written, 2026-10-12, after this blocked T-PAY2
+ * (feat/t-pay2-payment-links, no athlete file touched) from the local stack
+ * it needed to test against instead of production. The escape hatch the
+ * failure message names, taken rather than worked around:
+ *
+ *   "allow branches that touch no athlete files to run db:*, av:seed and
+ *    dev:av, only when the database is local and PUSH_MODE and EMAIL_MODE
+ *    are log."
+ *
+ * So two of the "never relaxed" bullets above now carry one exception, and
+ * it is narrower than the test one:
+ *   - In a db context (`--db`: db:*, av:seed) or a dev context (`--dev`:
+ *     predev:av), on a branch whose diff against main has no athlete-program
+ *     file, ONLY rule 1 (the branch name) is skipped, and only when the
+ *     database resolves to local AND PUSH_MODE and EMAIL_MODE are `log`, both
+ *     as text and as resolved by lib/notify/sendMode.ts.
+ *   - Rules 3 and 4 are still enforced on that path, not skipped. They are
+ *     also preconditions of the skip, so a branch failing them gets rule 1 too.
+ *   - `main` is still never relaxed. Unknown scope still fails CLOSED.
+ *   - The pre-push hook is still never relaxed (it is neither context).
+ *   - The decision is scripts/av-guard-scope.mjs, a pure function, so every
+ *     combination is tested directly (scripts/avGuard.dbDevScope.test.ts).
+ *
+ * ═══════════════════════════════════════════════════════════════════════════
  * IT PRINTS WHAT IT READ, NOT ONLY THAT IT PASSED
  * ═══════════════════════════════════════════════════════════════════════════
  *
@@ -76,6 +104,7 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { readEnvFile } from './envFile.mjs';
+import { branchRuleRelaxation } from './av-guard-scope.mjs';
 
 const SELF = fileURLToPath(import.meta.url);
 const ROOT = path.resolve(path.dirname(SELF), '..');
@@ -212,18 +241,27 @@ const DB_CONTEXT =
  * relaxation applies to, so the list is spelled out rather than inferred from
  * what is NOT a db context.
  */
-const TEST_CONTEXT = argv.includes('--test') || /^(pre)?test(:complete)?$/.test(lifecycle);
+/**
+ * ADDENDUM 2026-10-12: a dev server says so with `--dev` (predev:av), for the
+ * same reason as --test above; the lifecycle regex is the second route. A db
+ * context outranks it, and it outranks a test context: a dev server never
+ * gets the test relaxation (rules 1 AND 4), only the narrower one in
+ * av-guard-scope.mjs.
+ */
+const DEV_CONTEXT = !DB_CONTEXT && (argv.includes('--dev') || /^(pre)?dev:av$/.test(lifecycle));
+const TEST_CONTEXT =
+  !DEV_CONTEXT && (argv.includes('--test') || /^(pre)?test(:complete)?$/.test(lifecycle));
 
 /**
  * Scope: does this branch touch the athlete-value program at all?
  * null = could not tell = treat as in scope (fail closed).
  */
-const changed = TEST_CONTEXT && !DB_CONTEXT ? changedFiles() : null;
+const changed = TEST_CONTEXT || DB_CONTEXT || DEV_CONTEXT ? changedFiles() : null;
 const athleteTouched = changed === null ? null : athleteFilesIn(changed);
 const OUT_OF_SCOPE = TEST_CONTEXT && !DB_CONTEXT && athleteTouched !== null && athleteTouched.length === 0;
 
 /** Which context the guard believes it is in, printed on every outcome. */
-const CONTEXT_LABEL = DB_CONTEXT ? 'db' : TEST_CONTEXT ? 'test' : 'other';
+const CONTEXT_LABEL = DB_CONTEXT ? 'db' : DEV_CONTEXT ? 'dev' : TEST_CONTEXT ? 'test' : 'other';
 
 const fail = (lines) => {
   console.error(`av-guard FAILED (context=${CONTEXT_LABEL})\n\n${lines.map((l) => `  - ${l}`).join('\n')}\n`);
@@ -253,12 +291,10 @@ if (git.status !== 0 || branch === '') {
   // NEVER relaxed. main is not a place this program is built, whatever the
   // diff looks like, and a green test run on main is not worth the exception.
   problems.push(`branch is "main". Nothing in this program is built on main.`);
-} else if (!OUT_OF_SCOPE && !ALLOWED.some((re) => re.test(branch))) {
-  problems.push(
-    `branch "${branch}" is not athlete/*, feat/t-av* or fix/t-av*. ` +
-      `Cut the ticket branch from athlete/main.`
-  );
 }
+// The branch-name check itself is below, after the env is resolved: the
+// db/dev relaxation (ADDENDUM 2026-10-12) depends on the database and the
+// send modes, so it cannot be decided here.
 
 // ── 2. migrations ──────────────────────────────────────────────────────────
 const mig = spawnSync(process.execPath, [path.join(ROOT, 'scripts', 'av-migration-check.mjs')], {
@@ -345,6 +381,29 @@ for (const channel of ['email', 'push']) {
   }
 }
 
+// ── 1, continued. the branch name ─────────────────────────────────────────
+const dbDev = branchRuleRelaxation({
+  context: CONTEXT_LABEL,
+  athleteTouched,
+  db,
+  modeText: { push: modes.PUSH_MODE.value, email: modes.EMAIL_MODE.value },
+  modeResolved: { push: resolved.push.mode, email: resolved.email.mode },
+});
+if (
+  git.status === 0 &&
+  branch !== '' &&
+  branch !== 'main' &&
+  !OUT_OF_SCOPE &&
+  !dbDev.relaxed &&
+  !ALLOWED.some((re) => re.test(branch))
+) {
+  problems.push(
+    `branch "${branch}" is not athlete/*, feat/t-av* or fix/t-av*. ` +
+      `Cut the ticket branch from athlete/main.`
+  );
+  if (dbDev.reason) problems.push(dbDev.reason);
+}
+
 // A guard that enforces must say WHY it considers itself in scope, or the
 // person reading the failure cannot tell a real block from a misfire. This is
 // the same reason the success line prints its evidence.
@@ -371,7 +430,9 @@ if (problems.length > 0) {
 // failure this file's comments warn about twice.
 const scope = OUT_OF_SCOPE
   ? ` scope=out-of-program(0 athlete files in ${changed.length} changed; rules 1+4 skipped)`
-  : athleteTouched && athleteTouched.length > 0
+  : dbDev.relaxed
+    ? ` scope=out-of-program(0 athlete files in ${changed.length} changed; rule 1 skipped, db=local, push+email=log)`
+    : athleteTouched && athleteTouched.length > 0
     ? ` scope=in-program(${athleteTouched.length}: ${athleteTouched.slice(0, 3).join(', ')}${athleteTouched.length > 3 ? ', …' : ''})`
     : '';
 
