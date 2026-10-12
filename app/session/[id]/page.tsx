@@ -24,6 +24,7 @@ import RecapPhotos from '@/components/session/RecapPhotos';
 import ReviewsList from '@/components/instructor/ReviewsList';
 import WaitlistPanel from '@/components/session/WaitlistPanel';
 import PendingRequestsPanel from '@/components/session/PendingRequestsPanel';
+import { shouldShowPayNow } from '@/components/session/PayNowButton';
 import LiveStatusSection from '@/components/session/LiveStatusSection';
 import ConfirmDialog from '@/components/ConfirmDialog';
 
@@ -253,6 +254,7 @@ export default function SessionDetailPage() {
           isCreator={isCreator}
           canViewPaymentInstructions={canViewPaymentInstructions}
           paymentInstructions={d.paymentInstructions}
+          showPayNow={shouldShowPayNow({ canViewPaymentInstructions, isCreator, isPending: d.isPending })}
           onOpenLightbox={d.openLightbox}
         />
 

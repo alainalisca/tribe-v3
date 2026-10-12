@@ -14,6 +14,7 @@ import { formatPriceForUser } from '@/lib/userCurrency';
 import { SessionDetailVenueLine, SessionDetailGymHost } from '@/components/session/SessionDetailVenue';
 import type { SessionGymIdentity } from '@/lib/sessionGym';
 import PaymentInstructionsText from '@/components/session/PaymentInstructionsText';
+import PayNowButton from '@/components/session/PayNowButton';
 
 interface CreatorInfo {
   id: string;
@@ -64,6 +65,11 @@ interface SessionDetailsProps {
    * reaches an anonymous visitor's page payload.
    */
   paymentInstructions?: string | null;
+  /**
+   * T-PAY2: show "Pagar ahora" under the instructions. The page computes it with
+   * shouldShowPayNow (pending athlete only, never the host or a confirmed athlete).
+   */
+  showPayNow?: boolean;
   onOpenLightbox: (index: number, type: 'location' | 'recap') => void;
 }
 
@@ -77,6 +83,7 @@ export default function SessionDetails({
   language,
   canViewPaymentInstructions = false,
   paymentInstructions = null,
+  showPayNow = false,
   onOpenLightbox,
 }: SessionDetailsProps) {
   const { t } = useLanguage();
@@ -235,6 +242,7 @@ export default function SessionDetails({
                   text={paymentInstructions}
                   className="text-sm text-emerald-900 dark:text-emerald-200 whitespace-pre-wrap break-words"
                 />
+                {showPayNow && <PayNowButton paymentInstructions={paymentInstructions} language={language} />}
               </div>
             )}
             {/* Earnings/fee breakdown intentionally hidden: Tribe does not take a
