@@ -187,6 +187,7 @@
   "9008_gym_plans.sql": "df854087bf1a536d4d37be6bbced60ccc083b7d3839c1d34173f9188cf2b05c9",
   "9009_tribe_os_sequences.sql": "658a2dfe0723479382aa954c7a247cffe95978fa2429a35bce083cae62cd97d9",
   "9010_tribe_os_leads.sql": "ed1b607757a7951e7035748b1ae9d5f2e530f305052873523a5c9a809f24ff7f",
+  "9011_tribe_os_programs.sql": "f177e9b1f6525b9b595d946b2e5751037bde2d68dc0c074dda8d26c33b183b59",
   "add_admin_rls.sql": "e2e8367cd24af4b3a762e12898e8dbe81bd363acb2d22c22e1ac3538a41110a7",
   "add_community_events.sql": "3f7cb81caebc1f1a5e3461bc4e1faae9e55e680fea470f334c2b10848652ff50",
   "add_composite_indexes.sql": "a819cf7f037ccd7f5da322d77f076a03af77d9463830050364b7be762dda97a9",
