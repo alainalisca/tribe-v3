@@ -9,7 +9,7 @@ import { showSuccess, showError } from '@/lib/toast';
 import { haptic } from '@/lib/haptics';
 import { createCommunityEvent } from '@/lib/dal/communityEvents';
 import { isCommunityMember } from '@/lib/dal/communities';
-import { bogotaLocalToUtc } from '@/lib/dates/bogota';
+import { bogotaLocalToUtc } from '@/lib/time/bogotaDate';
 import { ChevronLeft, CalendarPlus, Loader2 } from 'lucide-react';
 
 const getT = (language: 'en' | 'es') => ({

@@ -77,3 +77,67 @@ export function bogotaDateOffset(days: number, now: Date = new Date()): string {
     day: '2-digit',
   }).format(anchor);
 }
+
+// ── Wall-clock ↔ UTC conversion ──────────────────────────────────────────────
+//
+// America/Bogota is UTC-5 all year (no DST), so the conversion is fixed
+// arithmetic. Everything reads and writes UTC fields only, making the result
+// independent of the device/server timezone by construction.
+
+const BOGOTA_OFFSET_MS = 5 * 60 * 60 * 1000;
+
+const LOCAL_VALUE = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/;
+
+/**
+ * A datetime-local value, read as Bogotá time, to a UTC ISO string.
+ * '2026-10-12T21:00' → '2026-10-13T02:00:00.000Z'.
+ * Returns null for anything that is not a real calendar date and time.
+ */
+export function bogotaLocalToUtc(localValue: string): string | null {
+  const match = LOCAL_VALUE.exec(localValue);
+  if (!match) return null;
+  const [year, month, day, hour, minute, second] = match.slice(1).map((part) => Number(part ?? 0));
+  if (hour > 23 || minute > 59 || second > 59) return null;
+
+  const wallClock = Date.UTC(year, month - 1, day, hour, minute, second);
+  const check = new Date(wallClock);
+  if (check.getUTCFullYear() !== year || check.getUTCMonth() !== month - 1 || check.getUTCDate() !== day) {
+    return null;
+  }
+  return new Date(wallClock + BOGOTA_OFFSET_MS).toISOString();
+}
+
+/**
+ * A stored timestamptz to the 'YYYY-MM-DDTHH:mm' Bogotá value a
+ * datetime-local input expects. '2026-10-13T02:00:00Z' → '2026-10-12T21:00'.
+ * Returns null for an empty or unparseable value.
+ */
+export function utcToBogotaLocal(iso: string): string | null {
+  if (!iso) return null;
+  const instant = new Date(iso).getTime();
+  if (Number.isNaN(instant)) return null;
+  return new Date(instant - BOGOTA_OFFSET_MS).toISOString().slice(0, 16);
+}
+
+const TIME_VALUE = /^(\d{2}):(\d{2})(?::(\d{2}))?$/;
+
+/**
+ * Combine a Bogotá-local DATE ('YYYY-MM-DD') and TIME ('HH:MM' or 'HH:MM:SS')
+ * into the correct UTC Date. Returns null for bad input.
+ */
+export function sessionStartUtc(date: string, startTime: string): Date | null {
+  const dp = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
+  const tp = TIME_VALUE.exec(startTime);
+  if (!dp || !tp) return null;
+
+  const [year, month, day] = dp.slice(1).map(Number);
+  const [hour, minute, second] = tp.slice(1).map((p) => Number(p ?? 0));
+  if (hour > 23 || minute > 59 || second > 59) return null;
+
+  const wallClock = Date.UTC(year, month - 1, day, hour, minute, second);
+  const check = new Date(wallClock);
+  if (check.getUTCFullYear() !== year || check.getUTCMonth() !== month - 1 || check.getUTCDate() !== day) {
+    return null;
+  }
+  return new Date(wallClock + BOGOTA_OFFSET_MS);
+}
