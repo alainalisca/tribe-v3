@@ -9,6 +9,7 @@ import { showSuccess, showError } from '@/lib/toast';
 import { haptic } from '@/lib/haptics';
 import { createCommunityEvent } from '@/lib/dal/communityEvents';
 import { isCommunityMember } from '@/lib/dal/communities';
+import { bogotaLocalToUtc } from '@/lib/dates/bogota';
 import { ChevronLeft, CalendarPlus, Loader2 } from 'lucide-react';
 
 const getT = (language: 'en' | 'es') => ({
@@ -72,17 +73,21 @@ export default function NewCommunityEventPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!title.trim() || !eventAt) {
+    // The inputs hold Bogotá wall-clock time whatever zone the device is in;
+    // `new Date(eventAt)` would read them in the device zone instead.
+    const eventAtUtc = bogotaLocalToUtc(eventAt);
+    const endsAtUtc = endsAt ? bogotaLocalToUtc(endsAt) : null;
+    if (!title.trim() || !eventAtUtc || (endsAt && !endsAtUtc)) {
       showError(t.required);
       return;
     }
     // The events list only shows event_at >= now, so a past-dated event would
     // be created successfully but never appear. Reject it up front.
-    if (new Date(eventAt).getTime() <= Date.now()) {
+    if (new Date(eventAtUtc).getTime() <= Date.now()) {
       showError(t.pastDate);
       return;
     }
-    if (endsAt && new Date(endsAt).getTime() <= new Date(eventAt).getTime()) {
+    if (endsAtUtc && new Date(endsAtUtc).getTime() <= new Date(eventAtUtc).getTime()) {
       showError(t.endBeforeStart);
       return;
     }
@@ -96,8 +101,8 @@ export default function NewCommunityEventPage() {
         title: title.trim(),
         description: description.trim() || null,
         location: location.trim() || null,
-        event_at: new Date(eventAt).toISOString(),
-        ends_at: endsAt ? new Date(endsAt).toISOString() : null,
+        event_at: eventAtUtc,
+        ends_at: endsAtUtc,
       });
 
       if (!result.success) {
