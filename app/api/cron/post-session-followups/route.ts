@@ -1,7 +1,7 @@
 import { getServiceRoleClient } from '@/lib/supabase/admin';
 import { NextResponse } from 'next/server';
 import { isValidCronAuth } from '@/lib/auth/cron';
-import { bogotaToday } from '@/lib/time/bogotaDate';
+import { bogotaToday, sessionStartUtc } from '@/lib/time/bogotaDate';
 import { log, logError } from '@/lib/logger';
 import { updateSession, fetchSessionsWithCreator, fetchSessionAttendance } from '@/lib/dal';
 
@@ -60,7 +60,8 @@ export async function GET(request: Request) {
 
     // Filter for sessions that actually ended
     const endedSessions = sessions.filter((session) => {
-      const sessionStart = new Date(`${session.date}T${session.start_time}`);
+      const sessionStart = sessionStartUtc(session.date, session.start_time);
+      if (!sessionStart) return false;
       const sessionEnd = new Date(sessionStart.getTime() + session.duration * 60 * 1000);
       return sessionEnd <= now && sessionEnd >= twoHoursAgo;
     });

@@ -1,7 +1,7 @@
 import { getServiceRoleClient } from '@/lib/supabase/admin';
 import { NextResponse } from 'next/server';
 import { isValidCronAuth } from '@/lib/auth/cron';
-import { bogotaToday } from '@/lib/time/bogotaDate';
+import { bogotaToday, sessionStartUtc } from '@/lib/time/bogotaDate';
 import { getRandomMessage, getMessageContent } from '@/lib/motivational-messages';
 import { log, logError } from '@/lib/logger';
 import {
@@ -84,7 +84,8 @@ export async function GET(request: Request) {
 
     if (sessions && sessions.length > 0) {
       const sessionsToRemind = sessions.filter((session) => {
-        const sessionDateTime = new Date(`${session.date}T${session.start_time}`);
+        const sessionDateTime = sessionStartUtc(session.date, session.start_time);
+        if (!sessionDateTime) return false;
         return sessionDateTime >= twoHoursFromNow && sessionDateTime <= twoHoursFifteenMinsFromNow;
       });
 

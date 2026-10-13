@@ -7,6 +7,7 @@ import { checkRateLimit } from '@/lib/rate-limit';
 import { getServiceRoleClient } from '@/lib/supabase/admin';
 import { SITE_URL } from '@/lib/http/siteUrl';
 import { TRIBE_SENDER_ADDRESS } from '@/lib/email/sender';
+import { sessionStartUtc } from '@/lib/time/bogotaDate';
 
 /**
  * @description Generates a downloadable ICS calendar file for a given training session, including sport, location, time, and organizer details.
@@ -62,32 +63,30 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Session not found' }, { status: 404 });
     }
 
-    // Parse date and time - use T00:00:00 to avoid UTC interpretation of date-only strings
-    const sessionDate = new Date(session.date + 'T00:00:00');
-    const [hours, minutes] = session.start_time.split(':');
+    const startDateTime = sessionStartUtc(session.date, session.start_time);
+    if (!startDateTime) {
+      return NextResponse.json({ error: 'Invalid session date/time' }, { status: 400 });
+    }
 
-    const startDateTime = new Date(sessionDate);
-    startDateTime.setHours(parseInt(hours), parseInt(minutes), 0);
+    const endDateTime = new Date(startDateTime.getTime() + (session.duration || 60) * 60 * 1000);
 
-    const endDateTime = new Date(startDateTime);
-    endDateTime.setMinutes(endDateTime.getMinutes() + (session.duration || 60));
-
-    // Create calendar event
     const event: EventAttributes = {
       start: [
-        startDateTime.getFullYear(),
-        startDateTime.getMonth() + 1,
-        startDateTime.getDate(),
-        startDateTime.getHours(),
-        startDateTime.getMinutes(),
+        startDateTime.getUTCFullYear(),
+        startDateTime.getUTCMonth() + 1,
+        startDateTime.getUTCDate(),
+        startDateTime.getUTCHours(),
+        startDateTime.getUTCMinutes(),
       ] as [number, number, number, number, number],
+      startInputType: 'utc',
       end: [
-        endDateTime.getFullYear(),
-        endDateTime.getMonth() + 1,
-        endDateTime.getDate(),
-        endDateTime.getHours(),
-        endDateTime.getMinutes(),
+        endDateTime.getUTCFullYear(),
+        endDateTime.getUTCMonth() + 1,
+        endDateTime.getUTCDate(),
+        endDateTime.getUTCHours(),
+        endDateTime.getUTCMinutes(),
       ] as [number, number, number, number, number],
+      endInputType: 'utc',
       title: `${session.sport} - Tribe`,
       description: `${session.description || ''}\n\nHosted by: ${session.creator_name || 'Tribe Community'}\n\nNever Train Alone!\n\n${SITE_URL}/session/${sessionId}`,
       location: session.location,

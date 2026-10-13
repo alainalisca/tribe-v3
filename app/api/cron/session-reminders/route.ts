@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 import { isValidCronAuth } from '@/lib/auth/cron';
-import { bogotaToday, bogotaDateOffset } from '@/lib/time/bogotaDate';
+import { bogotaToday, bogotaDateOffset, sessionStartUtc } from '@/lib/time/bogotaDate';
 import { log, logError } from '@/lib/logger';
 import {
   updateSession,
@@ -84,7 +84,8 @@ export async function GET(request: Request) {
     const sessions = sessionsResult.data;
 
     for (const session of sessions || []) {
-      const sessionDateTime = new Date(`${session.date}T${session.start_time}`);
+      const sessionDateTime = sessionStartUtc(session.date, session.start_time);
+      if (!sessionDateTime) continue;
 
       // Check for 1-hour reminder
       const needsOneHourReminder =

@@ -23,7 +23,7 @@ function code(): string {
 describe('community event page time zone', () => {
   it('converts both datetime-local values through bogotaLocalToUtc', () => {
     const src = code();
-    expect(src).toContain("from '@/lib/dates/bogota'");
+    expect(src).toContain("from '@/lib/time/bogotaDate'");
     expect(src).toMatch(/bogotaLocalToUtc\(eventAt\)/);
     expect(src).toMatch(/bogotaLocalToUtc\(endsAt\)/);
   });

@@ -6,7 +6,7 @@ import { SupabaseClient } from '@supabase/supabase-js';
 import type { Session, SessionUpdate, SessionInsert } from '@/lib/database.types';
 import { logError } from '@/lib/logger';
 import { signRecapPhotoUrls } from '@/lib/storage/privateMedia';
-import { bogotaToday } from '@/lib/time/bogotaDate';
+import { bogotaToday, sessionStartUtc } from '@/lib/time/bogotaDate';
 
 import type { DalResult, SessionWithCreator } from './types';
 export type { DalResult } from './types';
@@ -721,8 +721,8 @@ export async function updateSessionAsHost(
       return { success: false, error: 'Only the session host can edit this session' };
     }
 
-    const startsAt = new Date(`${session.date}T${session.start_time}`);
-    if (!session.is_recurring && startsAt.getTime() < Date.now()) {
+    const startsAt = sessionStartUtc(session.date, session.start_time);
+    if (!session.is_recurring && startsAt && startsAt.getTime() < Date.now()) {
       return { success: false, error: 'Past sessions cannot be edited' };
     }
 

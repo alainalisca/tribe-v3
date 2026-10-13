@@ -3,10 +3,10 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 // Mocks (declared before importing the route).
 vi.mock('@/lib/logger', () => ({ log: vi.fn(), logError: vi.fn() }));
 vi.mock('@/lib/auth/cron', () => ({ isValidCronAuth: () => true }));
-vi.mock('@/lib/time/bogotaDate', () => ({
-  bogotaToday: () => '2026-06-15',
-  bogotaDateOffset: () => '2026-06-16',
-}));
+vi.mock('@/lib/time/bogotaDate', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/time/bogotaDate')>();
+  return { ...actual, bogotaToday: () => '2026-06-15', bogotaDateOffset: () => '2026-06-16' };
+});
 vi.mock('@/lib/sessionLocation', () => ({ formatSessionLocation: () => 'Parque' }));
 vi.mock('@supabase/supabase-js', () => ({ createClient: () => ({}) }));
 vi.mock('@/lib/dal', () => ({
@@ -37,9 +37,9 @@ let fetchMock: ReturnType<typeof vi.fn>;
 beforeEach(() => {
   vi.clearAllMocks();
   vi.useFakeTimers();
-  // Local wall-clock 10:00; the session below starts 11:02, i.e. 62 minutes out,
-  // inside the [now+60, now+65] one-hour reminder window.
-  vi.setSystemTime(new Date('2026-06-15T10:00:00'));
+  // 15:00 UTC = 10:00 Bogotá; session times are Bogotá wall time.
+  // Session at 11:02 Bogotá = 16:02 UTC, 62 min out → inside [now+60, now+65].
+  vi.setSystemTime(new Date('2026-06-15T15:00:00Z'));
 
   (fetchActiveSessionsForDates as ReturnType<typeof vi.fn>).mockResolvedValue({
     success: true,
@@ -113,5 +113,15 @@ describe('session-reminders cron: session_reminders category is authoritative', 
       'sess-1',
       'id, preferred_language'
     );
+  });
+
+  it('does NOT remind when the old 5-hour bug would have matched (now=10:00 UTC = 05:00 Bogotá)', async () => {
+    vi.setSystemTime(new Date('2026-06-15T10:00:00Z'));
+    (shouldSendNotification as ReturnType<typeof vi.fn>).mockResolvedValue(true);
+
+    await GET(makeRequest());
+
+    // 11:02 Bogotá = 16:02 UTC, 362 min from 10:00 UTC — far outside the window.
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });
