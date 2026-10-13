@@ -38,6 +38,7 @@ import {
   Upload,
   CalendarDays,
   ClipboardList,
+  Dumbbell,
   ListOrdered,
   UserPlus,
   Settings as SettingsIcon,
@@ -133,10 +134,6 @@ interface NavItem {
   matchPrefix: string;
 }
 
-// Programs + Messages are intentionally NOT listed: their routes are
-// ComingSoonPage placeholders. Promising unbuilt features in the
-// primary nav of a paid tier erodes trust on day one. Re-add here when
-// the real surfaces ship (routes still exist for any deep links).
 const NAV_ITEMS: readonly NavItem[] = [
   { href: '/os/dashboard', labelKey: 'dashboard', Icon: LayoutDashboard, matchPrefix: '/os/dashboard' },
   { href: '/os/tasks', labelKey: 'tasks', Icon: ClipboardList, matchPrefix: '/os/tasks' },
@@ -149,6 +146,7 @@ const NAV_ITEMS: readonly NavItem[] = [
   { href: '/os/weekly', labelKey: 'weekly', Icon: CalendarDays, matchPrefix: '/os/weekly' },
   { href: '/os/intelligence', labelKey: 'intelligence', Icon: Brain, matchPrefix: '/os/intelligence' },
   { href: '/os/leads', labelKey: 'leads', Icon: UserPlus, matchPrefix: '/os/leads' },
+  { href: '/os/programs', labelKey: 'programs', Icon: Dumbbell, matchPrefix: '/os/programs' },
   { href: '/os/retention', labelKey: 'retention', Icon: HeartPulse, matchPrefix: '/os/retention' },
   { href: '/os/sequences', labelKey: 'sequences', Icon: ListOrdered, matchPrefix: '/os/sequences' },
   { href: '/os/messages', labelKey: 'messages', Icon: MessageSquare, matchPrefix: '/os/messages' },

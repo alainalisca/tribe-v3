@@ -262,6 +262,13 @@ type EventName =
   | 'tribe_os_lead_converted'
   | 'tribe_os_lead_activity_added'
 
+  // Programs (T-OS10)
+  | 'tribe_os_programs_viewed'
+  | 'tribe_os_program_created'
+  | 'tribe_os_program_detail_viewed'
+  | 'tribe_os_program_member_assigned'
+  | 'tribe_os_program_member_removed'
+
   // Demand signal for not-yet-built paid flows (honest "notify me")
   | 'tribe_plus_interest' // user tapped Tribe+ subscribe before billing is live
   | 'promote_pro_interest' // user tapped Promote Pro upgrade before billing is live
