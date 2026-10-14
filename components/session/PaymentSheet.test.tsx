@@ -57,6 +57,14 @@ describe('PaymentSheet', () => {
     expect(screen.queryByRole('dialog')).toBeNull();
   });
 
+  it('writes the Spanish date in lowercase, as Spanish does ("jueves, 15 de octubre")', () => {
+    render(<PaymentSheet {...props} date="2026-10-15" onClose={vi.fn()} />);
+    const date = screen.getByText('jueves, 15 de octubre');
+    // CSS `capitalize` would render it "Jueves, 15 De Octubre" on screen even
+    // though the text node is lowercase, so the class itself must not be there.
+    expect(date).not.toHaveClass('capitalize');
+  });
+
   it('uses English copy', () => {
     render(<PaymentSheet {...props} language="en" onClose={vi.fn()} />);
     expect(screen.getByText('Request sent!')).toBeInTheDocument();

@@ -84,7 +84,7 @@ export default function PaymentSheet({
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="font-semibold text-white">{translateSport(sport, language)}</p>
-                <p className="text-sm capitalize text-white/70">{dateLabel}</p>
+                <p className="text-sm text-white/70">{dateLabel}</p>
               </div>
               <p className="shrink-0 font-bold text-white">
                 {formatPriceForUser(priceCents, (currency || 'USD') as Currency, userCurrency)}
