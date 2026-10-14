@@ -1,17 +1,20 @@
 'use client';
 
 /**
- * T-PLAN1 part C: the /planes page body. White, clean, gym photos over Tribe
- * branding. No upsell popups: this page is reached by a link only.
+ * T-PLAN1 part C: /planes. Mobile-first (coaches open it on their phone from a
+ * WhatsApp link), white, Spanish first, one real coach mid-class as the hero.
+ * No upsell popups anywhere: this page is reached by a link only.
  */
 
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Check } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
-import { formatCoachPlanPrice, type CoachPlan, type PaidCoachPlan } from '@/lib/subscription/coachPlans';
-import { planesCopy, type PlanCopy } from './planesCopy';
+import type { CoachPlan, PaidCoachPlan } from '@/lib/subscription/coachPlans';
+import { planesCopy } from './planesCopy';
+import PlanCard, { type PlanCardAction } from './PlanCard';
+import Reveal from './Reveal';
+import { PlanesFaq, PlanesHero, PlanesProof, PlanesSteps } from './PlanesSections';
 
 export type PlanesViewer =
   | { signedIn: false }
@@ -31,15 +34,12 @@ async function postForUrl(path: string, body?: object): Promise<string> {
   });
   const json: unknown = await res.json().catch(() => null);
   const url = typeof json === 'object' && json !== null && 'url' in json ? (json as { url: unknown }).url : null;
-  if (!res.ok || typeof url !== 'string') {
-    const err =
-      typeof json === 'object' && json !== null && 'error' in json
-        ? String((json as { error: unknown }).error)
-        : 'error';
-    throw new Error(err);
-  }
+  if (!res.ok || typeof url !== 'string') throw new Error('request_failed');
   return url;
 }
+
+const amountLabel = (amount: number | null) =>
+  amount === null ? null : new Intl.NumberFormat('es-CO', { maximumFractionDigits: 0 }).format(amount);
 
 export default function PlanesClient({ viewer, prices, whatsappDigits }: PlanesClientProps) {
   const { language, setLanguage } = useLanguage();
@@ -101,144 +101,129 @@ export default function PlanesClient({ viewer, prices, whatsappDigits }: PlanesC
   }, [checkoutParam, router]);
 
   const banner = checkoutParam === 'success' ? c.successBanner : checkoutParam === 'canceled' ? c.canceledBanner : null;
-
-  const priceLabel = (amount: number | null) =>
-    amount === null ? c.priceUnavailable : `${formatCoachPlanPrice(amount, prices.currency)} ${c.perMonth}`;
-
   const whatsappHref = whatsappDigits
-    ? `https://wa.me/${whatsappDigits}?text=${encodeURIComponent(
-        language === 'es'
-          ? 'Hola Al, quiero saber más de Tribe Crecimiento.'
-          : 'Hi Al, I would like to know more about Tribe Crecimiento.'
-      )}`
+    ? `https://wa.me/${whatsappDigits}?text=${encodeURIComponent(c.whatsappText)}`
     : null;
 
-  const column = (key: CoachPlan & ('basico' | PaidCoachPlan), copy: PlanCopy, price: string, founding: boolean) => {
-    // Embajador has no column of its own; the comp banner above says so.
-    const isCurrent = currentPlan === key;
-    return (
-      <div
-        key={key}
-        className={`flex flex-col rounded-2xl border p-6 bg-white ${isCurrent ? 'border-tribe-green ring-2 ring-tribe-green' : 'border-slate-200'}`}
-      >
-        <div className="flex items-center justify-between gap-2 min-h-6">
-          {founding && (
-            <span className="text-[11px] font-bold uppercase tracking-wide text-slate-900 bg-tribe-green rounded-full px-2 py-0.5">
-              {c.founding}
-            </span>
-          )}
-          {isCurrent && (
-            <span className="text-[11px] font-bold uppercase tracking-wide text-tribe-green">{c.currentPlan}</span>
-          )}
-        </div>
-        <h2 className="mt-3 text-xl font-extrabold text-slate-900">{copy.name}</h2>
-        <p className="text-sm text-slate-500">{copy.priceNote}</p>
-        <p className="mt-4 text-2xl font-extrabold text-slate-900">{price}</p>
-        <ul className="mt-5 space-y-2 flex-1">
-          {copy.bullets.map((b) => (
-            <li key={b} className="flex gap-2 text-sm text-slate-700">
-              <Check className="w-4 h-4 mt-0.5 text-tribe-green flex-shrink-0" aria-hidden="true" />
-              <span>{b}</span>
-            </li>
-          ))}
-        </ul>
-        <div className="mt-6 space-y-2">
-          {key === 'basico' ? (
-            <Link
-              href={viewer.signedIn ? '/create/' : `/auth/?returnTo=${encodeURIComponent('/create/')}`}
-              className="block w-full text-center rounded-xl border border-slate-300 py-3 font-semibold text-slate-900 hover:border-slate-900 transition"
-            >
-              {copy.cta}
-            </Link>
-          ) : isCurrent && viewer.signedIn && viewer.canManage ? (
-            <button
-              type="button"
-              onClick={openPortal}
-              disabled={busy !== null}
-              className="w-full rounded-xl bg-slate-900 py-3 font-semibold text-white disabled:opacity-60"
-            >
-              {busy === 'portal' ? c.working : c.manage}
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={() => startCheckout(key)}
-              disabled={busy !== null || (viewer.signedIn && viewer.active)}
-              className="w-full rounded-xl bg-tribe-green py-3 font-semibold text-slate-900 disabled:opacity-60"
-            >
-              {busy === key ? c.working : copy.cta}
-            </button>
-          )}
-          {key === 'crecimiento' && whatsappHref && (
-            <a
-              href={whatsappHref}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="block w-full text-center rounded-xl border border-slate-300 py-3 font-semibold text-slate-900 hover:border-slate-900 transition"
-            >
-              {c.talkToAl}
-            </a>
-          )}
-        </div>
-      </div>
-    );
+  const paidAction = (plan: PaidCoachPlan): PlanCardAction => {
+    if (viewer.signedIn && currentPlan === plan && viewer.canManage) {
+      return { kind: 'manage', onClick: openPortal, disabled: busy !== null, busy: busy === 'portal' };
+    }
+    return {
+      kind: 'checkout',
+      onClick: () => void startCheckout(plan),
+      disabled: busy !== null || (viewer.signedIn && viewer.active),
+      busy: busy === plan,
+    };
   };
 
   return (
-    <main className="min-h-screen bg-white text-slate-900">
-      <header className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
-        <Link href="/" aria-label="Tribe">
+    <div className="min-h-screen bg-white text-tribe-dark">
+      <header className="max-w-6xl mx-auto flex items-center justify-between px-4 py-4">
+        <Link
+          href="/"
+          aria-label="Tribe"
+          className="rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-tribe-green"
+        >
+          {/* The real wordmark file, dark variant for a white page. */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/tribe-wordmark-dark.png" alt="Tribe" className="h-7 w-auto" />
+          <img src="/tribe-wordmark-dark.png" alt="Tribe" width={1709} height={564} className="h-7 w-auto" />
         </Link>
         <button
           type="button"
           onClick={() => setLanguage(language === 'es' ? 'en' : 'es')}
-          className="text-sm font-semibold text-slate-600 hover:text-slate-900"
+          className="rounded-full border border-tribe-dark-60 px-3 py-1 text-sm font-bold text-tribe-dark-80 transition hover:border-tribe-dark hover:text-tribe-dark"
         >
           {language === 'es' ? 'EN' : 'ES'}
         </button>
       </header>
 
-      <section className="max-w-5xl mx-auto px-4">
-        <div className="grid grid-cols-2 gap-2 rounded-2xl overflow-hidden h-36 sm:h-48">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/landing-deadlift.jpg" alt="" className="w-full h-full object-cover" />
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/landing-rowers.jpg" alt="" className="w-full h-full object-cover" />
-        </div>
-        <h1 className="mt-6 text-3xl sm:text-4xl font-extrabold tracking-tight">{c.title}</h1>
-        <p className="mt-2 text-slate-600 max-w-2xl">{c.subtitle}</p>
-
-        {banner && <p className="mt-4 rounded-xl bg-slate-50 border border-slate-200 p-3 text-sm">{banner}</p>}
-        {viewer.signedIn && viewer.comped && (
-          <p className="mt-4 rounded-xl bg-slate-50 border border-tribe-green p-3 text-sm">
-            {c.compBanner(
-              viewer.plan === 'embajador'
-                ? c.embajador
-                : planesCopy[language][viewer.plan === 'crecimiento' ? 'crecimiento' : 'pro'].name
+      <main>
+        {(banner || notice || (viewer.signedIn && viewer.comped)) && (
+          <div className="max-w-6xl mx-auto px-4 space-y-3 pb-4">
+            {banner && <p className="rounded-2xl bg-tribe-dark-40 p-4 text-sm font-semibold">{banner}</p>}
+            {viewer.signedIn && viewer.comped && (
+              <p className="rounded-2xl bg-tribe-green/20 p-4 text-sm font-semibold">
+                {c.compBanner(
+                  viewer.plan === 'embajador'
+                    ? c.embajador
+                    : c[viewer.plan === 'crecimiento' ? 'crecimiento' : 'pro'].name
+                )}
+              </p>
             )}
-          </p>
-        )}
-        {notice && (
-          <div className="mt-4 rounded-xl bg-amber-50 border border-amber-200 p-3 text-sm text-amber-900">
-            {notice}
-            {notice === c.instructorsOnly && (
-              <Link href="/onboarding/role/" className="ml-2 font-semibold underline">
-                {c.becomeInstructor}
-              </Link>
+            {notice && (
+              <div role="alert" className="rounded-2xl bg-amber-50 border border-amber-200 p-4 text-sm text-amber-900">
+                {notice}
+                {notice === c.instructorsOnly && (
+                  <Link href="/onboarding/role/" className="ml-2 font-bold underline">
+                    {c.becomeInstructor}
+                  </Link>
+                )}
+              </div>
             )}
           </div>
         )}
 
-        <div className="mt-8 grid gap-4 md:grid-cols-3">
-          {column('basico', c.basico, c.free, false)}
-          {column('pro', c.pro, priceLabel(prices.pro), true)}
-          {column('crecimiento', c.crecimiento, priceLabel(prices.crecimiento), true)}
-        </div>
+        <PlanesHero c={c} />
+        <PlanesProof c={c} />
 
-        <p className="mt-8 mb-12 text-center text-sm text-slate-500">{c.footer}</p>
-      </section>
-    </main>
+        <section id="planes" className="scroll-mt-4 bg-tribe-dark-40 py-14">
+          <div className="max-w-6xl mx-auto px-4">
+            <Reveal>
+              <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight">{c.plansTitle}</h2>
+              <p className="mt-2 text-tribe-dark-80">{c.plansSub}</p>
+            </Reveal>
+            {/* Mobile: Coach Pro first (the recommended choice), then Crecimiento,
+                then Básico. Desktop: Básico | Coach Pro | Crecimiento. */}
+            <div className="mt-8 grid gap-5 md:grid-cols-3 md:items-stretch">
+              <Reveal className="order-3 md:order-1">
+                <PlanCard
+                  copy={c.basico}
+                  c={c}
+                  amount={null}
+                  isCurrent={viewer.signedIn && currentPlan === 'basico'}
+                  action={{
+                    kind: 'link',
+                    href: viewer.signedIn ? '/create/' : `/auth/?returnTo=${encodeURIComponent('/create/')}`,
+                  }}
+                  className="h-full"
+                />
+              </Reveal>
+              <Reveal className="order-1 md:order-2" delayMs={80}>
+                <PlanCard
+                  copy={c.pro}
+                  c={c}
+                  amount={amountLabel(prices.pro)}
+                  recommended
+                  founding
+                  isCurrent={currentPlan === 'pro'}
+                  action={paidAction('pro')}
+                  className="h-full md:-my-3"
+                />
+              </Reveal>
+              <Reveal className="order-2 md:order-3" delayMs={160}>
+                <PlanCard
+                  copy={c.crecimiento}
+                  c={c}
+                  amount={amountLabel(prices.crecimiento)}
+                  founding
+                  isCurrent={currentPlan === 'crecimiento'}
+                  action={paidAction('crecimiento')}
+                  className="h-full"
+                />
+              </Reveal>
+            </div>
+            {prices.pro === null && <p className="mt-4 text-sm text-tribe-dark-80">{c.priceUnavailable}</p>}
+          </div>
+        </section>
+
+        <PlanesSteps c={c} />
+        <PlanesFaq c={c} whatsappHref={whatsappHref} />
+      </main>
+
+      <footer className="border-t border-tribe-dark-60/50 py-8 text-center text-sm text-tribe-dark-80 px-4">
+        {c.footer}
+      </footer>
+    </div>
   );
 }

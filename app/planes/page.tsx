@@ -26,8 +26,19 @@ import PlanesClient, { type PlanesViewer } from './PlanesClient';
 export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
-  title: 'Planes | Tribe',
-  description: 'Planes para coaches y gimnasios en Tribe. El perfil básico es gratis para siempre.',
+  title: 'Planes para coaches | Tribe',
+  description: 'Llena tus clases. Nosotros te ayudamos. Tu perfil y tus clases en Tribe siempre son gratis.',
+  openGraph: {
+    title: 'Llena tus clases. Nosotros te ayudamos.',
+    description: 'Planes para coaches y gimnasios en Medellín. Tu perfil y tus clases en Tribe siempre son gratis.',
+    type: 'website',
+    locale: 'es_CO',
+  },
+  twitter: {
+    card: 'summary',
+    title: 'Llena tus clases. Nosotros te ayudamos.',
+    description: 'Planes para coaches y gimnasios en Medellín.',
+  },
 };
 
 async function loadViewer(): Promise<PlanesViewer> {
