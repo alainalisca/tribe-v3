@@ -61,19 +61,29 @@ function mockSupabase(opts: {
     error: opts.rpcResult?.error ?? null,
   });
 
+  // Web Checkout back-fill chain: .update(...).eq(...).is(...) → resolves.
+  const updateChain = () => ({
+    eq: vi.fn().mockReturnValue({
+      is: vi.fn().mockResolvedValue({ error: null }),
+    }),
+  });
+
   const paymentsChain = {
     select: vi.fn().mockReturnValue({
       eq: vi.fn().mockReturnValue({
         single: vi.fn().mockResolvedValue({ data: opts.existingPayment ?? null, error: null }),
       }),
     }),
+    update: vi.fn().mockImplementation(updateChain),
   };
+  const tipsChain = { update: vi.fn().mockImplementation(updateChain) };
   const eventsChain = { insert: insertFn };
 
   const supabase = {
     from: vi.fn((table: string) => {
       if (table === 'processed_webhook_events') return eventsChain;
       if (table === 'payments') return paymentsChain;
+      if (table === 'tips') return tipsChain;
       return { insert: vi.fn(), select: vi.fn() };
     }),
     rpc: rpcFn,
