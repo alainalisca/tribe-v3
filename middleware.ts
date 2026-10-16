@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { athletesGateAllows, isAthletesGatedPath, GATED_NOT_FOUND_PATH } from '@/lib/features/athleteValueGate';
 import { canonicalLinkHeader } from '@/lib/seo/canonicalLink';
+import { hasAuthCookieName } from '@/lib/site/authCookie';
 
 /**
  * Tribe middleware does three things, in order:
@@ -61,6 +62,16 @@ const publicPaths = [
   '/about',
   '/faq',
   '/for-instructors',
+  // T-SITE1: the marketing site. /inicio is the signed-out `/` (see the rewrite
+  // in middleware()); the rest are its pages.
+  '/inicio',
+  '/para-atletas',
+  '/deportes',
+  '/coaches',
+  '/gimnasios',
+  '/tribe-os',
+  '/tv',
+  '/preguntas',
   '/download', // static app-download page (public/download/index.html) — must be reachable without auth
   '/_next',
   '/sw.js',
@@ -318,6 +329,17 @@ export async function middleware(request: NextRequest) {
   // Static asset short-circuit.
   if (pathname.match(/\.\w+$/)) {
     return applySecurityHeaders(NextResponse.next(), pathname);
+  }
+
+  // T-SITE1: a visitor with no Supabase auth cookie gets the marketing site at
+  // `/`, prerendered, instead of app/page.tsx (a client page that shows a splash
+  // until auth resolves, then the old landing). The URL stays `/`. A cookie,
+  // valid or not, goes on to the feed, which resolves the session itself and
+  // sends a stale one back here. See lib/site/authCookie.
+  if (pathname === '/' && !hasAuthCookieName(request.cookies.getAll().map((c) => c.name))) {
+    const inicio = request.nextUrl.clone();
+    inicio.pathname = '/inicio/';
+    return applySecurityHeaders(NextResponse.rewrite(inicio), pathname);
   }
 
   // T-AV24: /atletas and /pase/verificar are gated on the athletes flag HERE,

@@ -6,6 +6,7 @@ import { logError } from '@/lib/logger';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { useLanguage } from '@/lib/LanguageContext';
 import { shouldSuppressInstallPrompt } from '@/lib/publicShareRoutes';
+import { useIsMarketingSurface } from '@/lib/site/marketingSurface';
 
 const APP_STORE_URL = 'https://apps.apple.com/us/app/tribe-never-train-alone/id6458219258';
 const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=prod.tribe.android';
@@ -23,7 +24,10 @@ export default function AppStoreBanner() {
   // lib/publicShareRoutes for which routes and why /s/ is not among them.
   // The union: public share routes PLUS the signup flow. See
   // lib/publicShareRoutes for why those are two lists and not one.
-  const onShareRoute = shouldSuppressInstallPrompt(pathname);
+  // T-SITE1: and never on the marketing site, which has its own store links.
+  // A path list cannot say so for `/` (see lib/site/marketingSurface).
+  const onMarketing = useIsMarketingSurface();
+  const onShareRoute = shouldSuppressInstallPrompt(pathname) || onMarketing;
 
   useEffect(() => {
     if (onShareRoute) return;

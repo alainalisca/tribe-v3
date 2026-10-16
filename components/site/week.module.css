@@ -1,0 +1,129 @@
+/* T-SITE1. "La semana" board (mock .fx). */
+.fx {
+  padding-block: 72px 64px;
+}
+.fxhead {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-bottom: 22px;
+}
+.fxhead h2 {
+  font-size: clamp(54px, 8vw, 120px);
+}
+.fxhead p {
+  color: var(--mute);
+  max-width: 26em;
+  font-size: 15px;
+}
+.table {
+  border-top: 2px solid var(--white);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.row {
+  display: grid;
+  grid-template-columns: 110px 90px minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr) 120px;
+  gap: 18px;
+  align-items: center;
+  padding-block: 18px;
+  border-bottom: 1px solid var(--rule);
+  transition:
+    background 0.2s,
+    padding 0.2s;
+}
+.row:hover {
+  background: var(--lime-wash);
+  padding-inline: 12px;
+}
+.day {
+  font-family: var(--disp);
+  font-variation-settings: 'opsz' 72;
+  font-weight: 800;
+  font-size: 26px;
+  text-transform: uppercase;
+  line-height: 1;
+}
+.hr {
+  font-family: var(--mono);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--lime);
+}
+.ses {
+  font-weight: 700;
+  font-size: 17px;
+}
+.ses small {
+  display: block;
+  font-weight: 500;
+  color: var(--mute);
+  font-size: 13.5px;
+}
+.loc,
+.who {
+  color: #d8dce0;
+  font-size: 15px;
+}
+.go {
+  justify-self: end;
+  font-weight: 700;
+  font-size: 14px;
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+}
+.go svg {
+  width: 16px;
+  height: 16px;
+  transition: transform 0.2s;
+}
+.row:hover .go svg {
+  transform: translateX(4px);
+}
+.tag {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 6px;
+  margin-left: 8px;
+  vertical-align: 2px;
+  background: var(--lime);
+  color: var(--ink);
+}
+.publish .ses {
+  color: var(--lime);
+}
+@media (max-width: 900px) {
+  .row {
+    grid-template-columns: 72px 1fr;
+    grid-template-areas: 'day ses' 'hr loc' 'hr who' 'hr go';
+    row-gap: 4px;
+  }
+  .day {
+    grid-area: day;
+    font-size: 22px;
+  }
+  .hr {
+    grid-area: hr;
+    align-self: start;
+  }
+  .ses {
+    grid-area: ses;
+  }
+  .loc {
+    grid-area: loc;
+  }
+  .who {
+    grid-area: who;
+  }
+  .go {
+    grid-area: go;
+    justify-self: start;
+    margin-top: 6px;
+  }
+}

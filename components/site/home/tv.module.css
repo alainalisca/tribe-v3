@@ -1,0 +1,157 @@
+/* T-SITE1. Inicio: Tribe.TV block and the Tribe.OS band (mock V6). */
+.tv {
+  background: var(--char2);
+  padding-block: 84px;
+}
+.tvhead {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 24px;
+  flex-wrap: wrap;
+  padding-bottom: 22px;
+  border-bottom: 1px solid var(--rule);
+  margin-bottom: 28px;
+}
+.tvLock {
+  --lh: clamp(44px, 5vw, 64px);
+}
+.onair {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--mute);
+}
+.onair i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ff3b30;
+}
+.tvgrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr);
+  gap: 28px;
+}
+.screen {
+  position: relative;
+  display: block;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  background: #000;
+  outline: 1px solid var(--rule);
+}
+.screen img {
+  object-fit: cover;
+  transition: transform 1.1s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.screen:hover img {
+  transform: scale(1.025);
+}
+.play {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--lime);
+  color: var(--ink);
+  font-weight: 700;
+  padding: 14px 18px;
+  transition: padding 0.2s;
+}
+.screen:hover .play {
+  padding-right: 26px;
+}
+.play svg {
+  width: 18px;
+  height: 18px;
+  fill: var(--ink);
+}
+.epmeta {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding-top: 14px;
+}
+.epmeta h3 {
+  font-size: clamp(19px, 1.7vw, 23px);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.epmeta .meta {
+  color: var(--mute);
+  white-space: nowrap;
+}
+.list {
+  border-top: 2px solid var(--white);
+}
+.li {
+  display: grid;
+  grid-template-columns: 40px 1fr;
+  gap: 14px;
+  padding-block: 16px;
+  border-bottom: 1px solid var(--rule);
+}
+.n {
+  font-family: var(--disp);
+  font-variation-settings: 'opsz' 72;
+  font-weight: 900;
+  font-size: 34px;
+  line-height: 0.9;
+  color: var(--lime);
+}
+.li h4 {
+  margin: 0 0 4px;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+.li small {
+  color: var(--mute);
+  font-size: 13px;
+}
+.dim .n,
+.dim h4 {
+  color: var(--mute);
+}
+.subs {
+  display: inline-block;
+  margin-top: 22px;
+}
+@media (max-width: 900px) {
+  .tvgrid {
+    grid-template-columns: 1fr;
+  }
+  .epmeta {
+    flex-direction: column;
+    gap: 4px;
+  }
+}
+
+/* Tribe.OS band */
+.osband {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: clamp(20px, 4vw, 60px);
+  align-items: center;
+  padding-block: 44px;
+  border-bottom: 1px solid var(--rule);
+}
+.osLock {
+  --lh: 52px;
+}
+.osband p {
+  color: #d7dbe0;
+  font-size: 17px;
+  max-width: 40em;
+}
+.osband p b {
+  color: #fff;
+}
+@media (max-width: 860px) {
+  .osband {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,0 +1,197 @@
+/*
+ * T-SITE1. Marketing site tokens and shared pieces, ported from the approved
+ * "Jornada" V6 mock. Everything is scoped under .site so none of it reaches the
+ * app routes. Brand green is #A8DA36 (tailwind tribe-green), not the mock's
+ * #B6E636. Fonts come from app/(site)/layout.tsx as CSS variables.
+ */
+.site {
+  --char: #22272d;
+  --char2: #1a1e23;
+  --paper: #f1efe8;
+  --ink: #121417;
+  --lime: #a8da36;
+  --lime-wash: rgba(168, 218, 54, 0.06);
+  --white: #ffffff;
+  --mute: #a7aeb6;
+  --soft: #c9ced4;
+  --rule: rgba(255, 255, 255, 0.14);
+  --rule-d: rgba(18, 20, 23, 0.16);
+  --disp: var(--font-site-disp), 'Arial Narrow', Impact, sans-serif;
+  --body: var(--font-site-body), 'Helvetica Neue', Arial, sans-serif;
+  --mono: var(--font-site-mono), ui-monospace, Menlo, monospace;
+  color-scheme: dark;
+  min-height: 100vh;
+  background: var(--char);
+  color: var(--white);
+  font-family: var(--body);
+  font-size: 16px;
+  line-height: 1.5;
+  overflow-x: clip;
+  -webkit-font-smoothing: antialiased;
+}
+:where(.site) :where(a) {
+  color: inherit;
+  text-decoration: none;
+}
+.site [id] {
+  /* Anchor jumps (#semana, #manifiesto) clear the sticky nav and its subnav. */
+  scroll-margin-top: 120px;
+}
+.site :focus-visible {
+  outline: 2px solid var(--lime);
+  outline-offset: 3px;
+}
+/* Zero specificity, so any section's own margin wins. */
+:where(.site) :where(h1, h2, h3, h4, p) {
+  margin: 0;
+}
+
+.g {
+  padding-inline: clamp(16px, 3.2vw, 48px);
+}
+.disp {
+  font-family: var(--disp);
+  font-variation-settings: 'opsz' 72;
+  font-weight: 900;
+  text-transform: uppercase;
+  line-height: 0.84;
+  letter-spacing: -0.005em;
+}
+.mono {
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.kick {
+  display: block;
+  color: var(--lime);
+  margin-bottom: 14px;
+}
+
+/* buttons */
+.cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--lime);
+  color: var(--ink) !important;
+  font-weight: 700;
+  font-size: 16px;
+  padding: 16px 22px;
+  white-space: nowrap;
+  transition:
+    background 0.2s,
+    color 0.2s;
+}
+.cta svg {
+  width: 18px;
+  height: 18px;
+  transition: transform 0.2s;
+}
+.cta:hover {
+  background: var(--white);
+}
+.cta:hover svg {
+  transform: translateX(4px);
+}
+.ctaInk {
+  background: var(--ink);
+  color: var(--lime) !important;
+}
+.ctaInk:hover {
+  background: var(--white);
+  color: var(--ink) !important;
+}
+.ulink {
+  font-weight: 700;
+  border-bottom: 2px solid var(--rule);
+  padding-bottom: 3px;
+  transition: border-color 0.2s;
+}
+.ulink:hover {
+  border-color: var(--lime);
+}
+.ulinkInk {
+  border-color: var(--rule-d);
+}
+.ulinkInk:hover {
+  border-color: var(--ink);
+}
+.acts {
+  display: flex;
+  gap: 22px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* section heads */
+.sec {
+  padding-block: clamp(56px, 7vw, 96px);
+  border-bottom: 1px solid var(--rule);
+}
+.sh {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+}
+.sh h2 {
+  font-size: clamp(50px, 7.4vw, 112px);
+}
+.sh p {
+  color: var(--mute);
+  max-width: 28em;
+  font-size: 16px;
+}
+.note {
+  margin-top: 14px;
+  color: var(--mute);
+  font-size: 13px;
+}
+
+/* wordmark lockups: Tribe.TV, Tribe.OS */
+.lock {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+}
+.lock img {
+  height: var(--lh, 56px);
+  width: auto;
+}
+.lock span {
+  font-family: var(--body);
+  font-weight: 700;
+  font-size: calc(var(--lh, 56px) * 1.19);
+  line-height: 0.8;
+  letter-spacing: -0.03em;
+  margin-bottom: 2px;
+}
+.lockInk img {
+  filter: invert(1) brightness(0.1);
+}
+
+.grain {
+  position: relative;
+}
+.grain::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.1;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .site *,
+  .site *::before,
+  .site *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

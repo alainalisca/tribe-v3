@@ -18,6 +18,7 @@ import { MessageSquare, X, Image as ImageIcon, CheckCircle } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client';
 import { useLanguage } from '@/lib/LanguageContext';
 import { isPublicShareRoute } from '@/lib/publicShareRoutes';
+import { useIsMarketingSurface } from '@/lib/site/marketingSurface';
 import { useTheme } from '@/contexts/ThemeContext';
 import type { FeedbackCategory, DeviceInfo, FeedbackSubmitPayload, FeedbackSubmitResponse } from '@/types/feedback';
 
@@ -127,8 +128,11 @@ export default function FeedbackWidget({ appVersion, bottomOffset = 80 }: Feedba
   // user_feedback and asks for a bug category -- and offering it to a stranger
   // who arrived from a gym's Instagram bio is the same leak the install modal
   // was, on the same surfaces. Same list, same mechanism.
+  // T-SITE1: nor on the marketing site, for the same reason (and its Dialog
+  // was the "Missing Description for DialogContent" warning there).
   const pathname = usePathname();
-  if (isPublicShareRoute(pathname)) return null;
+  const onMarketing = useIsMarketingSurface();
+  if (isPublicShareRoute(pathname) || onMarketing) return null;
 
   if (!mounted) return null;
 

@@ -1,0 +1,241 @@
+/* T-SITE1. Ticker, nav and footer from the Jornada mock. */
+
+/* ticker */
+.ticker {
+  background: var(--lime);
+  color: var(--ink);
+  overflow: hidden;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--ink);
+}
+.run {
+  display: inline-flex;
+  animation: tick 38s linear infinite;
+  padding-block: 7px;
+}
+.run span {
+  font-family: var(--mono);
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding-right: 42px;
+}
+.run b {
+  font-weight: 700;
+  background: var(--ink);
+  color: var(--lime);
+  padding: 1px 6px;
+  margin-right: 8px;
+}
+@keyframes tick {
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+/* nav: sticky, always solid (the audit's transparent-header bug) */
+.nav {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: var(--char);
+  border-bottom: 1px solid var(--rule);
+  padding-top: var(--safe-area-inset-top, 0px);
+}
+.bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 64px;
+  gap: 20px;
+}
+.logo {
+  display: block;
+  height: 28px;
+  width: auto;
+}
+.links {
+  display: flex;
+  gap: 30px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-weight: 600;
+  font-size: 14px;
+}
+.links a {
+  color: var(--mute);
+  padding-bottom: 4px;
+  transition: color 0.2s;
+}
+.links a:hover {
+  color: var(--white);
+}
+.links a.on {
+  color: var(--white);
+  box-shadow: inset 0 -2px 0 var(--lime);
+}
+.right {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  font-weight: 700;
+  font-size: 14px;
+}
+.enter {
+  color: var(--soft);
+}
+.enter:hover {
+  color: var(--white);
+}
+.avatar {
+  display: block;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--char2);
+  border: 1px solid var(--rule);
+}
+.join {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 2px solid var(--lime);
+  padding-bottom: 2px;
+}
+.join svg {
+  width: 16px;
+  height: 16px;
+  transition: transform 0.2s;
+}
+.join:hover svg {
+  transform: translate(3px, -3px);
+}
+.subnav {
+  display: none;
+  overflow-x: auto;
+  scrollbar-width: none;
+  border-top: 1px solid var(--rule);
+}
+.subnav::-webkit-scrollbar {
+  display: none;
+}
+.subIn {
+  display: flex;
+  gap: 22px;
+  padding-block: 11px;
+  white-space: nowrap;
+  font-weight: 600;
+  font-size: 14px;
+}
+.subIn a {
+  color: var(--mute);
+}
+.subIn a.on {
+  color: var(--white);
+  box-shadow: inset 0 -2px 0 var(--lime);
+}
+@media (max-width: 860px) {
+  .links {
+    display: none;
+  }
+  .subnav {
+    display: block;
+  }
+}
+@media (max-width: 420px) {
+  .right {
+    gap: 14px;
+  }
+}
+
+/* footer */
+.footer {
+  background: var(--char2);
+  overflow: hidden;
+  padding-top: 46px;
+}
+.fTop {
+  display: flex;
+  justify-content: space-between;
+  gap: 32px;
+  flex-wrap: wrap;
+  padding-bottom: 30px;
+  border-bottom: 1px solid var(--rule);
+}
+.fBrand p {
+  margin-top: 12px;
+  color: var(--mute);
+  font-size: 14px;
+  max-width: 22em;
+}
+.fCols {
+  display: flex;
+  gap: clamp(32px, 6vw, 88px);
+  flex-wrap: wrap;
+  font-size: 14px;
+}
+.fCols h3 {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--mute);
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+.fCols ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.fCols a {
+  color: var(--soft);
+}
+.fCols a:hover {
+  color: var(--white);
+}
+.fBottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+  padding-top: 22px;
+  color: var(--mute);
+  font-size: 13px;
+}
+.stores {
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+.lang {
+  display: inline-flex;
+  gap: 2px;
+  border: 1px solid var(--rule);
+}
+.lang button {
+  font: 700 12px/1 var(--mono);
+  letter-spacing: 0.06em;
+  padding: 7px 10px;
+  background: transparent;
+  color: var(--mute);
+  border: 0;
+  cursor: pointer;
+}
+.lang button[aria-pressed='true'] {
+  background: var(--lime);
+  color: var(--ink);
+}
+.giant {
+  display: block;
+  width: calc(100% + 4px);
+  height: auto;
+  margin: 24px -2px -3.2vw;
+  opacity: 0.97;
+}
