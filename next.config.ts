@@ -1,4 +1,11 @@
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
 import type { NextConfig } from 'next';
+import { PLANES_PAGE, planesGuardError } from './lib/site/planesGuard';
+
+// T-SITE1: the coach-plans flag cannot go on before T-PLAN1's /planes page exists.
+const planesGuard = planesGuardError(process.env.COACH_PLANS_ENABLED, existsSync(join(process.cwd(), PLANES_PAGE)));
+if (planesGuard) throw new Error(planesGuard);
 
 const nextConfig: NextConfig = {
   /**
@@ -43,6 +50,12 @@ const nextConfig: NextConfig = {
         destination: '/sessions',
         permanent: true,
       },
+      // T-SITE1: the old marketing pages, replaced by the Jornada site. 301 (not
+      // Next's default 308) because that is what the spec and old crawlers
+      // expect. `{/}?` matches with and without the trailing slash.
+      { source: '/for-instructors{/}?', destination: '/coaches/', statusCode: 301 },
+      { source: '/faq{/}?', destination: '/preguntas/', statusCode: 301 },
+      { source: '/about{/}?', destination: '/#manifiesto', statusCode: 301 },
     ];
   },
   async rewrites() {

@@ -1,4 +1,4 @@
-/** Page: / — Landing page for visitors, home feed for logged-in users */
+/** Page: / — home feed for logged-in users (signed-out visitors get the T-SITE1 site; see middleware) */
 'use client';
 
 import dynamic from 'next/dynamic';
@@ -54,7 +54,7 @@ import { showInfo } from '@/lib/toast';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useHomeFeed } from './useHomeFeed';
-import LandingPage from './LandingPage';
+import StaleSessionToSite from './StaleSessionToSite';
 
 export default function HomePage() {
   const f = useHomeFeed();
@@ -69,20 +69,21 @@ export default function HomePage() {
   // wordmark (proper circular green dot, not a CSS `.` glyph). Two
   // variants swap on Tailwind dark: — dark-on-light for light mode,
   // light-on-dark for dark mode — so both backgrounds render clean.
-  if (!f.userChecked) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-tribe-card">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/tribe-wordmark-dark.png" alt="Tribe" className="h-12 w-auto block dark:hidden" />
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/tribe-wordmark.png" alt="Tribe" className="h-12 w-auto hidden dark:block" />
-      </div>
-    );
-  }
+  const splash = (
+    <div className="min-h-screen flex items-center justify-center bg-white dark:bg-tribe-card">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/tribe-wordmark-dark.png" alt="Tribe" className="h-12 w-auto block dark:hidden" />
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/tribe-wordmark.png" alt="Tribe" className="h-12 w-auto hidden dark:block" />
+    </div>
+  );
+  if (!f.userChecked) return splash;
 
-  // Show landing page for unauthenticated visitors
+  // No user behind the auth cookie: an expired session. Middleware serves
+  // signed-out visitors the site's Inicio at `/`; this clears the stale cookie
+  // and loads `/` again so they get it too (T-SITE1).
   if (!f.user) {
-    return <LandingPage />;
+    return <StaleSessionToSite>{splash}</StaleSessionToSite>;
   }
 
   return (

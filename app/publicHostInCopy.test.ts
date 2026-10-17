@@ -52,14 +52,17 @@ function jsonStrings(v: unknown): string[] {
 
 describe('copy never sends a user to tribe-v3.vercel.app', () => {
   const sources = ['app', 'components', 'lib'].flatMap((d) => files(path.join(ROOT, d)));
-  const messages = fs
-    .readdirSync(path.join(ROOT, 'messages'))
-    .filter((f) => f.endsWith('.json'))
-    .map((f) => path.join(ROOT, 'messages', f));
+  // messages/*.json and the site's messages/site/*.json (T-SITE1.1).
+  const messages = ['messages', path.join('messages', 'site')].flatMap((dir) =>
+    fs
+      .readdirSync(path.join(ROOT, dir))
+      .filter((f) => f.endsWith('.json'))
+      .map((f) => path.join(ROOT, dir, f))
+  );
 
   it('read a real corpus, including a file that legitimately holds the bare host', () => {
     expect(sources.length).toBeGreaterThan(300);
-    expect(messages.length).toBeGreaterThanOrEqual(2);
+    expect(messages.length).toBeGreaterThanOrEqual(4);
     // DeepLinkRouter keeps the host as data; seeing it proves the reader works
     // and that the rule, not an exclusion, is what lets it through.
     const router = renderableText(

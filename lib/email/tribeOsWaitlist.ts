@@ -31,7 +31,8 @@ interface ConfirmationParams {
   email: string;
   whatTheyTeach: string;
   sessionsPerWeek: number | null;
-  pricingPreference: PricingPreference;
+  /** Null when the form did not ask (the T-SITE1 /tribe-os/ page shows no prices). */
+  pricingPreference: PricingPreference | null;
   language: 'en' | 'es';
 }
 
@@ -40,7 +41,8 @@ interface AdminNotificationParams extends ConfirmationParams {
   createdAt: string;
 }
 
-function pricingLabel(pref: PricingPreference, language: 'en' | 'es'): string {
+function pricingLabel(pref: PricingPreference | null, language: 'en' | 'es'): string | null {
+  if (pref === null) return null;
   if (language === 'es') {
     return pref === 'monthly_30' ? 'treinta dólares al mes' : 'quince por ciento de participación en ingresos';
   }
@@ -68,8 +70,8 @@ const confirmationCopy = {
   en: {
     subject: 'Welcome to the Tribe.OS waitlist',
     greeting: (name: string) => `Hi ${name},`,
-    body: (teaches: string, sessions: string, pricingText: string) =>
-      `Thanks for joining the Tribe.OS waitlist.\n\nYou signed up because you teach ${teaches} and run about ${sessions} sessions per week. Your pricing preference is ${pricingText}.\n\nWe are building Tribe.OS based on what instructors and group leaders are actually asking for. We will reach out as soon as we open early access. If you have ideas for what would help your business most, just reply to this email.\n\nIn the meantime, keep using the free Tribe app. Every session you post reaches participants you have not met yet.`,
+    body: (teaches: string, sessions: string, pricingText: string | null) =>
+      `Thanks for joining the Tribe.OS waitlist.\n\nYou signed up because you teach ${teaches} and run about ${sessions} sessions per week.${pricingText ? ` Your pricing preference is ${pricingText}.` : ''}\n\nWe are building Tribe.OS based on what instructors and group leaders are actually asking for. We will reach out as soon as we open early access. If you have ideas for what would help your business most, just reply to this email.\n\nIn the meantime, keep using the free Tribe app. Every session you post reaches participants you have not met yet.`,
     sign: 'Alain\nA Plus Fitness LLC',
     appStoreLabel: 'App Store',
     googlePlayLabel: 'Google Play',
@@ -78,8 +80,8 @@ const confirmationCopy = {
   es: {
     subject: 'Bienvenido a la lista de espera de Tribe.OS',
     greeting: (name: string) => `Hola ${name},`,
-    body: (teaches: string, sessions: string, pricingText: string) =>
-      `Gracias por unirte a la lista de espera de Tribe.OS.\n\nTe inscribiste porque enseñas ${teaches} y realizas alrededor de ${sessions} sesiones por semana. Tu preferencia de precios es ${pricingText}.\n\nEstamos construyendo Tribe.OS con base en lo que los instructores y líderes de grupo realmente están pidiendo. Te contactaremos en cuanto abramos el acceso anticipado. Si tienes ideas sobre qué ayudaría más a tu negocio, simplemente responde a este correo.\n\nMientras tanto, sigue usando la aplicación Tribe gratuita. Cada sesión que publicas llega a participantes que aún no conoces.`,
+    body: (teaches: string, sessions: string, pricingText: string | null) =>
+      `Gracias por unirte a la lista de espera de Tribe.OS.\n\nTe inscribiste porque enseñas ${teaches} y realizas alrededor de ${sessions} sesiones por semana.${pricingText ? ` Tu preferencia de precios es ${pricingText}.` : ''}\n\nEstamos construyendo Tribe.OS con base en lo que los instructores y líderes de grupo realmente están pidiendo. Te contactaremos en cuanto abramos el acceso anticipado. Si tienes ideas sobre qué ayudaría más a tu negocio, simplemente responde a este correo.\n\nMientras tanto, sigue usando la aplicación Tribe gratuita. Cada sesión que publicas llega a participantes que aún no conoces.`,
     sign: 'Alain\nA Plus Fitness LLC',
     appStoreLabel: 'App Store',
     googlePlayLabel: 'Google Play',
@@ -92,7 +94,8 @@ function renderConfirmationHtml(params: ConfirmationParams): string {
   const teaches = escapeHtml(params.whatTheyTeach);
   const name = escapeHtml(params.name);
   const sessions = escapeHtml(formatSessions(params.sessionsPerWeek, params.language));
-  const pricingText = escapeHtml(pricingLabel(params.pricingPreference, params.language));
+  const label = pricingLabel(params.pricingPreference, params.language);
+  const pricingText = label === null ? null : escapeHtml(label);
 
   const bodyParas = c
     .body(teaches, sessions, pricingText)
@@ -171,7 +174,7 @@ export async function sendTribeOsWaitlistAdminNotification(params: AdminNotifica
     `Email: ${params.email}`,
     `Teaches: ${params.whatTheyTeach}`,
     `Sessions per week: ${sessions}`,
-    `Pricing preference: ${pricingText}`,
+    `Pricing preference: ${pricingText ?? '(not asked)'}`,
     `Locale: ${params.language}`,
     `Comments: ${comments}`,
     '',

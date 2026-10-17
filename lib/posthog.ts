@@ -1,6 +1,19 @@
 import type { PostHog } from 'posthog-js';
 import type { Attribution } from './attribution';
 import { ATTR_TAG_FIELDS } from './attribution';
+import { cookieNames, hasAuthCookieName } from './site/authCookie';
+import { siteSlugOf } from './site/paths';
+
+/**
+ * T-SITE1 Part F: the marketing site is the page this visit started on.
+ * Signed-out `/` is the site (middleware serves Inicio there); with an auth
+ * cookie `/` is the feed.
+ */
+function startedOnMarketingSite(): boolean {
+  const slug = siteSlugOf(window.location.pathname);
+  if (slug === null) return false;
+  return slug !== '' || !hasAuthCookieName(cookieNames(document.cookie));
+}
 
 let posthogInstance: PostHog | null = null;
 let initPromise: Promise<PostHog | null> | null = null;
@@ -114,6 +127,9 @@ export async function initPostHog(): Promise<PostHog | null> {
           // Activity → Exceptions view. Pairs with lib/captureError.ts on
           // the server side. No separate Sentry vendor required.
           capture_exceptions: true,
+          // T-SITE1 Part F: no session replay on the marketing site (events are
+          // fine). Decided once, at init, from the page the visit started on.
+          ...(startedOnMarketingSite() ? { disable_session_recording: true } : {}),
         });
         posthogInstance = ph;
         for (const call of pendingCalls.splice(0)) runCall(ph, call);

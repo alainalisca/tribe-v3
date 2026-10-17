@@ -3,6 +3,9 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { athletesGateAllows, isAthletesGatedPath, GATED_NOT_FOUND_PATH } from '@/lib/features/athleteValueGate';
 import { canonicalLinkHeader } from '@/lib/seo/canonicalLink';
+import { hasAuthCookieName } from '@/lib/site/authCookie';
+import { LANGUAGE_COOKIE, languageFromCookie } from '@/lib/languageCookie';
+import { internalSitePath, publicPathForInternal, siteSlugOf } from '@/lib/site/paths';
 
 /**
  * Tribe middleware does three things, in order:
@@ -58,9 +61,16 @@ const publicPaths = [
   '/i', // public instructor share pages (/i/[id]) — must be viewable + scrapable without auth
   '/g', // public gym share pages (/g/[slug]) — bio-link destination; must be viewable + scrapable without auth
   '/pase', // T-LEAD1 digital pass (/pase/[slug]) -- the QR on a printed voucher; the visitor has no account and may never make one
-  '/about',
-  '/faq',
-  '/for-instructors',
+  // T-SITE1: the marketing site's pages. middleware() rewrites them to their
+  // prerendered app/sitio/[lang] page before this list is consulted; they are
+  // listed so the gate can never catch one if that rewrite is ever skipped.
+  '/para-atletas',
+  '/deportes',
+  '/coaches',
+  '/gimnasios',
+  '/tribe-os',
+  '/tv',
+  '/preguntas',
   '/download', // static app-download page (public/download/index.html) — must be reachable without auth
   '/_next',
   '/sw.js',
@@ -279,7 +289,9 @@ export function buildCsp(): string {
       "'self' blob: https://*.supabase.co https://*.cloudflarestream.com https://videodelivery.net"
     ),
     // *.cloudflarestream.com so the Stream iframe player remains an option.
-    'frame-src': "'self' https://vercel.live https://*.cloudflarestream.com",
+    // youtube-nocookie.com for the Tribe.TV player on the landing page
+    // (privacy-enhanced embed, mounted only after the visitor taps play).
+    'frame-src': "'self' https://vercel.live https://*.cloudflarestream.com https://www.youtube-nocookie.com",
     'object-src': "'none'",
     'base-uri': "'self'",
     'form-action': "'self'",
@@ -316,6 +328,28 @@ export async function middleware(request: NextRequest) {
   // Static asset short-circuit.
   if (pathname.match(/\.\w+$/)) {
     return applySecurityHeaders(NextResponse.next(), pathname);
+  }
+
+  // T-SITE1: the marketing site. Its pages are prerendered once per language
+  // under app/sitio/[lang]; the tribe_lang cookie (default Spanish) picks one and
+  // the URL never changes (lib/site/paths). `/` is the site only for a visitor
+  // with no Supabase auth cookie: everyone else gets the feed, app/page.tsx,
+  // which sends an expired session back here. Internal URLs and the old /inicio
+  // redirect to their public path, so each page has one address.
+  const publicForInternal = publicPathForInternal(pathname);
+  const oldInicio = pathname === '/inicio' || pathname === '/inicio/';
+  if (publicForInternal !== null || oldInicio) {
+    const target = request.nextUrl.clone();
+    target.pathname = publicForInternal ?? '/';
+    return applySecurityHeaders(NextResponse.redirect(target, 308), pathname);
+  }
+  const siteSlug = siteSlugOf(pathname);
+  if (siteSlug !== null && (siteSlug !== '' || !hasAuthCookieName(request.cookies.getAll().map((c) => c.name)))) {
+    const page = request.nextUrl.clone();
+    page.pathname = internalSitePath(siteSlug, languageFromCookie(request.cookies.get(LANGUAGE_COOKIE)?.value));
+    // No Vary: Cookie here: Next 16 overwrites Vary on page responses. Vercel caches
+    // the rewrite target, so each tribe_lang value is cached separately.
+    return applySecurityHeaders(NextResponse.rewrite(page), pathname);
   }
 
   // T-AV24: /atletas and /pase/verificar are gated on the athletes flag HERE,

@@ -3,10 +3,9 @@
 import { useEffect, useRef } from 'react';
 import { usePathname } from 'next/navigation';
 import { initPostHog } from '@/lib/posthog';
-import { createClient } from '@/lib/supabase/client';
 import { resetUserIfIdentified } from '@/lib/analytics';
-import { identifyCurrentUser } from '@/lib/analyticsIdentity';
 import { recordNavigation } from '@/lib/navigationSource';
+import { cookieNames, hasAuthCookieName } from '@/lib/site/authCookie';
 
 /** Auth events after which the signed-in user should be (re)identified. */
 const IDENTIFY_EVENTS = new Set(['INITIAL_SESSION', 'SIGNED_IN', 'USER_UPDATED']);
@@ -47,33 +46,66 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
     // so StrictMode's second mount is harmless.
     void initPostHog();
 
-    const supabase = createClient();
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
-      const user = session?.user ?? null;
-      currentUserId.current = user?.id ?? null;
+    // T-SITE1 Part F: supabase-js and the identify path are loaded here, not
+    // imported at the top, because this provider wraps every page, the
+    // marketing site included. With no Supabase auth cookie (a first visit)
+    // there is nobody to identify yet, so the listener waits for an idle moment
+    // instead of competing with the first paint. Subscribing later loses
+    // nothing: INITIAL_SESSION fires on subscribe with whatever session exists.
+    let cancelled = false;
+    let unsubscribe: (() => void) | null = null;
 
-      if (event === 'SIGNED_OUT') {
-        identifiedUserId.current = null;
-        resetUserIfIdentified();
-        return;
+    const subscribe = async () => {
+      const [{ createClient }, { identifyCurrentUser }] = await Promise.all([
+        import('@/lib/supabase/client'),
+        import('@/lib/analyticsIdentity'),
+      ]);
+      if (cancelled) return;
+      const supabase = createClient();
+      const {
+        data: { subscription },
+      } = supabase.auth.onAuthStateChange((event, session) => {
+        const user = session?.user ?? null;
+        currentUserId.current = user?.id ?? null;
+
+        if (event === 'SIGNED_OUT') {
+          identifiedUserId.current = null;
+          resetUserIfIdentified();
+          return;
+        }
+        if (!user || !IDENTIFY_EVENTS.has(event)) return;
+        // SIGNED_IN also fires on tab refocus; identify once per user unless the
+        // account itself changed.
+        if (identifiedUserId.current === user.id && event !== 'USER_UPDATED') return;
+
+        // Deferred: supabase-js runs this callback while holding its auth lock,
+        // and the identify path makes Supabase calls of its own.
+        setTimeout(() => {
+          void identifyCurrentUser(supabase, user, () => currentUserId.current === user.id).then((issued) => {
+            if (issued) identifiedUserId.current = user.id;
+          });
+        }, 0);
+      });
+      unsubscribe = () => subscription.unsubscribe();
+    };
+
+    let idleHandle: number | null = null;
+    if (hasAuthCookieName(cookieNames(document.cookie))) {
+      void subscribe();
+    } else if (typeof window.requestIdleCallback === 'function') {
+      idleHandle = window.requestIdleCallback(() => void subscribe(), { timeout: 4000 });
+    } else {
+      idleHandle = window.setTimeout(() => void subscribe(), 2000);
+    }
+
+    return () => {
+      cancelled = true;
+      if (idleHandle !== null) {
+        if (typeof window.cancelIdleCallback === 'function') window.cancelIdleCallback(idleHandle);
+        window.clearTimeout(idleHandle);
       }
-      if (!user || !IDENTIFY_EVENTS.has(event)) return;
-      // SIGNED_IN also fires on tab refocus; identify once per user unless the
-      // account itself changed.
-      if (identifiedUserId.current === user.id && event !== 'USER_UPDATED') return;
-
-      // Deferred: supabase-js runs this callback while holding its auth lock,
-      // and the identify path makes Supabase calls of its own.
-      setTimeout(() => {
-        void identifyCurrentUser(supabase, user, () => currentUserId.current === user.id).then((issued) => {
-          if (issued) identifiedUserId.current = user.id;
-        });
-      }, 0);
-    });
-
-    return () => subscription.unsubscribe();
+      unsubscribe?.();
+    };
   }, []);
 
   return <>{children}</>;
