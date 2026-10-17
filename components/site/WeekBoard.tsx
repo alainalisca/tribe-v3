@@ -53,22 +53,38 @@ export default function WeekBoard({ lang, rows }: { lang: SiteLanguage; rows: We
           );
           return (
             <li key={r.id}>
-              <Link className={w.row} href={`/s/${r.id}/`} aria-label={`${t('site.week.ask')}: ${title}`}>
-                <span className={w.day}>{daysLabel(r.weekdays, lang)}</span>
-                <span className={w.hr}>{r.startTime}</span>
+              {/* Named "<title>: pedir cupo" (Al, 2026-10-17), so the name starts with the
+                  visible title. The aria-label replaces the content for assistive tech,
+                  so the details around the title are aria-hidden: the visible text left
+                  (title, "Pedir cupo") is then contained in the name, as WCAG 2.5.3 asks. */}
+              <Link
+                className={w.row}
+                href={`/s/${r.id}/`}
+                aria-label={`${title}: ${t('site.week.ask').toLocaleLowerCase(lang)}`}
+              >
+                <span className={w.day} aria-hidden="true">
+                  {daysLabel(r.weekdays, lang)}
+                </span>
+                <span className={w.hr} aria-hidden="true">
+                  {r.startTime}
+                </span>
                 <span className={w.ses}>
                   {title}
-                  <span className={w.tags}>{tags}</span>
-                  <small>
+                  <span className={w.tags} aria-hidden="true">
+                    {tags}
+                  </span>
+                  <small aria-hidden="true">
                     {r.title && sport ? `${sport} · ` : ''}
                     {r.duration} min{r.price ? ` · ${formatPrice(r.price, lang)}` : ''}
                   </small>
                 </span>
-                <span className={w.loc}>
+                <span className={w.loc} aria-hidden="true">
                   {r.place}
                   <span className={w.tagsPhone}>{tags}</span>
                 </span>
-                <span className={w.who}>{r.creatorName}</span>
+                <span className={w.who} aria-hidden="true">
+                  {r.creatorName}
+                </span>
                 <span className={w.go}>
                   {t('site.week.ask')} <ArrowRight />
                 </span>
