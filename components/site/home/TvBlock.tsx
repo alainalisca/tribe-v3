@@ -37,7 +37,7 @@ export default function TvBlock({ lang }: { lang: SiteLanguage }) {
             href={youtubeWatchUrl(featured.id)}
             target="_blank"
             rel="noopener"
-            aria-label={`${t('watch')}: ${featured.title[lang]}`}
+            aria-label={`${t('watchEpisode')}: ${featured.title[lang]}`}
           >
             <Image src={featured.thumb} alt={featured.alt[lang]} fill sizes="(max-width: 900px) 100vw, 62vw" />
             <span className={v.play}>

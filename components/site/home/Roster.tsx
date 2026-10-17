@@ -85,24 +85,26 @@ export default function Roster({ lang }: { lang: SiteLanguage }) {
         </h2>
         <p className={b.phoneHide}>{t('site.home.rosterLede')}</p>
       </div>
-      <div className={s.roster} role="list">
+      <ul className={s.roster}>
         {COACHES.map((c) => (
-          <Link key={c.img} href={c.href} role="listitem">
-            <figure>
-              <Image
-                alt={t(`site.alt.${c.img}`)}
-                src={photo(c.img)}
-                fill
-                sizes="(max-width: 900px) 62vw, 25vw"
-                style={c.position ? { objectPosition: c.position } : undefined}
-              />
-            </figure>
-            <span className={`${b.mono} ${s.sport}`}>{c.sportKey ? t(c.sportKey) : c.sport}</span>
-            <h3>{c.name}</h3>
-            <p>{c.whereKey ? t(c.whereKey) : c.where}</p>
-          </Link>
+          <li key={c.img}>
+            <Link href={c.href}>
+              <figure>
+                <Image
+                  alt={t(`site.alt.${c.img}`)}
+                  src={photo(c.img)}
+                  fill
+                  sizes="(max-width: 900px) 62vw, 25vw"
+                  style={c.position ? { objectPosition: c.position } : undefined}
+                />
+              </figure>
+              <span className={`${b.mono} ${s.sport}`}>{c.sportKey ? t(c.sportKey) : c.sport}</span>
+              <h3>{c.name}</h3>
+              <p>{c.whereKey ? t(c.whereKey) : c.where}</p>
+            </Link>
+          </li>
         ))}
-      </div>
+      </ul>
       <p className={`${b.note} ${s.rosterNote}`}>{t('site.home.rosterNote')}</p>
     </section>
   );

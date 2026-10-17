@@ -30,8 +30,10 @@ export function generateStaticParams() {
   return SITE_LANGUAGES.map((lang) => ({ lang }));
 }
 
+// T-SITE1 Part F: Latin only (every Spanish and English character is in it;
+// latin-ext was a second 45 KB file preloaded ahead of the hero image).
 const display = Big_Shoulders({
-  subsets: ['latin', 'latin-ext'],
+  subsets: ['latin'],
   axes: ['opsz'],
   variable: '--font-site-disp',
   display: 'swap',
@@ -43,15 +45,17 @@ const display = Big_Shoulders({
 });
 
 const body = Instrument_Sans({
-  subsets: ['latin', 'latin-ext'],
+  subsets: ['latin'],
   variable: '--font-site-body',
   display: 'swap',
   fallback: ['Helvetica Neue', 'Arial', 'sans-serif'],
 });
 
+// Small mono labels only: not preloaded, so it never competes with the hero.
 const mono = JetBrains_Mono({
   subsets: ['latin'],
   weight: ['500', '700'],
+  preload: false,
   variable: '--font-site-mono',
   display: 'swap',
   fallback: ['ui-monospace', 'Menlo', 'monospace'],

@@ -76,7 +76,10 @@ beforeEach(() => {
   // document.cookie across tests, so it is cleared with localStorage.
   document.cookie = 'tribe_lang=; Path=/; Max-Age=0';
   setBrowserLanguages(['en-US']);
-  // Signed in by default, with no stored preference.
+  // Signed in by default, with no stored preference. T-SITE1: the provider only
+  // asks the account when a Supabase auth cookie exists, so "signed in" includes
+  // the cookie.
+  document.cookie = 'sb-test-auth-token=x; Path=/';
   mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } });
   mockMaybeSingle.mockResolvedValue({ data: { preferred_language: null } });
   mockUpdateUser.mockResolvedValue({ success: true });
@@ -134,6 +137,18 @@ describe('priority 2: the stored account preference', () => {
 
     await waitFor(() => expect(mockMaybeSingle).toHaveBeenCalled());
     expect(lang()).toBe('en');
+  });
+
+  it('a visitor with no auth cookie never loads supabase-js for this (T-SITE1)', async () => {
+    document.cookie = 'sb-test-auth-token=; Path=/; Max-Age=0';
+    setBrowserLanguages(['es-CO']);
+
+    renderProvider();
+
+    await waitFor(() => expect(lang()).toBe('es'));
+    await new Promise((r) => setTimeout(r, 20));
+    expect(mockGetUser).not.toHaveBeenCalled();
+    expect(mockFrom).not.toHaveBeenCalled();
   });
 
   it('does not query at all for a signed out visitor', async () => {

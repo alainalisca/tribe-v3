@@ -1,6 +1,9 @@
 'use client';
 
-import { domAnimation, LazyMotion, MotionConfig } from 'framer-motion';
+import { LazyMotion, MotionConfig } from 'framer-motion';
+
+/** framer-motion's DOM feature set, fetched after the first paint (T-SITE1 Part F). */
+const loadFeatures = () => import('framer-motion').then((mod) => mod.domAnimation);
 
 /**
  * Makes every framer-motion element honour the OS "reduce motion" setting.
@@ -17,7 +20,9 @@ import { domAnimation, LazyMotion, MotionConfig } from 'framer-motion';
  * It also loads framer-motion's feature set lazily. Two of the seven
  * consumers live in the root layout, so the full `motion` bundle was landing
  * in the chunk every route pays for. None of the seven uses drag, layout
- * projection or pan, so `domAnimation` covers all of them.
+ * projection or pan, so `domAnimation` covers all of them. Since T-SITE1 Part
+ * F the feature set is fetched asynchronously too (an animation that starts
+ * before it arrives simply runs once it has).
  *
  * `strict` is deliberate: it makes any stray `motion.*` component throw
  * rather than silently re-importing the full bundle and quietly undoing this.
@@ -25,7 +30,7 @@ import { domAnimation, LazyMotion, MotionConfig } from 'framer-motion';
  */
 export default function ReducedMotionProvider({ children }: { children: React.ReactNode }) {
   return (
-    <LazyMotion features={domAnimation} strict>
+    <LazyMotion features={loadFeatures} strict>
       <MotionConfig reducedMotion="user">{children}</MotionConfig>
     </LazyMotion>
   );

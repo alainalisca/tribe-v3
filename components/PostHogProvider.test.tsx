@@ -44,12 +44,20 @@ import { PostHogProvider } from './PostHogProvider';
 const ana = { id: 'u-ana', created_at: '2026-10-01T00:00:00Z' };
 const ben = { id: 'u-ben', created_at: '2026-10-02T00:00:00Z' };
 
-function renderProvider() {
-  return render(
+/**
+ * Render, then let the provider load supabase-js and subscribe (T-SITE1: the
+ * listener is imported lazily). With an auth cookie that happens at once.
+ */
+async function renderProvider() {
+  const result = render(
     <PostHogProvider>
       <p>child</p>
     </PostHogProvider>
   );
+  await act(async () => {
+    await vi.runAllTimersAsync();
+  });
+  return result;
 }
 
 /** Fire an auth event and let the deferred identify run. */
@@ -63,6 +71,8 @@ async function emit(event: string, user: typeof ana | null) {
 beforeEach(() => {
   vi.clearAllMocks();
   vi.useFakeTimers();
+  // Signed in unless a test says otherwise: the listener subscribes at once.
+  document.cookie = 'sb-test-auth-token=x; Path=/';
   authCallback = null;
   identifyCurrentUser.mockResolvedValue(true);
 });
@@ -72,42 +82,42 @@ afterEach(() => {
 });
 
 describe('PostHogProvider, part A', () => {
-  it('renders its children and starts the PostHog load', () => {
-    renderProvider();
+  it('renders its children and starts the PostHog load', async () => {
+    await renderProvider();
     expect(screen.getByText('child')).toBeInTheDocument();
     expect(initPostHog).toHaveBeenCalled();
   });
 
-  it('never captures a pageview of its own', () => {
-    renderProvider();
+  it('never captures a pageview of its own', async () => {
+    await renderProvider();
     expect(capture).not.toHaveBeenCalled();
   });
 });
 
 describe('PostHogProvider, part B: identity follows auth', () => {
   it('identifies on an authenticated load (INITIAL_SESSION)', async () => {
-    renderProvider();
+    await renderProvider();
     await emit('INITIAL_SESSION', ana);
     expect(identifyCurrentUser).toHaveBeenCalledOnce();
     expect(identifyCurrentUser.mock.calls[0][1]).toBe(ana);
   });
 
   it('identifies on a sign-in completed in the page (SIGNED_IN, the OAuth callback)', async () => {
-    renderProvider();
+    await renderProvider();
     await emit('INITIAL_SESSION', null);
     await emit('SIGNED_IN', ana);
     expect(identifyCurrentUser).toHaveBeenCalledOnce();
   });
 
   it('does nothing for a signed-out visitor', async () => {
-    renderProvider();
+    await renderProvider();
     await emit('INITIAL_SESSION', null);
     expect(identifyCurrentUser).not.toHaveBeenCalled();
     expect(resetUserIfIdentified).not.toHaveBeenCalled();
   });
 
   it('identifies once per user, not on every SIGNED_IN refocus or token refresh', async () => {
-    renderProvider();
+    await renderProvider();
     await emit('INITIAL_SESSION', ana);
     await emit('SIGNED_IN', ana);
     await emit('TOKEN_REFRESHED', ana);
@@ -115,14 +125,14 @@ describe('PostHogProvider, part B: identity follows auth', () => {
   });
 
   it('re-identifies when the account itself changes (USER_UPDATED)', async () => {
-    renderProvider();
+    await renderProvider();
     await emit('INITIAL_SESSION', ana);
     await emit('USER_UPDATED', ana);
     expect(identifyCurrentUser).toHaveBeenCalledTimes(2);
   });
 
   it('resets on sign-out, then identifies the next person on the device', async () => {
-    renderProvider();
+    await renderProvider();
     await emit('INITIAL_SESSION', ana);
     await emit('SIGNED_OUT', null);
     expect(resetUserIfIdentified).toHaveBeenCalledOnce();
@@ -134,7 +144,7 @@ describe('PostHogProvider, part B: identity follows auth', () => {
   it('tells the identify path when the user it is identifying has signed out', async () => {
     // The unverified-email path signs in and straight back out; the identify
     // started by SIGNED_IN must be able to see that before it lands.
-    renderProvider();
+    await renderProvider();
     await emit('SIGNED_IN', ana);
     const stillCurrent = identifyCurrentUser.mock.calls[0][2] as () => boolean;
     expect(stillCurrent()).toBe(true);
@@ -142,8 +152,25 @@ describe('PostHogProvider, part B: identity follows auth', () => {
     expect(stillCurrent()).toBe(false);
   });
 
-  it('unsubscribes from auth on unmount', () => {
-    const { unmount } = renderProvider();
+  it('with no auth cookie (a first visit), subscribes only once the page is idle (T-SITE1)', async () => {
+    document.cookie = 'sb-test-auth-token=; Path=/; Max-Age=0';
+    render(
+      <PostHogProvider>
+        <p>child</p>
+      </PostHogProvider>
+    );
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(500);
+    });
+    expect(authCallback).toBeNull();
+    await act(async () => {
+      await vi.runAllTimersAsync();
+    });
+    expect(authCallback).not.toBeNull();
+  });
+
+  it('unsubscribes from auth on unmount', async () => {
+    const { unmount } = await renderProvider();
     unmount();
     expect(unsubscribe).toHaveBeenCalled();
   });

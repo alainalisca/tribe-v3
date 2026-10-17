@@ -2,10 +2,19 @@
 
 import { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
 import { translations, Language, TranslationKey } from './translations';
-import { trackEvent } from '@/lib/analytics';
-import { createClient } from '@/lib/supabase/client';
-import { updateUser } from '@/lib/dal';
 import { readLanguageCookie, writeLanguageCookie } from '@/lib/languageCookie';
+import { cookieNames, hasAuthCookieName } from '@/lib/site/authCookie';
+
+/*
+ * T-SITE1 Part F. supabase-js, the data layer and analytics are imported where
+ * they are used, not at the top: this provider wraps every page, the marketing
+ * site included, and a static import put ~80 KB of them in front of every first
+ * paint. A visitor with no Supabase auth cookie has no account preference to
+ * read, so they never download them for this provider at all.
+ */
+function mightBeSignedIn(): boolean {
+  return typeof document !== 'undefined' && hasAuthCookieName(cookieNames(document.cookie));
+}
 
 interface LanguageContextType {
   language: Language;
@@ -97,7 +106,9 @@ function applyDocumentLanguage(lang: Language) {
  * than throwing inside a provider that wraps the whole app.
  */
 async function fetchStoredPreference(): Promise<Language | null> {
+  if (!mightBeSignedIn()) return null;
   try {
+    const { createClient } = await import('@/lib/supabase/client');
     const supabase = createClient();
     const { data } = await supabase.auth.getUser();
     if (!data.user) return null;
@@ -166,18 +177,23 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     applyDocumentLanguage(lang);
     if (typeof window !== 'undefined') persistLanguage(lang);
     if (previousLang !== lang) {
-      trackEvent('language_changed', { from: previousLang, to: lang });
+      void import('@/lib/analytics').then(({ trackEvent }) =>
+        trackEvent('language_changed', { from: previousLang, to: lang })
+      );
 
       // Persist the preference server-side so notification senders can honour it.
       // Fire-and-forget: a DB hiccup must not block the UI language switch.
-      const supabase = createClient();
-      supabase.auth.getUser().then(({ data }) => {
-        if (data.user) {
-          updateUser(supabase, data.user.id, { preferred_language: lang }).catch(() => {
+      if (mightBeSignedIn()) {
+        void Promise.all([import('@/lib/supabase/client'), import('@/lib/dal')])
+          .then(async ([{ createClient }, { updateUser }]) => {
+            const supabase = createClient();
+            const { data } = await supabase.auth.getUser();
+            if (data.user) await updateUser(supabase, data.user.id, { preferred_language: lang });
+          })
+          .catch(() => {
             // Intentionally silent — the localStorage value still works client-side.
           });
-        }
-      });
+      }
     }
   };
 
