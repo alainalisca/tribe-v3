@@ -60,21 +60,21 @@ describe('Inicio, "La semana" (T-SITE1 Part B)', () => {
     expect(ld.itemListElement).toHaveLength(2);
   });
 
-  it('each session row is ONE link named "<title>: pedir cupo" (EN "<title>: ask for a spot")', async () => {
+  it('each session row is ONE link, named by its visible text (no aria-label, WCAG 2.5.3)', async () => {
     fetchWeekBoard.mockResolvedValue([row(0), { ...row(1), title: 'WOD de los viernes' }]);
     const { board } = await renderInicio();
-    const named = within(board).getAllByRole('link', { name: /: pedir cupo$/ });
-    expect(named.map((l) => l.getAttribute('aria-label'))).toEqual([
-      'Boxeo con Coach0: pedir cupo',
-      'WOD de los viernes: pedir cupo',
-    ]);
+    const links = within(board).getAllByRole('link', { name: /Pedir cupo/ });
+    expect(links).toHaveLength(2);
+    for (const l of links) expect(l.hasAttribute('aria-label')).toBe(false);
+    expect(within(board).getByRole('link', { name: /Boxeo con Coach0.*Pedir cupo/ })).toBeTruthy();
+    expect(within(board).getByRole('link', { name: /WOD de los viernes.*Pedir cupo/ })).toBeTruthy();
     for (const li of board.querySelectorAll('li')) expect(li.querySelectorAll('a, button')).toHaveLength(1);
   });
 
   it('names the rows in English on the English page', async () => {
     fetchWeekBoard.mockResolvedValue([row(1)]);
     const { board } = await renderInicio('en');
-    expect(within(board).getByRole('link', { name: 'Boxing with Coach1: ask for a spot' })).toBeTruthy();
+    expect(within(board).getByRole('link', { name: /Boxing with Coach1.*Ask for a spot/ })).toBeTruthy();
   });
 
   it('gives every image a real alt; only the decorative ones are empty and hidden (Part C)', async () => {
