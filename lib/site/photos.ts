@@ -53,6 +53,7 @@ export const SITE_PHOTOS = {
   gym_page: '/site/gym_page.jpg',
   gym_coaches: '/site/gym_coaches.jpg',
   gym_pass: '/site/gym_pass.jpg',
+  gym_report: '/site/gym_report.jpg',
   os_photo: '/site/os_photo.jpg',
   sp_fuerza: '/site/sp_fuerza.jpg',
   sp_combate: '/site/sp_combate.jpg',

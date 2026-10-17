@@ -8,11 +8,13 @@ import { ArrowRight } from '../icons';
 import b from '../base.module.css';
 import p from './plans.module.css';
 
-const DELIVERABLES: { key: string; img: PhotoKey }[] = [
-  { key: 'get1', img: 'gym_page' },
-  { key: 'get2', img: 'gym_coaches' },
-  { key: 'get3', img: 'gym_pass' },
-  { key: 'get4', img: 'al_zona' },
+/** `cap`: the photo has a site.cap caption (T-SITE1.1 Part B). */
+const DELIVERABLES: { key: string; img: PhotoKey; cap: boolean }[] = [
+  { key: 'get1', img: 'gym_page', cap: true },
+  { key: 'get2', img: 'gym_coaches', cap: true },
+  { key: 'get3', img: 'gym_pass', cap: true },
+  // Zona de Combate's sign on the cage padding (Al, 2026-10-17): al_zona is Aliados' photo.
+  { key: 'get4', img: 'gym_report', cap: false },
 ];
 
 /**
@@ -44,7 +46,7 @@ export default function GymGrowth({ lang }: { lang: SiteLanguage }) {
                   sizes="(max-width: 860px) 50vw, 25vw"
                   {...faceProps(d.img)}
                 />
-                {d.img !== 'al_zona' && <span className={b.capTag}>{t(`site.cap.${d.img}`)}</span>}
+                {d.cap && <span className={b.capTag}>{t(`site.cap.${d.img}`)}</span>}
               </figure>
               <h3>{k(d.key)}</h3>
             </li>

@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, it, expect } from 'vitest';
 import { cookieNames, hasAuthCookieName } from './authCookie';
@@ -9,7 +9,7 @@ import { SPORTS_LIST } from '@/lib/sports';
 import { storeUrlFor, APP_STORE_URL, PLAY_STORE_URL } from './links';
 import { formatPrice, weekdayIndex } from './weekFormat';
 
-describe('site copy (messages/{es,en}.json, site.*)', () => {
+describe('site copy (messages/site/{es,en}.json)', () => {
   it('has the same keys in Spanish and English', () => {
     expect(siteKeys('en')).toEqual(siteKeys('es'));
   });
@@ -139,7 +139,7 @@ describe('no message file in the site client bundle', () => {
   it.each(clientFiles.map((f) => [f.replace(process.cwd() + '/', '')]))('%s imports no copy', (file) => {
     const src = readFileSync(join(process.cwd(), file), 'utf8');
     expect(src).not.toMatch(
-      /from ['"][^'"]*(messages\/(es|en)\.json|lib\/site\/(messages|i18n)|i18n\/useTranslations)['"]/
+      /from ['"][^'"]*(messages\/(site\/)?(es|en)\.json|lib\/site\/(messages|i18n)|i18n\/useTranslations)['"]/
     );
   });
 
@@ -147,5 +147,41 @@ describe('no message file in the site client bundle', () => {
     const pages = files.filter((f) => /app\/sitio\/.*(page|layout)\.tsx$/.test(f));
     expect(pages.length).toBeGreaterThanOrEqual(9);
     for (const f of pages) expect(clientFiles, f).not.toContain(f);
+  });
+});
+
+/**
+ * T-SITE1.1: the site's copy lives in messages/site/{es,en}.json, read only by
+ * lib/site/messages.ts. lib/i18n/useTranslations ships messages/{es,en}.json
+ * whole to every app page, and the site's copy there pushed the app's home
+ * page past CI's bundle budget.
+ */
+describe('site copy stays out of the app bundle', () => {
+  it('messages/{es,en}.json carry no "site" namespace', () => {
+    for (const lang of ['es', 'en']) {
+      const app = JSON.parse(readFileSync(join(process.cwd(), `messages/${lang}.json`), 'utf8'));
+      expect(Object.keys(app), lang).not.toContain('site');
+    }
+  });
+
+  it('only lib/site/messages.ts imports messages/site', () => {
+    const importers: string[] = [];
+    const walk = (dir: string) => {
+      for (const name of readdirSync(dir)) {
+        const p = join(dir, name);
+        if (name === 'node_modules' || name.startsWith('.')) continue;
+        if (statSync(p).isDirectory()) walk(p);
+        else if (/\.(tsx?|mjs|js)$/.test(name) && /messages\/site\//.test(readFileSync(p, 'utf8'))) importers.push(p);
+      }
+    };
+    for (const d of ['app', 'components', 'lib', 'hooks', 'contexts']) {
+      const dir = join(process.cwd(), d);
+      if (existsSync(dir)) walk(dir);
+    }
+    const real = importers
+      .map((p) => p.replace(process.cwd() + '/', ''))
+      .filter((p) => !/\.test\.tsx?$/.test(p))
+      .filter((p) => /from ['"][^'"]*messages\/site\//.test(readFileSync(join(process.cwd(), p), 'utf8')));
+    expect(real).toEqual(['lib/site/messages.ts']);
   });
 });

@@ -3,18 +3,23 @@
  * site renders its copy on the server (lib/site/i18n.ts) and no client
  * component may import this file (lib/site/site.test.ts enforces it).
  *
- * The copy lives in messages/{es,en}.json under "site.<page>". Lookup inside a
+ * The copy lives in messages/site/{es,en}.json, keyed "site.<page>" here.
+ * It is kept out of messages/{es,en}.json because lib/i18n/useTranslations
+ * ships those two files whole to the browser on every app page: the site's
+ * copy there cost the app's home page 35 KB and failed CI's bundle budget
+ * (T-SITE1.1). Nothing on the client imports these files (lib/site/site.test.ts
+ * enforces it). Lookup inside a
  * namespace is flat, exactly as in useTranslations. A key missing in English
  * falls back to Spanish (the site is written Spanish first); a key missing in
  * both renders the key, and lib/site/site.test.ts fails CI before that can
  * ship.
  */
-import en from '@/messages/en.json';
-import es from '@/messages/es.json';
+import en from '@/messages/site/en.json';
+import es from '@/messages/site/es.json';
 
 export type SiteLanguage = 'es' | 'en';
 type MessageNode = string | { [key: string]: MessageNode };
-const dicts: Record<SiteLanguage, MessageNode> = { es: es as MessageNode, en: en as MessageNode };
+const dicts: Record<SiteLanguage, MessageNode> = { es: { site: es as MessageNode }, en: { site: en as MessageNode } };
 
 function lookup(root: MessageNode, path: string[]): MessageNode | undefined {
   let node: MessageNode | undefined = root;
@@ -39,7 +44,7 @@ export function siteMessage(
   return out;
 }
 
-/** Every leaf under messages.<lang>.site, as dot paths. For the parity test. */
+/** Every leaf of messages/site/<lang>.json, as dot paths. For the parity test. */
 export function siteKeys(language: SiteLanguage): string[] {
   const out: string[] = [];
   const walk = (node: MessageNode | undefined, prefix: string) => {

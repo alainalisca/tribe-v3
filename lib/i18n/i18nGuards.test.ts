@@ -205,12 +205,30 @@ function spanishStrings(rel: string, src: string): { value: string; where: strin
   return out;
 }
 
-function flattenJson(obj: unknown, prefix = '', acc: { value: string; where: string }[] = []) {
+function flattenJson(
+  obj: unknown,
+  prefix = '',
+  acc: { value: string; where: string }[] = [],
+  file = 'messages/es.json'
+) {
   for (const [k, v] of Object.entries(obj as Record<string, unknown>)) {
-    if (typeof v === 'string') acc.push({ value: v, where: `messages/es.json: ${prefix}${k}` });
-    else if (v && typeof v === 'object') flattenJson(v, `${prefix}${k}.`, acc);
+    if (typeof v === 'string') acc.push({ value: v, where: `${file}: ${prefix}${k}` });
+    else if (v && typeof v === 'object') flattenJson(v, `${prefix}${k}.`, acc, file);
   }
   return acc;
+}
+
+/**
+ * Every Spanish message string: the app's messages/es.json and the marketing
+ * site's messages/site/es.json (T-SITE1.1 moved the site's copy there so the
+ * app does not ship it). Both are Tribe's Spanish, so both are guarded.
+ */
+function spanishMessages() {
+  const read = (rel: string) => JSON.parse(fs.readFileSync(path.join(ROOT, rel), 'utf8'));
+  return [
+    ...flattenJson(read('messages/es.json')),
+    ...flattenJson(read('messages/site/es.json'), 'site.', [], 'messages/site/es.json'),
+  ];
 }
 
 /**
@@ -405,9 +423,8 @@ describe('Spanish accents', () => {
   it('no Spanish string is missing an accent it must carry, in ANY of the four sources', () => {
     const offenders: string[] = [];
 
-    // (a) messages/es.json
-    const es = JSON.parse(fs.readFileSync(path.join(ROOT, 'messages/es.json'), 'utf8'));
-    const all = flattenJson(es);
+    // (a) messages/es.json, and the marketing site's messages/site/es.json (T-SITE1.1)
+    const all = [...spanishMessages()];
 
     // (b) (c) (d) the source tree
     for (const file of sourceFiles(ROOT)) {
@@ -584,7 +601,7 @@ describe('Spanish spelled both ways', () => {
   // Uses the module-level `spell` from the top-level beforeAll above; the
   // dictionary is loaded once for the file, not once per describe.
   function pairsInCorpus(): Map<string, string[]> {
-    const all = flattenJson(JSON.parse(fs.readFileSync(path.join(ROOT, 'messages/es.json'), 'utf8')));
+    const all = [...spanishMessages()];
     for (const file of sourceFiles(ROOT)) {
       const rel = path.relative(ROOT, file);
       // THE GUARD'S OWN VOCABULARY IS NOT TRIBE'S COPY. spanishAccents.ts holds

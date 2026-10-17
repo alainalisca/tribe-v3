@@ -10,8 +10,8 @@ const file = (key: PhotoKey) => join(process.cwd(), 'public', SITE_PHOTOS[key]);
 
 describe('site photos (Part C)', () => {
   it('has every key of the photo map (T-SITE1.1 Part B), minus the two Al dropped', () => {
-    // 35 photos + door_os, bb_w, fv_w, tv_wod, tv_wil, logo_w, hero_full.
-    expect(KEYS).toHaveLength(42);
+    // 36 photos + door_os, bb_w, fv_w, tv_wod, tv_wil, logo_w, hero_full.
+    expect(KEYS).toHaveLength(43);
     expect(KEYS).not.toContain('hero_tall');
     expect(KEYS).not.toContain('rowers');
   });
