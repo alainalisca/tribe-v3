@@ -1101,6 +1101,22 @@
       "cap1": "Boxeo · al aire libre",
       "cap2": "Argollas · BullBox",
       "cap3": "HYROX · BullBox"
+    },
+    "sports": {
+      "kicker": "Deportes",
+      "title1": "{n} deportes.",
+      "title2": "Una ciudad.",
+      "lede": "Todo lo que puedes encontrar y publicar en Tribe. ¿No ves el tuyo? Los coaches pueden publicar cualquier disciplina como \"Otro\".",
+      "strength": "Fuerza y box",
+      "combat": "Combate",
+      "endurance": "Resistencia",
+      "mind": "Cuerpo y mente",
+      "team": "Equipo y raqueta",
+      "street": "Calle",
+      "thisWeek": "{n} esta semana",
+      "yourSport": "Tu deporte",
+      "find": "Busca una sesión",
+      "publish": "¿Das clases de uno de estos? Publica gratis"
     }
   }
 }

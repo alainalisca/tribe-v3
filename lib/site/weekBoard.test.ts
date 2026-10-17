@@ -8,6 +8,7 @@ import {
   publicPlace,
   rowTitle,
   shortName,
+  sportCounts,
   type BoardSessionRow,
 } from './weekBoard';
 import { weekBoardJsonLd } from './weekJsonLd';
@@ -193,6 +194,26 @@ describe('never a street address', () => {
       expect(JSON.stringify(r)).not.toMatch(/Cra|Calle|#|apto/);
       expect(Object.keys(r)).not.toContain('location');
     }
+  });
+});
+
+describe('sport counts for Deportes', () => {
+  it("counts every upcoming occurrence per sport, with the board's own filters", () => {
+    const base = session().creator!;
+    const counts = sportCounts(
+      [
+        session({ sport: 'Boxing' }),
+        session({ sport: 'Boxing', recurring_parent_id: 'p1' }),
+        session({ sport: 'Yoga' }),
+        session({ sport: 'Yoga', status: 'cancelled' }),
+        session({ sport: 'Yoga', creator: { ...base, id: 'x', is_test_account: true } }),
+        session({ sport: 'Running', date: '2026-10-24' }),
+      ],
+      TODAY,
+      LAST,
+      NOW
+    );
+    expect(counts).toEqual({ Boxing: 2, Yoga: 1 });
   });
 });
 

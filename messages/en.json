@@ -1101,6 +1101,22 @@
       "cap1": "Boxing · outdoors",
       "cap2": "Rings · BullBox",
       "cap3": "HYROX · BullBox"
+    },
+    "sports": {
+      "kicker": "Sports",
+      "title1": "{n} sports.",
+      "title2": "One city.",
+      "lede": "Everything you can find and publish on Tribe. Don't see yours? Coaches can publish any discipline as \"Other\".",
+      "strength": "Strength and box",
+      "combat": "Combat",
+      "endurance": "Endurance",
+      "mind": "Mind and body",
+      "team": "Team and racket",
+      "street": "Street",
+      "thisWeek": "{n} this week",
+      "yourSport": "Your sport",
+      "find": "Find a session",
+      "publish": "Teach one of these? Publish for free"
     }
   }
 }

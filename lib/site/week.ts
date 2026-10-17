@@ -4,7 +4,7 @@ import { unstable_cache } from 'next/cache';
 import { logError } from '@/lib/logger';
 import { getServiceRoleClient } from '@/lib/supabase/admin';
 import { bogotaDateOffset, bogotaToday } from '@/lib/time/bogotaDate';
-import { buildWeekBoard, WEEK_BOARD_DAYS, type BoardSessionRow } from './weekBoard';
+import { buildWeekBoard, sportCounts, WEEK_BOARD_DAYS, type BoardSessionRow } from './weekBoard';
 import type { WeekRow } from './weekTypes';
 
 /**
@@ -17,8 +17,9 @@ import type { WeekRow } from './weekTypes';
  * needs, so a private column cannot ride along.
  *
  * ONE QUERY, CACHED. unstable_cache keyed by the Bogotá day, revalidated every
- * five minutes, and React's cache() so the ticker (layout) and the board (page)
- * share one result per render. The site segment also exports revalidate = 300.
+ * five minutes, and React's cache() so the ticker (layout), the board (Inicio),
+ * the soonest session (Para atletas) and the sport counts (Deportes) share one
+ * result per render. The site segment also exports revalidate = 300.
  *
  * NEVER THROWS. A missing key at build time or a database hiccup renders the
  * empty state (the "Publica la tuya" row), never an error page.
@@ -34,7 +35,10 @@ const QUERY_LIMIT = 300;
 
 export const WEEK_BOARD_REVALIDATE_SECONDS = 300;
 
-async function queryWeekBoard(today: string): Promise<WeekRow[]> {
+type WeekData = { rows: WeekRow[]; counts: Record<string, number> };
+const EMPTY: WeekData = { rows: [], counts: {} };
+
+async function queryWeek(today: string): Promise<WeekData> {
   const now = new Date();
   const lastDay = bogotaDateOffset(WEEK_BOARD_DAYS, now);
   const nowTime = now.toLocaleTimeString('en-GB', { timeZone: 'America/Bogota', hour12: false }).slice(0, 5);
@@ -50,21 +54,34 @@ async function queryWeekBoard(today: string): Promise<WeekRow[]> {
     .limit(QUERY_LIMIT);
   if (error) {
     logError(error, { action: 'site.fetchWeekBoard' });
-    return [];
+    return EMPTY;
   }
-  return buildWeekBoard((data ?? []) as unknown as BoardSessionRow[], today, lastDay, nowTime);
+  const raw = (data ?? []) as unknown as BoardSessionRow[];
+  return {
+    rows: buildWeekBoard(raw, today, lastDay, nowTime),
+    counts: sportCounts(raw, today, lastDay, nowTime),
+  };
 }
 
-/** The board's rows, at most eight, soonest first. Empty on any failure. */
-export const fetchWeekBoard = cache(async (): Promise<WeekRow[]> => {
+const fetchWeek = cache(async (): Promise<WeekData> => {
   const today = bogotaToday();
   try {
-    return await unstable_cache(() => queryWeekBoard(today), ['site-week-board', today], {
+    return await unstable_cache(() => queryWeek(today), ['site-week', today], {
       revalidate: WEEK_BOARD_REVALIDATE_SECONDS,
       tags: ['site-week-board'],
     })();
   } catch (error) {
     logError(error, { action: 'site.fetchWeekBoard' });
-    return [];
+    return EMPTY;
   }
 });
+
+/** The board's rows, at most eight, soonest first. Empty on any failure. */
+export async function fetchWeekBoard(): Promise<WeekRow[]> {
+  return (await fetchWeek()).rows;
+}
+
+/** Sessions this week per sport key (Deportes chips). Empty on any failure. */
+export async function fetchWeekSportCounts(): Promise<Record<string, number>> {
+  return (await fetchWeek()).counts;
+}

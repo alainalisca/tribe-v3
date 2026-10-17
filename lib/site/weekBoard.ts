@@ -218,6 +218,22 @@ export function buildWeekBoard(
   return pickVaried(collapseSeries(upcoming(rows, today, lastDay, nowTime)));
 }
 
+/**
+ * Sessions this week per sport key, for the Deportes page's "3 esta semana"
+ * chips: every upcoming occurrence that would qualify for the board (same
+ * window, same creator rules), before series are collapsed or eight picked.
+ */
+export function sportCounts(
+  rows: readonly BoardSessionRow[],
+  today: string,
+  lastDay: string,
+  nowTime: string
+): Record<string, number> {
+  const counts: Record<string, number> = {};
+  for (const r of upcoming(rows, today, lastDay, nowTime)) if (r.sport) counts[r.sport] = (counts[r.sport] ?? 0) + 1;
+  return counts;
+}
+
 /** The ticker's first two items: the two soonest rows, "Lun a vie 06:00" + "Boxeo con Salomón · El Poblado". */
 export function tickerLead(rows: readonly WeekRow[], lang: 'es' | 'en'): { id: string; tag: string; text: string }[] {
   return rows.slice(0, 2).map((r) => ({
