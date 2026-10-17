@@ -1,22 +1,19 @@
-'use client';
-
 import Image from 'next/image';
 import Link from 'next/link';
 import { EPISODES, UPCOMING_EPISODE, youtubeWatchUrl } from '@/lib/site/episodes';
-import { useSiteLanguage, useSiteT } from '@/lib/site/useSiteT';
+import { siteT, type SiteLanguage } from '@/lib/site/i18n';
 import { Play } from '../icons';
 import b from '../base.module.css';
 import v from './tv.module.css';
 
 /**
  * Inicio's Tribe.TV block: the newest episode as a screen, the list beside it.
- * Links out to YouTube; the in-page player lives on /tv. Client only because
- * episode titles are per-language fields of the episode record
- * (lib/site/episodes.ts), not messages.
+ * Links out to YouTube; the in-page player lives on /tv. Episode titles are
+ * per-language fields of the episode record (lib/site/episodes.ts), not messages.
  */
-export default function TvBlock() {
-  const lang = useSiteLanguage();
-  const t = useSiteT('site.home');
+export default function TvBlock({ lang }: { lang: SiteLanguage }) {
+  const tr = siteT(lang);
+  const t = (key: string) => tr(`site.home.${key}`);
   const [featured] = EPISODES;
   const meta = (e: (typeof EPISODES)[number]) => `${e.gym} · ${e.sport}`;
 

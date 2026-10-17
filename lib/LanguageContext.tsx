@@ -5,6 +5,7 @@ import { translations, Language, TranslationKey } from './translations';
 import { trackEvent } from '@/lib/analytics';
 import { createClient } from '@/lib/supabase/client';
 import { updateUser } from '@/lib/dal';
+import { readLanguageCookie, writeLanguageCookie } from '@/lib/languageCookie';
 
 interface LanguageContextType {
   language: Language;
@@ -27,15 +28,33 @@ function isLanguage(value: unknown): value is Language {
  * including the stored server preference, because it is the most recent thing
  * the user actually said. It is also what the pre-paint script in
  * app/layout.tsx reads, so the two must stay in step.
+ *
+ * T-SITE1: the `tribe_lang` cookie comes first. The marketing site renders on
+ * the server from it and its toggle writes it, so it is the most recent choice
+ * whenever the two differ. localStorage is the older home of the same choice
+ * and is copied into the cookie (see the provider) so returning users get their
+ * language on the site without choosing again.
  */
 export function readStoredLanguage(): Language | null {
   if (typeof window === 'undefined') return null;
+  const fromCookie = readLanguageCookie(document.cookie);
+  if (fromCookie) return fromCookie;
   try {
     const saved = window.localStorage.getItem(LANGUAGE_STORAGE_KEY);
     return isLanguage(saved) ? saved : null;
   } catch {
     // localStorage throws in private browsing on some Safari versions.
     return null;
+  }
+}
+
+/** Store a settled choice in both homes: the cookie (site and app) and localStorage (app). */
+function persistLanguage(lang: Language) {
+  writeLanguageCookie(lang);
+  try {
+    window.localStorage.setItem(LANGUAGE_STORAGE_KEY, lang);
+  } catch {
+    // Private browsing. The cookie and the in-memory value still hold.
   }
 }
 
@@ -113,6 +132,8 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     if (saved) {
       setLanguageState(saved);
       applyDocumentLanguage(saved);
+      // A choice stored before the cookie existed reaches the site from now on.
+      if (readLanguageCookie(document.cookie) !== saved) writeLanguageCookie(saved);
       return;
     }
 
@@ -128,13 +149,9 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
       if (explicitChoiceRef.current) return;
       setLanguageState(preferred);
       applyDocumentLanguage(preferred);
-      try {
-        // Cache it so this device resolves synchronously from now on and never
-        // shows the wrong language again while the profile loads.
-        window.localStorage.setItem(LANGUAGE_STORAGE_KEY, preferred);
-      } catch {
-        // Private browsing. The in-memory value is still correct for this visit.
-      }
+      // Cache it so this device resolves synchronously from now on and never
+      // shows the wrong language again while the profile loads.
+      persistLanguage(preferred);
     });
 
     return () => {
@@ -147,13 +164,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     explicitChoiceRef.current = true;
     setLanguageState(lang);
     applyDocumentLanguage(lang);
-    if (typeof window !== 'undefined') {
-      try {
-        window.localStorage.setItem(LANGUAGE_STORAGE_KEY, lang);
-      } catch {
-        // Private browsing; the choice still holds for this visit.
-      }
-    }
+    if (typeof window !== 'undefined') persistLanguage(lang);
     if (previousLang !== lang) {
       trackEvent('language_changed', { from: previousLang, to: lang });
 

@@ -43,6 +43,12 @@ const nextConfig: NextConfig = {
         destination: '/sessions',
         permanent: true,
       },
+      // T-SITE1: the old marketing pages, replaced by the Jornada site. 301 (not
+      // Next's default 308) because that is what the spec and old crawlers
+      // expect. `{/}?` matches with and without the trailing slash.
+      { source: '/for-instructors{/}?', destination: '/coaches/', statusCode: 301 },
+      { source: '/faq{/}?', destination: '/preguntas/', statusCode: 301 },
+      { source: '/about{/}?', destination: '/#manifiesto', statusCode: 301 },
     ];
   },
   async rewrites() {

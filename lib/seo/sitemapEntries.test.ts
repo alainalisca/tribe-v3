@@ -15,9 +15,13 @@ describe('buildSitemapEntries', () => {
   it('lists home, the static pages, partners, instructors and sessions on the canonical host', () => {
     expect(urls(INPUT)).toEqual([
       'https://tribelatam.com/',
-      'https://tribelatam.com/for-instructors/',
-      'https://tribelatam.com/about/',
-      'https://tribelatam.com/faq/',
+      'https://tribelatam.com/para-atletas/',
+      'https://tribelatam.com/coaches/',
+      'https://tribelatam.com/gimnasios/',
+      'https://tribelatam.com/deportes/',
+      'https://tribelatam.com/tv/',
+      'https://tribelatam.com/tribe-os/',
+      'https://tribelatam.com/preguntas/',
       'https://tribelatam.com/g/bullbox/',
       'https://tribelatam.com/i/11111111-1111-4111-8111-111111111111/',
       'https://tribelatam.com/s/22222222-2222-4222-8222-222222222222/',
@@ -36,8 +40,16 @@ describe('buildSitemapEntries', () => {
     expect(urls(INPUT).some((u) => u.includes('/pase/'))).toBe(false);
   });
 
+  it('lists none of the old marketing pages, which 301 to the site (T-SITE1)', () => {
+    for (const old of ['/for-instructors/', '/about/', '/faq/', '/inicio/', '/sitio/'])
+      expect(
+        urls(INPUT).some((u) => u.includes(old)),
+        old
+      ).toBe(false);
+  });
+
   it('still lists the static pages when every database section came back empty', () => {
-    expect(urls({ ...INPUT, partnerSlugs: [], instructorIds: [], sessions: [] })).toHaveLength(4);
+    expect(urls({ ...INPUT, partnerSlugs: [], instructorIds: [], sessions: [] })).toHaveLength(8);
   });
 });
 

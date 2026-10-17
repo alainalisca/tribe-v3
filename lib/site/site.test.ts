@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { describe, it, expect } from 'vitest';
 import { cookieNames, hasAuthCookieName } from './authCookie';
 import { siteKeys, siteMessage } from './messages';
+import { SITE_SLUGS } from './paths';
 import { storeUrlFor, APP_STORE_URL, PLAY_STORE_URL } from './links';
 import { formatPrice, weekdayIndex } from './weekFormat';
 
@@ -31,19 +32,29 @@ describe('site copy (messages/{es,en}.json, site.*)', () => {
       }
     };
     walk(join(process.cwd(), 'components/site'));
-    walk(join(process.cwd(), 'app/(site)'));
+    walk(join(process.cwd(), 'app/sitio'));
     const keys = new Set<string>();
     for (const f of files) {
       for (const m of readFileSync(f, 'utf8').matchAll(/["'](site\.[a-zA-Z0-9_.]+)["']/g)) keys.add(m[1]);
     }
     expect(keys.size).toBeGreaterThan(50);
-    // useSiteT('site.nav') names a namespace, not a message.
     const leaves = siteKeys('es').map((k) => `site.${k}`);
     const isNamespace = (key: string) => leaves.some((leaf) => leaf.startsWith(`${key}.`));
     for (const key of keys) {
       if (isNamespace(key)) continue;
       const i = key.lastIndexOf('.');
       expect(siteMessage('es', key.slice(0, i), key.slice(i + 1)), key).not.toBe(key);
+    }
+  });
+
+  it('has a stub heading, paragraph and metadata for every site page', () => {
+    for (const lang of ['es', 'en'] as const) {
+      for (const slug of SITE_SLUGS) {
+        for (const key of ['kicker', 'title', 'body'])
+          expect(siteMessage(lang, `site.pages.${slug}`, key), `${lang} ${slug}.${key}`).not.toMatch(/^site\./);
+        for (const key of ['title', 'description'])
+          expect(siteMessage(lang, `site.meta.${slug}`, key), `${lang} meta ${slug}.${key}`).not.toMatch(/^site\./);
+      }
     }
   });
 
@@ -85,5 +96,41 @@ describe('week board formatting', () => {
 
   it('formats COP without decimals', () => {
     expect(formatPrice({ cents: 2500000, currency: 'COP' }, 'es')).toMatch(/25\.000/);
+  });
+});
+
+/**
+ * Al's rule (2026-10-16): all marketing copy renders on the server; nothing
+ * from messages/*.json ships to the browser on site routes. A client component
+ * under the site takes its strings as props.
+ */
+describe('no message file in the site client bundle', () => {
+  const files: string[] = [];
+  const walk = (dir: string) => {
+    for (const name of readdirSync(dir)) {
+      const p = join(dir, name);
+      if (statSync(p).isDirectory()) walk(p);
+      else if (/\.tsx?$/.test(name) && !/\.test\./.test(name)) files.push(p);
+    }
+  };
+  walk(join(process.cwd(), 'components/site'));
+  walk(join(process.cwd(), 'app/sitio'));
+  const clientFiles = files.filter((f) => /^\s*['"]use client['"]/.test(readFileSync(f, 'utf8')));
+
+  it('found the client leaves (the scan read something)', () => {
+    expect(clientFiles.length).toBeGreaterThanOrEqual(4);
+  });
+
+  it.each(clientFiles.map((f) => [f.replace(process.cwd() + '/', '')]))('%s imports no copy', (file) => {
+    const src = readFileSync(join(process.cwd(), file), 'utf8');
+    expect(src).not.toMatch(
+      /from ['"][^'"]*(messages\/(es|en)\.json|lib\/site\/(messages|i18n)|i18n\/useTranslations)['"]/
+    );
+  });
+
+  it('no site page is a client component', () => {
+    const pages = files.filter((f) => /app\/sitio\/.*(page|layout)\.tsx$/.test(f));
+    expect(pages.length).toBeGreaterThanOrEqual(9);
+    for (const f of pages) expect(clientFiles, f).not.toContain(f);
   });
 });

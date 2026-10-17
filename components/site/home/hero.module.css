@@ -138,4 +138,17 @@
   .credit {
     display: none;
   }
+  .h1 {
+    font-size: 76px;
+  }
+  .hrow {
+    padding-block: 18px 28px;
+    gap: 18px;
+  }
+  .hrow p {
+    font-size: 17px;
+  }
+  .partners {
+    padding-block: 14px;
+  }
 }

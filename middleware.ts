@@ -4,6 +4,8 @@ import type { NextRequest } from 'next/server';
 import { athletesGateAllows, isAthletesGatedPath, GATED_NOT_FOUND_PATH } from '@/lib/features/athleteValueGate';
 import { canonicalLinkHeader } from '@/lib/seo/canonicalLink';
 import { hasAuthCookieName } from '@/lib/site/authCookie';
+import { LANGUAGE_COOKIE, languageFromCookie } from '@/lib/languageCookie';
+import { internalSitePath, publicPathForInternal, siteSlugOf } from '@/lib/site/paths';
 
 /**
  * Tribe middleware does three things, in order:
@@ -62,9 +64,9 @@ const publicPaths = [
   '/about',
   '/faq',
   '/for-instructors',
-  // T-SITE1: the marketing site. /inicio is the signed-out `/` (see the rewrite
-  // in middleware()); the rest are its pages.
-  '/inicio',
+  // T-SITE1: the marketing site's pages. middleware() rewrites them to their
+  // prerendered app/sitio/[lang] page before this list is consulted; they are
+  // listed so the gate can never catch one if that rewrite is ever skipped.
   '/para-atletas',
   '/deportes',
   '/coaches',
@@ -331,15 +333,24 @@ export async function middleware(request: NextRequest) {
     return applySecurityHeaders(NextResponse.next(), pathname);
   }
 
-  // T-SITE1: a visitor with no Supabase auth cookie gets the marketing site at
-  // `/`, prerendered, instead of app/page.tsx (a client page that shows a splash
-  // until auth resolves, then the old landing). The URL stays `/`. A cookie,
-  // valid or not, goes on to the feed, which resolves the session itself and
-  // sends a stale one back here. See lib/site/authCookie.
-  if (pathname === '/' && !hasAuthCookieName(request.cookies.getAll().map((c) => c.name))) {
-    const inicio = request.nextUrl.clone();
-    inicio.pathname = '/inicio/';
-    return applySecurityHeaders(NextResponse.rewrite(inicio), pathname);
+  // T-SITE1: the marketing site. Its pages are prerendered once per language
+  // under app/sitio/[lang]; the tribe_lang cookie (default Spanish) picks one and
+  // the URL never changes (lib/site/paths). `/` is the site only for a visitor
+  // with no Supabase auth cookie: everyone else gets the feed, app/page.tsx,
+  // which sends an expired session back here. Internal URLs and the old /inicio
+  // redirect to their public path, so each page has one address.
+  const publicForInternal = publicPathForInternal(pathname);
+  const oldInicio = pathname === '/inicio' || pathname === '/inicio/';
+  if (publicForInternal !== null || oldInicio) {
+    const target = request.nextUrl.clone();
+    target.pathname = publicForInternal ?? '/';
+    return applySecurityHeaders(NextResponse.redirect(target, 308), pathname);
+  }
+  const siteSlug = siteSlugOf(pathname);
+  if (siteSlug !== null && (siteSlug !== '' || !hasAuthCookieName(request.cookies.getAll().map((c) => c.name)))) {
+    const page = request.nextUrl.clone();
+    page.pathname = internalSitePath(siteSlug, languageFromCookie(request.cookies.get(LANGUAGE_COOKIE)?.value));
+    return applySecurityHeaders(NextResponse.rewrite(page), pathname);
   }
 
   // T-AV24: /atletas and /pase/verificar are gated on the athletes flag HERE,

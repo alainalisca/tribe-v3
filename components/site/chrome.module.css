@@ -239,3 +239,15 @@
   margin: 24px -2px -3.2vw;
   opacity: 0.97;
 }
+@media (max-width: 600px) {
+  .footer {
+    padding-top: 32px;
+  }
+  .fTop {
+    gap: 22px;
+    padding-bottom: 22px;
+  }
+  .giant {
+    margin-top: 16px;
+  }
+}

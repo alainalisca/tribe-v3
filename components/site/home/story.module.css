@@ -89,11 +89,29 @@
   color: var(--mute);
   font-size: 14.5px;
 }
+/* Phones: one row that scrolls sideways (T-SITE1 fixes, Inicio length). */
 @media (max-width: 900px) {
   .roster {
-    grid-template-columns: 1fr 1fr;
-    row-gap: 28px;
-    gap: 10px;
+    grid-template-columns: none;
+    grid-auto-flow: column;
+    grid-auto-columns: 62%;
+    gap: 12px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+    margin-inline: calc(-1 * clamp(16px, 3.2vw, 48px));
+    padding-inline: clamp(16px, 3.2vw, 48px);
+    scroll-padding-inline: clamp(16px, 3.2vw, 48px);
+  }
+  .roster::-webkit-scrollbar {
+    display: none;
+  }
+  .roster a {
+    scroll-snap-align: start;
+  }
+  .roster figure {
+    margin-bottom: 10px;
   }
 }
 
@@ -160,20 +178,16 @@
   grid-column: 1 / 6;
   grid-row: 1 / 3;
 }
-.m2 {
+.m5 {
   grid-column: 6 / 13;
   grid-row: 1 / 3;
 }
-.m5 {
-  grid-column: 1 / 6;
-  grid-row: 3 / 5;
-}
 .m3 {
-  grid-column: 6 / 9;
+  grid-column: 1 / 7;
   grid-row: 3 / 5;
 }
 .m4 {
-  grid-column: 9 / 13;
+  grid-column: 7 / 13;
   grid-row: 3 / 5;
 }
 .pillars {
@@ -203,39 +217,51 @@
   font-size: 15.5px;
 }
 @media (max-width: 860px) {
+  .essay {
+    padding-block: 52px;
+  }
   .top {
     grid-template-columns: 1fr;
+    gap: 16px;
+    margin-bottom: 22px;
   }
+  .top p {
+    font-size: 16px;
+  }
+  /* Phones: the four tiles as a 2x2 grid. */
   .mosaic {
-    grid-auto-rows: 150px;
+    grid-auto-rows: 140px;
+    gap: 6px;
   }
   .m1,
-  .m2,
+  .m3,
+  .m4,
   .m5 {
-    grid-column: 1 / 13;
-    grid-row: auto / span 2;
+    grid-column: auto / span 6;
+    grid-row: auto;
   }
-  .m3 {
-    grid-column: 1 / 7;
-    grid-row: auto / span 2;
-  }
-  .m4 {
-    grid-column: 7 / 13;
-    grid-row: auto / span 2;
+  .mosaic figcaption {
+    font-size: 9px;
+    padding: 5px 7px;
   }
   .pillars {
     grid-template-columns: 1fr;
+    margin-top: 26px;
+  }
+  .pillars div,
+  .pillars div + div {
+    padding: 14px 0 10px;
   }
   .pillars div + div {
-    padding-left: 0;
     border-left: 0;
     border-top: 1px solid var(--rule-d);
   }
-}
-@media (max-width: 640px) {
-  .m3,
-  .m4 {
-    display: none;
+  .pillars h3 {
+    font-size: 24px;
+    margin-bottom: 6px;
+  }
+  .pillars p {
+    font-size: 14.5px;
   }
 }
 
@@ -308,4 +334,126 @@
 }
 .over .acts {
   margin-top: 22px;
+}
+
+/* Phones: the manifesto and the closing photo, tighter (T-SITE1 fixes). */
+@media (max-width: 600px) {
+  .facts > div {
+    padding-block: 14px;
+  }
+  .facts b {
+    font-size: 40px;
+  }
+  .facts span {
+    font-size: 13.5px;
+  }
+  .rosterHead {
+    margin-top: 36px;
+  }
+  .mani {
+    padding-block: 52px;
+  }
+  .mani h2 {
+    font-size: 52px;
+  }
+  .row2 {
+    margin-top: 22px;
+    padding-top: 16px;
+    gap: 18px;
+  }
+  .row2 p {
+    font-size: 16px;
+  }
+  .hook {
+    margin-top: 18px;
+  }
+  .closeIm {
+    height: 220px;
+  }
+  .over {
+    padding-top: 44px;
+    padding-bottom: 28px;
+  }
+  .over h2 {
+    font-size: 50px;
+  }
+}
+@media (max-width: 600px) {
+  /* The four facts in one row. */
+  .facts {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  .facts > div,
+  .facts > div + div,
+  .facts > div:nth-child(3) {
+    padding: 12px 6px 12px 0;
+    gap: 4px;
+  }
+  .facts > div + div {
+    padding-left: 8px;
+    border-left: 1px solid var(--rule);
+  }
+  .facts > div:nth-child(n + 3) {
+    border-top: 0;
+  }
+  .facts b {
+    font-size: 30px;
+  }
+  .facts span {
+    font-size: 11.5px;
+    line-height: 1.3;
+  }
+  .roster {
+    grid-auto-columns: 48%;
+  }
+  .roster h3 {
+    font-size: 24px;
+  }
+  .roster p {
+    font-size: 13px;
+  }
+}
+@media (max-width: 600px) {
+  .storeText,
+  .rosterNote {
+    display: none;
+  }
+  .essay {
+    padding-block: 40px;
+  }
+  .essay h2 {
+    font-size: 48px;
+  }
+  .top p {
+    font-size: 15px;
+  }
+  .pillars p {
+    font-size: 13.5px;
+  }
+  .mani {
+    padding-block: 40px;
+  }
+  .mani h2 {
+    font-size: 46px;
+  }
+  .over {
+    padding-top: 36px;
+  }
+  .over h2 {
+    font-size: 44px;
+  }
+}
+@media (max-width: 600px) {
+  /* Pillars as three titled lines; the bodies are on desktop and /para-atletas/. */
+  .pillars p {
+    display: none;
+  }
+  .pillars div,
+  .pillars div + div {
+    padding: 10px 0;
+  }
+  .pillars h3 {
+    font-size: 22px;
+    margin-bottom: 0;
+  }
 }

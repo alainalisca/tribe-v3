@@ -1,55 +1,49 @@
 import type { ReactNode } from 'react';
+import { EPISODES } from '@/lib/site/episodes';
 import { coachPlansEnabled } from '@/lib/site/flags';
-import LatestEpisodeTitle from './LatestEpisodeTitle';
+import { siteT, type SiteLanguage } from '@/lib/site/i18n';
 import MarketingSurfaceMarker from './MarketingSurfaceMarker';
 import SiteFooter from './SiteFooter';
 import SiteNav from './SiteNav';
-import { T } from './T';
 import Ticker, { type TickerItem } from './Ticker';
 import b from './base.module.css';
 
 /**
  * T-SITE1 Part A. The marketing site's frame: ticker, sticky nav, page, footer.
- * Replaces components/marketing/MarketingLayout for the (site) routes.
+ * Replaces components/marketing/MarketingLayout for the site routes.
  *
  * `lead` is the ticker's first two items, which come from the live week board
- * (Part B); a page without the board passes none and the ticker keeps its three
- * static items.
+ * (Part B); without them the ticker keeps its three static items.
  */
 export default function SiteLayout({
   children,
+  lang,
   fontClassName,
   lead = [],
 }: {
   children: ReactNode;
+  lang: SiteLanguage;
   fontClassName: string;
   lead?: TickerItem[];
 }) {
+  const t = siteT(lang);
   const plans = coachPlansEnabled();
   const ticker: TickerItem[] = [
     ...lead.slice(0, 2),
-    {
-      id: 'tv',
-      tag: <T k="site.ticker.tvTag" />,
-      text: (
-        <>
-          Tribe.TV · <LatestEpisodeTitle />
-        </>
-      ),
-    },
+    { id: 'tv', tag: t('site.ticker.tvTag'), text: `Tribe.TV · ${EPISODES[0]?.title[lang] ?? ''}` },
     plans
-      ? { id: 'plans', tag: <T k="site.ticker.plansTag" />, text: <T k="site.ticker.plansText" /> }
-      : { id: 'os', tag: <T k="site.ticker.osTag" />, text: <T k="site.ticker.osText" /> },
-    { id: 'sports', tag: '22', text: <T k="site.ticker.sportsText" /> },
+      ? { id: 'plans', tag: t('site.ticker.plansTag'), text: t('site.ticker.plansText') }
+      : { id: 'os', tag: t('site.ticker.osTag'), text: t('site.ticker.osText') },
+    { id: 'sports', tag: '22', text: t('site.ticker.sportsText') },
   ];
 
   return (
-    <div className={`${b.site} ${fontClassName}`}>
+    <div className={`${b.site} ${fontClassName}`} lang={lang}>
       <MarketingSurfaceMarker />
       <Ticker items={ticker} />
-      <SiteNav />
+      <SiteNav lang={lang} />
       <main id="contenido">{children}</main>
-      <SiteFooter plansEnabled={plans} />
+      <SiteFooter lang={lang} plansEnabled={plans} />
     </div>
   );
 }

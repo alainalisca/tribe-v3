@@ -709,7 +709,10 @@
       "tv": "Tribe.TV",
       "signIn": "Sign in",
       "download": "Get the app",
-      "myFeed": "Go to my Tribe home"
+      "myFeed": "Go to my Tribe home",
+      "homeAria": "Tribe, home",
+      "mainAria": "Main",
+      "subAria": "Sections"
     },
     "ticker": {
       "tvTag": "New",
@@ -732,12 +735,41 @@
       "contact": "Contact",
       "terms": "Terms",
       "privacy": "Privacy",
-      "dataPolicy": "Data processing policy"
+      "dataPolicy": "Data processing policy",
+      "navAria": "Footer"
     },
     "meta": {
       "home": {
         "title": "Tribe · Never train alone in Medellín",
         "description": "Find sessions for your sport in your neighborhood, train with real coaches and come back every week to a group that expects you. Free on iOS and Android."
+      },
+      "para-atletas": {
+        "title": "Athletes · Tribe",
+        "description": "Find sessions for your sport in your neighborhood, ask for your spot and come back every week to a group that expects you. Tribe is free for athletes."
+      },
+      "deportes": {
+        "title": "Sports · Tribe",
+        "description": "Strength, combat, endurance, and mind and body. Pick your sport and see who is training this week in Medellín."
+      },
+      "coaches": {
+        "title": "Coaches · Tribe",
+        "description": "Publish your classes, take bookings and build a group that comes back every week. Tribe charges no commission; athletes pay the instructor directly."
+      },
+      "gimnasios": {
+        "title": "Gyms · Tribe",
+        "description": "No posts. No likes. New people walking through the door."
+      },
+      "tribe-os": {
+        "title": "Tribe.OS · Tribe",
+        "description": "Clients, programs and attendance in one place, built for the coaches and gyms of Medellín. It is in development."
+      },
+      "tv": {
+        "title": "Tribe.TV · Tribe",
+        "description": "Episodes filmed in Tribe classes in Medellín: the WOD at BullBox, MMA at Zona de Combate and what comes next."
+      },
+      "preguntas": {
+        "title": "Frequently asked questions · Tribe",
+        "description": "How Tribe works, what it costs and how payment works. Tribe charges no commission; athletes pay the instructor directly. Another question? Write to info@tribelatam.com."
       }
     },
     "alt": {
@@ -756,7 +788,6 @@
       "pad_tall": "Salomón holding focus mitts in an evening class",
       "ro_wil": "Coach Wil in his outdoor class in Ciudad del Río",
       "mos1": "A coach explaining the workout on the BullBox whiteboard",
-      "rowers": "Athletes shaking hands after a session",
       "barbell": "Chalked hands gripping a barbell",
       "mos4": "Andrés and Juan bumping fists after the WOD",
       "mos5": "A coach and an athlete talking between sets at BullBox"
@@ -813,7 +844,6 @@
       "essayTitle2": "are the plan.",
       "essayLede": "Tribe is not another workout app. It is how you find your people to train with in Medellín: the coach who corrects you, the group that expects you and the next session already on your calendar.",
       "cap_mos1": "The whiteboard · BullBox",
-      "cap_rowers": "End of the session",
       "cap_barbell": "The bar",
       "cap_mos4": "After the WOD · BullBox",
       "cap_mos5": "Between sets · BullBox",
@@ -851,6 +881,43 @@
       "publishTitle": "Post yours",
       "publishBody": "Teach in Medellín? Post your session for free and show up here.",
       "publishGo": "For coaches"
+    },
+    "pages": {
+      "para-atletas": {
+        "kicker": "Athletes",
+        "title": "Train with your people.",
+        "body": "Find sessions for your sport in your neighborhood, ask for your spot and come back every week to a group that expects you. Tribe is free for athletes."
+      },
+      "deportes": {
+        "kicker": "Sports",
+        "title": "22 sports, one app.",
+        "body": "Strength, combat, endurance, and mind and body. Pick your sport and see who is training this week in Medellín."
+      },
+      "coaches": {
+        "kicker": "Coaches",
+        "title": "Fill your group.",
+        "body": "Publish your classes, take bookings and build a group that comes back every week. Tribe charges no commission; athletes pay the instructor directly."
+      },
+      "gimnasios": {
+        "kicker": "Gyms",
+        "title": "Your gym, fuller.",
+        "body": "No posts. No likes. New people walking through the door."
+      },
+      "tribe-os": {
+        "kicker": "Tribe.OS · In development",
+        "title": "The system for coaches and gyms.",
+        "body": "Clients, programs and attendance in one place, built for the coaches and gyms of Medellín. It is in development."
+      },
+      "tv": {
+        "kicker": "Tribe.TV",
+        "title": "Real workouts, real coaches.",
+        "body": "Episodes filmed in Tribe classes in Medellín: the WOD at BullBox, MMA at Zona de Combate and what comes next."
+      },
+      "preguntas": {
+        "kicker": "Questions",
+        "title": "Frequently asked questions.",
+        "body": "How Tribe works, what it costs and how payment works. Tribe charges no commission; athletes pay the instructor directly. Another question? Write to info@tribelatam.com."
+      }
     }
   }
 }

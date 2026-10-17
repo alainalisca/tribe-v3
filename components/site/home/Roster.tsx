@@ -1,13 +1,15 @@
+import Image from 'next/image';
 import Link from 'next/link';
 import { EPISODES } from '@/lib/site/episodes';
-import { SiteImage, T } from '../T';
+import { siteT, type SiteLanguage } from '@/lib/site/i18n';
 import b from '../base.module.css';
 import s from './story.module.css';
 
 /**
  * Coaches with name and face. Names, handles and places are proper nouns, the
  * same in both languages; the sport line and alt text are translated.
- * pad_tall is the one Salomón photo allowed on Inicio.
+ * pad_tall is the one Salomón photo allowed on Inicio. Four across on desktop,
+ * a horizontal scroller on phones.
  */
 type Coach = {
   img: string;
@@ -20,10 +22,35 @@ type Coach = {
   position?: string;
 };
 const COACHES: Coach[] = [
-  { img: 'ro_andres', sport: 'CrossFit · HYROX', name: 'Andrés Varón', where: 'BullBox · Ciudad del Río', href: '/coaches/' },
-  { img: 'ro_alex', sportKey: 'site.home.sportYoga', name: 'Alexandra Aguirre', where: 'El Poblado · Envigado · @aleyoga_med', href: '/coaches/' },
-  { img: 'pad_tall', sportKey: 'site.home.sportBoxMuay', name: 'Salomón Tabares', whereKey: 'site.home.whereSalomon', href: '/coaches/', position: 'center 25%' },
-  { img: 'ro_wil', sportKey: 'site.home.sportCombat', name: 'Profe Wil', where: 'Zona de Combate · @fightwil', href: '/tv/' },
+  {
+    img: 'ro_andres',
+    sport: 'CrossFit · HYROX',
+    name: 'Andrés Varón',
+    where: 'BullBox · Ciudad del Río',
+    href: '/coaches/',
+  },
+  {
+    img: 'ro_alex',
+    sportKey: 'site.home.sportYoga',
+    name: 'Alexandra Aguirre',
+    where: 'El Poblado · Envigado · @aleyoga_med',
+    href: '/coaches/',
+  },
+  {
+    img: 'pad_tall',
+    sportKey: 'site.home.sportBoxMuay',
+    name: 'Salomón Tabares',
+    whereKey: 'site.home.whereSalomon',
+    href: '/coaches/',
+    position: 'center 25%',
+  },
+  {
+    img: 'ro_wil',
+    sportKey: 'site.home.sportCombat',
+    name: 'Profe Wil',
+    where: 'Zona de Combate · @fightwil',
+    href: '/tv/',
+  },
 ];
 
 const FACTS = [
@@ -32,58 +59,49 @@ const FACTS = [
   { value: String(EPISODES.length), key: 'factEpisodes' },
 ] as const;
 
-export default function Roster() {
+export default function Roster({ lang }: { lang: SiteLanguage }) {
+  const t = siteT(lang);
   return (
     <section className={`${b.sec} ${b.g}`} aria-labelledby="coaches-titulo">
       <div className={s.facts}>
         {FACTS.map((f) => (
           <div key={f.key}>
             <b>{f.value}</b>
-            <span>
-              <T k={`site.home.${f.key}`} />
-            </span>
+            <span>{t(`site.home.${f.key}`)}</span>
           </div>
         ))}
         <div>
-          <b>
-            <T k="site.home.factFreeValue" />
-          </b>
-          <span>
-            <T k="site.home.factFree" />
-          </span>
+          <b>{t('site.home.factFreeValue')}</b>
+          <span>{t('site.home.factFree')}</span>
         </div>
       </div>
       <div className={`${b.sh} ${s.rosterHead}`}>
         <h2 id="coaches-titulo" className={b.disp}>
-          <T k="site.home.rosterTitle1" />
+          {t('site.home.rosterTitle1')}
           <br />
-          <T k="site.home.rosterTitle2" />
+          {t('site.home.rosterTitle2')}
         </h2>
-        <p>
-          <T k="site.home.rosterLede" />
-        </p>
+        <p>{t('site.home.rosterLede')}</p>
       </div>
-      <div className={s.roster}>
+      <div className={s.roster} role="list">
         {COACHES.map((c) => (
-          <Link key={c.img} href={c.href}>
+          <Link key={c.img} href={c.href} role="listitem">
             <figure>
-              <SiteImage
-                altKey={`site.alt.${c.img}`}
+              <Image
+                alt={t(`site.alt.${c.img}`)}
                 src={`/site/${c.img}.jpg`}
                 fill
-                sizes="(max-width: 900px) 50vw, 25vw"
+                sizes="(max-width: 900px) 62vw, 25vw"
                 style={c.position ? { objectPosition: c.position } : undefined}
               />
             </figure>
-            <span className={`${b.mono} ${s.sport}`}>{c.sportKey ? <T k={c.sportKey} /> : c.sport}</span>
+            <span className={`${b.mono} ${s.sport}`}>{c.sportKey ? t(c.sportKey) : c.sport}</span>
             <h3>{c.name}</h3>
-            <p>{c.whereKey ? <T k={c.whereKey} /> : c.where}</p>
+            <p>{c.whereKey ? t(c.whereKey) : c.where}</p>
           </Link>
         ))}
       </div>
-      <p className={b.note}>
-        <T k="site.home.rosterNote" />
-      </p>
+      <p className={`${b.note} ${s.rosterNote}`}>{t('site.home.rosterNote')}</p>
     </section>
   );
 }

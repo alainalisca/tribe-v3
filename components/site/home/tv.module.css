@@ -155,3 +155,29 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Phones (T-SITE1 fixes, Inicio length): the featured episode only; the list
+   and the Tribe.OS band live on /tv/ and /tribe-os/ (the OS door links there). */
+@media (max-width: 600px) {
+  .tv {
+    padding-block: 52px;
+  }
+  .tvhead {
+    margin-bottom: 18px;
+    padding-bottom: 14px;
+  }
+  .list {
+    display: none;
+  }
+  .subs {
+    margin-top: 16px;
+  }
+  .osband {
+    display: none;
+  }
+}
+@media (max-width: 600px) {
+  .tv {
+    padding-block: 40px;
+  }
+}

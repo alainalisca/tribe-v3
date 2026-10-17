@@ -142,10 +142,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             copy is React state, so the first server rendered frame is still
             the default until the provider hydrates. This CORRECTS the document
             language when the stored choice differs from the static value the
-            document was served with. */}
+            document was served with. T-SITE1: the tribe_lang cookie
+            (lib/languageCookie) is read first, as readStoredLanguage() does. */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var l=localStorage.getItem('language');if(l==='en'||l==='es'){document.documentElement.lang=l;}}catch(e){}})();`,
+            __html: `(function(){try{var m=document.cookie.match(/(?:^|; *)tribe_lang=(en|es)(?:;|$)/);var l=m?m[1]:localStorage.getItem('language');if(l==='en'||l==='es'){document.documentElement.lang=l;}}catch(e){}})();`,
           }}
         />
         <link rel="manifest" href="/manifest.json" />

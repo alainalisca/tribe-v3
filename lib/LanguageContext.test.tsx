@@ -72,6 +72,9 @@ beforeEach(() => {
   mockSelect.mockClear();
   vi.clearAllMocks();
   localStorage.clear();
+  // T-SITE1: the tribe_lang cookie is the choice's other home; jsdom keeps
+  // document.cookie across tests, so it is cleared with localStorage.
+  document.cookie = 'tribe_lang=; Path=/; Max-Age=0';
   setBrowserLanguages(['en-US']);
   // Signed in by default, with no stored preference.
   mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } });
@@ -152,6 +155,47 @@ describe('priority 2: the stored account preference', () => {
 });
 
 describe('priority 1: an explicit choice outranks the account', () => {
+  it('the tribe_lang cookie (the site toggle) wins over localStorage and skips the query', async () => {
+    document.cookie = 'tribe_lang=es; Path=/';
+    localStorage.setItem('language', 'en');
+    mockMaybeSingle.mockResolvedValue({ data: { preferred_language: 'en' } });
+
+    renderProvider();
+
+    await waitFor(() => expect(lang()).toBe('es'));
+    expect(mockGetUser).not.toHaveBeenCalled();
+  });
+
+  it('copies an older localStorage choice into the cookie, so the site follows it', async () => {
+    localStorage.setItem('language', 'en');
+
+    renderProvider();
+
+    await waitFor(() => expect(lang()).toBe('en'));
+    expect(document.cookie).toContain('tribe_lang=en');
+  });
+
+  it('writes the cookie on an explicit change', async () => {
+    setBrowserLanguages(['es-CO']);
+    renderProvider();
+    await waitFor(() => expect(lang()).toBe('es'));
+
+    fireEvent.click(screen.getByText('to-en'));
+
+    expect(document.cookie).toContain('tribe_lang=en');
+    expect(localStorage.getItem('language')).toBe('en');
+  });
+
+  it('does not write the cookie for a browser-locale guess', async () => {
+    setBrowserLanguages(['en-US']);
+    mockGetUser.mockResolvedValue({ data: { user: null } });
+
+    renderProvider();
+
+    await waitFor(() => expect(lang()).toBe('en'));
+    expect(document.cookie).not.toContain('tribe_lang=');
+  });
+
   it('a saved localStorage choice wins and skips the query entirely', async () => {
     localStorage.setItem('language', 'en');
     mockMaybeSingle.mockResolvedValue({ data: { preferred_language: 'es' } });

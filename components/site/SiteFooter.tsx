@@ -1,14 +1,15 @@
 import Image from 'next/image';
 import Link from 'next/link';
+import { siteT, type SiteLanguage } from '@/lib/site/i18n';
 import { APP_STORE_URL, CONTACT_EMAIL, PLAY_STORE_URL } from '@/lib/site/links';
 import LanguageToggle from './LanguageToggle';
-import { T } from './T';
 import b from './base.module.css';
 import c from './chrome.module.css';
 
 type FooterLink = { k: string; href: string; external?: boolean };
 
-export default function SiteFooter({ plansEnabled }: { plansEnabled: boolean }) {
+export default function SiteFooter({ lang, plansEnabled }: { lang: SiteLanguage; plansEnabled: boolean }) {
+  const t = siteT(lang);
   const product: FooterLink[] = [
     { k: 'athletes', href: '/para-atletas/' },
     { k: 'coaches', href: '/coaches/' },
@@ -26,20 +27,14 @@ export default function SiteFooter({ plansEnabled }: { plansEnabled: boolean }) 
 
   const column = (titleKey: string, links: FooterLink[]) => (
     <div>
-      <h3>
-        <T k={`site.footer.${titleKey}`} />
-      </h3>
+      <h3>{t(`site.footer.${titleKey}`)}</h3>
       <ul>
         {links.map((l) => (
           <li key={l.k}>
             {l.external ? (
-              <a href={l.href}>
-                <T k={`site.footer.${l.k}`} />
-              </a>
+              <a href={l.href}>{t(`site.footer.${l.k}`)}</a>
             ) : (
-              <Link href={l.href}>
-                <T k={`site.footer.${l.k}`} />
-              </Link>
+              <Link href={l.href}>{t(`site.footer.${l.k}`)}</Link>
             )}
           </li>
         ))}
@@ -53,11 +48,9 @@ export default function SiteFooter({ plansEnabled }: { plansEnabled: boolean }) 
         <div className={c.fTop}>
           <div className={c.fBrand}>
             <Image className={c.logo} src="/tribe-wordmark.png" alt="Tribe" width={85} height={28} sizes="85px" />
-            <p>
-              <T k="site.footer.tagline" />
-            </p>
+            <p>{t('site.footer.tagline')}</p>
           </div>
-          <nav className={c.fCols} aria-label="Footer">
+          <nav className={c.fCols} aria-label={t('site.footer.navAria')}>
             {column('product', product)}
             {column('company', company)}
           </nav>
@@ -71,7 +64,7 @@ export default function SiteFooter({ plansEnabled }: { plansEnabled: boolean }) 
               Google Play
             </a>
           </div>
-          <LanguageToggle />
+          <LanguageToggle current={lang} />
           <span>© 2026 A Plus Fitness LLC</span>
         </div>
         <Image

@@ -155,7 +155,7 @@ export function useHomeFeed() {
   const liveStatus = useLiveStatus(supabase);
 
   const loadSessions = useCallback(async () => {
-    // RLS-H4: a logged-out visitor renders <LandingPage> (app/page.tsx) and never
+    // RLS-H4: a logged-out visitor gets the T-SITE1 site, not app/page.tsx, and never
     // sees this list, so fetching it as anon was pure waste — and it was the last
     // anon-reachable select('*') on the base table, silently 401ing since the 137
     // revoke. Guarding on user both removes that 401 and keeps fetchUpcomingSessions

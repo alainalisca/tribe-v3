@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { cookieNames, hasAuthCookieName } from '@/lib/site/authCookie';
-import { useSiteT } from '@/lib/site/useSiteT';
 import { logError } from '@/lib/logger';
 import { ArrowUpRight } from './icons';
 import StoreButton from './StoreButton';
@@ -18,8 +17,7 @@ type Me = { name: string; avatarUrl: string | null };
  * supabase-js is imported only when an auth cookie exists (lib/site/authCookie),
  * so a first-time visitor never downloads it.
  */
-export default function NavActions() {
-  const t = useSiteT('site.nav');
+export default function NavActions({ signIn, download, myFeed }: { signIn: string; download: string; myFeed: string }) {
   const [me, setMe] = useState<Me | null>(null);
 
   useEffect(() => {
@@ -50,7 +48,7 @@ export default function NavActions() {
   return (
     <div className={c.right}>
       {me ? (
-        <Link href="/" aria-label={t('myFeed')}>
+        <Link href="/" aria-label={myFeed}>
           {me.avatarUrl ? (
             // eslint-disable-next-line @next/next/no-img-element -- remote avatar of unknown host, 32px
             <img className={c.avatar} src={me.avatarUrl} alt="" width={32} height={32} />
@@ -60,11 +58,11 @@ export default function NavActions() {
         </Link>
       ) : (
         <Link className={c.enter} href="/auth/">
-          {t('signIn')}
+          {signIn}
         </Link>
       )}
       <StoreButton className={c.join}>
-        {t('download')}
+        {download}
         <ArrowUpRight />
       </StoreButton>
     </div>

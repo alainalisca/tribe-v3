@@ -50,8 +50,6 @@ function isNonPage(pathname: string): boolean {
 export function canonicalUrlFor(pathname: string): string | null {
   if (!pathname.startsWith('/') || isNonPage(pathname)) return null;
   const withSlash = pathname.endsWith('/') ? pathname : `${pathname}/`;
-  // T-SITE1: /inicio is the signed-out `/` served by a middleware rewrite.
-  if (withSlash === '/inicio/') return `${CANONICAL_SITE_URL}/`;
   for (const prefix of Object.keys(OWN_CANONICAL_PREFIXES)) {
     if (withSlash.startsWith(prefix)) return null;
   }

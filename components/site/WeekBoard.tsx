@@ -1,8 +1,6 @@
-'use client';
-
 import Link from 'next/link';
 import { translateSport } from '@/lib/sportTranslationData';
-import { useSiteLanguage, useSiteT } from '@/lib/site/useSiteT';
+import { siteT, type SiteLanguage } from '@/lib/site/i18n';
 import { DAYS, formatPrice, weekdayIndex } from '@/lib/site/weekFormat';
 import type { WeekRow } from '@/lib/site/weekTypes';
 import { ArrowRight } from './icons';
@@ -14,9 +12,9 @@ import w from './week.module.css';
  * the server (lib/site/week.ts); fewer than three rows adds one "Publica la
  * tuya" row for coaches. Sample rows are never rendered.
  */
-export default function WeekBoard({ rows }: { rows: WeekRow[] }) {
-  const lang = useSiteLanguage();
-  const t = useSiteT('site.week');
+export default function WeekBoard({ lang, rows }: { lang: SiteLanguage; rows: WeekRow[] }) {
+  const tr = siteT(lang);
+  const t = (key: string, vars?: Record<string, string | number>) => tr(`site.week.${key}`, vars);
 
   return (
     <section className={`${w.fx} ${b.g}`} id="semana" aria-labelledby="semana-titulo">

@@ -1,12 +1,13 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowRight } from '../icons';
-import { T } from '../T';
+import { siteT, type SiteLanguage } from '@/lib/site/i18n';
 import b from '../base.module.css';
 import v from './tv.module.css';
 
 /** One line on Tribe.OS and a way in. No prices (Part D.4). */
-export default function OsBand() {
+export default function OsBand({ lang }: { lang: SiteLanguage }) {
+  const t = siteT(lang);
   return (
     <section className={`${v.osband} ${b.g}`} aria-label="Tribe.OS">
       <span className={`${b.lock} ${v.osLock}`}>
@@ -14,13 +15,10 @@ export default function OsBand() {
         <span>OS</span>
       </span>
       <p>
-        <b>
-          <T k="site.home.osStrong" />
-        </b>{' '}
-        <T k="site.home.osRest" />
+        <b>{t('site.home.osStrong')}</b> {t('site.home.osRest')}
       </p>
       <Link className={b.cta} href="/tribe-os/">
-        <T k="site.home.seeOs" /> <ArrowRight />
+        {t('site.home.seeOs')} <ArrowRight />
       </Link>
     </section>
   );

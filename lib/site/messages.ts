@@ -1,11 +1,12 @@
 /**
- * T-SITE1. Lookup for the marketing site's copy, usable on the server and in
- * the client hook (lib/site/useSiteT.ts).
+ * T-SITE1. Lookup for the marketing site's copy. SERVER ONLY in practice: the
+ * site renders its copy on the server (lib/site/i18n.ts) and no client
+ * component may import this file (lib/site/site.test.ts enforces it).
  *
  * The copy lives in messages/{es,en}.json under "site.<page>". Lookup inside a
  * namespace is flat, exactly as in useTranslations. A key missing in English
  * falls back to Spanish (the site is written Spanish first); a key missing in
- * both renders the key, and lib/site/messages.test.ts fails CI before that can
+ * both renders the key, and lib/site/site.test.ts fails CI before that can
  * ship.
  */
 import en from '@/messages/en.json';

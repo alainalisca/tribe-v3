@@ -195,3 +195,38 @@
     transition: none !important;
   }
 }
+
+/* stub pages (Part A): one heading and one paragraph until Part E fills them */
+.stub {
+  min-height: 52vh;
+}
+.stub h1 {
+  font-size: clamp(56px, 10vw, 150px);
+  max-width: 12ch;
+}
+.stub p {
+  margin-top: 26px;
+  max-width: 34em;
+  color: var(--soft);
+  font-size: 19px;
+}
+@media (max-width: 600px) {
+  .sec {
+    padding-block: 44px;
+  }
+  .sh {
+    margin-bottom: 18px;
+  }
+  .sh p {
+    font-size: 15px;
+  }
+}
+/* Phones: secondary lines the Inicio length budget leaves out (T-SITE1 fixes). */
+@media (max-width: 600px) {
+  .phoneHide {
+    display: none !important;
+  }
+  .sh h2 {
+    font-size: 44px;
+  }
+}
