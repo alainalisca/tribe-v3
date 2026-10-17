@@ -10,10 +10,9 @@ import type { CSSProperties } from 'react';
  *   scripts/site-crops.mjs, every job (source, crop box, anchor) recorded in
  *   "Homepage Photos/_mock/crops/jobs.json", which also lists the banned
  *   frames the script refuses. door_os is the Zona frame at 40% brightness.
- * - Older crops (row_*, ro_*, strip2, hero_coach, al_zona): the face-aware
+ * - Older crops (row_*, strip2, hero_coach, al_zona): the face-aware
  *   pass, listed under `legacy` in the same jobs.json.
  * - hero_full: w0143, Zona de Combate on the plaza steps, uncropped 3:2.
- * - pad_tall: the Salomón padwork photo, the one Salomón photo on Inicio.
  * - bb_w, fv_w: the mock's white BullBox and Fruta Vida marks.
  * - al_bb: n_9632 (rowing at BullBox), resized to 900x600 (Al, 2026-10-17).
  * - tv_wod, tv_wil: Tribe.TV posters (tv_wil from the camera original, no
@@ -37,10 +36,6 @@ export const SITE_PHOTOS = {
   row_comb: '/site/row_comb.jpg',
   row_run: '/site/row_run.jpg',
   strip2: '/site/strip2.jpg',
-  ro_andres: '/site/ro_andres.jpg',
-  ro_alex: '/site/ro_alex.jpg',
-  ro_wil: '/site/ro_wil.jpg',
-  pad_tall: '/site/pad_tall.jpg',
   essay_bb: '/site/essay_bb.jpg',
   essay_zona: '/site/essay_zona.jpg',
   essay_wil: '/site/essay_wil.jpg',
@@ -117,10 +112,6 @@ export const FACE_ANCHORS: Partial<Record<PhotoKey, readonly [number, number]>> 
   row_comb: [50, 15],
   row_run: [55, 34],
   strip2: [71, 20],
-  ro_andres: [45, 30],
-  ro_alex: [74, 22],
-  ro_wil: [51, 22],
-  pad_tall: [62, 20],
   al_bb: [85, 32],
   al_zona: [21, 22],
 };

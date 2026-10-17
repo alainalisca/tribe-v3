@@ -12,6 +12,7 @@ import WeekBoard from '@/components/site/WeekBoard';
 import { siteLanguage } from '@/lib/site/i18n';
 import { siteMetadata } from '@/lib/site/metadata';
 import { photo } from '@/lib/site/photos';
+import { fetchRoster } from '@/lib/site/roster';
 import { fetchWeekBoard } from '@/lib/site/week';
 
 /**
@@ -32,13 +33,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function InicioPage({ params }: Props) {
   const lang = siteLanguage((await params).lang);
-  const week = await fetchWeekBoard();
+  const [week, roster] = await Promise.all([fetchWeekBoard(), fetchRoster()]);
   return (
     <>
       <Hero lang={lang} />
       <Doors lang={lang} />
       <Disciplines lang={lang} />
-      <Roster lang={lang} />
+      <Roster lang={lang} coaches={roster} />
       <WeekBoard lang={lang} rows={week} />
       <Essay lang={lang} />
       <Manifesto lang={lang} />

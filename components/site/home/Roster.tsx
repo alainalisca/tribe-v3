@@ -1,57 +1,10 @@
-import Image from 'next/image';
-import Link from 'next/link';
 import { EPISODES } from '@/lib/site/episodes';
 import { siteT, type SiteLanguage } from '@/lib/site/i18n';
 import { SITE_SPORT_COUNT } from '@/lib/site/sportCount';
-import { faceProps, photo, type PhotoKey } from '@/lib/site/photos';
+import { ROSTER_HOME_MAX, type RosterCoach } from '@/lib/site/rosterBuild';
+import RosterGrid from '../RosterGrid';
 import b from '../base.module.css';
 import s from './story.module.css';
-
-/**
- * Coaches with name and face. Names, handles and places are proper nouns, the
- * same in both languages; the sport line and alt text are translated.
- * pad_tall is the one Salomón photo allowed on Inicio. Four across on desktop,
- * a horizontal scroller on phones.
- */
-type Coach = {
-  img: PhotoKey;
-  name: string;
-  href: string;
-  sport?: string;
-  sportKey?: string;
-  where?: string;
-  whereKey?: string;
-};
-const COACHES: Coach[] = [
-  {
-    img: 'ro_andres',
-    sport: 'CrossFit · HYROX',
-    name: 'Andrés Varón',
-    where: 'BullBox · Ciudad del Río',
-    href: '/coaches/',
-  },
-  {
-    img: 'ro_alex',
-    sportKey: 'site.home.sportYoga',
-    name: 'Alexandra Aguirre',
-    where: 'El Poblado · Envigado · @aleyoga_med',
-    href: '/coaches/',
-  },
-  {
-    img: 'pad_tall',
-    sportKey: 'site.home.sportBoxMuay',
-    name: 'Salomón Tabares',
-    whereKey: 'site.home.whereSalomon',
-    href: '/coaches/',
-  },
-  {
-    img: 'ro_wil',
-    sportKey: 'site.home.sportCombat',
-    name: 'Profe Wil',
-    where: 'Zona de Combate · @fightwil',
-    href: '/tv/',
-  },
-];
 
 const FACTS = [
   { value: String(SITE_SPORT_COUNT), key: 'factSports' },
@@ -59,7 +12,11 @@ const FACTS = [
   { value: String(EPISODES.length), key: 'factEpisodes' },
 ] as const;
 
-export default function Roster({ lang }: { lang: SiteLanguage }) {
+/**
+ * Facts, then the live roster (T-SITE1.1 Part C): coaches with a public session
+ * in the last 60 days, the twelve most active first (lib/site/roster.ts).
+ */
+export default function Roster({ lang, coaches }: { lang: SiteLanguage; coaches: readonly RosterCoach[] }) {
   const t = siteT(lang);
   return (
     <section className={`${b.sec} ${b.g}`} aria-labelledby="coaches-titulo">
@@ -83,26 +40,7 @@ export default function Roster({ lang }: { lang: SiteLanguage }) {
         </h2>
         <p className={b.phoneHide}>{t('site.home.rosterLede')}</p>
       </div>
-      <ul className={s.roster}>
-        {COACHES.map((c) => (
-          <li key={c.img}>
-            <Link href={c.href}>
-              <figure>
-                <Image
-                  alt={t(`site.alt.${c.img}`)}
-                  src={photo(c.img)}
-                  fill
-                  sizes="(max-width: 900px) 62vw, 25vw"
-                  {...faceProps(c.img)}
-                />
-              </figure>
-              <span className={`${b.mono} ${s.sport}`}>{c.sportKey ? t(c.sportKey) : c.sport}</span>
-              <h3>{c.name}</h3>
-              <p>{c.whereKey ? t(c.whereKey) : c.where}</p>
-            </Link>
-          </li>
-        ))}
-      </ul>
+      <RosterGrid lang={lang} coaches={coaches} max={ROSTER_HOME_MAX} />
       <p className={`${b.note} ${s.rosterNote}`}>{t('site.home.rosterNote')}</p>
     </section>
   );

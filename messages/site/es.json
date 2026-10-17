@@ -82,10 +82,6 @@
     "row_box": "Golpe recto a las manoplas en una clase al aire libre",
     "row_comb": "Sparring en el parque en la clase del profe Wil",
     "row_run": "Grupo corriendo en Ciudad del Río",
-    "ro_andres": "Andrés Varón en las argollas de BullBox",
-    "ro_alex": "Alexandra Aguirre meditando en una terraza",
-    "pad_tall": "Salomón con guantes de enfoque en una clase nocturna",
-    "ro_wil": "El profe Wil en su clase al aire libre en Ciudad del Río",
     "close_team": "El equipo de Zona de Combate posa en guardia frente al logo del gimnasio.",
     "al_zona": "Clase de boxeo del profe Wil al aire libre en Ciudad del Río",
     "strip2": "Juan en las argollas de BullBox",
@@ -156,9 +152,6 @@
     "rosterTitle1": "Con quién",
     "rosterTitle2": "entrenas",
     "rosterLede": "Coaches reales de Medellín, con nombre y cara. Así se ven sus clases.",
-    "sportYoga": "Yoga",
-    "sportBoxMuay": "Boxeo · Muay Thai",
-    "whereSalomon": "Al aire libre · @salotaba",
     "rosterNote": "Lo que dice su gente aparece en el perfil de cada coach dentro de la app.",
     "essayTitle1": "La gente",
     "essayTitle2": "es el plan.",
@@ -286,7 +279,9 @@
     "a2": "Sí. Las sesiones gratis son una buena manera de construir tu reputación y atraer atletas nuevos. Cualquier sesión puede ser gratis.",
     "q3": "¿Cuándo recibo mi plata?",
     "a3": "Cuando tu estudiante te paga, y eso lo arreglan entre ustedes. Tribe no retiene ni transfiere plata, así que no hay ningún pago que esperar.",
-    "allFaq": "Todas las preguntas"
+    "allFaq": "Todas las preguntas",
+    "rosterTitle": "Ya están en Tribe",
+    "rosterLede": "Coaches con una sesión pública en los últimos 60 días."
   },
   "gyms": {
     "tag": "Para gimnasios y estudios",
@@ -511,5 +506,9 @@
     "sp_combate": "Salomón · Zona de Combate",
     "sp_resist": "Kettlebell · BullBox",
     "sp_mente": "Alexandra · Terraza"
+  },
+  "roster": {
+    "empty": "Los coaches aparecen aquí cuando publican su primera sesión.",
+    "emptyCta": "Publica la tuya"
   }
 }

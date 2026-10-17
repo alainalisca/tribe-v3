@@ -18,7 +18,6 @@ const ROWS: Row[] = [
   { img: 'row_box', word: 'Boxeo', wordKey: 'site.home.sportBoxing', whereKey: 'site.home.whereOutdoors' },
   { img: 'row_comb', word: 'Combate', wordKey: 'site.home.sportCombat', where: 'Jiu-Jitsu · Muay Thai · Kickboxing' },
   { img: 'row_run', word: 'Correr', wordKey: 'site.home.sportRunning', where: 'Ciudad del Río' },
-  // Not yoga: row_yoga is the same frame as ro_alex in the roster (Al, 2026-10-17).
   { img: 'strip2', word: 'Calistenia', wordKey: 'site.home.sportCalisthenics', where: 'BullBox' },
 ];
 

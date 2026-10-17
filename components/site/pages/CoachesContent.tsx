@@ -3,7 +3,9 @@ import Link from 'next/link';
 import { coachPlansEnabled } from '@/lib/site/flags';
 import { siteT, type SiteLanguage } from '@/lib/site/i18n';
 import { faceProps, photo } from '@/lib/site/photos';
+import type { RosterCoach } from '@/lib/site/rosterBuild';
 import CoachPlans from '../plans/CoachPlans';
+import RosterGrid from '../RosterGrid';
 import { ArrowRight } from '../icons';
 import StoreButton from '../StoreButton';
 import b from '../base.module.css';
@@ -27,7 +29,7 @@ const OFFERS = [
  * while COACH_PLANS_ENABLED is on, then three questions. The money story is
  * stated once, in step 4.
  */
-export default function CoachesContent({ lang }: { lang: SiteLanguage }) {
+export default function CoachesContent({ lang, roster }: { lang: SiteLanguage; roster: readonly RosterCoach[] }) {
   const tr = siteT(lang);
   const t = (k: string) => tr(`site.coaches.${k}`);
   return (
@@ -66,6 +68,17 @@ export default function CoachesContent({ lang }: { lang: SiteLanguage }) {
           />
           <figcaption className={b.capTag}>{tr('site.cap.coach_group')}</figcaption>
         </figure>
+      </section>
+
+      {/* T-SITE1.1 Part C: every coach with a public session in the last 60 days. */}
+      <section className={`${b.sec} ${b.g}`} aria-labelledby="ya-en-tribe">
+        <div className={b.sh}>
+          <h2 id="ya-en-tribe" className={b.disp}>
+            {t('rosterTitle')}
+          </h2>
+          <p>{t('rosterLede')}</p>
+        </div>
+        <RosterGrid lang={lang} coaches={roster} />
       </section>
 
       <section className={`${b.sec} ${b.g}`} aria-labelledby="que-ofrecer">

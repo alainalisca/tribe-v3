@@ -82,10 +82,6 @@
     "row_box": "A straight punch to the pads in an outdoor class",
     "row_comb": "Sparring in the park in coach Wil's class",
     "row_run": "A group running in Ciudad del Río",
-    "ro_andres": "Andrés Varón on the rings at BullBox",
-    "ro_alex": "Alexandra Aguirre meditating on a rooftop",
-    "pad_tall": "Salomón holding focus mitts in an evening class",
-    "ro_wil": "Coach Wil in his outdoor class in Ciudad del Río",
     "close_team": "The Zona de Combate team poses in guard in front of the gym's logo.",
     "al_zona": "Profe Wil's outdoor boxing class in Ciudad del Río",
     "strip2": "Juan on the rings at BullBox",
@@ -156,9 +152,6 @@
     "rosterTitle1": "Who you",
     "rosterTitle2": "train with",
     "rosterLede": "Real coaches from Medellín, with a name and a face. This is what their classes look like.",
-    "sportYoga": "Yoga",
-    "sportBoxMuay": "Boxing · Muay Thai",
-    "whereSalomon": "Outdoors · @salotaba",
     "rosterNote": "What their people say is on each coach's profile in the app.",
     "essayTitle1": "The people",
     "essayTitle2": "are the plan.",
@@ -286,7 +279,9 @@
     "a2": "Yes. Free sessions are a good way to build your reputation and bring in new athletes. Any session can be free.",
     "q3": "When do I get my money?",
     "a3": "When your student pays you, which the two of you arrange. Tribe does not hold or transfer money, so there is no payout to wait for.",
-    "allFaq": "All questions"
+    "allFaq": "All questions",
+    "rosterTitle": "Already on Tribe",
+    "rosterLede": "Coaches with a public session in the last 60 days."
   },
   "gyms": {
     "tag": "For gyms and studios",
@@ -511,5 +506,9 @@
     "sp_combate": "Salomón · Zona de Combate",
     "sp_resist": "Kettlebell · BullBox",
     "sp_mente": "Alexandra · Terrace"
+  },
+  "roster": {
+    "empty": "Coaches show up here once they publish their first session.",
+    "emptyCta": "Publish yours"
   }
 }

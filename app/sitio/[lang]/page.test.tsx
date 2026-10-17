@@ -5,6 +5,7 @@ import type { WeekRow } from '@/lib/site/weekTypes';
 vi.mock('server-only', () => ({}));
 const fetchWeekBoard = vi.fn<() => Promise<WeekRow[]>>();
 vi.mock('@/lib/site/week', () => ({ fetchWeekBoard: () => fetchWeekBoard() }));
+vi.mock('@/lib/site/roster', () => ({ fetchRoster: async () => [] }));
 
 import InicioPage from './page';
 
