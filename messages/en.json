@@ -791,7 +791,8 @@
       "barbell": "Chalked hands gripping a barbell",
       "mos4": "Andrés and Juan bumping fists after the WOD",
       "mos5": "A coach and an athlete talking between sets at BullBox",
-      "close_team": "The Zona de Combate team in front of the gym logo after training"
+      "close_team": "The Zona de Combate team in front of the gym logo after training",
+      "al_zona": "Profe Wil's outdoor boxing class in Ciudad del Río"
     },
     "home": {
       "h1a": "Never",
@@ -918,6 +919,51 @@
         "kicker": "Questions",
         "title": "Frequently asked questions.",
         "body": "How Tribe works, what it costs and how payment works. Tribe charges no commission; athletes pay the instructor directly. Another question? Write to info@tribelatam.com."
+      }
+    },
+    "plans": {
+      "coach": {
+        "kicker": "Plans",
+        "title": "Two ways",
+        "basicName": "Basic",
+        "basicPrice": "Free",
+        "basic1": "Profile",
+        "basic2": "Classes",
+        "basic3": "Bookings",
+        "basic4": "Your payment links",
+        "basicCta": "Create my profile",
+        "proName": "Coach Pro",
+        "proPrice": "{price} / month",
+        "proNote": "Founding price",
+        "pro1": "Everything in Basic",
+        "pro2": "Pro badge",
+        "pro3": "Featured coaches row",
+        "pro4": "A weekly story made by Tribe",
+        "pro5": "One \"Conoce a\" post a month",
+        "pro6": "Your numbers",
+        "proCta": "Go Pro",
+        "money": "Coach Pro is a Tribe subscription for visibility and services, never a fee on your sessions."
+      },
+      "gym": {
+        "getKicker": "Tribe Crecimiento",
+        "getTitle": "What you get",
+        "get1": "Your page with a free pass",
+        "get2": "Video of your coaches",
+        "get3": "Personal invitations",
+        "get4": "A report every Friday",
+        "priceKicker": "Pricing",
+        "priceTitle": "What it costs",
+        "pageName": "Gym page",
+        "pagePrice": "Free",
+        "pageCta": "Apply as a partner",
+        "growName": "Tribe Crecimiento",
+        "growPrice": "{price} / month",
+        "growCta": "Get started",
+        "growTalk": "Talk to Al",
+        "mediaName": "Media Day",
+        "mediaPrice": "{price} / hour",
+        "mediaCta": "Book a Media Day",
+        "money": "Tribe Crecimiento and Media Day are Tribe services for your gym, never a fee on your classes."
       }
     }
   }

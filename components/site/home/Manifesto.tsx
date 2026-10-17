@@ -7,8 +7,10 @@ import s from './story.module.css';
 
 /**
  * The lime band, and the About page's content (/about 301s to /#manifiesto).
- * Below it, the Part D plan hook: "Ver planes" when coach plans are on, else
- * "Soy coach". Ink on lime throughout (white on lime fails contrast).
+ * Below it, the Part D plan hook ("¿Das clases? Llena tu grupo." with "Ver
+ * planes" and "Tengo un gimnasio"), only while COACH_PLANS_ENABLED is on: with
+ * it off the site shows no plan content (Al, 2026-10-17). Ink on lime
+ * throughout (white on lime fails contrast).
  */
 export default function Manifesto({ lang }: { lang: SiteLanguage }) {
   const t = siteT(lang);
@@ -25,15 +27,17 @@ export default function Manifesto({ lang }: { lang: SiteLanguage }) {
           {t('site.home.howItWorks')} <ArrowRight />
         </Link>
       </div>
-      <p className={s.hook}>
-        <span>{t('site.home.hookLine')}</span>
-        <Link className={`${b.ulink} ${b.ulinkInk}`} href={plans ? '/planes/' : '/coaches/'}>
-          {t(plans ? 'site.home.hookPlans' : 'site.home.imCoach')}
-        </Link>
-        <Link className={`${b.ulink} ${b.ulinkInk}`} href="/gimnasios/">
-          {t('site.home.hookGym')}
-        </Link>
-      </p>
+      {plans && (
+        <p className={s.hook}>
+          <span>{t('site.home.hookLine')}</span>
+          <Link className={`${b.ulink} ${b.ulinkInk}`} href="/planes/">
+            {t('site.home.hookPlans')}
+          </Link>
+          <Link className={`${b.ulink} ${b.ulinkInk}`} href="/gimnasios/">
+            {t('site.home.hookGym')}
+          </Link>
+        </p>
+      )}
     </section>
   );
 }

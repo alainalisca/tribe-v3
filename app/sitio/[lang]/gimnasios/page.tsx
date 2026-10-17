@@ -1,10 +1,15 @@
 import type { Metadata } from 'next';
 import StubPage from '@/components/site/StubPage';
+import GymGrowth from '@/components/site/plans/GymGrowth';
+import { coachPlansEnabled } from '@/lib/site/flags';
 import { siteLanguage } from '@/lib/site/i18n';
 import { siteMetadata } from '@/lib/site/metadata';
 import { photo } from '@/lib/site/photos';
 
-/** Page: /gimnasios/ (T-SITE1). A stub until Part E; middleware serves it in the visitor's language. */
+/**
+ * Page: /gimnasios/ (T-SITE1). A stub until Part E; middleware serves it in the visitor's language.
+ * Part D: the plan section renders only while COACH_PLANS_ENABLED is on.
+ */
 type Props = { params: Promise<{ lang: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -12,5 +17,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function GimnasiosPage({ params }: Props) {
-  return <StubPage lang={siteLanguage((await params).lang)} slug="gimnasios" />;
+  const lang = siteLanguage((await params).lang);
+  return (
+    <>
+      <StubPage lang={lang} slug="gimnasios" />
+      {coachPlansEnabled() && <GymGrowth lang={lang} />}
+    </>
+  );
 }

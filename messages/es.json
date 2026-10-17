@@ -791,7 +791,8 @@
       "barbell": "Manos con tiza agarrando una barra",
       "mos4": "Andrés y Juan chocando el puño después del WOD",
       "mos5": "Coach y atleta conversando entre series en BullBox",
-      "close_team": "El equipo de Zona de Combate frente al logo del gimnasio después de entrenar"
+      "close_team": "El equipo de Zona de Combate frente al logo del gimnasio después de entrenar",
+      "al_zona": "Clase de boxeo del profe Wil al aire libre en Ciudad del Río"
     },
     "home": {
       "h1a": "Nunca",
@@ -918,6 +919,51 @@
         "kicker": "Preguntas",
         "title": "Preguntas frecuentes.",
         "body": "Cómo funciona Tribe, qué cuesta y cómo se paga. Tribe no cobra comisión; los atletas le pagan directo al instructor. ¿Otra pregunta? Escríbenos a info@tribelatam.com."
+      }
+    },
+    "plans": {
+      "coach": {
+        "kicker": "Planes",
+        "title": "Dos maneras",
+        "basicName": "Básico",
+        "basicPrice": "Gratis",
+        "basic1": "Perfil",
+        "basic2": "Clases",
+        "basic3": "Reservas",
+        "basic4": "Tus links de pago",
+        "basicCta": "Crear mi perfil",
+        "proName": "Coach Pro",
+        "proPrice": "{price} / mes",
+        "proNote": "Precio fundador",
+        "pro1": "Todo lo de Básico",
+        "pro2": "Insignia Pro",
+        "pro3": "Destacados",
+        "pro4": "Una historia semanal hecha por Tribe",
+        "pro5": "Un post \"Conoce a\" al mes",
+        "pro6": "Tus números",
+        "proCta": "Pasar a Pro",
+        "money": "Coach Pro es una suscripción de Tribe para visibilidad y servicios, nunca un cobro sobre tus sesiones."
+      },
+      "gym": {
+        "getKicker": "Tribe Crecimiento",
+        "getTitle": "Qué recibes",
+        "get1": "Tu página con pase gratis",
+        "get2": "Video de tus coaches",
+        "get3": "Invitaciones personales",
+        "get4": "Reporte cada viernes",
+        "priceKicker": "Precios",
+        "priceTitle": "Cuánto cuesta",
+        "pageName": "Página de gimnasio",
+        "pagePrice": "Gratis",
+        "pageCta": "Aplica como aliado",
+        "growName": "Tribe Crecimiento",
+        "growPrice": "{price} / mes",
+        "growCta": "Empezar",
+        "growTalk": "Hablar con Al",
+        "mediaName": "Media Day",
+        "mediaPrice": "{price} / hora",
+        "mediaCta": "Reservar un Media Day",
+        "money": "Tribe Crecimiento y Media Day son servicios de Tribe para tu gimnasio, nunca un cobro sobre tus clases."
       }
     }
   }

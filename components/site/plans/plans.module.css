@@ -1,0 +1,115 @@
+/* T-SITE1 Part D. Plan sections: paper tables, ink on lime for the featured plan. */
+.paper {
+  background: var(--paper);
+  color: var(--ink);
+  padding-block: clamp(48px, 7vw, 96px);
+}
+.paper h2 {
+  font-size: clamp(48px, 7vw, 104px);
+  color: var(--ink);
+}
+.kick {
+  display: block;
+  color: #4a5160;
+  margin-bottom: 14px;
+}
+.h2 {
+  font-size: clamp(44px, 6vw, 96px);
+  margin-bottom: 24px;
+}
+.two,
+.three {
+  display: grid;
+  gap: 12px;
+  margin-top: 28px;
+}
+.two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.plan {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 24px;
+  border: 2px solid var(--ink);
+  background: #fbfaf6;
+}
+.plan h3 {
+  font-family: var(--disp);
+  font-variation-settings: 'opsz' 72;
+  font-weight: 900;
+  text-transform: uppercase;
+  font-size: clamp(30px, 3vw, 44px);
+  line-height: 0.9;
+}
+.plan ul {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 6px;
+  flex: 1 1 auto;
+}
+.plan > a {
+  align-self: flex-start;
+}
+.featured {
+  background: var(--lime);
+}
+.price {
+  font-weight: 700;
+  font-size: 20px;
+}
+.note {
+  display: block;
+  margin-top: 4px;
+  font-size: 11px;
+}
+.acts {
+  display: flex;
+  gap: 18px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.money {
+  margin-top: 18px;
+  max-width: 44em;
+  font-size: 14px;
+  color: #3a3f46;
+}
+.gets {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+.gets figure {
+  position: relative;
+  margin: 0 0 12px;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  background: var(--char2);
+}
+.gets img {
+  object-fit: cover;
+}
+.gets h3 {
+  font-weight: 700;
+  font-size: 17px;
+}
+@media (max-width: 860px) {
+  .two,
+  .three {
+    grid-template-columns: 1fr;
+  }
+  .gets {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .plan {
+    padding: 18px;
+  }
+}

@@ -1,0 +1,84 @@
+import Image from 'next/image';
+import Link from 'next/link';
+import { siteT, type SiteLanguage } from '@/lib/site/i18n';
+import { photo, type PhotoKey } from '@/lib/site/photos';
+import { formatPlanPrice, mediaDayPaymentLink, sitePlanPrices, talkToAlHref } from '@/lib/site/plans';
+import { WA_TOPICS } from '@/lib/site/whatsapp';
+import { ArrowRight } from '../icons';
+import b from '../base.module.css';
+import p from './plans.module.css';
+
+const DELIVERABLES: { key: string; img: PhotoKey }[] = [
+  { key: 'get1', img: 'door_gym' },
+  { key: 'get2', img: 'ro_wil' },
+  { key: 'get3', img: 'row_run' },
+  { key: 'get4', img: 'al_zona' },
+];
+
+/**
+ * T-SITE1 Part D.3, Gimnasios: the four Tribe Crecimiento deliverables with
+ * photos, then the price table (Página de gimnasio, Tribe Crecimiento, Media
+ * Day). Rendered only while COACH_PLANS_ENABLED is on (the page checks).
+ * "Aliados" comes with the full page in Part E.
+ */
+export default function GymGrowth({ lang }: { lang: SiteLanguage }) {
+  const t = siteT(lang);
+  const k = (key: string, vars?: Record<string, string | number>) => t(`site.plans.gym.${key}`, vars);
+  const prices = sitePlanPrices();
+  const mediaDayHref = mediaDayPaymentLink() ?? talkToAlHref('gimnasios', WA_TOPICS.mediaDay);
+  return (
+    <>
+      <section className={`${b.sec} ${b.g}`} aria-labelledby="crecimiento-titulo">
+        <span className={`${b.mono} ${b.kick}`}>{k('getKicker')}</span>
+        <h2 id="crecimiento-titulo" className={`${b.disp} ${p.h2}`}>
+          {k('getTitle')}
+        </h2>
+        <ul className={p.gets}>
+          {DELIVERABLES.map((d) => (
+            <li key={d.key}>
+              <figure>
+                <Image alt={t(`site.alt.${d.img}`)} src={photo(d.img)} fill sizes="(max-width: 860px) 50vw, 25vw" />
+              </figure>
+              <h3>{k(d.key)}</h3>
+            </li>
+          ))}
+        </ul>
+      </section>
+      <section className={`${p.paper} ${b.g}`} aria-labelledby="precios-titulo">
+        <span className={`${b.mono} ${p.kick}`}>{k('priceKicker')}</span>
+        <h2 id="precios-titulo" className={b.disp}>
+          {k('priceTitle')}
+        </h2>
+        <div className={p.three}>
+          <div className={p.plan}>
+            <h3>{k('pageName')}</h3>
+            <p className={p.price}>{k('pagePrice')}</p>
+            <a className={`${b.ulink} ${b.ulinkInk}`} href={talkToAlHref('gimnasios', WA_TOPICS.partner)}>
+              {k('pageCta')}
+            </a>
+          </div>
+          <div className={`${p.plan} ${p.featured}`}>
+            <h3>{k('growName')}</h3>
+            <p className={p.price}>{k('growPrice', { price: formatPlanPrice(prices.crecimiento, lang) })}</p>
+            <div className={p.acts}>
+              <Link className={`${b.cta} ${b.ctaInk}`} href="/planes/">
+                {k('growCta')} <ArrowRight />
+              </Link>
+              <a className={`${b.ulink} ${b.ulinkInk}`} href={talkToAlHref('gimnasios', WA_TOPICS.growth)}>
+                {k('growTalk')}
+              </a>
+            </div>
+          </div>
+          <div className={p.plan}>
+            <h3>{k('mediaName')}</h3>
+            <p className={p.price}>{k('mediaPrice', { price: formatPlanPrice(prices.mediaDay, lang) })}</p>
+            <a className={`${b.ulink} ${b.ulinkInk}`} href={mediaDayHref}>
+              {k('mediaCta')}
+            </a>
+          </div>
+        </div>
+        <p className={p.money}>{k('money')}</p>
+      </section>
+    </>
+  );
+}

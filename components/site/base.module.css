@@ -200,6 +200,10 @@
 .stub {
   min-height: 52vh;
 }
+/* A stub followed by another section (Part D plans) needs no filler height. */
+.stub:not(:last-child) {
+  min-height: 0;
+}
 .stub h1 {
   font-size: clamp(56px, 10vw, 150px);
   max-width: 12ch;
