@@ -11,6 +11,7 @@
   white-space: nowrap;
   border-bottom: 1px solid var(--ink);
   padding-left: 16px;
+  container-type: inline-size;
 }
 .run {
   display: inline-flex;
@@ -23,7 +24,8 @@
   font-size: 12px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  padding-right: 42px;
+  --gap: 42px;
+  padding-right: var(--gap);
 }
 .run b {
   font-weight: 700;
@@ -37,16 +39,15 @@
     transform: translateX(-50%);
   }
 }
-/* Phones: tighter type, so the first item (the soonest session) fits on load. */
-@media (max-width: 480px) {
-  .run span {
-    font-size: 10.5px;
-    letter-spacing: 0.03em;
-    padding-right: 28px;
-  }
-  .run b {
-    margin-right: 6px;
-  }
+/* The first item of each copy: at most the ticker's own width (container units),
+   so at rest it ends at the screen's edge, cut with an ellipsis when too long.
+   The cap adds back the item's own gap, which sits inside its box. */
+.lead {
+  display: inline-block;
+  max-width: calc(100cqw + var(--gap));
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: top;
 }
 
 /* nav: sticky, always solid (the audit's transparent-header bug) */
