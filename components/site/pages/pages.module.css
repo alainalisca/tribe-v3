@@ -9,7 +9,8 @@
 .ph {
   position: relative;
   height: min(62vh, 600px);
-  min-height: 360px;
+  /* At least half the scaled photo (--ar set inline): its faces stay in view. */
+  min-height: max(360px, calc(100vw / var(--ar, 99) / 2));
   overflow: hidden;
 }
 .ph img {

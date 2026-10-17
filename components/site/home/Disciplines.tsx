@@ -2,7 +2,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { siteT, type SiteLanguage } from '@/lib/site/i18n';
 import { SITE_SPORT_COUNT } from '@/lib/site/sportCount';
-import { photo, type PhotoKey } from '@/lib/site/photos';
+import { faceProps, photo, type PhotoKey } from '@/lib/site/photos';
 import { ArrowUpRight } from '../icons';
 import b from '../base.module.css';
 import d from './doors.module.css';
@@ -48,6 +48,7 @@ export default function Disciplines({ lang }: { lang: SiteLanguage }) {
               width={76}
               height={92}
               sizes="76px"
+              {...faceProps(row.img)}
             />
             <span className={d.w}>{row.wordKey ? t(row.wordKey) : row.word}</span>
             <span className={d.where}>{row.whereKey ? t(row.whereKey) : row.where}</span>
@@ -61,6 +62,7 @@ export default function Disciplines({ lang }: { lang: SiteLanguage }) {
               width={280}
               height={350}
               sizes="280px"
+              {...faceProps(row.img)}
             />
           </Link>
         ))}

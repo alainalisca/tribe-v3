@@ -107,8 +107,10 @@ describe('week board formatting', () => {
     expect(weekdayIndex('2026-10-18')).toBe(0); // Sunday
   });
 
-  it('formats COP without decimals', () => {
-    expect(formatPrice({ cents: 2500000, currency: 'COP' }, 'es')).toMatch(/25\.000/);
+  it('formats a price as "30.000": no sign, no space, no decimals, in both languages', () => {
+    expect(formatPrice({ cents: 3_000_000, currency: 'COP' }, 'es')).toBe('30.000');
+    expect(formatPrice({ cents: 3_000_000, currency: 'COP' }, 'en')).toBe('30.000');
+    expect(formatPrice({ cents: 500_000, currency: 'COP' }, 'es')).toBe('5.000');
   });
 });
 

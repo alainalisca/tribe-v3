@@ -4,7 +4,7 @@ import {
   collapseSeries,
   daysLabel,
   isoWeekday,
-  pickVaried,
+  pickBoard,
   publicPlace,
   rowTitle,
   shortName,
@@ -77,9 +77,10 @@ describe('one row per series per WEEK (decision 2)', () => {
     expect(row.seriesId).toBe('past-parent');
   });
 
-  it('keeps two different series of the same coach as two rows', () => {
-    const rows = board([session({ id: 'a' }), session({ id: 'b', start_time: '18:30:00' })]);
-    expect(rows.map((r) => r.id)).toEqual(['a', 'b']);
+  it('keeps two series of the same coach apart, but the board shows one per coach', () => {
+    const series = collapseSeries([session({ id: 'a' }), session({ id: 'b', start_time: '18:30:00' })]);
+    expect(series.map((r) => r.id)).toEqual(['a', 'b']);
+    expect(board([session({ id: 'a' }), session({ id: 'b', start_time: '18:30:00' })]).map((r) => r.id)).toEqual(['a']);
   });
 
   it('labels days in both languages', () => {
@@ -99,38 +100,50 @@ describe('one row per series per WEEK (decision 2)', () => {
   });
 });
 
-describe('eight rows, as many coaches as possible (decision 2)', () => {
-  it('takes every coach once before anyone twice, then shows them soonest first', () => {
+describe('eight rows: two per sport, one per coach (T-SITE1.1)', () => {
+  const at = (h: number) => `${String(h).padStart(2, '0')}:00:00`;
+
+  it('skips a third row of a sport and fills with the next sports, soonest first', () => {
     const rows = [
-      session({ id: 'a1', creatorId: 'a', date: '2026-10-17' }),
-      session({ id: 'a2', creatorId: 'a', date: '2026-10-17', start_time: '07:00:00' }),
-      session({ id: 'a3', creatorId: 'a', date: '2026-10-17', start_time: '08:00:00' }),
-      ...Array.from({ length: 7 }, (_, i) =>
-        session({ id: `x${i}`, creatorId: `coach${i}`, date: '2026-10-20', start_time: `0${i + 1}:00:00` })
-      ),
+      session({ id: 'y1', sport: 'Yoga', creatorId: 'a', start_time: at(6) }),
+      session({ id: 'y2', sport: 'Yoga', creatorId: 'b', start_time: at(7) }),
+      session({ id: 'y3', sport: 'Yoga', creatorId: 'c', start_time: at(8) }),
+      session({ id: 'b1', sport: 'Boxing', creatorId: 'd', start_time: at(9) }),
+      session({ id: 'y4', sport: 'Yoga', creatorId: 'e', start_time: at(10) }),
+      session({ id: 'r1', sport: 'Running', creatorId: 'f', start_time: at(11) }),
     ];
+    expect(board(rows).map((r) => r.id)).toEqual(['y1', 'y2', 'b1', 'r1']);
+  });
+
+  it('shows each coach once, even across sports', () => {
+    const rows = [
+      session({ id: 'a1', sport: 'Yoga', creatorId: 'a', start_time: at(6) }),
+      session({ id: 'a2', sport: 'Boxing', creatorId: 'a', start_time: at(7) }),
+      session({ id: 'b1', sport: 'Boxing', creatorId: 'b', start_time: at(8) }),
+    ];
+    expect(board(rows).map((r) => r.id)).toEqual(['a1', 'b1']);
+  });
+
+  it('stops at eight', () => {
+    const sports = ['Yoga', 'Boxing', 'Running', 'CrossFit', 'Pilates', 'HYROX'];
+    const rows = Array.from({ length: 20 }, (_, i) =>
+      session({ id: `r${i}`, sport: sports[i % sports.length], creatorId: `c${i}`, start_time: at(6 + (i % 12)) })
+    );
     const picked = board(rows);
     expect(picked).toHaveLength(8);
+    const perSport = new Map<string, number>();
+    for (const r of picked) perSport.set(r.sport, (perSport.get(r.sport) ?? 0) + 1);
+    expect(Math.max(...perSport.values())).toBeLessThanOrEqual(2);
     expect(new Set(picked.map((r) => r.creatorId)).size).toBe(8);
-    expect(picked.map((r) => r.id)).toEqual(['a1', 'x0', 'x1', 'x2', 'x3', 'x4', 'x5', 'x6']);
   });
 
-  it('fills with second rows when there are fewer than eight coaches', () => {
-    const rows = [
-      session({ id: 'a1', creatorId: 'a', start_time: '06:00:00' }),
-      session({ id: 'a2', creatorId: 'a', start_time: '09:00:00' }),
-      session({ id: 'b1', creatorId: 'b', start_time: '07:00:00' }),
-    ];
-    expect(board(rows).map((r) => r.id)).toEqual(['a1', 'b1', 'a2']);
-  });
-
-  it('never returns more than eight', () => {
+  it('returns fewer than eight when the caps run out', () => {
     const many = Array.from({ length: 30 }, (_, i) => ({
       ...collapseSeries([session()])[0],
       id: `r${i}`,
       creatorId: `c${i % 3}`,
     }));
-    expect(pickVaried(many)).toHaveLength(8);
+    expect(pickBoard(many)).toHaveLength(2);
   });
 });
 
@@ -180,12 +193,22 @@ describe('never a street address', () => {
     ).toBe('El Poblado');
   });
 
-  it('falls back to the neighbourhood, then the city, and never shows the street', () => {
+  it('falls back to the neighbourhood, else no place, and never shows the street', () => {
     expect(publicPlace({ location: 'Cra 43A #1-50, El Poblado, Medellín', partner_status: null, partner: null })).toBe(
       'El Poblado'
     );
-    expect(publicPlace({ location: 'Cra 43A #1-50', partner_status: null, partner: null })).toBe('Medellín');
-    expect(publicPlace({ location: null, partner_status: null, partner: null })).toBe('Medellín');
+    expect(publicPlace({ location: 'Cra 43A #1-50', partner_status: null, partner: null })).toBeNull();
+    expect(publicPlace({ location: 'Cra 43A #1-50, Medellín', partner_status: null, partner: null })).toBeNull();
+    expect(publicPlace({ location: null, partner_status: null, partner: null })).toBeNull();
+  });
+
+  it('JSON-LD still names the city for a row without a place', () => {
+    const rows = board([session({ id: 'x', location: 'Cra 43A #1-50' })]);
+    expect(rows[0].place).toBeNull();
+    const ld = weekBoardJsonLd(rows, 'es', 'https://tribelatam.com') as {
+      itemListElement: { item: { location: { name: string } } }[];
+    };
+    expect(ld.itemListElement[0].item.location.name).toBe('Medellín');
   });
 
   it('no row of a realistic board carries the street or the raw location', () => {

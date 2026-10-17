@@ -21,8 +21,8 @@ export type WeekRow = {
   weekdays: number[];
   /** Minutes. */
   duration: number;
-  /** Partner gym name, else neighbourhood, else the city. Never `sessions.location`. */
-  place: string;
+  /** Partner gym name, else neighbourhood; null when only the city is known. Never `sessions.location`. */
+  place: string | null;
   /** Null when free. */
   price: { cents: number; currency: string } | null;
   /** Present only when > 0. */

@@ -2,7 +2,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowRight } from '../icons';
 import { siteT, type SiteLanguage } from '@/lib/site/i18n';
-import { photo } from '@/lib/site/photos';
+import { backgroundBoxStyle, photo } from '@/lib/site/photos';
 import b from '../base.module.css';
 import HeroPicture from './HeroPicture';
 import h from './hero.module.css';
@@ -12,7 +12,7 @@ export default function Hero({ lang }: { lang: SiteLanguage }) {
   const t = siteT(lang);
   return (
     <section className={h.hero} aria-labelledby="inicio-titulo">
-      <div className={`${h.ph} ${b.grain}`}>
+      <div className={`${h.ph} ${b.grain}`} style={backgroundBoxStyle('hero_full')}>
         <HeroPicture alt={t('site.alt.hero_full')} />
         <span className={`${h.credit} ${b.mono}`}>Zona de Combate · Ciudad del Río</span>
       </div>
@@ -43,15 +43,26 @@ export default function Hero({ lang }: { lang: SiteLanguage }) {
             </Link>
           </div>
         </div>
+        {/* "Aliados": gyms that train on Tribe, then partner brands, one row that
+            scrolls sideways on phones and never wraps. Zona de Combate has no logo
+            file, so it is set as a wordmark at the marks' cap height. */}
         <div className={h.partners}>
           <span className={`${b.mono} ${h.label}`}>{t('site.home.partnersLabel')}</span>
-          <Image src={photo('bb_w')} alt="BullBox" width={39} height={46} sizes="39px" />
-          <Image src={photo('fv_w')} alt="Fruta Vida" width={37} height={46} sizes="37px" />
-          <span className={h.zona}>
-            Zona de
-            <br />
-            Combate
-          </span>
+          <div className={h.marks}>
+            <div className={h.pgroup} role="group" aria-labelledby="aliados-entrenan">
+              <span id="aliados-entrenan" className={`${b.mono} ${h.glabel}`}>
+                {t('site.home.partnersTrain')}
+              </span>
+              <Image src={photo('bb_w')} alt="BullBox" width={39} height={46} sizes="39px" />
+              <span className={h.zona}>Zona de Combate</span>
+            </div>
+            <div className={h.pgroup} role="group" aria-labelledby="aliados-marcas">
+              <span id="aliados-marcas" className={`${b.mono} ${h.glabel}`}>
+                {t('site.home.partnersBrands')}
+              </span>
+              <Image src={photo('fv_w')} alt="Fruta Vida" width={37} height={46} sizes="37px" />
+            </div>
+          </div>
         </div>
       </div>
     </section>

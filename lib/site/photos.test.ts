@@ -2,7 +2,7 @@ import { existsSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, it, expect } from 'vitest';
 import { siteKeys } from './messages';
-import { SITE_MARKS, SITE_PHOTOS, type PhotoKey } from './photos';
+import { FACE_ANCHORS, SITE_MARKS, SITE_PHOTOS, faceProps, type PhotoKey } from './photos';
 
 /** T-SITE1 Part C: the site's photos are keyed, present, light and described. */
 const KEYS = Object.keys(SITE_PHOTOS) as PhotoKey[];
@@ -34,5 +34,35 @@ describe('site photos (Part C)', () => {
         expect(SITE_MARKS, key).not.toContain(key);
       }
     }
+  });
+});
+
+describe('one file, one slot (T-SITE1.1 Part A)', () => {
+  it('no file is registered under two keys', () => {
+    const byPath = new Map<string, PhotoKey[]>();
+    for (const key of KEYS) byPath.set(SITE_PHOTOS[key], [...(byPath.get(SITE_PHOTOS[key]) ?? []), key]);
+    const shared = [...byPath.entries()].filter(([, keys]) => keys.length > 1);
+    expect(shared).toEqual([]);
+  });
+});
+
+describe('face anchors (T-SITE1.1 Part A)', () => {
+  it('anchors only registered photos, never a mark, inside the image', () => {
+    for (const [key, [x, y]] of Object.entries(FACE_ANCHORS) as [PhotoKey, readonly [number, number]][]) {
+      expect(KEYS, key).toContain(key);
+      expect(SITE_MARKS, key).not.toContain(key);
+      expect(x, key).toBeGreaterThanOrEqual(0);
+      expect(x, key).toBeLessThanOrEqual(100);
+      expect(y, key).toBeGreaterThanOrEqual(0);
+      expect(y, key).toBeLessThanOrEqual(100);
+    }
+  });
+
+  it('positions the photo on its faces and tags it for the face test', () => {
+    expect(faceProps('close_team')).toEqual({
+      style: { objectPosition: '47% 31%' },
+      'data-face-anchor': '47 31',
+    });
+    expect(faceProps('barbell')).toEqual({});
   });
 });

@@ -1,7 +1,7 @@
 import Image from 'next/image';
 import { siteT, type SiteLanguage } from '@/lib/site/i18n';
 import { SITE_SPORT_COUNT } from '@/lib/site/sportCount';
-import { photo, type PhotoKey } from '@/lib/site/photos';
+import { faceProps, photo, type PhotoKey } from '@/lib/site/photos';
 import b from '../base.module.css';
 import s from './story.module.css';
 
@@ -37,7 +37,7 @@ export default function Essay({ lang }: { lang: SiteLanguage }) {
               src={photo(tile.img)}
               fill
               sizes={tile.sizes}
-              style={'position' in tile ? { objectPosition: tile.position } : undefined}
+              {...('position' in tile ? { style: { objectPosition: tile.position } } : faceProps(tile.img))}
             />
             <figcaption>{t(`site.home.cap_${tile.img}`)}</figcaption>
           </figure>

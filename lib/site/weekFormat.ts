@@ -10,10 +10,10 @@ export function weekdayIndex(date: string): number {
   return new Date(Date.UTC(y, m - 1, d)).getUTCDay();
 }
 
-export function formatPrice(price: { cents: number; currency: string }, lang: 'es' | 'en'): string {
-  return new Intl.NumberFormat(lang === 'es' ? 'es-CO' : 'en-US', {
-    style: 'currency',
-    currency: price.currency,
-    maximumFractionDigits: 0,
-  }).format(price.cents / 100);
+/**
+ * "30.000": the amount alone, Colombian grouping, no currency sign or space
+ * (T-SITE1.1), in both languages; the board only lists peso prices.
+ */
+export function formatPrice(price: { cents: number; currency: string }, _lang: 'es' | 'en'): string {
+  return new Intl.NumberFormat('es-CO', { maximumFractionDigits: 0 }).format(price.cents / 100);
 }

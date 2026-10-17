@@ -1,5 +1,5 @@
 import Image from 'next/image';
-import { photo } from '@/lib/site/photos';
+import { faceProps, photo } from '@/lib/site/photos';
 
 /**
  * The Inicio hero photo, the LCP element: preloaded at high priority.
@@ -10,5 +10,5 @@ import { photo } from '@/lib/site/photos';
  * hero_tall from the spec on 2026-10-16.
  */
 export default function HeroPicture({ alt }: { alt: string }) {
-  return <Image src={photo('hero_full')} alt={alt} fill sizes="100vw" preload fetchPriority="high" />;
+  return <Image src={photo('hero_full')} alt={alt} fill sizes="100vw" preload fetchPriority="high" {...faceProps('hero_full')} />;
 }

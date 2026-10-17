@@ -2,7 +2,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { siteT, type SiteLanguage } from '@/lib/site/i18n';
 import { APP_STORE_URL, PLAY_STORE_URL } from '@/lib/site/links';
-import { photo } from '@/lib/site/photos';
+import { faceProps, photo } from '@/lib/site/photos';
 import type { WeekRow } from '@/lib/site/weekTypes';
 import { ArrowRight } from '../icons';
 import StoreButton from '../StoreButton';
@@ -110,7 +110,13 @@ export default function AthletesContent({ lang, soonest }: { lang: SiteLanguage;
           {STRIP.map((s) => (
             <li key={s.img}>
               <figure>
-                <Image src={photo(s.img)} alt={tr(`site.alt.${s.img}`)} fill sizes="(max-width: 640px) 50vw, 33vw" />
+                <Image
+                  src={photo(s.img)}
+                  alt={tr(`site.alt.${s.img}`)}
+                  fill
+                  sizes="(max-width: 640px) 50vw, 33vw"
+                  {...faceProps(s.img)}
+                />
                 <figcaption>{t(s.cap)}</figcaption>
               </figure>
             </li>

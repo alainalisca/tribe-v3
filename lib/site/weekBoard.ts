@@ -12,10 +12,12 @@
  * - One row per series per WEEK: every occurrence of a recurring series in the
  *   window collapses into one row that names its days ("Lun a vie · 06:00") and
  *   links to the next occurrence.
- * - At most eight rows, as many different coaches as possible: each coach's
- *   soonest row first, then second rows, and so on.
+ * - At most eight rows, soonest first, with at most two per sport and one per
+ *   coach (Al, T-SITE1.1): a row over either cap is skipped, so the next
+ *   sports fill the board. Fewer than eight when the caps run out.
  * - Never a street address: the place is the partner gym when the session is
- *   hosted at a verified one, else the neighbourhood, else the city.
+ *   hosted at a verified one, else the session's neighbourhood. When that would
+ *   only be the city, the row has no place and its title carries it.
  */
 import { seriesParentId } from '@/lib/dal/sessions';
 import { ACTIVE_CITY } from '@/lib/city-config';
@@ -62,11 +64,21 @@ export function isListedCreator(
   return !!creator && !creator.is_admin && !creator.is_test_account && !creator.banned && !creator.deleted_at;
 }
 
-/** The public place: verified partner gym, else neighbourhood, else the city. Never `location` itself. */
-export function publicPlace(row: Pick<BoardSessionRow, 'location' | 'partner_status' | 'partner'>): string {
+/**
+ * The public place: verified partner gym, else the session's neighbourhood.
+ * Null when that would only be the city: the row then shows no place. Never
+ * `location` itself.
+ *
+ * Not the coach's profile barrio (users.location): migration 168 revoked it from
+ * anonymous readers because T-ATH5 shows a person's barrio only to people who
+ * have trained with them. Using it here is Al's call (T-SITE1.1 report).
+ */
+export function publicPlace(row: Pick<BoardSessionRow, 'location' | 'partner_status' | 'partner'>): string | null {
   const partner =
     row.partner_status === 'approved' && row.partner?.status === 'active' ? row.partner.business_name?.trim() : null;
-  return partner || neighborhoodFromAddress(row.location) || ACTIVE_CITY.name;
+  if (partner) return partner;
+  const hood = neighborhoodFromAddress(row.location);
+  return hood && hood !== ACTIVE_CITY.name ? hood : null;
 }
 
 function words(name: string | null | undefined): string[] {
@@ -191,21 +203,26 @@ export function collapseSeries(sorted: readonly BoardSessionRow[]): WeekRow[] {
   }));
 }
 
+export const WEEK_BOARD_PER_SPORT = 2;
+export const WEEK_BOARD_PER_COACH = 1;
+
 /**
- * Up to `max` rows with as many different coaches as possible: every coach's
- * soonest row, then every coach's second, and so on; shown soonest first.
+ * Up to `max` rows, soonest first, skipping any row whose sport already has two
+ * rows or whose coach already has one, so the next sports fill the board.
  */
-export function pickVaried(rows: readonly WeekRow[], max = WEEK_BOARD_MAX): WeekRow[] {
-  const byCoach = new Map<string, WeekRow[]>();
-  for (const r of rows) byCoach.set(r.creatorId, [...(byCoach.get(r.creatorId) ?? []), r]);
+export function pickBoard(rows: readonly WeekRow[], max = WEEK_BOARD_MAX): WeekRow[] {
+  const perSport = new Map<string, number>();
+  const coaches = new Set<string>();
   const picked: WeekRow[] = [];
-  for (let round = 0; picked.length < max; round++) {
-    const layer = [...byCoach.values()].map((list) => list[round]).filter((r): r is WeekRow => !!r);
-    if (layer.length === 0) break;
-    for (const r of layer) if (picked.length < max) picked.push(r);
+  for (const r of rows) {
+    if (picked.length >= max) break;
+    const sport = perSport.get(r.sport) ?? 0;
+    if (sport >= WEEK_BOARD_PER_SPORT || coaches.has(r.creatorId)) continue;
+    perSport.set(r.sport, sport + 1);
+    coaches.add(r.creatorId);
+    picked.push(r);
   }
-  const order = new Map(rows.map((r, i) => [r.id, i]));
-  return picked.sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0));
+  return picked;
 }
 
 /** The board, from the raw query rows. `now` decides today and what has already started. */
@@ -215,7 +232,7 @@ export function buildWeekBoard(
   lastDay: string,
   nowTime: string
 ): WeekRow[] {
-  return pickVaried(collapseSeries(upcoming(rows, today, lastDay, nowTime)));
+  return pickBoard(collapseSeries(upcoming(rows, today, lastDay, nowTime)));
 }
 
 /**
@@ -239,6 +256,6 @@ export function tickerLead(rows: readonly WeekRow[], lang: 'es' | 'en'): { id: s
   return rows.slice(0, 2).map((r) => ({
     id: `week-${r.id}`,
     tag: `${daysLabel(r.weekdays, lang)} ${r.startTime}`,
-    text: `${rowTitle(r, lang)} · ${r.place}`,
+    text: r.place ? `${rowTitle(r, lang)} · ${r.place}` : rowTitle(r, lang),
   }));
 }

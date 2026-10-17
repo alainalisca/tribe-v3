@@ -2,7 +2,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { coachPlansEnabled } from '@/lib/site/flags';
 import { siteT, type SiteLanguage } from '@/lib/site/i18n';
-import { photo } from '@/lib/site/photos';
+import { faceProps, photo } from '@/lib/site/photos';
 import { talkToAlHref, WA_TOPICS } from '@/lib/site/whatsapp';
 import GymGrowth from '../plans/GymGrowth';
 import { ArrowRight } from '../icons';
@@ -98,6 +98,7 @@ export default function GymsContent({ lang }: { lang: SiteLanguage }) {
                   alt={a.logo ? a.name : tr(`site.alt.${a.img}`)}
                   fill
                   sizes="(max-width: 860px) 120px, 33vw"
+                  {...faceProps(a.img)}
                 />
               </figure>
               <h3>{a.name}</h3>

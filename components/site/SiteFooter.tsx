@@ -68,15 +68,6 @@ export default function SiteFooter({ lang, plansEnabled }: { lang: SiteLanguage;
           <LanguageToggle current={lang} />
           <span>© 2026 A Plus Fitness LLC</span>
         </div>
-        <Image
-          className={c.giant}
-          src={photo('logo_w')}
-          alt=""
-          aria-hidden="true"
-          width={1709}
-          height={564}
-          sizes="100vw"
-        />
       </div>
     </footer>
   );

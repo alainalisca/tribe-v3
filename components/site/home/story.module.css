@@ -316,10 +316,11 @@
   position: relative;
   width: 100%;
   height: clamp(340px, 44vw, 620px);
+  /* At least half the scaled photo (--ar set inline): the faces never leave. */
+  min-height: calc(100vw / var(--ar, 99) / 2);
 }
 .closeIm img {
   object-fit: cover;
-  object-position: center 72%;
 }
 .over {
   position: relative;

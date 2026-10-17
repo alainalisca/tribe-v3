@@ -2,7 +2,7 @@ import Image from 'next/image';
 import { APP_STORE_URL, PLAY_STORE_URL } from '@/lib/site/links';
 import { ArrowRight } from '../icons';
 import { siteT, type SiteLanguage } from '@/lib/site/i18n';
-import { photo } from '@/lib/site/photos';
+import { backgroundBoxStyle, faceProps, photo } from '@/lib/site/photos';
 import b from '../base.module.css';
 import StoreButton from '../StoreButton';
 import s from './story.module.css';
@@ -12,8 +12,8 @@ export default function Closing({ lang }: { lang: SiteLanguage }) {
   const t = siteT(lang);
   return (
     <section className={s.close} aria-labelledby="cierre-titulo">
-      <div className={s.closeIm}>
-        <Image alt={t('site.alt.close_team')} src={photo('close_team')} fill sizes="100vw" />
+      <div className={s.closeIm} style={backgroundBoxStyle('close_team')}>
+        <Image alt={t('site.alt.close_team')} src={photo('close_team')} fill sizes="100vw" {...faceProps('close_team')} />
       </div>
       <div className={`${s.over} ${b.g}`}>
         <h2 id="cierre-titulo" className={b.disp}>

@@ -6,7 +6,9 @@
 .ph {
   position: relative;
   height: min(78vh, 760px);
-  min-height: 460px;
+  /* At least half the scaled photo (--ar is its aspect, set inline), so its
+     faces stay on screen at any width. */
+  min-height: max(460px, calc(100vw / var(--ar, 99) / 2));
   overflow: hidden;
 }
 .ph::before {
@@ -20,7 +22,7 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: center 38%;
+  /* object-position comes from the photo's face anchor (lib/site/photos). */
   transform: scale(1.04);
   animation: settle 2.4s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
 }
@@ -91,19 +93,47 @@
 .hrow .acts {
   justify-content: flex-end;
 }
+/* "Aliados": one row, never wrapping; on a narrow screen it scrolls sideways.
+   Every mark is --mark tall: the logos by height, the Zona de Combate wordmark
+   by cap height (Big Shoulders' caps are --cap of the font size, measured
+   in Chrome at weight 800). */
 .partners {
+  --mark: 40px;
+  --cap: 0.81;
   display: flex;
   align-items: center;
-  gap: clamp(18px, 4vw, 56px);
-  flex-wrap: wrap;
+  gap: clamp(18px, 3vw, 40px);
   padding-block: 20px;
   border-bottom: 1px solid var(--rule);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.partners::-webkit-scrollbar {
+  display: none;
 }
 .partners .label {
+  flex: none;
   color: var(--mute);
 }
-.partners img {
-  height: 46px;
+.marks {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: clamp(24px, 4vw, 56px);
+}
+.pgroup {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: clamp(16px, 2.5vw, 32px);
+  white-space: nowrap;
+}
+.glabel {
+  color: var(--mute);
+  font-size: 10px;
+}
+.pgroup img {
+  height: var(--mark);
   width: auto;
   opacity: 0.9;
 }
@@ -111,10 +141,11 @@
   font-family: var(--disp);
   font-variation-settings: 'opsz' 72;
   font-weight: 800;
-  font-size: 26px;
-  letter-spacing: 0.04em;
+  font-size: calc(var(--mark) / var(--cap));
+  letter-spacing: 0.02em;
   text-transform: uppercase;
-  line-height: 0.9;
+  line-height: 1;
+  white-space: nowrap;
 }
 @media (max-width: 860px) {
   .hrow {
@@ -132,9 +163,6 @@
     min-height: 0;
     aspect-ratio: 3 / 2;
   }
-  .ph img {
-    object-position: center;
-  }
   .credit {
     display: none;
   }
@@ -149,6 +177,7 @@
     font-size: 17px;
   }
   .partners {
+    --mark: 32px;
     padding-block: 14px;
   }
 }

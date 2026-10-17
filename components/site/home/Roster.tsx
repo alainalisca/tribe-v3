@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { EPISODES } from '@/lib/site/episodes';
 import { siteT, type SiteLanguage } from '@/lib/site/i18n';
 import { SITE_SPORT_COUNT } from '@/lib/site/sportCount';
-import { photo, type PhotoKey } from '@/lib/site/photos';
+import { faceProps, photo, type PhotoKey } from '@/lib/site/photos';
 import b from '../base.module.css';
 import s from './story.module.css';
 
@@ -21,7 +21,6 @@ type Coach = {
   sportKey?: string;
   where?: string;
   whereKey?: string;
-  position?: string;
 };
 const COACHES: Coach[] = [
   {
@@ -44,7 +43,6 @@ const COACHES: Coach[] = [
     name: 'Salomón Tabares',
     whereKey: 'site.home.whereSalomon',
     href: '/coaches/',
-    position: 'center 25%',
   },
   {
     img: 'ro_wil',
@@ -95,7 +93,7 @@ export default function Roster({ lang }: { lang: SiteLanguage }) {
                   src={photo(c.img)}
                   fill
                   sizes="(max-width: 900px) 62vw, 25vw"
-                  style={c.position ? { objectPosition: c.position } : undefined}
+                  {...faceProps(c.img)}
                 />
               </figure>
               <span className={`${b.mono} ${s.sport}`}>{c.sportKey ? t(c.sportKey) : c.sport}</span>

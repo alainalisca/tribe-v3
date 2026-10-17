@@ -1,7 +1,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { siteT, type SiteLanguage } from '@/lib/site/i18n';
-import { photo } from '@/lib/site/photos';
+import { faceProps, photo } from '@/lib/site/photos';
 import { ArrowRight } from '../icons';
 import b from '../base.module.css';
 import d from './doors.module.css';
@@ -41,6 +41,7 @@ export default function Doors({ lang }: { lang: SiteLanguage }) {
                 src={photo(door.img)}
                 fill
                 sizes="(max-width: 1100px) 50vw, 25vw"
+                {...faceProps(door.img)}
               />
             </div>
             <div className={d.tx}>

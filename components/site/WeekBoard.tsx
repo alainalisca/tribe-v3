@@ -13,8 +13,8 @@ import w from './week.module.css';
 
 /**
  * "La semana": the next seven days of open sessions (Part B), one row per
- * series with its days ("Lun a vie · 06:00"), at most eight, as many coaches as
- * possible. Rows come from the server (lib/site/week.ts); fewer than three adds
+ * series with its days ("Lun a vie · 06:00"), at most eight, two per sport and
+ * one per coach (lib/site/weekBoard). Rows come from the server (lib/site/week.ts); fewer than three adds
  * one "Publica la tuya" row for coaches. Sample rows are never rendered. The
  * rows are also emitted as an ItemList of Events for search engines.
  */

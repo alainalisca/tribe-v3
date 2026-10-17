@@ -1,3 +1,4 @@
+import { ACTIVE_CITY } from '@/lib/city-config';
 import { sessionEventJsonLd } from '@/lib/seo/jsonLd';
 import { rowTitle } from './weekBoard';
 import type { WeekRow } from './weekTypes';
@@ -25,7 +26,8 @@ export function weekBoardJsonLd(
         date: r.date,
         start_time: r.startTime,
         end_time: null,
-        location: r.place,
+        // The row omits a place that is only the city; an Event still needs one.
+        location: r.place ?? ACTIVE_CITY.name,
         price_cents: r.price?.cents ?? null,
         currency: r.price?.currency ?? null,
         status: 'active',

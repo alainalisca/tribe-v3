@@ -1,7 +1,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { siteT, type SiteLanguage } from '@/lib/site/i18n';
-import { photo } from '@/lib/site/photos';
+import { faceProps, photo } from '@/lib/site/photos';
 import { SITE_SPORT_COUNT } from '@/lib/site/sportCount';
 import { SPORT_GROUPS } from '@/lib/site/sportGroups';
 import { translateSport } from '@/lib/sportTranslationData';
@@ -54,7 +54,13 @@ export default function SportsContent({ lang, counts }: { lang: SiteLanguage; co
             </ul>
             {g.img && (
               <div className={p.pic}>
-                <Image src={photo(g.img)} alt={tr(`site.alt.${g.img}`)} fill sizes="(max-width: 900px) 96px, 170px" />
+                <Image
+                  src={photo(g.img)}
+                  alt={tr(`site.alt.${g.img}`)}
+                  fill
+                  sizes="(max-width: 900px) 96px, 170px"
+                  {...faceProps(g.img)}
+                />
               </div>
             )}
           </div>

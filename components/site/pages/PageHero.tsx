@@ -1,6 +1,6 @@
 import Image from 'next/image';
 import type { ReactNode } from 'react';
-import { photo, type PhotoKey } from '@/lib/site/photos';
+import { backgroundBoxStyle, faceProps, photo, type PhotoKey } from '@/lib/site/photos';
 import b from '../base.module.css';
 import p from './pages.module.css';
 
@@ -30,8 +30,8 @@ export default function PageHero({
 }) {
   return (
     <section className={p.hero} aria-labelledby="pagina-titulo">
-      <div className={`${p.ph} ${b.grain}`}>
-        <Image src={photo(img)} alt={alt} fill sizes="100vw" preload fetchPriority="high" />
+      <div className={`${p.ph} ${b.grain}`} style={backgroundBoxStyle(img)}>
+        <Image src={photo(img)} alt={alt} fill sizes="100vw" preload fetchPriority="high" {...faceProps(img)} />
         <span className={`${b.mono} ${p.tag}`}>{tag}</span>
       </div>
       <div className={b.g}>
