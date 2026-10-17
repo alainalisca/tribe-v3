@@ -1117,6 +1117,16 @@
       "yourSport": "Your sport",
       "find": "Find a session",
       "publish": "Teach one of these? Publish for free"
+    },
+    "tv": {
+      "onAir": "Full episodes · filmed in real sessions",
+      "intro": "Tribe.TV is our YouTube channel. We show up to a real session with a community coach and film the whole thing: the warm-up, the work, the people and what happens after.",
+      "play": "Watch episode",
+      "soon": "Coming soon",
+      "subscribe": "Subscribe to Tribe.TV",
+      "coachKick": "Are you a coach?",
+      "coachBody": "We film episodes with community coaches. Publish your sessions on Tribe and write to us.",
+      "coachLink": "For coaches"
     }
   }
 }

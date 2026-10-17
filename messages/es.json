@@ -1117,6 +1117,16 @@
       "yourSport": "Tu deporte",
       "find": "Busca una sesión",
       "publish": "¿Das clases de uno de estos? Publica gratis"
+    },
+    "tv": {
+      "onAir": "Episodios completos · grabados en sesiones reales",
+      "intro": "Tribe.TV es nuestro canal de YouTube. Llegamos a una sesión real con un coach de la comunidad y la grabamos completa: el calentamiento, el trabajo, la gente y lo que pasa después.",
+      "play": "Ver episodio",
+      "soon": "Próximamente",
+      "subscribe": "Suscríbete a Tribe.TV",
+      "coachKick": "¿Eres coach?",
+      "coachBody": "Grabamos episodios con coaches de la comunidad. Publica tus sesiones en Tribe y escríbenos.",
+      "coachLink": "Para coaches"
     }
   }
 }
