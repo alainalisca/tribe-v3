@@ -33,7 +33,8 @@ const PLAN_CONTENT = [
   '490.000',
   '250.000',
   'wa.me',
-  '¿Das clases?',
+  // Inicio's plan hook. Not "¿Das clases?" alone: that is also the Coaches page title.
+  '¿Das clases? Llena tu grupo.',
 ];
 
 async function renderSite(lang: 'es' | 'en') {

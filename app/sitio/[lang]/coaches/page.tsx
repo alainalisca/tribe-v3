@@ -1,14 +1,13 @@
 import type { Metadata } from 'next';
-import StubPage from '@/components/site/StubPage';
-import CoachPlans from '@/components/site/plans/CoachPlans';
-import { coachPlansEnabled } from '@/lib/site/flags';
+import CoachesContent from '@/components/site/pages/CoachesContent';
 import { siteLanguage } from '@/lib/site/i18n';
 import { siteMetadata } from '@/lib/site/metadata';
 import { photo } from '@/lib/site/photos';
 
 /**
- * Page: /coaches/ (T-SITE1). A stub until Part E; middleware serves it in the visitor's language.
- * Part D: the plan section renders only while COACH_PLANS_ENABLED is on.
+ * Page: /coaches/ (T-SITE1 Part E). Middleware serves it in the visitor's
+ * language; /for-instructors/ 301s here. The plan section renders only while
+ * COACH_PLANS_ENABLED is on.
  */
 type Props = { params: Promise<{ lang: string }> };
 
@@ -17,11 +16,5 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function CoachesPage({ params }: Props) {
-  const lang = siteLanguage((await params).lang);
-  return (
-    <>
-      <StubPage lang={lang} slug="coaches" />
-      {coachPlansEnabled() && <CoachPlans lang={lang} />}
-    </>
-  );
+  return <CoachesContent lang={siteLanguage((await params).lang)} />;
 }
