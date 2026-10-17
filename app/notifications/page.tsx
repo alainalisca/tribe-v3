@@ -4,44 +4,15 @@
 import { trackEvent } from '@/lib/analytics';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import {
-  ArrowLeft,
-  Bell,
-  Calendar,
-  MessageCircle,
-  Users,
-  Star,
-  Gift,
-  Zap,
-  CheckCheck,
-  UserCog,
-  Repeat,
-} from 'lucide-react';
+import { ArrowLeft, Bell, CheckCheck } from 'lucide-react';
 import { m } from 'framer-motion';
 import BottomNav from '@/components/BottomNav';
 import { createClient } from '@/lib/supabase/client';
 import { useNotifications } from './useNotifications';
 import type { NotificationWithActor } from '@/lib/dal/notifications';
+import NotificationSender, { senderName } from './NotificationSender';
+import { useTranslations } from '@/lib/i18n/useTranslations';
 
-const TYPE_ICONS: Record<string, React.ReactNode> = {
-  session_reminder: <Calendar className="w-5 h-5 text-tribe-green" />,
-  session_update: <Calendar className="w-5 h-5 text-blue-400" />,
-  series_occurrences_generated: <Repeat className="w-5 h-5 text-tribe-green" />,
-  session_join: <Users className="w-5 h-5 text-tribe-green" />,
-  session_invite: <Users className="w-5 h-5 text-tribe-green" />,
-  new_message: <MessageCircle className="w-5 h-5 text-tribe-green" />,
-  dm: <MessageCircle className="w-5 h-5 text-tribe-green" />,
-  connection_request: <Users className="w-5 h-5 text-amber-500" />,
-  follow: <Users className="w-5 h-5 text-amber-500" />,
-  review: <Star className="w-5 h-5 text-yellow-500" />,
-  review_received: <Star className="w-5 h-5 text-yellow-500" />,
-  referral_complete: <Gift className="w-5 h-5 text-amber-500" />,
-  referral_converted: <Gift className="w-5 h-5 text-amber-500" />,
-  streak_milestone: <Zap className="w-5 h-5 text-amber-500" />,
-  achievement: <Zap className="w-5 h-5 text-amber-500" />,
-  profile_incomplete: <UserCog className="w-5 h-5 text-tribe-green" />,
-  general: <Bell className="w-5 h-5 text-stone-400" />,
-};
 
 export function getNotificationLink(notification: NotificationWithActor): string | null {
   const { type, entity_type, entity_id, actor_id, action_url } = notification;
@@ -99,6 +70,8 @@ export function getNotificationLink(notification: NotificationWithActor): string
 
 export default function NotificationsPage() {
   const router = useRouter();
+  const tNotif = useTranslations('notif');
+  const unknownSenderLabel = tNotif('unknownSender');
   const { t, notifications, loading, error, handleMarkRead, handleMarkAllRead, formatTime } = useNotifications();
   const unreadCount = notifications.filter((n) => !n.is_read).length;
 
@@ -217,21 +190,17 @@ export default function NotificationsPage() {
                     : 'bg-tribe-green/10 dark:bg-tribe-green/5 border border-tribe-green/20'
                 }`}
               >
-                {/* Type icon */}
-                <div className="w-10 h-10 rounded-full bg-stone-100 dark:bg-tribe-mid flex items-center justify-center flex-shrink-0 mt-0.5">
-                  {notification.actor?.avatar_url ? (
-                    <img
-                      src={notification.actor.avatar_url}
-                      alt={notification.actor.name}
-                      className="w-10 h-10 rounded-full object-cover"
-                    />
-                  ) : (
-                    TYPE_ICONS[notification.type] || TYPE_ICONS.general
-                  )}
-                </div>
+                {/* Sender: a person whenever actor_id is set, the type icon only
+                    when it is not. See NotificationSender.tsx. */}
+                <NotificationSender notification={notification} unknownSenderLabel={unknownSenderLabel} />
 
                 {/* Content */}
                 <div className="flex-1 min-w-0">
+                  {senderName(notification, unknownSenderLabel) && (
+                    <p className="text-xs font-semibold text-stone-900 dark:text-white mb-0.5">
+                      {senderName(notification, unknownSenderLabel)}
+                    </p>
+                  )}
                   <p
                     className={`text-sm leading-relaxed ${
                       notification.is_read
