@@ -1,10 +1,10 @@
 import type { Metadata } from 'next';
-import StubPage from '@/components/site/StubPage';
+import FaqContent from '@/components/site/pages/FaqContent';
 import { siteLanguage } from '@/lib/site/i18n';
 import { siteMetadata } from '@/lib/site/metadata';
 import { photo } from '@/lib/site/photos';
 
-/** Page: /preguntas/ (T-SITE1). A stub until Part E; middleware serves it in the visitor's language. */
+/** Page: /preguntas/ (T-SITE1 Part E). Middleware serves it in the visitor's language; /faq/ 301s here. */
 type Props = { params: Promise<{ lang: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -12,5 +12,5 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function PreguntasPage({ params }: Props) {
-  return <StubPage lang={siteLanguage((await params).lang)} slug="preguntas" />;
+  return <FaqContent lang={siteLanguage((await params).lang)} />;
 }
