@@ -23,12 +23,19 @@ export interface SitemapInput {
   now: Date;
 }
 
-/** The static pages that were already listed, now with their trailing slashes. */
+/**
+ * The static pages: Inicio and the marketing site's pages (T-SITE1). The old
+ * /for-instructors/, /about/ and /faq/ 301 to the site and are not listed.
+ */
 export const STATIC_PAGES: { path: string; changeFrequency: 'weekly' | 'monthly'; priority: number }[] = [
   { path: '/', changeFrequency: 'weekly', priority: 1 },
-  { path: '/for-instructors/', changeFrequency: 'weekly', priority: 0.9 },
-  { path: '/about/', changeFrequency: 'monthly', priority: 0.7 },
-  { path: '/faq/', changeFrequency: 'monthly', priority: 0.6 },
+  { path: '/para-atletas/', changeFrequency: 'weekly', priority: 0.9 },
+  { path: '/coaches/', changeFrequency: 'weekly', priority: 0.9 },
+  { path: '/gimnasios/', changeFrequency: 'weekly', priority: 0.9 },
+  { path: '/deportes/', changeFrequency: 'weekly', priority: 0.8 },
+  { path: '/tv/', changeFrequency: 'weekly', priority: 0.8 },
+  { path: '/tribe-os/', changeFrequency: 'monthly', priority: 0.7 },
+  { path: '/preguntas/', changeFrequency: 'monthly', priority: 0.6 },
 ];
 
 /**

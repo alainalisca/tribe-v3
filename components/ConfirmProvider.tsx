@@ -12,7 +12,11 @@
  */
 
 import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from 'react';
-import ConfirmDialog from '@/components/ConfirmDialog';
+import dynamic from 'next/dynamic';
+
+// T-SITE1 Part F: loaded the first time something asks for confirmation. The
+// provider wraps every page, and the dialog (Radix) was in every first load.
+const ConfirmDialog = dynamic(() => import('@/components/ConfirmDialog'), { ssr: false });
 
 export interface ConfirmOptions {
   title: string;

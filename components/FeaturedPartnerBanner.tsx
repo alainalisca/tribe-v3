@@ -23,7 +23,7 @@ export default function FeaturedPartnerBanner() {
   // The track shipped broken on iPhone: slides landed partway and clipped, and
   // an empty slide appeared at the end. Neither Al nor I could reproduce it,
   // because the authenticated feed is unreachable to both of us -- / renders
-  // LandingPage when logged out and both banner mounts sit behind
+  // the marketing site when logged out and both banner mounts sit behind
   // {f.user && ...}. Reverting the mechanism is the honest response to a bug
   // that cannot be observed; a speculative CSS fix would have been the same
   // mistake a third time.

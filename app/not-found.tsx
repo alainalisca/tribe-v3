@@ -10,7 +10,12 @@
 import Link from 'next/link';
 import { Compass } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
-import BottomNav from '@/components/BottomNav';
+import dynamic from 'next/dynamic';
+
+// T-SITE1 Part F: lazy. The root not-found chunk is loaded with every page, the
+// marketing site included, and BottomNav brought supabase-js (~50 KB) into all
+// of them. The 404 still shows the nav, a moment after the page.
+const BottomNav = dynamic(() => import('@/components/BottomNav'), { ssr: false });
 
 export default function NotFound() {
   const { language } = useLanguage();

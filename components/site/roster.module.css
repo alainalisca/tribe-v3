@@ -1,0 +1,86 @@
+/* T-SITE1.1 Part C. The live coach roster: square cards, no rounded corners. */
+.grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 14px;
+}
+.grid a {
+  display: block;
+}
+.ph {
+  position: relative;
+  margin: 0 0 10px;
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
+  background: var(--ink);
+}
+.ph img {
+  object-fit: cover;
+  transition: transform 1s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.grid a:hover img {
+  transform: scale(1.04);
+}
+.initials {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--disp);
+  font-variation-settings: 'opsz' 72;
+  font-weight: 900;
+  font-size: clamp(44px, 5vw, 72px);
+  color: var(--paper);
+}
+.grid h3 {
+  font-family: var(--disp);
+  font-variation-settings: 'opsz' 72;
+  font-weight: 900;
+  text-transform: uppercase;
+  font-size: clamp(22px, 2vw, 30px);
+  line-height: 0.95;
+  margin: 0 0 4px;
+  transition: color 0.2s;
+}
+.grid a:hover h3 {
+  color: var(--lime);
+}
+.grid p {
+  margin: 0;
+  color: var(--mute);
+  font-size: 14px;
+}
+.empty {
+  color: var(--soft);
+}
+@media (max-width: 1100px) {
+  .grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+/* Phones: one row that scrolls sideways, as the roster always has. */
+@media (max-width: 900px) {
+  .grid {
+    grid-template-columns: none;
+    grid-auto-flow: column;
+    grid-auto-columns: 46%;
+    gap: 10px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+    margin-inline: calc(-1 * clamp(16px, 3.2vw, 48px));
+    padding-inline: clamp(16px, 3.2vw, 48px);
+    scroll-padding-inline: clamp(16px, 3.2vw, 48px);
+  }
+  .grid::-webkit-scrollbar {
+    display: none;
+  }
+  .grid li {
+    scroll-snap-align: start;
+  }
+}

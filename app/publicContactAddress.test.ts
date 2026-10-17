@@ -47,8 +47,8 @@ describe('visitor-facing pages show info@tribelatam.com, never the old address',
   it('read a real corpus, and reads the new address where it is known to be', () => {
     // A scanner that reads nothing passes the next test forever.
     expect(files.length).toBeGreaterThan(300);
-    const footer = path.join(ROOT, 'components', 'marketing', 'MarketingLayout.tsx');
-    expect(textOf(footer).join('\n')).toContain('info@tribelatam.com');
+    const privacy = path.join(ROOT, 'app', 'legal', 'privacy', 'page.tsx');
+    expect(textOf(privacy).join('\n')).toContain('info@tribelatam.com');
   });
 
   it(`no rendered string under app/ (outside app/api) or components/ contains "${OLD}"`, () => {

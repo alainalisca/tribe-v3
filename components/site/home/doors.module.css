@@ -1,0 +1,315 @@
+/* T-SITE1. Inicio: four doors, sports index, facts and roster (mock V6). */
+.doors {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+.door {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--char2);
+  border: 1px solid var(--rule);
+}
+.im {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+}
+.im img {
+  object-fit: cover;
+  transition: transform 1s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.door:hover .im img {
+  transform: scale(1.05);
+}
+.tx {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  padding: 18px 18px 20px;
+}
+.tx .label {
+  color: var(--mute);
+}
+.door h3 {
+  font-family: var(--disp);
+  font-variation-settings: 'opsz' 72;
+  font-weight: 900;
+  text-transform: uppercase;
+  font-size: clamp(34px, 3.2vw, 48px);
+  line-height: 0.9;
+  margin: 8px 0 10px;
+}
+.tx p {
+  flex: 1 1 auto;
+  margin: 0 0 16px;
+  color: #d3d7dc;
+  font-size: 15px;
+}
+.go {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 14px;
+  border-bottom: 2px solid var(--lime);
+  padding-bottom: 2px;
+}
+.go svg {
+  width: 16px;
+  height: 16px;
+  transition: transform 0.2s;
+}
+.door:hover .go svg {
+  transform: translateX(4px);
+}
+/* The Tribe.OS door: its photo (already at 40% brightness) under the white
+   Tribe.OS wordmark; no lime slab. */
+.osIm {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.osIm .osLock {
+  position: relative;
+  z-index: 1;
+}
+.badge {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 5px 9px;
+  background: var(--ink);
+  color: var(--lime);
+}
+.badge i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--lime);
+}
+.osLock {
+  --lh: 58px;
+}
+@media (max-width: 1100px) {
+  .doors {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+/* Phones: still 2x2 (T-SITE1 fixes, Inicio length). Title and the way in only. */
+@media (max-width: 600px) {
+  .doors {
+    gap: 8px;
+  }
+  .tx {
+    padding: 12px 12px 14px;
+  }
+  .door h3 {
+    font-size: 26px;
+    margin: 6px 0 10px;
+  }
+  .tx p {
+    display: none;
+  }
+  .tx .label {
+    font-size: 10px;
+  }
+  .go {
+    font-size: 13px;
+  }
+  .osLock {
+    --lh: 34px;
+  }
+  .badge {
+    font-size: 9px;
+    padding: 4px 6px;
+  }
+}
+
+/* sports index */
+.disc {
+  padding-block: 76px 40px;
+  border-bottom: 1px solid var(--rule);
+}
+.dhead {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+.dhead h2 {
+  font-size: clamp(54px, 8vw, 120px);
+}
+.dhead p {
+  color: var(--mute);
+  max-width: 24em;
+  font-size: 15px;
+}
+.dlist {
+  border-top: 2px solid var(--white);
+}
+.drow {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 24px;
+  padding-block: 6px;
+  border-bottom: 1px solid var(--rule);
+}
+.w {
+  font-family: var(--disp);
+  font-variation-settings: 'opsz' 72;
+  font-weight: 900;
+  text-transform: uppercase;
+  font-size: clamp(52px, 8.6vw, 132px);
+  line-height: 0.92;
+  transition:
+    color 0.25s,
+    transform 0.35s cubic-bezier(0.2, 0.7, 0.2, 1);
+  transform-origin: left center;
+}
+.where {
+  color: var(--mute);
+  font-size: 15px;
+  font-weight: 600;
+  text-align: right;
+}
+.arrow {
+  width: 46px;
+  height: 46px;
+  border: 1px solid var(--rule);
+  display: grid;
+  place-items: center;
+  transition:
+    background 0.25s,
+    border-color 0.25s;
+}
+.arrow svg {
+  width: 20px;
+  height: 20px;
+}
+.peek {
+  position: absolute !important;
+  z-index: 5;
+  right: 22%;
+  top: 50%;
+  width: clamp(200px, 18vw, 280px) !important;
+  height: auto !important;
+  aspect-ratio: 4 / 5;
+  object-fit: cover;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(-50%) rotate(-4deg) scale(0.86);
+  transition:
+    opacity 0.25s,
+    transform 0.45s cubic-bezier(0.2, 0.7, 0.2, 1);
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.5);
+}
+.drow:hover .w {
+  color: var(--lime);
+  transform: translateX(14px);
+}
+.drow:hover .arrow {
+  background: var(--lime);
+  border-color: var(--lime);
+  color: var(--ink);
+}
+.drow:hover .peek {
+  opacity: 1;
+  transform: translateY(-50%) rotate(-2deg) scale(1);
+}
+.count {
+  color: var(--lime);
+}
+.more {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+  padding-block: 22px;
+  border-bottom: 1px solid var(--rule);
+}
+.more b {
+  font-family: var(--disp);
+  font-variation-settings: 'opsz' 72;
+  font-weight: 900;
+  text-transform: uppercase;
+  font-size: clamp(34px, 4vw, 60px);
+  line-height: 0.9;
+}
+/* Touch and narrow screens: the index becomes a two-column chip grid. */
+@media (hover: none), (max-width: 860px) {
+  .disc {
+    padding-block: 52px 8px;
+  }
+  .dlist {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    border-top: 0;
+  }
+  /* Two tiles per row: the name, and this week's count under it. */
+  .drow {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px;
+    padding: 12px;
+    border: 1px solid var(--rule);
+    background: var(--char2);
+  }
+  .peek,
+  .where,
+  .arrow {
+    display: none;
+  }
+  .count {
+    display: block;
+    text-align: left;
+    font-size: 12.5px;
+  }
+  .w {
+    font-size: 24px;
+    line-height: 1;
+    overflow-wrap: anywhere;
+  }
+  .drow:hover .w {
+    transform: none;
+  }
+  .more {
+    border-bottom: 0;
+  }
+  .more b {
+    font-size: 28px;
+  }
+}
+@media (max-width: 600px) {
+  .im {
+    aspect-ratio: 16 / 11;
+  }
+}
+@media (max-width: 600px) {
+  .disc {
+    padding-block: 40px 4px;
+  }
+  .dhead {
+    margin-bottom: 14px;
+  }
+  .dhead h2 {
+    font-size: 44px;
+  }
+  .more {
+    padding-block: 14px;
+  }
+}

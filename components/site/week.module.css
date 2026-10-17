@@ -1,0 +1,187 @@
+/* T-SITE1. "La semana" board (mock .fx). */
+.fx {
+  padding-block: 72px 64px;
+}
+.fxhead {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-bottom: 22px;
+}
+.fxhead h2 {
+  font-size: clamp(54px, 8vw, 120px);
+}
+.fxhead p {
+  color: var(--mute);
+  max-width: 26em;
+  font-size: 15px;
+}
+.table {
+  border-top: 2px solid var(--white);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.row {
+  display: grid;
+  grid-template-columns: 150px 70px minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr) 120px;
+  gap: 18px;
+  align-items: center;
+  padding-block: 18px;
+  border-bottom: 1px solid var(--rule);
+  transition:
+    background 0.2s,
+    padding 0.2s;
+}
+.row:hover {
+  background: var(--lime-wash);
+  padding-inline: 12px;
+}
+.day {
+  font-family: var(--disp);
+  font-variation-settings: 'opsz' 72;
+  font-weight: 800;
+  font-size: 22px;
+  text-transform: uppercase;
+  line-height: 1;
+}
+.hr {
+  font-family: var(--mono);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--lime);
+}
+.ses {
+  font-weight: 700;
+  font-size: 17px;
+}
+.ses small {
+  display: block;
+  font-weight: 500;
+  color: var(--mute);
+  font-size: 13.5px;
+}
+.loc,
+.who {
+  color: #d8dce0;
+  font-size: 15px;
+}
+.go {
+  justify-self: end;
+  font-weight: 700;
+  font-size: 14px;
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+}
+.go svg {
+  width: 16px;
+  height: 16px;
+  transition: transform 0.2s;
+}
+.row:hover .go svg {
+  transform: translateX(4px);
+}
+.tag {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 6px;
+  margin-left: 8px;
+  vertical-align: 2px;
+  background: var(--lime);
+  color: var(--ink);
+}
+.publish .ses {
+  color: var(--lime);
+}
+/* The price as a tag only where the detail line (which carries it) is hidden. */
+.priceTag {
+  display: none;
+}
+.tagsPhone {
+  display: none;
+}
+/* Narrow screens: two lines per row. Left, the days over the time; right, the
+   title with its tags over place and coach. The whole row is the link, so the
+   "Pedir cupo" label is left to wider screens. */
+@media (max-width: 900px) {
+  .fx {
+    padding-block: 44px 36px;
+  }
+  .fxhead {
+    margin-bottom: 14px;
+  }
+  .fxhead h2 {
+    font-size: 44px;
+  }
+  .row {
+    grid-template-columns: 74px minmax(0, 1fr) minmax(0, auto);
+    grid-template-areas: 'day ses ses' 'hr loc who';
+    column-gap: 12px;
+    row-gap: 2px;
+    padding-block: 8px;
+    align-items: baseline;
+  }
+  .row:hover {
+    padding-inline: 0;
+  }
+  .day {
+    grid-area: day;
+    font-size: 15px;
+  }
+  .hr {
+    grid-area: hr;
+    font-size: 13px;
+  }
+  .ses {
+    grid-area: ses;
+    font-size: 15px;
+    line-height: 1.3;
+  }
+  .ses small {
+    display: none;
+  }
+  .priceTag {
+    display: inline-block;
+  }
+  .tags {
+    display: none;
+  }
+  .tagsPhone {
+    display: inline;
+  }
+  .tagsPhone .tag {
+    margin-left: 6px;
+    font-size: 10px;
+    padding: 1px 5px;
+  }
+  .loc,
+  .who {
+    font-size: 13px;
+    color: var(--mute);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .loc {
+    grid-area: loc;
+  }
+  .who {
+    grid-area: who;
+    justify-self: end;
+  }
+  .go {
+    display: none;
+  }
+  .publish .ses small {
+    display: block;
+  }
+  .publish .go {
+    display: inline-flex;
+    grid-area: loc;
+  }
+}
