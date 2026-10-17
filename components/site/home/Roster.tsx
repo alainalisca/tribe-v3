@@ -81,7 +81,7 @@ export default function Roster({ lang }: { lang: SiteLanguage }) {
           <br />
           {t('site.home.rosterTitle2')}
         </h2>
-        <p>{t('site.home.rosterLede')}</p>
+        <p className={b.phoneHide}>{t('site.home.rosterLede')}</p>
       </div>
       <div className={s.roster} role="list">
         {COACHES.map((c) => (

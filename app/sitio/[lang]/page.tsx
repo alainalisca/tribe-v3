@@ -11,6 +11,7 @@ import TvBlock from '@/components/site/home/TvBlock';
 import WeekBoard from '@/components/site/WeekBoard';
 import { siteLanguage } from '@/lib/site/i18n';
 import { siteMetadata } from '@/lib/site/metadata';
+import { fetchWeekBoard } from '@/lib/site/week';
 
 /**
  * Page: / for signed-out visitors (T-SITE1 Inicio).
@@ -19,7 +20,8 @@ import { siteMetadata } from '@/lib/site/metadata';
  * so the URL never shows /sitio and the canonical is `/`. Signed-in visitors
  * keep app/page.tsx, the feed; an expired session is sent back here.
  *
- * "La semana" renders its empty state until Part B wires the live board.
+ * "La semana" is the live board (Part B, lib/site/week.ts): one cached query,
+ * shared with the layout's ticker; the segment revalidates every five minutes.
  */
 type Props = { params: Promise<{ lang: string }> };
 
@@ -29,13 +31,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function InicioPage({ params }: Props) {
   const lang = siteLanguage((await params).lang);
+  const week = await fetchWeekBoard();
   return (
     <>
       <Hero lang={lang} />
       <Doors lang={lang} />
       <Disciplines lang={lang} />
       <Roster lang={lang} />
-      <WeekBoard lang={lang} rows={[]} />
+      <WeekBoard lang={lang} rows={week} />
       <Essay lang={lang} />
       <Manifesto lang={lang} />
       <TvBlock lang={lang} />

@@ -26,7 +26,7 @@
 }
 .row {
   display: grid;
-  grid-template-columns: 110px 90px minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr) 120px;
+  grid-template-columns: 150px 70px minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr) 120px;
   gap: 18px;
   align-items: center;
   padding-block: 18px;
@@ -43,7 +43,7 @@
   font-family: var(--disp);
   font-variation-settings: 'opsz' 72;
   font-weight: 800;
-  font-size: 26px;
+  font-size: 22px;
   text-transform: uppercase;
   line-height: 1;
 }
@@ -98,32 +98,90 @@
 .publish .ses {
   color: var(--lime);
 }
+/* The price as a tag only where the detail line (which carries it) is hidden. */
+.priceTag {
+  display: none;
+}
+.tagsPhone {
+  display: none;
+}
+/* Narrow screens: two lines per row. Left, the days over the time; right, the
+   title with its tags over place and coach. The whole row is the link, so the
+   "Pedir cupo" label is left to wider screens. */
 @media (max-width: 900px) {
+  .fx {
+    padding-block: 44px 36px;
+  }
+  .fxhead {
+    margin-bottom: 14px;
+  }
+  .fxhead h2 {
+    font-size: 44px;
+  }
   .row {
-    grid-template-columns: 72px 1fr;
-    grid-template-areas: 'day ses' 'hr loc' 'hr who' 'hr go';
-    row-gap: 4px;
+    grid-template-columns: 74px minmax(0, 1fr) minmax(0, auto);
+    grid-template-areas: 'day ses ses' 'hr loc who';
+    column-gap: 12px;
+    row-gap: 2px;
+    padding-block: 8px;
+    align-items: baseline;
+  }
+  .row:hover {
+    padding-inline: 0;
   }
   .day {
     grid-area: day;
-    font-size: 22px;
+    font-size: 15px;
   }
   .hr {
     grid-area: hr;
-    align-self: start;
+    font-size: 13px;
   }
   .ses {
     grid-area: ses;
+    font-size: 15px;
+    line-height: 1.3;
+  }
+  .ses small {
+    display: none;
+  }
+  .priceTag {
+    display: inline-block;
+  }
+  .tags {
+    display: none;
+  }
+  .tagsPhone {
+    display: inline;
+  }
+  .tagsPhone .tag {
+    margin-left: 6px;
+    font-size: 10px;
+    padding: 1px 5px;
+  }
+  .loc,
+  .who {
+    font-size: 13px;
+    color: var(--mute);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .loc {
     grid-area: loc;
   }
   .who {
     grid-area: who;
+    justify-self: end;
   }
   .go {
-    grid-area: go;
-    justify-self: start;
-    margin-top: 6px;
+    display: none;
+  }
+  .publish .ses small {
+    display: block;
+  }
+  .publish .go {
+    display: inline-flex;
+    grid-area: loc;
   }
 }
