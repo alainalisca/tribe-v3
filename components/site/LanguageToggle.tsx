@@ -21,8 +21,7 @@ export default function LanguageToggle({ current }: { current: CookieLanguage })
     // A full navigation to the same URL. The hash is dropped: a same-URL hash
     // change would not load the page at all.
     const url = window.location.pathname + window.location.search;
-    // Site responses say Vary: Cookie, but Next's page renderer overwrites Vary,
-    // and `next start` lets the browser reuse a cached page (stale-while-revalidate)
+    // Responses can't say Vary: Cookie (Next 16 overwrites Vary), and `next start` lets the browser reuse a cached page (stale-while-revalidate)
     // without asking the server. So refetch the page first, bypassing the cache:
     // the browser's copy of this URL is then the new language, and the navigation
     // paints it on the first frame wherever the site is hosted. On Vercel the

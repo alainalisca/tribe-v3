@@ -46,9 +46,9 @@ describe('middleware canonical Link header', () => {
 describe('middleware() sets the canonical on both success branches', () => {
   it('public page', async () => {
     const { middleware } = await import('./middleware');
-    const res = await middleware(new NextRequest('https://tribe-v3.vercel.app/about/'));
+    const res = await middleware(new NextRequest('https://tribe-v3.vercel.app/legal/privacy/'));
     expect(res.status).toBe(200);
-    expect(res.headers.get('Link')).toBe('<https://tribelatam.com/about/>; rel="canonical"');
+    expect(res.headers.get('Link')).toBe('<https://tribelatam.com/legal/privacy/>; rel="canonical"');
   });
 
   it('signed-in private page', async () => {
