@@ -505,6 +505,7 @@ const HOMOGRAPHS: Record<string, string> = {
   esta: 'está', // "esta sesión" (this) vs "está llena" (it is)
   este: 'esté', // "este mes" (this) vs "cuando esté listo" (subjunctive)
   estas: 'estás', // "estas recomendaciones" (these) vs "estás en peligro" (you are)
+  entreno: 'entrenó', // "planes de entreno" (noun, training; T-SITE1) vs "entrenó" (he/she trained)
   aun: 'aún', // "aun así" (even) vs "aún no" (yet)
 
   // Noun versus third-person preterite. Both forms are used and both correct.
