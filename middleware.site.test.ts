@@ -51,6 +51,12 @@ describe('site pages are served in the cookie language (T-SITE1)', () => {
     expect(rewriteOf(signedIn)?.pathname).toBe('/sitio/en/coaches/');
   });
 
+  it('marks every site page Vary: Cookie, so no cache serves the other language', async () => {
+    for (const path of ['/', '/coaches/', '/preguntas/']) {
+      expect((await middleware(req(path, 'tribe_lang=en'))).headers.get('Vary')).toBe('Cookie');
+    }
+  });
+
   it('treats an unknown cookie value as Spanish', async () => {
     expect(rewriteOf(await middleware(req('/tv/', 'tribe_lang=fr')))?.pathname).toBe('/sitio/es/tv/');
   });

@@ -350,7 +350,11 @@ export async function middleware(request: NextRequest) {
   if (siteSlug !== null && (siteSlug !== '' || !hasAuthCookieName(request.cookies.getAll().map((c) => c.name)))) {
     const page = request.nextUrl.clone();
     page.pathname = internalSitePath(siteSlug, languageFromCookie(request.cookies.get(LANGUAGE_COOKIE)?.value));
-    return applySecurityHeaders(NextResponse.rewrite(page), pathname);
+    // One URL, two languages picked by a cookie: a cache (the browser's or a CDN's)
+    // must never answer with the page cached under the other cookie.
+    const res = NextResponse.rewrite(page);
+    res.headers.set('Vary', 'Cookie');
+    return applySecurityHeaders(res, pathname);
   }
 
   // T-AV24: /atletas and /pase/verificar are gated on the athletes flag HERE,
