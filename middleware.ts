@@ -351,7 +351,12 @@ export async function middleware(request: NextRequest) {
     const page = request.nextUrl.clone();
     page.pathname = internalSitePath(siteSlug, languageFromCookie(request.cookies.get(LANGUAGE_COOKIE)?.value));
     // One URL, two languages picked by a cookie: a cache (the browser's or a CDN's)
-    // must never answer with the page cached under the other cookie.
+    // must never answer with the page cached under the other cookie. Next's page
+    // renderer replaces Vary on the final response (next start and Vercel alike,
+    // Next 16.0), so this header documents the intent rather than enforcing it.
+    // What does enforce it: Vercel caches the rewrite target per language and
+    // sends browsers max-age=0, must-revalidate; the ES|EN toggle refetches the
+    // page past the browser cache before navigating (components/site/LanguageToggle).
     const res = NextResponse.rewrite(page);
     res.headers.set('Vary', 'Cookie');
     return applySecurityHeaders(res, pathname);
