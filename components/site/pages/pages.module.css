@@ -23,6 +23,18 @@
   z-index: 1;
   background: linear-gradient(180deg, rgba(18, 20, 23, 0.05) 35%, rgba(34, 39, 45, 1) 100%);
 }
+/* T-SITE1.1 Part B: the gradient starts at 55%, darkening only the bottom 45%. */
+.phLow::before {
+  background: linear-gradient(180deg, rgba(18, 20, 23, 0) 55%, rgba(34, 39, 45, 1) 100%);
+}
+.credit {
+  position: absolute;
+  z-index: 2;
+  right: clamp(16px, 3.2vw, 48px);
+  top: 18px;
+  color: #fff;
+  opacity: 0.85;
+}
 .tag {
   position: absolute;
   z-index: 2;
@@ -415,6 +427,28 @@
 }
 .pic img {
   object-fit: cover;
+}
+/* A sport group without a photo: its name on ink, "sin foto todavía" below. */
+.noPic {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 6px;
+  padding: 12px;
+  background: var(--ink);
+  color: var(--paper);
+}
+.noPic b {
+  font-family: var(--disp);
+  font-variation-settings: 'opsz' 72;
+  font-weight: 900;
+  text-transform: uppercase;
+  font-size: clamp(18px, 2vw, 28px);
+  line-height: 0.95;
+}
+.noPic span {
+  font-size: 9.5px;
+  color: var(--mute);
 }
 @media (max-width: 900px) {
   .sg {
@@ -830,4 +864,26 @@
 }
 .fqhNext {
   margin-top: 36px !important;
+}
+
+/* T-SITE1.1 Part B. A captioned photo inside a section. */
+.photo {
+  position: relative;
+  margin: 0;
+  overflow: hidden;
+  background: var(--char2);
+}
+.photo img {
+  object-fit: cover;
+}
+.photoWide {
+  aspect-ratio: 3 / 2;
+  max-height: 72vh;
+  width: 100%;
+  margin-top: 32px;
+}
+.photoSide {
+  aspect-ratio: 4 / 3;
+  margin-top: 20px;
+  max-width: 30em;
 }

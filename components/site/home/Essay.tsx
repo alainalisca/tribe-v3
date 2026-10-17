@@ -6,15 +6,15 @@ import b from '../base.module.css';
 import s from './story.module.css';
 
 /**
- * At most six tiles. "rowers" was removed 2026-10-16 (not Al's photo); its
- * slot stays empty until Al approves a replacement (n_j0590.jpg is flagged).
+ * Four places (T-SITE1.1 Part B): BullBox, Zona de Combate, the park and the
+ * terrace. The fourth tile is the 4:5 yoga portrait; its row takes its height.
  */
 const TILES = [
-  { img: 'mos1', cls: 'm1', sizes: '(max-width: 860px) 50vw, 42vw' },
-  { img: 'mos5', cls: 'm5', sizes: '(max-width: 860px) 50vw, 58vw' },
-  { img: 'barbell', cls: 'm3', sizes: '(max-width: 860px) 50vw, 50vw', position: 'center 35%' },
-  { img: 'mos4', cls: 'm4', sizes: '(max-width: 860px) 50vw, 50vw' },
-] as const satisfies ReadonlyArray<{ img: PhotoKey; cls: keyof typeof s; sizes: string; position?: string }>;
+  { img: 'essay_bb', cls: 'm1', sizes: '(max-width: 860px) 50vw, 42vw' },
+  { img: 'essay_zona', cls: 'm5', sizes: '(max-width: 860px) 50vw, 58vw' },
+  { img: 'essay_wil', cls: 'm3', sizes: '(max-width: 860px) 50vw, 66vw' },
+  { img: 'essay_yoga', cls: 'm4', sizes: '(max-width: 860px) 50vw, 34vw' },
+] as const satisfies ReadonlyArray<{ img: PhotoKey; cls: keyof typeof s; sizes: string }>;
 
 /** "La gente es el plan.": the paper photo essay and its three pillars. */
 export default function Essay({ lang }: { lang: SiteLanguage }) {
@@ -37,9 +37,9 @@ export default function Essay({ lang }: { lang: SiteLanguage }) {
               src={photo(tile.img)}
               fill
               sizes={tile.sizes}
-              {...('position' in tile ? { style: { objectPosition: tile.position } } : faceProps(tile.img))}
+              {...faceProps(tile.img)}
             />
-            <figcaption>{t(`site.home.cap_${tile.img}`)}</figcaption>
+            <figcaption>{t(`site.cap.${tile.img}`)}</figcaption>
           </figure>
         ))}
       </div>

@@ -1,6 +1,6 @@
 import Image from 'next/image';
 import { siteT, type SiteLanguage } from '@/lib/site/i18n';
-import { photo } from '@/lib/site/photos';
+import { faceProps, photo } from '@/lib/site/photos';
 import WaitlistForm from '../WaitlistForm';
 import b from '../base.module.css';
 import p from './pages.module.css';
@@ -51,6 +51,16 @@ export default function OsContent({ lang }: { lang: SiteLanguage }) {
             <span className={`${b.mono} ${b.kick}`}>{t('leftKick')}</span>
             <h3>{t('leftTitle')}</h3>
             <p>{t('leftBody')}</p>
+            <figure className={`${p.photo} ${p.photoSide}`}>
+              <Image
+                src={photo('os_photo')}
+                alt={tr('site.alt.os_photo')}
+                fill
+                sizes="(max-width: 900px) 100vw, 40vw"
+                {...faceProps('os_photo')}
+              />
+              <figcaption className={b.capTag}>{tr('site.cap.os_photo')}</figcaption>
+            </figure>
           </div>
           <div className={p.mid} aria-hidden="true">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4">

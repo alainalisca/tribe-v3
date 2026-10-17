@@ -13,8 +13,8 @@ const DOORS = [
 ] as const;
 
 /**
- * "Una comunidad. Cuatro puertas.": athletes, coaches, gyms, and the lime
- * Tribe.OS door. Four across on desktop, a 2x2 grid everywhere else; phones
+ * "Una comunidad. Cuatro puertas.": athletes, coaches, gyms, and the Tribe.OS
+ * door (its photo at 40% brightness under the Tribe.OS wordmark). Four across on desktop, a 2x2 grid everywhere else; phones
  * drop the body line and keep the title and the way in.
  */
 export default function Doors({ lang }: { lang: SiteLanguage }) {
@@ -43,6 +43,7 @@ export default function Doors({ lang }: { lang: SiteLanguage }) {
                 sizes="(max-width: 1100px) 50vw, 25vw"
                 {...faceProps(door.img)}
               />
+              <span className={b.capTag}>{t(`site.cap.${door.img}`)}</span>
             </div>
             <div className={d.tx}>
               <span className={`${b.mono} ${d.label}`}>
@@ -56,9 +57,11 @@ export default function Doors({ lang }: { lang: SiteLanguage }) {
             </div>
           </Link>
         ))}
-        <Link className={`${d.door} ${d.os}`} href="/tribe-os/">
-          <div className={d.big}>
-            <span className={`${b.lock} ${b.lockInk} ${d.osLock}`}>
+        <Link className={d.door} href="/tribe-os/">
+          <div className={`${d.im} ${d.osIm}`}>
+            {/* Darkened in the file itself (scripts/site-crops.mjs, brightness 0.4). */}
+            <Image src={photo('door_os')} alt="" aria-hidden="true" fill sizes="(max-width: 1100px) 50vw, 25vw" />
+            <span className={`${b.lock} ${d.osLock}`}>
               <Image src={photo('logo_w')} alt="Tribe" width={176} height={58} sizes="176px" />
               <span>OS</span>
             </span>

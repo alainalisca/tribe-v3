@@ -13,7 +13,14 @@ export default function Closing({ lang }: { lang: SiteLanguage }) {
   return (
     <section className={s.close} aria-labelledby="cierre-titulo">
       <div className={s.closeIm} style={backgroundBoxStyle('close_team')}>
-        <Image alt={t('site.alt.close_team')} src={photo('close_team')} fill sizes="100vw" {...faceProps('close_team')} />
+        <Image
+          alt={t('site.alt.close_team')}
+          src={photo('close_team')}
+          fill
+          sizes="100vw"
+          {...faceProps('close_team')}
+        />
+        <span className={b.capTag}>{t('site.cap.close_team')}</span>
       </div>
       <div className={`${s.over} ${b.g}`}>
         <h2 id="cierre-titulo" className={b.disp}>

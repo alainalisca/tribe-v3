@@ -1,6 +1,8 @@
+import Image from 'next/image';
 import Link from 'next/link';
 import { coachPlansEnabled } from '@/lib/site/flags';
 import { siteT, type SiteLanguage } from '@/lib/site/i18n';
+import { faceProps, photo } from '@/lib/site/photos';
 import CoachPlans from '../plans/CoachPlans';
 import { ArrowRight } from '../icons';
 import StoreButton from '../StoreButton';
@@ -54,6 +56,16 @@ export default function CoachesContent({ lang }: { lang: SiteLanguage }) {
           <p>{t('howLede')}</p>
         </div>
         <Steps steps={[1, 2, 3, 4].map((i) => ({ title: t(`step${i}Title`), body: t(`step${i}Body`) }))} />
+        <figure className={`${p.photo} ${p.photoWide}`}>
+          <Image
+            src={photo('coach_group')}
+            alt={tr('site.alt.coach_group')}
+            fill
+            sizes="(max-width: 1440px) 100vw, 1340px"
+            {...faceProps('coach_group')}
+          />
+          <figcaption className={b.capTag}>{tr('site.cap.coach_group')}</figcaption>
+        </figure>
       </section>
 
       <section className={`${b.sec} ${b.g}`} aria-labelledby="que-ofrecer">

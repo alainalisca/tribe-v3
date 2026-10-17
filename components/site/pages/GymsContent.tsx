@@ -31,8 +31,9 @@ export default function GymsContent({ lang }: { lang: SiteLanguage }) {
   return (
     <>
       <PageHero
-        img="hero_gym"
-        alt={tr('site.alt.hero_gym')}
+        img="gym_hero"
+        alt={tr('site.alt.gym_hero')}
+        caption={tr('site.cap.gym_hero')}
         tag={t('tag')}
         title1={t('title1')}
         title2={t('title2')}

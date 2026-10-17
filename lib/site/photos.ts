@@ -6,46 +6,54 @@ import type { CSSProperties } from 'react';
  * compile and lib/site/photos.test.ts proves every file exists.
  *
  * Sources (all Al's own; nothing from Instagram, stock or Medellín Run Club):
- * - The face-aware crops, byte-identical to "Homepage Photos/_mock/crops"
- *   (jobs.json; sizes and aspects are final).
+ * - T-SITE1.1 Part B: cropped from the camera originals by
+ *   scripts/site-crops.mjs, every job (source, crop box, anchor) recorded in
+ *   "Homepage Photos/_mock/crops/jobs.json", which also lists the banned
+ *   frames the script refuses. door_os is the Zona frame at 40% brightness.
+ * - Older crops (row_*, ro_*, strip2, hero_coach, al_zona): the face-aware
+ *   pass, listed under `legacy` in the same jobs.json.
  * - hero_full: w0143, Zona de Combate on the plaza steps, uncropped 3:2.
- *   hero_tall was dropped (Al, 2026-10-16): a tall crop cuts faces.
  * - pad_tall: the Salomón padwork photo, the one Salomón photo on Inicio.
- * - barbell: BullBox barbell prep.
  * - bb_w, fv_w: the mock's white BullBox and Fruta Vida marks.
- * - al_bb: n_9632 (rowing at BullBox), resized to 900x600. The original crop
- *   was the same frame as door_gym (Al, 2026-10-17).
- * - tv_wod, tv_wil: Tribe.TV frames; logo_w: the white wordmark.
- * - "rowers" was removed 2026-10-16 (not Al's photo). n_j0590.jpg is flagged
- *   as its replacement and is not placed until Al says "use it".
+ * - al_bb: n_9632 (rowing at BullBox), resized to 900x600 (Al, 2026-10-17).
+ * - tv_wod, tv_wil: Tribe.TV posters (tv_wil from the camera original, no
+ *   baked-in text); logo_w: the white wordmark.
+ * - Never Zona de Combate IMG_9764-9766, 9776-9777: a person who asked not to
+ *   appear in Tribe media (Al, 2026-10-17). n_j0590.jpg is not placed until Al
+ *   says "use it".
  */
 export const SITE_PHOTOS = {
   hero_full: '/site/hero_full.jpg',
   hero_ath: '/site/hero_ath.jpg',
   hero_coach: '/site/hero_coach.jpg',
-  hero_gym: '/site/hero_gym.jpg',
+  gym_hero: '/site/gym_hero.jpg',
   door_ath: '/site/door_ath.jpg',
   door_coach: '/site/door_coach.jpg',
   door_gym: '/site/door_gym.jpg',
+  door_os: '/site/door_os.jpg',
   row_hyrox: '/site/row_hyrox.jpg',
   row_cf: '/site/row_cf.jpg',
   row_box: '/site/row_box.jpg',
   row_comb: '/site/row_comb.jpg',
   row_run: '/site/row_run.jpg',
-  row_yoga: '/site/row_yoga.jpg',
+  strip2: '/site/strip2.jpg',
   ro_andres: '/site/ro_andres.jpg',
   ro_alex: '/site/ro_alex.jpg',
   ro_wil: '/site/ro_wil.jpg',
   pad_tall: '/site/pad_tall.jpg',
-  mos1: '/site/mos1.jpg',
-  mos4: '/site/mos4.jpg',
-  mos5: '/site/mos5.jpg',
-  barbell: '/site/barbell.jpg',
+  essay_bb: '/site/essay_bb.jpg',
+  essay_zona: '/site/essay_zona.jpg',
+  essay_wil: '/site/essay_wil.jpg',
+  essay_yoga: '/site/essay_yoga.jpg',
   close_team: '/site/close_team.jpg',
-  split_ath: '/site/split_ath.jpg',
-  strip1: '/site/strip1.jpg',
-  strip2: '/site/strip2.jpg',
-  strip3: '/site/strip3.jpg',
+  ath_1: '/site/ath_1.jpg',
+  ath_2: '/site/ath_2.jpg',
+  ath_3: '/site/ath_3.jpg',
+  coach_group: '/site/coach_group.jpg',
+  gym_page: '/site/gym_page.jpg',
+  gym_coaches: '/site/gym_coaches.jpg',
+  gym_pass: '/site/gym_pass.jpg',
+  os_photo: '/site/os_photo.jpg',
   sp_fuerza: '/site/sp_fuerza.jpg',
   sp_combate: '/site/sp_combate.jpg',
   sp_resist: '/site/sp_resist.jpg',
@@ -79,34 +87,39 @@ export const SITE_MARKS: readonly PhotoKey[] = ['bb_w', 'fv_w', 'logo_w'];
  */
 export const FACE_ANCHORS: Partial<Record<PhotoKey, readonly [number, number]>> = {
   hero_full: [55, 35],
-  hero_ath: [67, 23],
   hero_coach: [52, 25],
-  hero_gym: [47, 31],
-  door_ath: [60, 34],
-  door_coach: [46, 19],
-  door_gym: [44, 46],
+  // T-SITE1.1 Part B: written by scripts/site-crops.mjs into jobs.json.
+  hero_ath: [56, 30],
+  door_ath: [46, 38],
+  door_coach: [43, 35],
+  essay_bb: [28, 35],
+  essay_zona: [57, 30],
+  essay_wil: [32, 31],
+  essay_yoga: [64, 30],
+  close_team: [47, 30],
+  ath_1: [54, 30],
+  ath_2: [50, 28],
+  ath_3: [62, 36],
+  coach_group: [50, 22],
+  gym_coaches: [50, 19],
+  gym_pass: [30, 35],
+  os_photo: [64, 35],
+  sp_fuerza: [50, 18],
+  sp_combate: [32, 33],
+  sp_resist: [82, 33],
+  sp_mente: [62, 35],
+  tv_wil: [42, 26],
+  // Read off a 10% grid (T-SITE1.1 Part A).
   row_hyrox: [56, 24],
   row_cf: [51, 26],
   row_box: [50, 17],
   row_comb: [50, 15],
   row_run: [55, 34],
-  row_yoga: [58, 22],
+  strip2: [71, 20],
   ro_andres: [45, 30],
   ro_alex: [74, 22],
   ro_wil: [51, 22],
   pad_tall: [62, 20],
-  mos1: [36, 28],
-  mos4: [50, 25],
-  mos5: [50, 22],
-  close_team: [47, 31],
-  split_ath: [56, 11],
-  strip1: [44, 16],
-  strip2: [71, 20],
-  strip3: [45, 18],
-  sp_fuerza: [53, 24],
-  sp_combate: [53, 27],
-  sp_resist: [50, 52],
-  sp_mente: [58, 24],
   al_bb: [85, 32],
   al_zona: [21, 22],
 };
@@ -125,10 +138,10 @@ export function faceProps(key: PhotoKey): { style?: CSSProperties; 'data-face-an
 /** Pixel size of the photos that fill a section's background, for aspect-tied min-heights. */
 export const BACKGROUND_SIZES: Partial<Record<PhotoKey, readonly [number, number]>> = {
   hero_full: [1600, 1067],
-  hero_ath: [1800, 750],
+  hero_ath: [1600, 667],
   hero_coach: [1800, 750],
-  hero_gym: [1800, 750],
-  close_team: [1800, 783],
+  gym_hero: [1600, 667],
+  close_team: [1600, 696],
 };
 
 /**

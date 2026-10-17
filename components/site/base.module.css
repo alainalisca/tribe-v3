@@ -216,3 +216,20 @@
     font-size: 44px;
   }
 }
+
+/* T-SITE1.1 Part B. A photo's caption: black mono tag in the bottom-left
+   corner (site.cap.<key>). The photo's box must be position: relative. */
+.capTag {
+  position: absolute;
+  z-index: 2;
+  left: 0;
+  bottom: 0;
+  padding: 7px 9px;
+  background: var(--ink);
+  color: var(--paper);
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  pointer-events: none;
+}

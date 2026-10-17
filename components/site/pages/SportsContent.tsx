@@ -52,7 +52,7 @@ export default function SportsContent({ lang, counts }: { lang: SiteLanguage; co
                 );
               })}
             </ul>
-            {g.img && (
+            {g.img ? (
               <div className={p.pic}>
                 <Image
                   src={photo(g.img)}
@@ -61,6 +61,13 @@ export default function SportsContent({ lang, counts }: { lang: SiteLanguage; co
                   sizes="(max-width: 900px) 96px, 170px"
                   {...faceProps(g.img)}
                 />
+                <span className={b.capTag}>{tr(`site.cap.${g.img}`)}</span>
+              </div>
+            ) : (
+              // Team and racket, street: no photo of Al's yet (T-SITE1.1 Part B).
+              <div className={`${p.pic} ${p.noPic}`} aria-hidden="true">
+                <b>{t(g.key)}</b>
+                <span className={b.mono}>{t('noPhoto')}</span>
               </div>
             )}
           </div>

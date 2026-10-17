@@ -66,25 +66,16 @@
 .door:hover .go svg {
   transform: translateX(4px);
 }
-.os {
-  background: var(--lime);
-  color: var(--ink);
-  border-color: var(--lime);
-}
-.os .label {
-  color: var(--ink);
-}
-.os p {
-  color: #2a2f18;
-}
-.os .go {
-  border-color: var(--ink);
-}
-.big {
-  aspect-ratio: 4 / 3;
+/* The Tribe.OS door: its photo (already at 40% brightness) under the white
+   Tribe.OS wordmark; no lime slab. */
+.osIm {
   display: flex;
-  align-items: flex-end;
-  padding: 18px;
+  align-items: center;
+  justify-content: center;
+}
+.osIm .osLock {
+  position: relative;
+  z-index: 1;
 }
 .badge {
   align-self: flex-start;
@@ -134,9 +125,6 @@
   }
   .go {
     font-size: 13px;
-  }
-  .big {
-    padding: 12px;
   }
   .osLock {
     --lh: 34px;
@@ -307,8 +295,7 @@
   }
 }
 @media (max-width: 600px) {
-  .im,
-  .big {
+  .im {
     aspect-ratio: 16 / 11;
   }
 }

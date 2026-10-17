@@ -17,6 +17,8 @@ export default function PageHero({
   title2,
   ledeStrong,
   ledeRest,
+  caption,
+  lowGradient,
   children,
 }: {
   img: PhotoKey;
@@ -26,13 +28,18 @@ export default function PageHero({
   title2: string;
   ledeStrong: string;
   ledeRest?: string;
+  /** The photo's caption tag (site.cap.<key>), bottom right. */
+  caption?: string;
+  /** Darken only the bottom 45%, so a face in the top third stays clear (Para atletas). */
+  lowGradient?: boolean;
   children?: ReactNode;
 }) {
   return (
     <section className={p.hero} aria-labelledby="pagina-titulo">
-      <div className={`${p.ph} ${b.grain}`} style={backgroundBoxStyle(img)}>
+      <div className={`${p.ph} ${b.grain} ${lowGradient ? p.phLow : ''}`} style={backgroundBoxStyle(img)}>
         <Image src={photo(img)} alt={alt} fill sizes="100vw" preload fetchPriority="high" {...faceProps(img)} />
         <span className={`${b.mono} ${p.tag}`}>{tag}</span>
+        {caption && <span className={`${b.mono} ${p.credit}`}>{caption}</span>}
       </div>
       <div className={b.g}>
         <h1 id="pagina-titulo" className={`${b.disp} ${p.h1}`}>

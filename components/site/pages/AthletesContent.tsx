@@ -11,11 +11,7 @@ import PageHero from './PageHero';
 import Steps from './Steps';
 import p from './pages.module.css';
 
-const STRIP = [
-  { img: 'strip1', cap: 'cap1' },
-  { img: 'strip2', cap: 'cap2' },
-  { img: 'strip3', cap: 'cap3' },
-] as const;
+const STRIP = ['ath_1', 'ath_2', 'ath_3'] as const;
 
 /**
  * Page: /para-atletas/ (T-SITE1 Part E, mock "Atletas"). Not /atletas, which
@@ -35,6 +31,7 @@ export default function AthletesContent({ lang, soonest }: { lang: SiteLanguage;
       <PageHero
         img="hero_ath"
         alt={tr('site.alt.hero_ath')}
+        lowGradient
         tag={t('tag')}
         title1={t('title1')}
         title2={t('title2')}
@@ -107,17 +104,17 @@ export default function AthletesContent({ lang, soonest }: { lang: SiteLanguage;
 
       <section className={`${b.sec} ${b.g}`} aria-label={t('tag')}>
         <ul className={p.strip}>
-          {STRIP.map((s) => (
-            <li key={s.img}>
+          {STRIP.map((img) => (
+            <li key={img}>
               <figure>
                 <Image
-                  src={photo(s.img)}
-                  alt={tr(`site.alt.${s.img}`)}
+                  src={photo(img)}
+                  alt={tr(`site.alt.${img}`)}
                   fill
                   sizes="(max-width: 640px) 50vw, 33vw"
-                  {...faceProps(s.img)}
+                  {...faceProps(img)}
                 />
-                <figcaption>{t(s.cap)}</figcaption>
+                <figcaption>{tr(`site.cap.${img}`)}</figcaption>
               </figure>
             </li>
           ))}

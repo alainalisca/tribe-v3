@@ -1,7 +1,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { siteT, type SiteLanguage } from '@/lib/site/i18n';
-import { photo, type PhotoKey } from '@/lib/site/photos';
+import { faceProps, photo, type PhotoKey } from '@/lib/site/photos';
 import { formatPlanPrice, mediaDayPaymentLink, sitePlanPrices } from '@/lib/site/plans';
 import { talkToAlHref, WA_TOPICS } from '@/lib/site/whatsapp';
 import { ArrowRight } from '../icons';
@@ -9,9 +9,9 @@ import b from '../base.module.css';
 import p from './plans.module.css';
 
 const DELIVERABLES: { key: string; img: PhotoKey }[] = [
-  { key: 'get1', img: 'door_gym' },
-  { key: 'get2', img: 'ro_wil' },
-  { key: 'get3', img: 'row_run' },
+  { key: 'get1', img: 'gym_page' },
+  { key: 'get2', img: 'gym_coaches' },
+  { key: 'get3', img: 'gym_pass' },
   { key: 'get4', img: 'al_zona' },
 ];
 
@@ -37,7 +37,14 @@ export default function GymGrowth({ lang }: { lang: SiteLanguage }) {
           {DELIVERABLES.map((d) => (
             <li key={d.key}>
               <figure>
-                <Image alt={t(`site.alt.${d.img}`)} src={photo(d.img)} fill sizes="(max-width: 860px) 50vw, 25vw" />
+                <Image
+                  alt={t(`site.alt.${d.img}`)}
+                  src={photo(d.img)}
+                  fill
+                  sizes="(max-width: 860px) 50vw, 25vw"
+                  {...faceProps(d.img)}
+                />
+                {d.img !== 'al_zona' && <span className={b.capTag}>{t(`site.cap.${d.img}`)}</span>}
               </figure>
               <h3>{k(d.key)}</h3>
             </li>

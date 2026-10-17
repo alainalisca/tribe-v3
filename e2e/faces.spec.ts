@@ -114,7 +114,8 @@ for (const vp of VIEWPORTS) {
       // Let the hero's settle animation finish before measuring.
       await page.waitForTimeout(2600);
       const { checked, missed } = await checkPage(page);
-      expect(checked, 'anchored photos on the page').toBeGreaterThan(path === '/' ? 8 : 2);
+      // Gimnasios: the two partner photos (its hero, the BullBox wall, has no faces).
+      expect(checked, 'anchored photos on the page').toBeGreaterThanOrEqual(path === '/' ? 8 : 2);
       expect(missed).toEqual([]);
     });
   }

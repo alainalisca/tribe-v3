@@ -82,7 +82,11 @@ describe('Inicio, "La semana" (T-SITE1 Part B)', () => {
     await renderInicio();
     const imgs = [...document.querySelectorAll('img')];
     expect(imgs.length).toBeGreaterThan(20);
-    for (const img of imgs) expect(img.getAttribute('alt'), img.getAttribute('src') ?? '').not.toBe('');
+    for (const img of imgs) {
+      // The Tribe.OS door's photo sits under the wordmark: decorative, so empty and hidden.
+      if (img.getAttribute('aria-hidden') === 'true') expect(img.getAttribute('alt')).toBe('');
+      else expect(img.getAttribute('alt'), img.getAttribute('src') ?? '').not.toBe('');
+    }
   });
 
   it('ten rows: eight shown, no "Publica la tuya"', async () => {

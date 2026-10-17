@@ -12,7 +12,7 @@ import { photo } from '@/lib/site/photos';
 type Props = { params: Promise<{ lang: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  return siteMetadata('gimnasios', '/gimnasios/', photo('hero_gym'), siteLanguage((await params).lang));
+  return siteMetadata('gimnasios', '/gimnasios/', photo('gym_hero'), siteLanguage((await params).lang));
 }
 
 export default async function GimnasiosPage({ params }: Props) {

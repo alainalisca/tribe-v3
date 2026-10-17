@@ -1,0 +1,93 @@
+#!/usr/bin/env node
+/**
+ * T-SITE1.1 Part B. The marketing site's photo pass, reproducible.
+ *
+ *   node scripts/site-crops.mjs "<path to Homepage Photos/_mock/crops/jobs.json>" [key ...]
+ *
+ * jobs.json holds `driveRoot` (the camera originals), `banned` (frames that
+ * must never be used) and `jobs`. Each job names a camera original under the
+ * drive root, the site key, the crop aspect, the output width and where the
+ * faces are in the original (`face`, percent) or, for a photo without people,
+ * the point to centre on (`focus`). `place` is where that point should sit in
+ * the crop (fractions, default 0.5, 0.4) and `zoom` shrinks the largest crop of
+ * that aspect (default 1). The script computes the crop box and the face point
+ * inside the crop, writes both back into the job (`crop`, `anchor`), and saves
+ * public/<out>.jpg and .webp: orientation applied, EXIF stripped, quality 82.
+ *
+ * A banned source stops the run before anything is read: Al's rule, a person
+ * who asked not to appear in Tribe media, and frames that are not Al's.
+ */
+import fs from 'node:fs';
+import path from 'node:path';
+import sharp from 'sharp';
+
+const [jobsPath, ...only] = process.argv.slice(2);
+if (!jobsPath) {
+  console.error('usage: node scripts/site-crops.mjs <jobs.json> [key ...]');
+  process.exit(2);
+}
+const file = JSON.parse(fs.readFileSync(jobsPath, 'utf8'));
+const PUBLIC = path.join(process.cwd(), 'public');
+
+/** A banned entry is an exact relative path, a folder ("dir/"), or "*text*" anywhere in the path. */
+function bannedBy(source, banned) {
+  const s = source.replace(/\\/g, '/').toLowerCase();
+  return banned.find((b) => {
+    const e = b.toLowerCase();
+    if (e.startsWith('*') && e.endsWith('*')) return s.includes(e.slice(1, -1));
+    if (e.endsWith('/')) return s.startsWith(e) || s.includes(`/${e}`);
+    return s === e || s.endsWith(`/${e}`);
+  });
+}
+
+const refused = file.jobs.map((j) => [j.key, j.source, bannedBy(j.source, file.banned)]).filter(([, , b]) => b);
+if (refused.length) {
+  for (const [key, source, rule] of refused) console.error(`REFUSED ${key}: ${source} is banned (${rule})`);
+  process.exit(1);
+}
+
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+
+for (const job of file.jobs) {
+  if (only.length && !only.includes(job.key)) continue;
+  const src = path.join(file.driveRoot, job.source);
+  const meta = await sharp(src).metadata();
+  const turned = (meta.orientation ?? 1) >= 5;
+  const W = turned ? meta.height : meta.width;
+  const H = turned ? meta.width : meta.height;
+
+  // The largest crop of this aspect, shrunk by zoom.
+  const zoom = job.zoom ?? 1;
+  let w = W / H > job.aspect ? H * job.aspect : W;
+  let h = w / job.aspect;
+  w = Math.round(w * zoom);
+  h = Math.round(h * zoom);
+
+  // Put the face (or focus) point at `place` inside the crop, then keep the crop inside the frame.
+  const [fx, fy] = job.face ?? job.focus ?? [50, 50];
+  const [px, py] = job.place ?? [0.5, 0.4];
+  const left = Math.round(clamp((fx / 100) * W - px * w, 0, W - w));
+  const top = Math.round(clamp((fy / 100) * H - py * h, 0, H - h));
+  job.crop = { left, top, width: w, height: h, of: [W, H] };
+  job.anchor = job.face
+    ? [Math.round((((fx / 100) * W - left) / w) * 100), Math.round((((fy / 100) * H - top) / h) * 100)]
+    : null;
+
+  const outW = Math.min(job.w, w);
+  const outH = Math.round(outW / job.aspect);
+  let img = sharp(src).rotate().extract({ left, top, width: w, height: h }).resize(outW, outH);
+  if (job.brightness) img = img.modulate({ brightness: job.brightness });
+  const out = path.join(PUBLIC, job.out ?? `site/${job.key}.jpg`);
+  fs.mkdirSync(path.dirname(out), { recursive: true });
+  const buf = await img.toBuffer();
+  await sharp(buf).jpeg({ quality: 82, mozjpeg: true }).toFile(out);
+  await sharp(buf)
+    .webp({ quality: 82 })
+    .toFile(out.replace(/\.jpe?g$/i, '.webp'));
+  const kb = (fs.statSync(out).size / 1024).toFixed(0);
+  console.log(
+    `${job.key.padEnd(12)} ${outW}x${outH} ${kb} KB  crop ${left},${top} ${w}x${h} of ${W}x${H}  anchor ${job.anchor ?? '-'}`
+  );
+}
+
+fs.writeFileSync(jobsPath, `${JSON.stringify(file, null, 2)}\n`);
