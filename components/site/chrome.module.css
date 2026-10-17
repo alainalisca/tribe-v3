@@ -1,16 +1,20 @@
 /* T-SITE1. Ticker, nav and footer from the Jornada mock. */
 
 /* ticker */
+/* T-SITE1.1 Part D: the first item sits fully visible, 16px in, for two seconds,
+   then the run moves. The lead is the container's padding, so the loop stays
+   seamless (the run still travels exactly one copy). */
 .ticker {
   background: var(--lime);
   color: var(--ink);
   overflow: hidden;
   white-space: nowrap;
   border-bottom: 1px solid var(--ink);
+  padding-left: 16px;
 }
 .run {
   display: inline-flex;
-  animation: tick 38s linear infinite;
+  animation: tick 38s linear 2s infinite;
   padding-block: 7px;
 }
 .run span {
@@ -31,6 +35,17 @@
 @keyframes tick {
   to {
     transform: translateX(-50%);
+  }
+}
+/* Phones: tighter type, so the first item (the soonest session) fits on load. */
+@media (max-width: 480px) {
+  .run span {
+    font-size: 10.5px;
+    letter-spacing: 0.03em;
+    padding-right: 28px;
+  }
+  .run b {
+    margin-right: 6px;
   }
 }
 

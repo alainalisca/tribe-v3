@@ -230,8 +230,8 @@
   opacity: 1;
   transform: translateY(-50%) rotate(-2deg) scale(1);
 }
-.thumb {
-  display: none !important;
+.count {
+  color: var(--lime);
 }
 .more {
   display: flex;
@@ -261,23 +261,23 @@
     gap: 8px;
     border-top: 0;
   }
+  /* Two tiles per row: the name, and this week's count under it. */
   .drow {
-    grid-template-columns: 44px minmax(0, 1fr);
-    gap: 10px;
-    padding: 6px 10px 6px 6px;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px;
+    padding: 12px;
     border: 1px solid var(--rule);
     background: var(--char2);
-  }
-  .thumb {
-    display: block !important;
-    width: 44px;
-    height: 44px;
-    object-fit: cover;
   }
   .peek,
   .where,
   .arrow {
     display: none;
+  }
+  .count {
+    display: block;
+    text-align: left;
+    font-size: 12.5px;
   }
   .w {
     font-size: 24px;

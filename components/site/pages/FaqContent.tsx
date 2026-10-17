@@ -60,9 +60,9 @@ export default function FaqContent({ lang }: { lang: SiteLanguage }) {
           <em>{t('title2')}</em>
         </h1>
         <p>
-          {t('lede')}{' '}
+          {t('lede')} {/* The address is the link's target, not text on the page (T-SITE1.1 Part D). */}
           <a className={b.ulink} href={`mailto:${CONTACT_EMAIL}`}>
-            {CONTACT_EMAIL}
+            {t('writeUs')}
           </a>
         </p>
       </div>

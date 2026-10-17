@@ -2,13 +2,16 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { coachPlansEnabled } from '@/lib/site/flags';
 import { siteT, type SiteLanguage } from '@/lib/site/i18n';
-import { faceProps, photo } from '@/lib/site/photos';
+import { faceProps, photo, type PhotoKey } from '@/lib/site/photos';
 import { talkToAlHref, WA_TOPICS } from '@/lib/site/whatsapp';
 import GymGrowth from '../plans/GymGrowth';
 import { ArrowRight } from '../icons';
 import b from '../base.module.css';
 import PageHero from './PageHero';
 import p from './pages.module.css';
+
+/** The photos of the first three "Qué recibes" items (T-SITE1.1 Part B). */
+const FEAT_PHOTOS: Partial<Record<number, PhotoKey>> = { 1: 'gym_page', 2: 'gym_coaches', 3: 'gym_pass' };
 
 /**
  * Page: /gimnasios/ (T-SITE1 Part E, mock "Gimnasios" + Part D).
@@ -61,25 +64,36 @@ export default function GymsContent({ lang }: { lang: SiteLanguage }) {
             </h2>
             <p>{t('getLede')}</p>
           </div>
+          {/* T-SITE1.1 Part D: the first three carry their photos; Tribe.OS is a line under the grid. */}
           <ul className={p.feats}>
-            {[1, 2, 3, 4, 5, 6].map((i) => (
-              <li key={i}>
-                <span className={`${b.mono} ${p.kicker}`}>{t(`f${i}k`)}</span>
-                <h3 className={i === 6 ? p.muted : undefined}>{t(`f${i}t`)}</h3>
-                <p>
-                  {t(`f${i}b`)}
-                  {i === 6 && (
-                    <>
-                      {' '}
-                      <Link className={b.ulink} href="/tribe-os/">
-                        {t('f6link')}
-                      </Link>
-                    </>
+            {[1, 2, 3, 4, 5].map((i) => {
+              const img = FEAT_PHOTOS[i];
+              return (
+                <li key={i}>
+                  {img && (
+                    <figure className={p.featPhoto}>
+                      <Image
+                        src={photo(img)}
+                        alt={tr(`site.alt.${img}`)}
+                        fill
+                        sizes="(max-width: 860px) 100vw, 33vw"
+                        {...faceProps(img)}
+                      />
+                      <figcaption className={b.capTag}>{tr(`site.cap.${img}`)}</figcaption>
+                    </figure>
                   )}
-                </p>
-              </li>
-            ))}
+                  <span className={`${b.mono} ${p.kicker}`}>{t(`f${i}k`)}</span>
+                  <h3>{t(`f${i}t`)}</h3>
+                  <p>{t(`f${i}b`)}</p>
+                </li>
+              );
+            })}
           </ul>
+          <p className={p.soon}>
+            <Link className={b.ulink} href="/tribe-os/">
+              {t('soonOs')}
+            </Link>
+          </p>
         </section>
       )}
 

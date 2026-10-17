@@ -32,14 +32,17 @@ export default function TvBlock({ lang }: { lang: SiteLanguage }) {
       </div>
       <div className={v.tvgrid}>
         <div>
+          {/* The button sits below the thumbnail, never over it (T-SITE1.1 Part D). */}
           <a
-            className={v.screen}
+            className={v.ep}
             href={youtubeWatchUrl(featured.id)}
             target="_blank"
             rel="noopener"
             aria-label={`${t('watchEpisode')}: ${featured.title[lang]}`}
           >
-            <Image src={featured.thumb} alt={featured.alt[lang]} fill sizes="(max-width: 900px) 100vw, 62vw" />
+            <span className={v.screen}>
+              <Image src={featured.thumb} alt={featured.alt[lang]} fill sizes="(max-width: 900px) 100vw, 62vw" />
+            </span>
             <span className={v.play}>
               <Play />
               {t('watchEpisode')}

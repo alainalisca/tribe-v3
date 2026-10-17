@@ -10,5 +10,15 @@ import { faceProps, photo } from '@/lib/site/photos';
  * hero_tall from the spec on 2026-10-16.
  */
 export default function HeroPicture({ alt }: { alt: string }) {
-  return <Image src={photo('hero_full')} alt={alt} fill sizes="100vw" preload fetchPriority="high" {...faceProps('hero_full')} />;
+  return (
+    <Image
+      src={photo('hero_full')}
+      alt={alt}
+      fill
+      sizes="100vw"
+      preload
+      fetchPriority="high"
+      {...faceProps('hero_full')}
+    />
+  );
 }

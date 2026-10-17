@@ -1,7 +1,7 @@
 import { existsSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, it, expect } from 'vitest';
-import { siteKeys } from './messages';
+import { siteKeys, siteMessage } from './messages';
 import { FACE_ANCHORS, SITE_MARKS, SITE_PHOTOS, faceProps, type PhotoKey } from './photos';
 
 /** T-SITE1 Part C: the site's photos are keyed, present, light and described. */
@@ -92,5 +92,29 @@ describe('banned frames (T-SITE1.1 Part B)', () => {
     for (const name of ['z9765.jpg', 'IMG_9776.JPG', 'IMG_9860.JPG', 'ronald_01.jpg'])
       expect(BANNED.test(name), name).toBe(true);
     for (const name of ['IMG_9714.JPG', 'z9824.jpg', 'door_ath.jpg']) expect(BANNED.test(name), name).toBe(false);
+  });
+});
+
+/**
+ * T-SITE1.1 (Al, 2026-10-17): every alt text is a sentence that ends with a
+ * period; English says "Coach Wil", Spanish "profe Wil".
+ */
+describe('alt text style', () => {
+  it('every alt ends with a period, in both languages', () => {
+    for (const lang of ['es', 'en'] as const) {
+      const alts = siteKeys(lang).filter((k) => k.startsWith('alt.'));
+      expect(alts.length).toBeGreaterThan(20);
+      const bad = alts.filter((k) => !siteMessage(lang, 'site.alt', k.slice(4)).endsWith('.'));
+      expect(bad, lang).toEqual([]);
+    }
+  });
+
+  it('Wil is "Coach Wil" in English and "profe Wil" in Spanish', () => {
+    for (const k of siteKeys('en').filter((k) => k.startsWith('alt.'))) {
+      expect(siteMessage('en', 'site.alt', k.slice(4)), k).not.toMatch(/\b(profe|Profe|coach) Wil\b/);
+    }
+    for (const k of siteKeys('es').filter((k) => k.startsWith('alt.'))) {
+      expect(siteMessage('es', 'site.alt', k.slice(4)), k).not.toMatch(/\b(Coach|coach|Profe) Wil\b/);
+    }
   });
 });

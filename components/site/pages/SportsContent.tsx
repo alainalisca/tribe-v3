@@ -58,7 +58,7 @@ export default function SportsContent({ lang, counts }: { lang: SiteLanguage; co
                   src={photo(g.img)}
                   alt={tr(`site.alt.${g.img}`)}
                   fill
-                  sizes="(max-width: 900px) 96px, 170px"
+                  sizes="(max-width: 640px) 100vw, (max-width: 900px) 96px, 170px"
                   {...faceProps(g.img)}
                 />
                 <span className={b.capTag}>{tr(`site.cap.${g.img}`)}</span>

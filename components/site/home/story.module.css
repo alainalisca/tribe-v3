@@ -380,9 +380,11 @@
   }
 }
 @media (max-width: 600px) {
-  /* Pillars as three titled lines; the bodies are on desktop and /para-atletas/. */
+  /* Each pillar: its title and one line of body, always shown (T-SITE1.1 Part D). */
   .pillars p {
-    display: none;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .pillars div,
   .pillars div + div {
@@ -390,6 +392,6 @@
   }
   .pillars h3 {
     font-size: 22px;
-    margin-bottom: 0;
+    margin-bottom: 4px;
   }
 }

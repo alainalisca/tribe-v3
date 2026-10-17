@@ -474,6 +474,27 @@
     font-size: 30px;
   }
 }
+/* Phones (T-SITE1.1 Part D): the group's photo full width, 16:9, above its sports. */
+@media (max-width: 640px) {
+  .sg {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .gname,
+  .pic,
+  .words {
+    grid-column: 1;
+  }
+  .pic {
+    grid-row: 2;
+    aspect-ratio: 16 / 9;
+  }
+  .words {
+    grid-row: 3;
+  }
+  .noPic b {
+    font-size: 28px;
+  }
+}
 
 /* allies */
 .allies {
@@ -571,8 +592,15 @@
   max-width: 12em;
 }
 .osh h1 em {
+  display: block;
   font-style: normal;
   color: var(--lime);
+}
+.osFirst {
+  display: block;
+  font-size: 0.48em;
+  line-height: 1;
+  margin-bottom: 0.18em;
 }
 .lead {
   margin-top: 22px !important;
@@ -886,4 +914,20 @@
   aspect-ratio: 4 / 3;
   margin-top: 20px;
   max-width: 30em;
+}
+
+/* Gimnasios, "Qué recibes": a photo on the first three items, Tribe.OS as a line under the grid. */
+.featPhoto {
+  position: relative;
+  margin: 0 0 14px;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  background: var(--char2);
+}
+.featPhoto img {
+  object-fit: cover;
+}
+.soon {
+  margin-top: 22px !important;
+  font-weight: 700;
 }

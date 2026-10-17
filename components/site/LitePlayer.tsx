@@ -29,31 +29,36 @@ export default function LitePlayer({
 }) {
   const [playing, setPlaying] = useState(false);
   return (
-    <div className={v.screen}>
+    <div className={v.lite}>
       {playing ? (
-        <iframe
-          className={v.player}
-          src={`https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0&modestbranding=1&playsinline=1`}
-          title={title}
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-          referrerPolicy="strict-origin-when-cross-origin"
-          allowFullScreen
-        />
+        <div className={v.screen}>
+          <iframe
+            className={v.player}
+            src={`https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0&modestbranding=1&playsinline=1`}
+            title={title}
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            referrerPolicy="strict-origin-when-cross-origin"
+            allowFullScreen
+          />
+        </div>
       ) : (
+        // The play label sits below the thumbnail, never over it (T-SITE1.1 Part D).
         <button
           type="button"
-          className={v.tapToPlay}
+          className={`${v.ep} ${v.tapToPlay}`}
           onClick={() => setPlaying(true)}
           aria-label={`${playLabel}: ${title}`}
         >
-          <Image
-            src={thumb}
-            alt={alt}
-            fill
-            sizes="(max-width: 900px) 100vw, 62vw"
-            preload={priority}
-            fetchPriority={priority ? 'high' : undefined}
-          />
+          <span className={v.screen}>
+            <Image
+              src={thumb}
+              alt={alt}
+              fill
+              sizes="(max-width: 900px) 100vw, 62vw"
+              preload={priority}
+              fetchPriority={priority ? 'high' : undefined}
+            />
+          </span>
           <span className={v.play}>
             <Play />
             {playLabel}

@@ -6,7 +6,7 @@ import { PLANES_PAGE, planesGuardError } from '@/lib/site/planesGuard';
 import type { ReactElement } from 'react';
 
 vi.mock('server-only', () => ({}));
-vi.mock('@/lib/site/week', () => ({ fetchWeekBoard: async () => [] }));
+vi.mock('@/lib/site/week', () => ({ fetchWeekBoard: async () => [], fetchWeekSportCounts: async () => ({}) }));
 vi.mock('@/lib/site/roster', () => ({ fetchRoster: async () => [] }));
 vi.mock('next/navigation', () => ({ usePathname: () => '/' }));
 vi.mock('@/lib/LanguageContext', () => ({ useLanguage: () => ({ language: 'es', setLanguage: vi.fn() }) }));

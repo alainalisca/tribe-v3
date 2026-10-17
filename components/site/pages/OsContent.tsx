@@ -29,10 +29,9 @@ export default function OsContent({ lang }: { lang: SiteLanguage }) {
             <span>OS</span>
           </span>
         </div>
+        {/* T-SITE1.1 Part D: the first line smaller, the lime line at full size; three lines at most on a phone. */}
         <h1 id="pagina-titulo" className={b.disp}>
-          {t('title1')}
-          <br />
-          <em>{t('title2')}</em>
+          <span className={p.osFirst}>{t('title1')}</span> <em>{t('title2')}</em>
         </h1>
         <p className={p.lead}>{t('lead')}</p>
       </section>

@@ -13,7 +13,7 @@ import { siteLanguage } from '@/lib/site/i18n';
 import { siteMetadata } from '@/lib/site/metadata';
 import { photo } from '@/lib/site/photos';
 import { fetchRoster } from '@/lib/site/roster';
-import { fetchWeekBoard } from '@/lib/site/week';
+import { fetchWeekBoard, fetchWeekSportCounts } from '@/lib/site/week';
 
 /**
  * Page: / for signed-out visitors (T-SITE1 Inicio).
@@ -33,12 +33,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function InicioPage({ params }: Props) {
   const lang = siteLanguage((await params).lang);
-  const [week, roster] = await Promise.all([fetchWeekBoard(), fetchRoster()]);
+  const [week, counts, roster] = await Promise.all([fetchWeekBoard(), fetchWeekSportCounts(), fetchRoster()]);
   return (
     <>
       <Hero lang={lang} />
       <Doors lang={lang} />
-      <Disciplines lang={lang} />
+      <Disciplines lang={lang} counts={counts} />
       <Roster lang={lang} coaches={roster} />
       <WeekBoard lang={lang} rows={week} />
       <Essay lang={lang} />
