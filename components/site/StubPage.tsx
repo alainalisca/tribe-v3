@@ -1,4 +1,5 @@
 import { siteT, type SiteLanguage } from '@/lib/site/i18n';
+import { SITE_SPORT_COUNT } from '@/lib/site/sportCount';
 import type { SiteSlug } from '@/lib/site/paths';
 import b from './base.module.css';
 
@@ -13,7 +14,7 @@ export default function StubPage({ lang, slug }: { lang: SiteLanguage; slug: Sit
     <section className={`${b.sec} ${b.g} ${b.stub}`} aria-labelledby="pagina-titulo">
       <span className={`${b.mono} ${b.kick}`}>{t(`site.pages.${slug}.kicker`)}</span>
       <h1 id="pagina-titulo" className={b.disp}>
-        {t(`site.pages.${slug}.title`)}
+        {t(`site.pages.${slug}.title`, { n: SITE_SPORT_COUNT })}
       </h1>
       <p>{t(`site.pages.${slug}.body`)}</p>
     </section>

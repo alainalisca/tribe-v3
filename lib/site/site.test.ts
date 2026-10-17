@@ -4,6 +4,8 @@ import { describe, it, expect } from 'vitest';
 import { cookieNames, hasAuthCookieName } from './authCookie';
 import { siteKeys, siteMessage } from './messages';
 import { SITE_SLUGS } from './paths';
+import { SITE_SPORT_COUNT } from './sportCount';
+import { SPORTS_LIST } from '@/lib/sports';
 import { storeUrlFor, APP_STORE_URL, PLAY_STORE_URL } from './links';
 import { formatPrice, weekdayIndex } from './weekFormat';
 
@@ -54,6 +56,19 @@ describe('site copy (messages/{es,en}.json, site.*)', () => {
           expect(siteMessage(lang, `site.pages.${slug}`, key), `${lang} ${slug}.${key}`).not.toMatch(/^site\./);
         for (const key of ['title', 'description'])
           expect(siteMessage(lang, `site.meta.${slug}`, key), `${lang} meta ${slug}.${key}`).not.toMatch(/^site\./);
+      }
+    }
+  });
+
+  it('never writes the sport count as a literal: it comes from lib/sports.ts (Al, 2026-10-17)', () => {
+    expect(SITE_SPORT_COUNT).toBe(SPORTS_LIST.length - 1);
+    for (const lang of ['es', 'en'] as const) {
+      for (const path of siteKeys(lang)) {
+        const i = path.lastIndexOf('.');
+        const text = siteMessage(lang, `site.${path.slice(0, i)}`, path.slice(i + 1));
+        expect(text, `${lang} site.${path}`).not.toMatch(
+          new RegExp(`\\b(${SITE_SPORT_COUNT}|${SITE_SPORT_COUNT - 6})\\b`)
+        );
       }
     }
   });

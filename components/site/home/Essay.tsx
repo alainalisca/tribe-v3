@@ -1,5 +1,6 @@
 import Image from 'next/image';
 import { siteT, type SiteLanguage } from '@/lib/site/i18n';
+import { SITE_SPORT_COUNT } from '@/lib/site/sportCount';
 import b from '../base.module.css';
 import s from './story.module.css';
 
@@ -45,7 +46,7 @@ export default function Essay({ lang }: { lang: SiteLanguage }) {
         {(['pillar1', 'pillar2', 'pillar3'] as const).map((p) => (
           <div key={p}>
             <h3>{t(`site.home.${p}Title`)}</h3>
-            <p>{t(`site.home.${p}Body`)}</p>
+            <p>{t(`site.home.${p}Body`, { n: SITE_SPORT_COUNT })}</p>
           </div>
         ))}
       </div>

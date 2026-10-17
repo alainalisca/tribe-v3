@@ -757,7 +757,7 @@
       },
       "gimnasios": {
         "title": "Gimnasios · Tribe",
-        "description": "No posts. No likes. Gente nueva entrando por la puerta."
+        "description": "Trae tu gimnasio a Tribe. Tus coaches, tus clases y una primera clase gratis que te trae gente nueva a la puerta. Hecho en Medellín."
       },
       "tribe-os": {
         "title": "Tribe.OS · Tribe",
@@ -769,7 +769,7 @@
       },
       "preguntas": {
         "title": "Preguntas frecuentes · Tribe",
-        "description": "Cómo funciona Tribe, qué cuesta y cómo se paga. Tribe no cobra comisión; los atletas le pagan directo al instructor. ¿Otra pregunta? Escríbenos a info@tribelatam.com."
+        "description": "Cómo funciona Tribe, qué cuesta y cómo se paga. Tribe no cobra comisión; los atletas le pagan directo al instructor."
       }
     },
     "alt": {
@@ -820,14 +820,14 @@
       "door_os_go": "Conoce Tribe.OS",
       "sportsTitle1": "Elige tu",
       "sportsTitle2": "deporte",
-      "sportsLede": "22 deportes en la app. Estos son los que más se mueven esta semana.",
+      "sportsLede": "{n} deportes en la app. Estos son los que más se mueven esta semana.",
       "sportBoxing": "Boxeo",
       "sportCombat": "Combate",
       "sportRunning": "Correr",
       "whereOutdoors": "Al aire libre",
       "whereTerrace": "En la terraza",
-      "moreSports": "Y 16 deportes más",
-      "allSports": "Ver los 22 deportes",
+      "moreSports": "Y {more} deportes más",
+      "allSports": "Ver los {n} deportes",
       "factSports": "deportes en la app",
       "factPartners": "gimnasios y aliados",
       "factEpisodes": "episodios en Tribe.TV",
@@ -848,7 +848,7 @@
       "cap_mos4": "Después del WOD · BullBox",
       "cap_mos5": "Entre series · BullBox",
       "pillar1Title": "Sesiones de verdad",
-      "pillar1Body": "22 deportes, de HYROX a yoga. Gratis o de pago, cerca de ti.",
+      "pillar1Body": "{n} deportes, de HYROX a yoga. Gratis o de pago, cerca de ti.",
       "pillar2Title": "Coaches con nombre",
       "pillar2Body": "Ves quién da la clase, su estilo y lo que dice su gente antes de llegar.",
       "pillar3Title": "Un grupo que vuelve",
@@ -890,7 +890,7 @@
       },
       "deportes": {
         "kicker": "Deportes",
-        "title": "22 deportes, una app.",
+        "title": "{n} deportes, una app.",
         "body": "Fuerza, combate, resistencia y mente y cuerpo. Elige tu deporte y mira quién entrena esta semana en Medellín."
       },
       "coaches": {

@@ -60,6 +60,23 @@ describe('Inicio, "La semana" (T-SITE1 Part B)', () => {
     expect(ld.itemListElement).toHaveLength(2);
   });
 
+  it('each session row is ONE link named "Pedir cupo: <title>" (EN "Ask for a spot: <title>")', async () => {
+    fetchWeekBoard.mockResolvedValue([row(0), { ...row(1), title: 'WOD de los viernes' }]);
+    const { board } = await renderInicio();
+    const named = within(board).getAllByRole('link', { name: /^Pedir cupo: / });
+    expect(named.map((l) => l.getAttribute('aria-label'))).toEqual([
+      'Pedir cupo: Boxeo con Coach0',
+      'Pedir cupo: WOD de los viernes',
+    ]);
+    for (const li of board.querySelectorAll('li')) expect(li.querySelectorAll('a, button')).toHaveLength(1);
+  });
+
+  it('names the rows in English on the English page', async () => {
+    fetchWeekBoard.mockResolvedValue([row(1)]);
+    const { board } = await renderInicio('en');
+    expect(within(board).getByRole('link', { name: 'Ask for a spot: Boxing with Coach1' })).toBeTruthy();
+  });
+
   it('ten rows: eight shown, no "Publica la tuya"', async () => {
     fetchWeekBoard.mockResolvedValue(Array.from({ length: 10 }, (_, i) => row(i)));
     const { links } = await renderInicio();
@@ -70,7 +87,7 @@ describe('Inicio, "La semana" (T-SITE1 Part B)', () => {
   it('renders in English for /sitio/en', async () => {
     fetchWeekBoard.mockResolvedValue([row(1)]);
     await renderInicio('en');
-    expect(screen.getByText('Boxing with Coach1')).toBeTruthy();
+    expect(screen.getAllByText('Boxing with Coach1').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Mon').length).toBeGreaterThan(0);
   });
 });

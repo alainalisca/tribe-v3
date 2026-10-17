@@ -53,7 +53,7 @@ export default function WeekBoard({ lang, rows }: { lang: SiteLanguage; rows: We
           );
           return (
             <li key={r.id}>
-              <Link className={w.row} href={`/s/${r.id}/`}>
+              <Link className={w.row} href={`/s/${r.id}/`} aria-label={`${t('site.week.ask')}: ${title}`}>
                 <span className={w.day}>{daysLabel(r.weekdays, lang)}</span>
                 <span className={w.hr}>{r.startTime}</span>
                 <span className={w.ses}>

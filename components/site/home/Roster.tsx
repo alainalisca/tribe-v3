@@ -2,6 +2,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { EPISODES } from '@/lib/site/episodes';
 import { siteT, type SiteLanguage } from '@/lib/site/i18n';
+import { SITE_SPORT_COUNT } from '@/lib/site/sportCount';
 import b from '../base.module.css';
 import s from './story.module.css';
 
@@ -54,7 +55,7 @@ const COACHES: Coach[] = [
 ];
 
 const FACTS = [
-  { value: '22', key: 'factSports' },
+  { value: String(SITE_SPORT_COUNT), key: 'factSports' },
   { value: '3', key: 'factPartners' },
   { value: String(EPISODES.length), key: 'factEpisodes' },
 ] as const;

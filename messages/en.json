@@ -718,7 +718,7 @@
       "tvTag": "New",
       "plansTag": "New",
       "plansText": "Plans for coaches and gyms",
-      "osTag": "Soon",
+      "osTag": "Coming soon",
       "osText": "Tribe.OS for coaches and gyms",
       "sportsText": "sports in the app"
     },
@@ -757,7 +757,7 @@
       },
       "gimnasios": {
         "title": "Gyms · Tribe",
-        "description": "No posts. No likes. New people walking through the door."
+        "description": "Bring your gym into Tribe. Your coaches, your classes and a free first class that puts new people at your door. Built in Medellín."
       },
       "tribe-os": {
         "title": "Tribe.OS · Tribe",
@@ -769,7 +769,7 @@
       },
       "preguntas": {
         "title": "Frequently asked questions · Tribe",
-        "description": "How Tribe works, what it costs and how payment works. Tribe charges no commission; athletes pay the instructor directly. Another question? Write to info@tribelatam.com."
+        "description": "How Tribe works, what it costs and how payment works. Tribe charges no commission; athletes pay the instructor directly."
       }
     },
     "alt": {
@@ -820,14 +820,14 @@
       "door_os_go": "Meet Tribe.OS",
       "sportsTitle1": "Pick your",
       "sportsTitle2": "sport",
-      "sportsLede": "22 sports in the app. These are the busiest this week.",
+      "sportsLede": "{n} sports in the app. These are the busiest this week.",
       "sportBoxing": "Boxing",
       "sportCombat": "Combat",
       "sportRunning": "Running",
       "whereOutdoors": "Outdoors",
       "whereTerrace": "On the rooftop",
-      "moreSports": "And 16 more sports",
-      "allSports": "See all 22 sports",
+      "moreSports": "And {more} more sports",
+      "allSports": "See all {n} sports",
       "factSports": "sports in the app",
       "factPartners": "gyms and partners",
       "factEpisodes": "episodes on Tribe.TV",
@@ -848,7 +848,7 @@
       "cap_mos4": "After the WOD · BullBox",
       "cap_mos5": "Between sets · BullBox",
       "pillar1Title": "Real sessions",
-      "pillar1Body": "22 sports, from HYROX to yoga. Free or paid, near you.",
+      "pillar1Body": "{n} sports, from HYROX to yoga. Free or paid, near you.",
       "pillar2Title": "Coaches with names",
       "pillar2Body": "You see who teaches the class, their style and what their people say before you arrive.",
       "pillar3Title": "A group that comes back",
@@ -890,7 +890,7 @@
       },
       "deportes": {
         "kicker": "Sports",
-        "title": "22 sports, one app.",
+        "title": "{n} sports, one app.",
         "body": "Strength, combat, endurance, and mind and body. Pick your sport and see who is training this week in Medellín."
       },
       "coaches": {

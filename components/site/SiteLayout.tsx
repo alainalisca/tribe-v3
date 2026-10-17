@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { EPISODES } from '@/lib/site/episodes';
 import { coachPlansEnabled } from '@/lib/site/flags';
 import { siteT, type SiteLanguage } from '@/lib/site/i18n';
+import { SITE_SPORT_COUNT } from '@/lib/site/sportCount';
 import MarketingSurfaceMarker from './MarketingSurfaceMarker';
 import SiteFooter from './SiteFooter';
 import SiteNav from './SiteNav';
@@ -34,7 +35,7 @@ export default function SiteLayout({
     plans
       ? { id: 'plans', tag: t('site.ticker.plansTag'), text: t('site.ticker.plansText') }
       : { id: 'os', tag: t('site.ticker.osTag'), text: t('site.ticker.osText') },
-    { id: 'sports', tag: '22', text: t('site.ticker.sportsText') },
+    { id: 'sports', tag: String(SITE_SPORT_COUNT), text: t('site.ticker.sportsText') },
   ];
 
   return (

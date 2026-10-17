@@ -1,6 +1,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { siteT, type SiteLanguage } from '@/lib/site/i18n';
+import { SITE_SPORT_COUNT } from '@/lib/site/sportCount';
 import { ArrowUpRight } from '../icons';
 import b from '../base.module.css';
 import d from './doors.module.css';
@@ -33,7 +34,7 @@ export default function Disciplines({ lang }: { lang: SiteLanguage }) {
           <br />
           {t('site.home.sportsTitle2')}
         </h2>
-        <p className={b.phoneHide}>{t('site.home.sportsLede')}</p>
+        <p className={b.phoneHide}>{t('site.home.sportsLede', { n: SITE_SPORT_COUNT })}</p>
       </div>
       <div className={d.dlist}>
         {ROWS.map((row) => (
@@ -56,9 +57,9 @@ export default function Disciplines({ lang }: { lang: SiteLanguage }) {
         ))}
       </div>
       <div className={d.more}>
-        <b className={b.phoneHide}>{t('site.home.moreSports')}</b>
+        <b className={b.phoneHide}>{t('site.home.moreSports', { more: SITE_SPORT_COUNT - ROWS.length })}</b>
         <Link className={b.ulink} href="/deportes/">
-          {t('site.home.allSports')}
+          {t('site.home.allSports', { n: SITE_SPORT_COUNT })}
         </Link>
       </div>
     </section>
