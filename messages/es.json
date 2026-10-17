@@ -896,43 +896,6 @@
       "publishBody": "¿Das clases en Medellín? Publica tu sesión gratis y aparece aquí.",
       "publishGo": "Para coaches"
     },
-    "pages": {
-      "para-atletas": {
-        "kicker": "Atletas",
-        "title": "Entrena con tu gente.",
-        "body": "Encuentra sesiones de tu deporte en tu barrio, pide tu cupo y vuelve cada semana a un grupo que te espera. Tribe es gratis para atletas."
-      },
-      "deportes": {
-        "kicker": "Deportes",
-        "title": "{n} deportes, una app.",
-        "body": "Fuerza, combate, resistencia y mente y cuerpo. Elige tu deporte y mira quién entrena esta semana en Medellín."
-      },
-      "coaches": {
-        "kicker": "Coaches",
-        "title": "Llena tu grupo.",
-        "body": "Publica tus clases, recibe reservas y arma un grupo que vuelve cada semana. Tribe no cobra comisión; los atletas le pagan directo al instructor."
-      },
-      "gimnasios": {
-        "kicker": "Gimnasios",
-        "title": "Tu gimnasio, más lleno.",
-        "body": "No posts. No likes. Gente nueva entrando por la puerta."
-      },
-      "tribe-os": {
-        "kicker": "Tribe.OS · En desarrollo",
-        "title": "El sistema para coaches y gimnasios.",
-        "body": "Clientes, programas y asistencia en un solo lugar, hecho para los coaches y gimnasios de Medellín. Está en desarrollo."
-      },
-      "tv": {
-        "kicker": "Tribe.TV",
-        "title": "Entrenamientos reales, coaches reales.",
-        "body": "Episodios grabados en clases de Tribe en Medellín: el WOD en BullBox, MMA en Zona de Combate y lo que viene."
-      },
-      "preguntas": {
-        "kicker": "Preguntas",
-        "title": "Preguntas frecuentes.",
-        "body": "Cómo funciona Tribe, qué cuesta y cómo se paga. Tribe no cobra comisión; los atletas le pagan directo al instructor. ¿Otra pregunta? Escríbenos a info@tribelatam.com."
-      }
-    },
     "plans": {
       "coach": {
         "kicker": "Planes",
@@ -1176,6 +1139,56 @@
       "ua1": "Sí. Usamos encriptación estándar de la industria y nunca compartimos tus datos personales con terceros. Tu ubicación solo se muestra a nivel de sesión, no tu dirección de casa.",
       "uq2": "¿Puedo eliminar mi cuenta?",
       "ua2": "Sí. Puedes eliminar tu cuenta cuando quieras desde la configuración de tu perfil. Tus datos personales se eliminan de forma permanente en un plazo de 30 días."
+    },
+    "os": {
+      "badge": "En desarrollo · Sale pronto",
+      "title1": "Tribe te trae gente nueva.",
+      "title2": "Tribe.OS hace que se quede.",
+      "lead": "Tribe.OS es el sistema para coaches y gimnasios que ya tienen clientes: quién viene, quién dejó de venir, qué está entrenando cada uno y cómo hablarle. Vive dentro de Tribe, así que la gente que llega por Tribe ya aparece en tu lista.",
+      "bridgeTitle1": "Dos partes,",
+      "bridgeTitle2": "un solo lugar",
+      "bridgeLede": "Tribe consigue. Tribe.OS retiene.",
+      "leftKick": "Tribe · ya disponible",
+      "leftTitle": "Gente nueva",
+      "leftBody": "Atletas que no te conocían encuentran tu sesión, piden cupo y llegan.",
+      "rightKick": "Tribe.OS · próximamente",
+      "rightTitle": "Clientes que vuelven",
+      "rightBody": "Así va a funcionar: ese atleta entra solo a tu lista de clientes, marcado como \"Vino de Tribe\", para que lo cuides desde el primer día.",
+      "cardName": "Laura M.",
+      "cardTag": "Vino de Tribe",
+      "cardMeta": "3 sesiones · última el martes",
+      "bringsTitle": "Qué trae",
+      "bringsLede": "Lo estamos construyendo con coaches y gimnasios reales de Medellín. Puede cambiar antes del lanzamiento.",
+      "l1t": "Clientes",
+      "l1b": "Cada cliente con su historial, notas y de dónde vino.",
+      "l2t": "Asistencia",
+      "l2b": "Quién viene, quién dejó de venir y quién está por irse.",
+      "l3t": "Programas",
+      "l3b": "Planes de entreno que armas y asignas a tus clientes.",
+      "l4t": "Mensajes",
+      "l4b": "A un cliente o a todo un grupo, desde el mismo lugar.",
+      "l5t": "Agenda",
+      "l5b": "Tus sesiones, cupos y clientes en un solo calendario.",
+      "l6t": "Gimnasios",
+      "l6b": "Miembros y coaches de todo el gimnasio en una sola cuenta.",
+      "waitKick": "Lista de espera",
+      "waitTitle1": "Sé de los",
+      "waitTitle2": "primeros.",
+      "waitNote": "Dejamos entrar a Tribe.OS por grupos. Déjanos tus datos y te escribimos cuando abra tu cupo.",
+      "fName": "Nombre",
+      "fNamePh": "Tu nombre",
+      "fEmail": "Correo",
+      "fEmailPh": "tu@correo.com",
+      "fRole": "Soy",
+      "fRoleCoach": "Coach independiente",
+      "fRoleGym": "Gimnasio o estudio",
+      "fTeach": "¿Qué enseñas?",
+      "fTeachPh": "Boxeo, yoga, HYROX...",
+      "fSessions": "¿Cuántas sesiones das por semana?",
+      "fSubmit": "Únete a la lista de espera",
+      "fSending": "Enviando...",
+      "fDone": "Listo. Te escribimos cuando abra tu cupo.",
+      "fError": "No pudimos agregarte. Intenta de nuevo."
     }
   }
 }

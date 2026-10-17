@@ -65,7 +65,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!VALID_PRICING.has(pricingPreferenceRaw as PricingPreference)) {
+    // T-SITE1: the /tribe-os/ page shows no prices, so it sends no preference.
+    // A preference that IS sent must still be one of the two models.
+    if (pricingPreferenceRaw !== '' && !VALID_PRICING.has(pricingPreferenceRaw as PricingPreference)) {
       return NextResponse.json(
         {
           error: t('Pick the pricing model that works for you.', 'Elige el modelo de precios que funciona para ti.'),
@@ -73,7 +75,7 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-    const pricingPreference = pricingPreferenceRaw as PricingPreference;
+    const pricingPreference = pricingPreferenceRaw === '' ? null : (pricingPreferenceRaw as PricingPreference);
 
     if (commentsRaw.length > MAX_COMMENTS_LEN) {
       return NextResponse.json(

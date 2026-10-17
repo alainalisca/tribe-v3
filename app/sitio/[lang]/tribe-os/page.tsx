@@ -1,10 +1,10 @@
 import type { Metadata } from 'next';
-import StubPage from '@/components/site/StubPage';
+import OsContent from '@/components/site/pages/OsContent';
 import { siteLanguage } from '@/lib/site/i18n';
 import { siteMetadata } from '@/lib/site/metadata';
 import { photo } from '@/lib/site/photos';
 
-/** Page: /tribe-os/ (T-SITE1). A stub until Part E; middleware serves it in the visitor's language. */
+/** Page: /tribe-os/ (T-SITE1 Part E). Middleware serves it in the visitor's language. */
 type Props = { params: Promise<{ lang: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -12,5 +12,5 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function TribeOsPage({ params }: Props) {
-  return <StubPage lang={siteLanguage((await params).lang)} slug="tribe-os" />;
+  return <OsContent lang={siteLanguage((await params).lang)} />;
 }

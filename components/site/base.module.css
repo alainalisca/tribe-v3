@@ -196,24 +196,6 @@
   }
 }
 
-/* stub pages (Part A): one heading and one paragraph until Part E fills them */
-.stub {
-  min-height: 52vh;
-}
-/* A stub followed by another section (Part D plans) needs no filler height. */
-.stub:not(:last-child) {
-  min-height: 0;
-}
-.stub h1 {
-  font-size: clamp(56px, 10vw, 150px);
-  max-width: 12ch;
-}
-.stub p {
-  margin-top: 26px;
-  max-width: 34em;
-  color: var(--soft);
-  font-size: 19px;
-}
 @media (max-width: 600px) {
   .sec {
     padding-block: 40px;

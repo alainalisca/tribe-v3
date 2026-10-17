@@ -49,11 +49,9 @@ describe('site copy (messages/{es,en}.json, site.*)', () => {
     }
   });
 
-  it('has a stub heading, paragraph and metadata for every site page', () => {
+  it('has a title and description for every site page, in both languages', () => {
     for (const lang of ['es', 'en'] as const) {
       for (const slug of SITE_SLUGS) {
-        for (const key of ['kicker', 'title', 'body'])
-          expect(siteMessage(lang, `site.pages.${slug}`, key), `${lang} ${slug}.${key}`).not.toMatch(/^site\./);
         for (const key of ['title', 'description'])
           expect(siteMessage(lang, `site.meta.${slug}`, key), `${lang} meta ${slug}.${key}`).not.toMatch(/^site\./);
       }
