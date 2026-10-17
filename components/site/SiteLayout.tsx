@@ -11,7 +11,6 @@ import b from './base.module.css';
 
 /**
  * T-SITE1 Part A. The marketing site's frame: ticker, sticky nav, page, footer.
- * Replaces components/marketing/MarketingLayout for the site routes.
  *
  * `lead` is the ticker's first two items, which come from the live week board
  * (Part B); without them the ticker keeps its three static items.
