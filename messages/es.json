@@ -792,7 +792,8 @@
       "mos4": "Andrés y Juan chocando el puño después del WOD",
       "mos5": "Coach y atleta conversando entre series en BullBox",
       "close_team": "El equipo de Zona de Combate frente al logo del gimnasio después de entrenar",
-      "al_zona": "Clase de boxeo del profe Wil al aire libre en Ciudad del Río"
+      "al_zona": "Clase de boxeo del profe Wil al aire libre en Ciudad del Río",
+      "strip2": "Juan en las argollas de BullBox"
     },
     "home": {
       "h1a": "Nunca",
@@ -827,7 +828,6 @@
       "sportCombat": "Combate",
       "sportRunning": "Correr",
       "whereOutdoors": "Al aire libre",
-      "whereTerrace": "En la terraza",
       "moreSports": "Y {more} deportes más",
       "allSports": "Ver los {n} deportes",
       "factSports": "deportes en la app",
@@ -871,7 +871,8 @@
       "osRest": "Clientes, programas, mensajes y asistencia para coaches y gimnasios, conectado con Tribe. Está en desarrollo y sale pronto.",
       "seeOs": "Ver Tribe.OS",
       "closeTitle1": "Tu grupo ya está",
-      "closeTitle2": "entrenando."
+      "closeTitle2": "entrenando.",
+      "sportCalisthenics": "Calistenia"
     },
     "week": {
       "title": "La semana",
@@ -924,7 +925,7 @@
     "plans": {
       "coach": {
         "kicker": "Planes",
-        "title": "Dos maneras",
+        "title": "Dos maneras de dar clases en Tribe",
         "basicName": "Básico",
         "basicPrice": "Gratis",
         "basic1": "Perfil",
@@ -938,7 +939,7 @@
         "pro1": "Todo lo de Básico",
         "pro2": "Insignia Pro",
         "pro3": "Destacados",
-        "pro4": "Una historia semanal hecha por Tribe",
+        "pro4": "Una historia semanal de Tribe",
         "pro5": "Un post \"Conoce a\" al mes",
         "pro6": "Tus números",
         "proCta": "Pasar a Pro",

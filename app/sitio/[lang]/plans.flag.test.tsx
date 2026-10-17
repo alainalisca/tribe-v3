@@ -1,5 +1,8 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, cleanup } from '@testing-library/react';
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
+import { PLANES_PAGE, planesGuardError } from '@/lib/site/planesGuard';
 import type { ReactElement } from 'react';
 
 vi.mock('server-only', () => ({}));
@@ -70,6 +73,16 @@ describe('plan hooks behind COACH_PLANS_ENABLED (Part D)', () => {
     vi.stubEnv('COACH_PLANS_ENABLED', '');
     const html = await renderSite('es');
     for (const s of PLAN_CONTENT) expect(html, s).not.toContain(s);
+  });
+
+  it('flag ON needs the /planes route: the build refuses the flag until T-PLAN1 brings app/planes/page.tsx', () => {
+    const planesExists = existsSync(join(process.cwd(), PLANES_PAGE));
+    // Today (before T-PLAN1 merges) the route is missing, so the guard must refuse the flag;
+    // once T-PLAN1 is merged the route exists and the flag may go on.
+    if (planesExists) expect(planesGuardError('true', true)).toBeNull();
+    else expect(planesGuardError('true', false)).toMatch(/Merge T-PLAN1 first/);
+    expect(planesGuardError('false', false)).toBeNull();
+    expect(planesGuardError(undefined, false)).toBeNull();
   });
 
   it('flag ON: Inicio hook, Coaches columns, Gimnasios deliverables and prices, ticker, footer', async () => {

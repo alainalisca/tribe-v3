@@ -1,4 +1,11 @@
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
 import type { NextConfig } from 'next';
+import { PLANES_PAGE, planesGuardError } from './lib/site/planesGuard';
+
+// T-SITE1: the coach-plans flag cannot go on before T-PLAN1's /planes page exists.
+const planesGuard = planesGuardError(process.env.COACH_PLANS_ENABLED, existsSync(join(process.cwd(), PLANES_PAGE)));
+if (planesGuard) throw new Error(planesGuard);
 
 const nextConfig: NextConfig = {
   /**

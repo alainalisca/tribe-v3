@@ -792,7 +792,8 @@
       "mos4": "Andrés and Juan bumping fists after the WOD",
       "mos5": "A coach and an athlete talking between sets at BullBox",
       "close_team": "The Zona de Combate team in front of the gym logo after training",
-      "al_zona": "Profe Wil's outdoor boxing class in Ciudad del Río"
+      "al_zona": "Profe Wil's outdoor boxing class in Ciudad del Río",
+      "strip2": "Juan on the rings at BullBox"
     },
     "home": {
       "h1a": "Never",
@@ -827,7 +828,6 @@
       "sportCombat": "Combat",
       "sportRunning": "Running",
       "whereOutdoors": "Outdoors",
-      "whereTerrace": "On the rooftop",
       "moreSports": "And {more} more sports",
       "allSports": "See all {n} sports",
       "factSports": "sports in the app",
@@ -871,7 +871,8 @@
       "osRest": "Clients, programs, messages and attendance for coaches and gyms, connected to Tribe. It is in development and coming soon.",
       "seeOs": "See Tribe.OS",
       "closeTitle1": "Your group is already",
-      "closeTitle2": "training."
+      "closeTitle2": "training.",
+      "sportCalisthenics": "Calisthenics"
     },
     "week": {
       "title": "This week",
@@ -924,7 +925,7 @@
     "plans": {
       "coach": {
         "kicker": "Plans",
-        "title": "Two ways",
+        "title": "Two ways to coach on Tribe",
         "basicName": "Basic",
         "basicPrice": "Free",
         "basic1": "Profile",
@@ -938,7 +939,7 @@
         "pro1": "Everything in Basic",
         "pro2": "Pro badge",
         "pro3": "Featured coaches row",
-        "pro4": "A weekly story made by Tribe",
+        "pro4": "A weekly Story from Tribe",
         "pro5": "One \"Conoce a\" post a month",
         "pro6": "Your numbers",
         "proCta": "Go Pro",
