@@ -2,6 +2,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { EPISODES, UPCOMING_EPISODE, youtubeWatchUrl } from '@/lib/site/episodes';
 import { siteT, type SiteLanguage } from '@/lib/site/i18n';
+import { photo } from '@/lib/site/photos';
 import { Play } from '../icons';
 import b from '../base.module.css';
 import v from './tv.module.css';
@@ -21,7 +22,7 @@ export default function TvBlock({ lang }: { lang: SiteLanguage }) {
     <section className={`${v.tv} ${b.g}`} aria-labelledby="tv-titulo">
       <div className={v.tvhead}>
         <Link className={`${b.lock} ${v.tvLock}`} href="/tv/" id="tv-titulo" aria-label="Tribe.TV">
-          <Image src="/tribe-wordmark.png" alt="" width={194} height={64} sizes="194px" />
+          <Image src={photo('logo_w')} alt="Tribe" width={194} height={64} sizes="194px" />
           <span>TV</span>
         </Link>
         <span className={`${b.mono} ${v.onair}`}>

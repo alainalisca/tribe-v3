@@ -2,6 +2,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { siteT, type SiteLanguage } from '@/lib/site/i18n';
 import { APP_STORE_URL, CONTACT_EMAIL, PLAY_STORE_URL } from '@/lib/site/links';
+import { photo } from '@/lib/site/photos';
 import LanguageToggle from './LanguageToggle';
 import b from './base.module.css';
 import c from './chrome.module.css';
@@ -47,7 +48,7 @@ export default function SiteFooter({ lang, plansEnabled }: { lang: SiteLanguage;
       <div className={b.g}>
         <div className={c.fTop}>
           <div className={c.fBrand}>
-            <Image className={c.logo} src="/tribe-wordmark.png" alt="Tribe" width={85} height={28} sizes="85px" />
+            <Image className={c.logo} src={photo('logo_w')} alt="Tribe" width={85} height={28} sizes="85px" />
             <p>{t('site.footer.tagline')}</p>
           </div>
           <nav className={c.fCols} aria-label={t('site.footer.navAria')}>
@@ -69,7 +70,7 @@ export default function SiteFooter({ lang, plansEnabled }: { lang: SiteLanguage;
         </div>
         <Image
           className={c.giant}
-          src="/tribe-wordmark.png"
+          src={photo('logo_w')}
           alt=""
           aria-hidden="true"
           width={1709}

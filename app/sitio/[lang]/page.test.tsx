@@ -77,6 +77,14 @@ describe('Inicio, "La semana" (T-SITE1 Part B)', () => {
     expect(within(board).getByRole('link', { name: 'Ask for a spot: Boxing with Coach1' })).toBeTruthy();
   });
 
+  it('gives every image a real alt; only the decorative ones are empty and hidden (Part C)', async () => {
+    fetchWeekBoard.mockResolvedValue([row(0)]);
+    await renderInicio();
+    const imgs = [...document.querySelectorAll('img')];
+    expect(imgs.length).toBeGreaterThan(20);
+    for (const img of imgs) expect(img.getAttribute('alt'), img.getAttribute('src') ?? '').not.toBe('');
+  });
+
   it('ten rows: eight shown, no "Publica la tuya"', async () => {
     fetchWeekBoard.mockResolvedValue(Array.from({ length: 10 }, (_, i) => row(i)));
     const { links } = await renderInicio();

@@ -1,6 +1,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { siteT, type SiteLanguage } from '@/lib/site/i18n';
+import { photo } from '@/lib/site/photos';
 import { ArrowRight } from '../icons';
 import b from '../base.module.css';
 import d from './doors.module.css';
@@ -37,7 +38,7 @@ export default function Doors({ lang }: { lang: SiteLanguage }) {
             <div className={d.im}>
               <Image
                 alt={t(`site.alt.${door.img}`)}
-                src={`/site/${door.img}.jpg`}
+                src={photo(door.img)}
                 fill
                 sizes="(max-width: 1100px) 50vw, 25vw"
               />
@@ -57,7 +58,7 @@ export default function Doors({ lang }: { lang: SiteLanguage }) {
         <Link className={`${d.door} ${d.os}`} href="/tribe-os/">
           <div className={d.big}>
             <span className={`${b.lock} ${b.lockInk} ${d.osLock}`}>
-              <Image src="/tribe-wordmark.png" alt="" width={176} height={58} sizes="176px" />
+              <Image src={photo('logo_w')} alt="Tribe" width={176} height={58} sizes="176px" />
               <span>OS</span>
             </span>
           </div>

@@ -1,6 +1,7 @@
 import Image from 'next/image';
 import { siteT, type SiteLanguage } from '@/lib/site/i18n';
 import { SITE_SPORT_COUNT } from '@/lib/site/sportCount';
+import { photo, type PhotoKey } from '@/lib/site/photos';
 import b from '../base.module.css';
 import s from './story.module.css';
 
@@ -13,7 +14,7 @@ const TILES = [
   { img: 'mos5', cls: 'm5', sizes: '(max-width: 860px) 50vw, 58vw' },
   { img: 'barbell', cls: 'm3', sizes: '(max-width: 860px) 50vw, 50vw', position: 'center 35%' },
   { img: 'mos4', cls: 'm4', sizes: '(max-width: 860px) 50vw, 50vw' },
-] as const satisfies ReadonlyArray<{ img: string; cls: keyof typeof s; sizes: string; position?: string }>;
+] as const satisfies ReadonlyArray<{ img: PhotoKey; cls: keyof typeof s; sizes: string; position?: string }>;
 
 /** "La gente es el plan.": the paper photo essay and its three pillars. */
 export default function Essay({ lang }: { lang: SiteLanguage }) {
@@ -33,7 +34,7 @@ export default function Essay({ lang }: { lang: SiteLanguage }) {
           <figure key={tile.img} className={s[tile.cls]}>
             <Image
               alt={t(`site.alt.${tile.img}`)}
-              src={`/site/${tile.img}.jpg`}
+              src={photo(tile.img)}
               fill
               sizes={tile.sizes}
               style={'position' in tile ? { objectPosition: tile.position } : undefined}

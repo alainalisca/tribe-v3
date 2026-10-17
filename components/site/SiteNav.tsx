@@ -2,6 +2,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { siteT, type SiteLanguage } from '@/lib/site/i18n';
 import { SITE_PAGES } from '@/lib/site/links';
+import { photo } from '@/lib/site/photos';
 import NavActions from './NavActions';
 import NavLinks, { type NavItem } from './NavLinks';
 import b from './base.module.css';
@@ -21,7 +22,7 @@ export default function SiteNav({ lang }: { lang: SiteLanguage }) {
     <header className={c.nav}>
       <div className={`${b.g} ${c.bar}`}>
         <Link href="/" aria-label={t('site.nav.homeAria')}>
-          <Image className={c.logo} src="/tribe-wordmark.png" alt="Tribe" width={85} height={28} sizes="85px" />
+          <Image className={c.logo} src={photo('logo_w')} alt="Tribe" width={85} height={28} sizes="85px" />
         </Link>
         <nav aria-label={t('site.nav.mainAria')}>
           <NavLinks variant="main" items={pages} />

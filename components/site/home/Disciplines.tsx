@@ -2,6 +2,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { siteT, type SiteLanguage } from '@/lib/site/i18n';
 import { SITE_SPORT_COUNT } from '@/lib/site/sportCount';
+import { photo, type PhotoKey } from '@/lib/site/photos';
 import { ArrowUpRight } from '../icons';
 import b from '../base.module.css';
 import d from './doors.module.css';
@@ -10,7 +11,7 @@ import d from './doors.module.css';
  * The six sports the mock leads with. A `*Key` is a message key (translated);
  * otherwise the literal is a name that reads the same in both languages.
  */
-type Row = { img: string; word: string; wordKey?: string; where?: string; whereKey?: string };
+type Row = { img: PhotoKey; word: string; wordKey?: string; where?: string; whereKey?: string };
 const ROWS: Row[] = [
   { img: 'row_hyrox', word: 'HYROX', where: 'BullBox' },
   { img: 'row_cf', word: 'CrossFit', where: 'BullBox' },
@@ -39,7 +40,14 @@ export default function Disciplines({ lang }: { lang: SiteLanguage }) {
       <div className={d.dlist}>
         {ROWS.map((row) => (
           <Link key={row.img} className={d.drow} href="/deportes/">
-            <Image alt="" className={d.thumb} src={`/site/${row.img}.jpg`} width={76} height={92} sizes="76px" />
+            <Image
+              alt={t(`site.alt.${row.img}`)}
+              className={d.thumb}
+              src={photo(row.img)}
+              width={76}
+              height={92}
+              sizes="76px"
+            />
             <span className={d.w}>{row.wordKey ? t(row.wordKey) : row.word}</span>
             <span className={d.where}>{row.whereKey ? t(row.whereKey) : row.where}</span>
             <span className={d.arrow}>
@@ -48,7 +56,7 @@ export default function Disciplines({ lang }: { lang: SiteLanguage }) {
             <Image
               alt={t(`site.alt.${row.img}`)}
               className={d.peek}
-              src={`/site/${row.img}.jpg`}
+              src={photo(row.img)}
               width={280}
               height={350}
               sizes="280px"

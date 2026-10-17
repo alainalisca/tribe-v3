@@ -11,6 +11,7 @@ import TvBlock from '@/components/site/home/TvBlock';
 import WeekBoard from '@/components/site/WeekBoard';
 import { siteLanguage } from '@/lib/site/i18n';
 import { siteMetadata } from '@/lib/site/metadata';
+import { photo } from '@/lib/site/photos';
 import { fetchWeekBoard } from '@/lib/site/week';
 
 /**
@@ -26,7 +27,7 @@ import { fetchWeekBoard } from '@/lib/site/week';
 type Props = { params: Promise<{ lang: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  return siteMetadata('home', '/', '/site/hero_full.jpg', siteLanguage((await params).lang));
+  return siteMetadata('home', '/', photo('hero_full'), siteLanguage((await params).lang));
 }
 
 export default async function InicioPage({ params }: Props) {

@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { EPISODES } from '@/lib/site/episodes';
 import { siteT, type SiteLanguage } from '@/lib/site/i18n';
 import { SITE_SPORT_COUNT } from '@/lib/site/sportCount';
+import { photo, type PhotoKey } from '@/lib/site/photos';
 import b from '../base.module.css';
 import s from './story.module.css';
 
@@ -13,7 +14,7 @@ import s from './story.module.css';
  * a horizontal scroller on phones.
  */
 type Coach = {
-  img: string;
+  img: PhotoKey;
   name: string;
   href: string;
   sport?: string;
@@ -90,7 +91,7 @@ export default function Roster({ lang }: { lang: SiteLanguage }) {
             <figure>
               <Image
                 alt={t(`site.alt.${c.img}`)}
-                src={`/site/${c.img}.jpg`}
+                src={photo(c.img)}
                 fill
                 sizes="(max-width: 900px) 62vw, 25vw"
                 style={c.position ? { objectPosition: c.position } : undefined}

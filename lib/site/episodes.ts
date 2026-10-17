@@ -1,9 +1,10 @@
 /**
- * T-SITE1. Tribe.TV episodes. To add one: drop the thumbnail in public/tribe-tv/
- * and add an entry at the TOP of EPISODES (newest first; the first is featured).
+ * T-SITE1. Tribe.TV episodes. To add one: drop the thumbnail in public/tribe-tv/,
+ * register it in lib/site/photos.ts and add an entry at the TOP of EPISODES (newest first; the first is featured).
  * Titles live here rather than in messages because they belong to the episode
  * record, the same way a session title does.
  */
+import { photo } from './photos';
 export type Episode = {
   /** YouTube video id. */
   id: string;
@@ -33,7 +34,7 @@ export const EPISODES: Episode[] = [
     sport: 'CrossFit',
     duration: null,
     published: null,
-    thumb: '/tribe-tv/ep-wod-bullbox.jpg',
+    thumb: photo('tv_wod'),
     alt: {
       es: 'Portada del episodio El WOD completo',
       en: 'Cover of the episode The full WOD',
@@ -50,7 +51,7 @@ export const EPISODES: Episode[] = [
     sport: 'MMA',
     duration: null,
     published: null,
-    thumb: '/tribe-tv/ep-mma-zona.jpg',
+    thumb: photo('tv_wil'),
     alt: {
       es: 'Portada del episodio Un viernes con el profe Wil',
       en: 'Cover of the episode A Friday with coach Wil',

@@ -2,6 +2,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowRight } from '../icons';
 import { siteT, type SiteLanguage } from '@/lib/site/i18n';
+import { photo } from '@/lib/site/photos';
 import b from '../base.module.css';
 import v from './tv.module.css';
 
@@ -11,7 +12,7 @@ export default function OsBand({ lang }: { lang: SiteLanguage }) {
   return (
     <section className={`${v.osband} ${b.g}`} aria-label="Tribe.OS">
       <span className={`${b.lock} ${v.osLock}`}>
-        <Image src="/tribe-wordmark.png" alt="" width={158} height={52} sizes="158px" />
+        <Image src={photo('logo_w')} alt="Tribe" width={158} height={52} sizes="158px" />
         <span>OS</span>
       </span>
       <p>
