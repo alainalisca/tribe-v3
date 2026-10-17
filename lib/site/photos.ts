@@ -4,13 +4,15 @@
  * compile and lib/site/photos.test.ts proves every file exists.
  *
  * Sources (all Al's own; nothing from Instagram, stock or Medellín Run Club):
- * - The 29 face-aware crops, byte-identical to "Homepage Photos/_mock/crops"
+ * - The face-aware crops, byte-identical to "Homepage Photos/_mock/crops"
  *   (jobs.json; sizes and aspects are final).
  * - hero_full: w0143, Zona de Combate on the plaza steps, uncropped 3:2.
  *   hero_tall was dropped (Al, 2026-10-16): a tall crop cuts faces.
  * - pad_tall: the Salomón padwork photo, the one Salomón photo on Inicio.
  * - barbell: BullBox barbell prep.
  * - bb_w, fv_w: the mock's white BullBox and Fruta Vida marks.
+ * - al_bb: n_9632 (rowing at BullBox), resized to 900x600. The original crop
+ *   was the same frame as door_gym (Al, 2026-10-17).
  * - tv_wod, tv_wil: Tribe.TV frames; logo_w: the white wordmark.
  * - "rowers" was removed 2026-10-16 (not Al's photo). n_j0590.jpg is flagged
  *   as its replacement and is not placed until Al says "use it".

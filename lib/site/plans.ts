@@ -1,6 +1,4 @@
 import 'server-only';
-import { CONTACT_EMAIL } from './links';
-import { waSalesLink, type WA_TOPICS, type WaSalesPage } from './whatsapp';
 
 /**
  * T-SITE1 Part D. What the site says about Tribe's own plans, read on the
@@ -43,9 +41,4 @@ export function formatPlanPrice(price: Price, lang: 'es' | 'en'): string {
 export function mediaDayPaymentLink(): string | null {
   const url = (process.env.MEDIA_DAY_PAYMENT_LINK ?? '').trim();
   return /^https:\/\//.test(url) ? url : null;
-}
-
-/** WhatsApp to Al from `page`, else the contact email: never a dead link. */
-export function talkToAlHref(page: WaSalesPage, topic?: (typeof WA_TOPICS)[keyof typeof WA_TOPICS]): string {
-  return waSalesLink(page, topic) ?? `mailto:${CONTACT_EMAIL}`;
 }

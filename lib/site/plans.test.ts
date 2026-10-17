@@ -2,8 +2,8 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 
 vi.mock('server-only', () => ({}));
 
-import { formatPlanPrice, mediaDayPaymentLink, sitePlanPrices, talkToAlHref } from './plans';
-import { waSalesLink, WA_TOPICS } from './whatsapp';
+import { formatPlanPrice, mediaDayPaymentLink, sitePlanPrices } from './plans';
+import { talkToAlHref, waSalesLink, WA_TOPICS } from './whatsapp';
 
 /** T-SITE1 Part D: plan prices, the Media Day link and the WhatsApp sales line. */
 afterEach(() => vi.unstubAllEnvs());

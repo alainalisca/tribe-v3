@@ -804,7 +804,7 @@
       "sp_combate": "Sparring in the park",
       "sp_resist": "A group out running",
       "sp_mente": "Yoga on a rooftop terrace",
-      "al_bb": "An athlete setting up the barbell in front of the BullBox sign"
+      "al_bb": "An athlete on the rower at BullBox"
     },
     "home": {
       "h1a": "Never",
@@ -966,7 +966,7 @@
       "offerB": "Recurring series",
       "offerBBody": "Publish once and your weekly class shows up on its own. Edit one date or the whole series.",
       "offerC": "Packages",
-      "offerCBody": "Several sessions at a discount. Athletes commit, you get predictable income.",
+      "offerCBody": "Several sessions for one price. The athlete messages you on Tribe to buy it and the two of you arrange it.",
       "offerD": "Your page",
       "offerDBody": "Who you are, your style and your next sessions in one link to share on WhatsApp and Instagram.",
       "offerE": "Tribe.TV",
@@ -980,7 +980,7 @@
       "q1": "Do I need a certification to be an instructor?",
       "a1": "No formal certification is required to publish sessions on Tribe. Credentials help athletes trust you and can improve your visibility.",
       "q2": "Can I offer free sessions?",
-      "a2": "Yes. Free sessions are a good way to build your reputation and bring in new athletes. You can set any session to $0 COP.",
+      "a2": "Yes. Free sessions are a good way to build your reputation and bring in new athletes. Any session can be free.",
       "q3": "When do I get my money?",
       "a3": "When your student pays you, which the two of you arrange. Tribe does not hold or transfer money, so there is no payout to wait for.",
       "allFaq": "All questions"
@@ -1015,13 +1015,13 @@
       "f6b": "Members, coaches and attendance for your whole gym in one place.",
       "f6link": "See more",
       "alliesTitle": "Partners",
-      "alliesLede": "The places already training with the Tribe.",
+      "alliesLede": "The places already training with Tribe.",
       "bbKind": "Gym · Ciudad del Río",
       "bbBody": "HYROX and CrossFit. Coaches Leo and Andrés.",
       "zonaKind": "Gym · Medellín",
       "zonaBody": "Martial arts and outdoor classes with profe Wil.",
       "fvKind": "Partner",
-      "fvBody": "Shares an address with BullBox. Official Tribe partner."
+      "fvBody": "At the BullBox address in Ciudad del Río. Official Tribe partner."
     },
     "athletes": {
       "tag": "For athletes",
@@ -1060,7 +1060,7 @@
       "f4b": "Some partner gyms give you a free trial class. You claim the pass on Tribe and show it at the door.",
       "f5k": "Coaches",
       "f5t": "Know who you train with",
-      "f5b": "Verified coaches, with their profile, their style, their next sessions and what their people say.",
+      "f5b": "Coaches with a name and a face, their style, their next sessions and what their people say.",
       "cap1": "Boxing · outdoors",
       "cap2": "Rings · BullBox",
       "cap3": "HYROX · BullBox"
@@ -1109,19 +1109,13 @@
       "aa4": "{n} sports, from weightlifting and yoga to running, cycling, martial arts and calisthenics.",
       "aa4link": "See them all",
       "aq5": "How do I find sessions near me?",
-      "aa5": "Open Tribe, browse the sessions or use the map. Filter by sport, date, time or coach.",
+      "aa5": "Open Tribe and browse this week's sessions. You can filter by sport.",
       "aq6": "Can I connect with other athletes?",
       "aa6": "Yes. When you join a session, you chat with the other participants. Connections come from training together, not from following profiles.",
       "aq7": "What if a session is full?",
-      "aa7": "You join the waitlist. If a spot opens up, we let you know. You can also message the coach.",
+      "aa7": "You join the session waitlist. You can also message the coach.",
       "aq8": "What if I need a refund?",
       "aa8": "Talk to the instructor. Since you paid them directly, the refund is between the two of you. You can message them through Tribe.",
-      "aq9": "How is it different from ClassPass?",
-      "aa9": "ClassPass connects you to gyms and studios. Tribe connects you to people: real sessions with real athletes and coaches, not just gym access.",
-      "aq10": "What are session packages?",
-      "aa10": "Several sessions with a coach at a discounted price. You commit to your training and save money.",
-      "aq11": "Is Tribe only in Medellín?",
-      "aa11": "For now, yes. We want Tribe to work really well in Medellín before reaching other cities in Colombia and Latin America.",
       "cq1": "How do I become an instructor?",
       "ca1": "Sign up, choose \"Instructor\" and complete your profile. You can publish sessions right away. There is no approval process.",
       "cq2": "Do I need a certification?",
@@ -1136,9 +1130,13 @@
       "ca6": "It is the system to manage and keep your clients, connected to Tribe. It is in development.",
       "ca6link": "Join the waitlist",
       "uq1": "Is my personal information safe?",
-      "ua1": "Yes. We use industry-standard encryption and never share your personal data with third parties. Your location is only shown at the session level, never your home address.",
+      "ua1": "We only share data with the providers that run Tribe, such as hosting and database services, and we never sell it. Your location is only shown at the session level, never your home address.",
       "uq2": "Can I delete my account?",
-      "ua2": "Yes. You can delete your account at any time from your profile settings. Your personal data is permanently deleted within 30 days."
+      "ua2": "Yes. You can delete your account at any time from your profile settings. When you do, we immediately remove your name, email, photo and location.",
+      "aq9": "What are session packages?",
+      "aa9": "Several sessions with a coach for one price. You message the coach on Tribe to buy it.",
+      "aq10": "Is Tribe only in Medellín?",
+      "aa10": "For now, yes. We want Tribe to work really well in Medellín before reaching other cities in Colombia and Latin America."
     },
     "os": {
       "badge": "In development · Coming soon",

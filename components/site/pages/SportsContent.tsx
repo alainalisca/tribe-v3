@@ -11,9 +11,10 @@ import p from './pages.module.css';
 
 /**
  * Page: /deportes/ (T-SITE1 Part E, mock "Deportes"). The app's sports in the
- * mock's six groups. Each sport links to the feed filtered by it
- * (/?sport=<key>); its "3 esta semana" chip counts this week's sessions from
- * the live board query, so the page is never stale. "Other" reads "Tu deporte".
+ * mock's six groups, as plain words: the feed does not filter by a ?sport=
+ * parameter, so only "Busca una sesión" links (to /). Each "3 esta semana" chip
+ * counts this week's sessions from the live board query, so the page is never
+ * stale. "Other" reads "Tu deporte".
  */
 export default function SportsContent({ lang, counts }: { lang: SiteLanguage; counts: Record<string, number> }) {
   const tr = siteT(lang);
@@ -40,15 +41,13 @@ export default function SportsContent({ lang, counts }: { lang: SiteLanguage; co
               {g.sports.map((s) => {
                 const n = counts[s] ?? 0;
                 return (
-                  <li key={s}>
-                    <Link href={`/?sport=${encodeURIComponent(s)}`}>
-                      {translateSport(s, lang)}
-                      {s === 'Other' ? (
-                        <span className={p.count}>{t('yourSport')}</span>
-                      ) : (
-                        n > 0 && <span className={p.count}>{t('thisWeek', { n })}</span>
-                      )}
-                    </Link>
+                  <li key={s} className={p.word}>
+                    {translateSport(s, lang)}
+                    {s === 'Other' ? (
+                      <span className={p.count}>{t('yourSport')}</span>
+                    ) : (
+                      n > 0 && <span className={p.count}>{t('thisWeek', { n })}</span>
+                    )}
                   </li>
                 );
               })}
@@ -62,7 +61,7 @@ export default function SportsContent({ lang, counts }: { lang: SiteLanguage; co
         ))}
       </div>
       <div className={p.centerCta}>
-        <Link className={b.cta} href="/para-atletas/">
+        <Link className={b.cta} href="/">
           {t('find')} <ArrowRight />
         </Link>
         <Link className={b.ulink} href="/coaches/">

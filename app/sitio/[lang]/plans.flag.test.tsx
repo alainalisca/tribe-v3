@@ -18,7 +18,9 @@ import InicioPage from './page';
 /**
  * T-SITE1 Part D, Al's rule (2026-10-17): every plan hook renders only while
  * COACH_PLANS_ENABLED is on, and with it off NO plan content appears anywhere
- * on the site, the ticker and footer included.
+ * on the site, the ticker and footer included. The WhatsApp sales line is not
+ * plan content (Al, 2026-10-17): "Aplica como aliado" on Gimnasios uses it
+ * whatever the flag says, and it appears nowhere else with the flag off.
  */
 const PLAN_CONTENT = [
   'Coach Pro',
@@ -32,30 +34,36 @@ const PLAN_CONTENT = [
   '89.000',
   '490.000',
   '250.000',
-  'wa.me',
   // Inicio's plan hook. Not "¿Das clases?" alone: that is also the Coaches page title.
   '¿Das clases? Llena tu grupo.',
 ];
 
-async function renderSite(lang: 'es' | 'en') {
+/** Each page inside the site frame (ticker, nav, footer), as HTML, by name. */
+async function renderPages(lang: 'es' | 'en') {
   const params = Promise.resolve({ lang });
-  const pages: ReactElement[] = [
-    await InicioPage({ params }),
-    await CoachesPage({ params }),
-    await GimnasiosPage({ params }),
+  const pages: [string, ReactElement][] = [
+    ['inicio', await InicioPage({ params })],
+    ['coaches', await CoachesPage({ params })],
+    ['gimnasios', await GimnasiosPage({ params })],
   ];
-  const html: string[] = [];
-  for (const page of pages) {
+  const html: Record<string, string> = {};
+  for (const [name, page] of pages) {
     const { container } = render(
       <SiteLayout lang={lang} fontClassName="">
         {page}
       </SiteLayout>
     );
-    html.push(container.innerHTML);
+    html[name] = container.innerHTML;
     cleanup();
   }
-  return html.join('\n');
+  return html;
 }
+
+async function renderSite(lang: 'es' | 'en') {
+  return Object.values(await renderPages(lang)).join('\n');
+}
+
+const waLinks = (html: string) => (html.match(/https:\/\/wa\.me\//g) ?? []).length;
 
 afterEach(() => vi.unstubAllEnvs());
 
@@ -65,8 +73,12 @@ describe('plan hooks behind COACH_PLANS_ENABLED (Part D)', () => {
     async (lang) => {
       vi.stubEnv('COACH_PLANS_ENABLED', 'false');
       vi.stubEnv('NEXT_PUBLIC_WA_SALES', '3001112233');
-      const html = await renderSite(lang);
-      for (const s of PLAN_CONTENT) expect(html, s).not.toContain(s);
+      const pages = await renderPages(lang);
+      for (const s of PLAN_CONTENT) expect(Object.values(pages).join('\n'), s).not.toContain(s);
+      // The one WhatsApp link with the flag off: "Aplica como aliado" on Gimnasios.
+      expect(waLinks(pages.gimnasios)).toBe(1);
+      expect(waLinks(pages.inicio)).toBe(0);
+      expect(waLinks(pages.coaches)).toBe(0);
     }
   );
 

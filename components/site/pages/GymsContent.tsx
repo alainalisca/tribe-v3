@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { coachPlansEnabled } from '@/lib/site/flags';
 import { siteT, type SiteLanguage } from '@/lib/site/i18n';
 import { photo } from '@/lib/site/photos';
-import { talkToAlHref } from '@/lib/site/plans';
+import { talkToAlHref, WA_TOPICS } from '@/lib/site/whatsapp';
 import GymGrowth from '../plans/GymGrowth';
 import { ArrowRight } from '../icons';
 import b from '../base.module.css';
@@ -13,8 +13,8 @@ import p from './pages.module.css';
 /**
  * Page: /gimnasios/ (T-SITE1 Part E, mock "Gimnasios" + Part D).
  *
- * Flag OFF: hero with "Aplica como aliado", the mock's six "Qué recibes",
- * Aliados. Flag ON (COACH_PLANS_ENABLED): "Hablar con Al" is the primary
+ * Flag OFF: hero with "Aplica como aliado" (the WhatsApp sales line, which is
+ * not plan content), the mock's six "Qué recibes", Aliados. Flag ON (COACH_PLANS_ENABLED): "Hablar con Al" is the primary
  * action, and "Qué recibes" becomes the four Tribe Crecimiento deliverables
  * plus the price table, whose free column keeps "Aplica como aliado".
  */
@@ -44,9 +44,9 @@ export default function GymsContent({ lang }: { lang: SiteLanguage }) {
             {t('talk')} <ArrowRight />
           </a>
         ) : (
-          <Link className={b.cta} href="/partners/apply/">
+          <a className={b.cta} href={talkToAlHref('gimnasios', WA_TOPICS.partner)}>
             {t('apply')} <ArrowRight />
-          </Link>
+          </a>
         )}
       </PageHero>
 

@@ -804,7 +804,7 @@
       "sp_combate": "Sparring en el parque",
       "sp_resist": "Grupo corriendo",
       "sp_mente": "Yoga en una terraza",
-      "al_bb": "Atleta preparando la barra frente al letrero de BullBox"
+      "al_bb": "Atleta en el remo de BullBox"
     },
     "home": {
       "h1a": "Nunca",
@@ -966,7 +966,7 @@
       "offerB": "Series recurrentes",
       "offerBBody": "Publicas una vez y tu clase de cada semana aparece sola. Puedes editar una fecha o toda la serie.",
       "offerC": "Paquetes",
-      "offerCBody": "Varias sesiones con descuento. Los atletas se comprometen, tú tienes ingresos predecibles.",
+      "offerCBody": "Varias sesiones por un solo precio. El atleta te escribe por Tribe para comprarlo y lo arreglan entre ustedes.",
       "offerD": "Tu página",
       "offerDBody": "Quién eres, tu estilo y tus próximas sesiones en un enlace para compartir por WhatsApp e Instagram.",
       "offerE": "Tribe.TV",
@@ -980,7 +980,7 @@
       "q1": "¿Necesito una certificación para ser instructor?",
       "a1": "No se requiere certificación formal para publicar sesiones en Tribe. Tener credenciales ayuda a generar confianza con los atletas y puede mejorar tu visibilidad.",
       "q2": "¿Puedo ofrecer sesiones gratis?",
-      "a2": "Sí. Las sesiones gratis son una buena manera de construir tu reputación y atraer atletas nuevos. Puedes poner cualquier sesión a $0 COP.",
+      "a2": "Sí. Las sesiones gratis son una buena manera de construir tu reputación y atraer atletas nuevos. Cualquier sesión puede ser gratis.",
       "q3": "¿Cuándo recibo mi plata?",
       "a3": "Cuando tu estudiante te paga, y eso lo arreglan entre ustedes. Tribe no retiene ni transfiere plata, así que no hay ningún pago que esperar.",
       "allFaq": "Todas las preguntas"
@@ -1015,13 +1015,13 @@
       "f6b": "Miembros, coaches y asistencia de todo tu gimnasio en un solo lugar.",
       "f6link": "Ver más",
       "alliesTitle": "Aliados",
-      "alliesLede": "Los lugares que ya entrenan con el Tribe.",
+      "alliesLede": "Los lugares que ya entrenan con Tribe.",
       "bbKind": "Gimnasio · Ciudad del Río",
       "bbBody": "HYROX y CrossFit. Coaches Leo y Andrés.",
       "zonaKind": "Gimnasio · Medellín",
       "zonaBody": "Artes marciales y clases al aire libre con el profe Wil.",
       "fvKind": "Aliado",
-      "fvBody": "Comparte dirección con BullBox. Aliado oficial de Tribe."
+      "fvBody": "En la dirección de BullBox en Ciudad del Río. Aliado oficial de Tribe."
     },
     "athletes": {
       "tag": "Para atletas",
@@ -1060,7 +1060,7 @@
       "f4b": "Algunos gimnasios aliados te regalan una clase de prueba. Reclamas el pase en Tribe y lo muestras en la entrada.",
       "f5k": "Coaches",
       "f5t": "Sabes con quién vas",
-      "f5b": "Coaches verificados, con su perfil, su estilo, sus próximas sesiones y lo que dice su gente.",
+      "f5b": "Coaches con nombre y cara, su estilo, sus próximas sesiones y lo que dice su gente.",
       "cap1": "Boxeo · al aire libre",
       "cap2": "Argollas · BullBox",
       "cap3": "HYROX · BullBox"
@@ -1109,19 +1109,13 @@
       "aa4": "{n} deportes, desde levantamiento de pesas y yoga hasta correr, ciclismo, artes marciales y calistenia.",
       "aa4link": "Ver todos",
       "aq5": "¿Cómo encuentro sesiones cerca de mí?",
-      "aa5": "Abre Tribe, explora las sesiones o usa el mapa. Filtra por deporte, fecha, hora o coach.",
+      "aa5": "Abre Tribe y explora las sesiones de la semana. Puedes filtrar por deporte.",
       "aq6": "¿Puedo conectar con otros atletas?",
       "aa6": "Sí. Cuando te unes a una sesión, chateas con los demás participantes. Las conexiones salen de entrenar juntos, no de seguir perfiles.",
       "aq7": "¿Qué pasa si una sesión está llena?",
-      "aa7": "Te unes a la lista de espera. Si se abre un cupo, te avisamos. También puedes escribirle al coach.",
+      "aa7": "Te unes a la lista de espera de la sesión. También puedes escribirle al coach.",
       "aq8": "¿Y si necesito un reembolso?",
       "aa8": "Habla con el instructor. Como le pagaste directo, el reembolso lo arreglan entre ustedes. Le puedes escribir por Tribe.",
-      "aq9": "¿En qué se diferencia de ClassPass?",
-      "aa9": "ClassPass te conecta con gimnasios y estudios. Tribe te conecta con personas: sesiones reales con atletas y coaches reales, no solo acceso a gimnasios.",
-      "aq10": "¿Qué son los paquetes de sesiones?",
-      "aa10": "Varias sesiones con un coach a un precio con descuento. Te comprometes con tu entrenamiento y ahorras.",
-      "aq11": "¿Tribe solo está en Medellín?",
-      "aa11": "Por ahora, sí. Queremos que Tribe funcione muy bien en Medellín antes de llegar a otras ciudades de Colombia y Latinoamérica.",
       "cq1": "¿Cómo me convierto en instructor?",
       "ca1": "Regístrate, selecciona \"Instructor\" y completa tu perfil. Puedes publicar sesiones de inmediato. No hay proceso de aprobación.",
       "cq2": "¿Necesito una certificación?",
@@ -1136,9 +1130,13 @@
       "ca6": "Es el sistema para manejar y retener a tus clientes, conectado con Tribe. Está en desarrollo.",
       "ca6link": "Únete a la lista de espera",
       "uq1": "¿Mi información personal está segura?",
-      "ua1": "Sí. Usamos encriptación estándar de la industria y nunca compartimos tus datos personales con terceros. Tu ubicación solo se muestra a nivel de sesión, no tu dirección de casa.",
+      "ua1": "Solo compartimos datos con los proveedores que hacen funcionar Tribe, como el hosting y la base de datos, y nunca los vendemos. Tu ubicación solo se muestra a nivel de sesión, nunca tu dirección de casa.",
       "uq2": "¿Puedo eliminar mi cuenta?",
-      "ua2": "Sí. Puedes eliminar tu cuenta cuando quieras desde la configuración de tu perfil. Tus datos personales se eliminan de forma permanente en un plazo de 30 días."
+      "ua2": "Sí. Puedes eliminar tu cuenta cuando quieras desde la configuración de tu perfil. Al hacerlo borramos de inmediato tu nombre, correo, foto y ubicación.",
+      "aq9": "¿Qué son los paquetes de sesiones?",
+      "aa9": "Varias sesiones con un coach por un solo precio. Le escribes al coach por Tribe para comprarlo.",
+      "aq10": "¿Tribe solo está en Medellín?",
+      "aa10": "Por ahora, sí. Queremos que Tribe funcione muy bien en Medellín antes de llegar a otras ciudades de Colombia y Latinoamérica."
     },
     "os": {
       "badge": "En desarrollo · Sale pronto",

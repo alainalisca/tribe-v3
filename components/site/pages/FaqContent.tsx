@@ -12,7 +12,8 @@ import p from './pages.module.css';
  * The mock's two columns, merged with the old /faq content: the duplicate
  * refund question and the duplicate recurring-class questions are one each,
  * and the four money questions are one ("¿Cómo pago una sesión?"), which
- * states the money story once. The ClassPass question stays.
+ * states the money story once. The ClassPass question was removed (Al,
+ * 2026-10-17).
  */
 export default function FaqContent({ lang }: { lang: SiteLanguage }) {
   const tr = siteT(lang);
@@ -68,7 +69,7 @@ export default function FaqContent({ lang }: { lang: SiteLanguage }) {
       <div className={p.faqcols}>
         <div>
           <h2 className={p.fqh}>{t('athletes')}</h2>
-          <Faq items={items('a', 11)} firstOpen />
+          <Faq items={items('a', 10)} firstOpen />
         </div>
         <div>
           <h2 className={p.fqh}>{t('coaches')}</h2>

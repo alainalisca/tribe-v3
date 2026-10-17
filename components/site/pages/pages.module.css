@@ -385,7 +385,7 @@
   padding: 0;
   min-width: 0;
 }
-.words a {
+.word {
   font-family: var(--disp);
   font-variation-settings: 'opsz' 72;
   font-weight: 800;
@@ -393,10 +393,6 @@
   font-size: clamp(28px, 3.6vw, 56px);
   line-height: 1;
   overflow-wrap: anywhere;
-  transition: color 0.2s;
-}
-.words a:hover {
-  color: var(--lime);
 }
 .count {
   font-family: var(--mono);
@@ -436,7 +432,7 @@
     grid-column: 2;
     grid-row: 2;
   }
-  .words a {
+  .word {
     font-size: 26px;
   }
   .gname h2 {
