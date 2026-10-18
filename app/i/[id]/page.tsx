@@ -3,6 +3,7 @@ import { coachCardVersion, coachGym, isListedCoach, loadCoach } from '@/lib/og/c
 import { translateSport } from '@/lib/sportTranslationData';
 import InstructorShareClient from './InstructorShareClient';
 import { SITE_URL } from '@/lib/http/siteUrl';
+import { shareImageOrigin } from '@/lib/http/shareImageOrigin';
 
 const BASE_URL = SITE_URL;
 
@@ -46,7 +47,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const gym = await coachGym(instructor.id);
   // Trailing slash matches next.config trailingSlash:true, so scrapers fetch
   // the image directly instead of chasing a 308 redirect.
-  const ogImageUrl = `${BASE_URL}/i/${slug}/card/?v=${coachCardVersion(instructor, gym)}`;
+  // The card on a Vercel preview's own host there, tribelatam.com in production (shareImageOrigin).
+  const ogImageUrl = `${shareImageOrigin()}/i/${slug}/card/?v=${coachCardVersion(instructor, gym)}`;
   const image = {
     url: ogImageUrl,
     width: 1200,

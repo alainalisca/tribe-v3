@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { CANONICAL_SITE_URL } from '@/lib/http/siteUrl';
+import { shareImageOrigin } from '@/lib/http/shareImageOrigin';
 import { siteMessage, type SiteLanguage } from './messages';
 
 /**
@@ -10,7 +11,8 @@ import { siteMessage, type SiteLanguage } from './messages';
  * it.
  *
  * The OG image: a page's share card (T-SHARE1, siteCardPath: a 1200 x 630
- * JPEG) or, for a page still on a plain photo, that photo's path.
+ * JPEG) or, for a page still on a plain photo, that photo's path, on
+ * tribelatam.com, or on a Vercel preview's own host (shareImageOrigin).
  */
 export function siteMetadata(
   page: string,
@@ -23,7 +25,8 @@ export function siteMetadata(
   const title = siteMessage(lang, `site.meta.${page}`, 'title', vars);
   const description = siteMessage(lang, `site.meta.${page}`, 'description', vars);
   const card = ogImage?.endsWith('/card/') ? { width: 1200, height: 630, type: 'image/jpeg' } : {};
-  const image = ogImage ? { url: `${CANONICAL_SITE_URL}${ogImage}`, alt: title, ...card } : null;
+  // On a Vercel preview the image is that preview's own (shareImageOrigin); og:url stays canonical.
+  const image = ogImage ? { url: `${shareImageOrigin()}${ogImage}`, alt: title, ...card } : null;
   return {
     title,
     description,
