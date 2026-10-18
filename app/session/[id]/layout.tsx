@@ -68,7 +68,9 @@ export default async function SessionLayout({ params, children }: Props) {
   const jsonLd = loaded
     ? sessionEventJsonLd({
         ...sessionJsonLdInputFromRow(loaded.row as unknown as Record<string, unknown>, `${SITE_URL}/session/${id}/`),
-        location: placeOf(loaded.row, loaded.partnerName).place,
+        // The city when there is neither a partner gym nor a barrio, as on the
+        // share card: an Event needs a location, and the street is never shown.
+        location: placeOf(loaded.row, loaded.partnerName).place ?? 'Medellín',
       })
     : null;
   return (

@@ -52,6 +52,20 @@ describe('/session/<id>/ metadata', () => {
     expect(html).not.toContain('Cra 43A');
   });
 
+  it('a session with no partner and no barrio still has Event JSON-LD, placed in Medellín', async () => {
+    const saved = { lat: row.location_lat, lng: row.location_lng, location: row.location };
+    Object.assign(row, { location_lat: null, location_lng: null, location: null });
+    try {
+      const html = renderToStaticMarkup(
+        await SessionLayout({ params: Promise.resolve({ id: row.id }), children: null })
+      );
+      expect(html).toContain('application/ld+json');
+      expect(html).toContain('Medellín');
+    } finally {
+      Object.assign(row, { location_lat: saved.lat, location_lng: saved.lng, location: saved.location });
+    }
+  });
+
   it('a session that is not public gets a neutral title and no JSON-LD', async () => {
     const m = await generateMetadata({ params: Promise.resolve({ id: '00000000-0000-4000-8000-000000000000' }) });
     expect(m.title).toBe('Entrenamiento no disponible | Tribe');
