@@ -54,6 +54,8 @@ const REQUIRED_FIELDS = [
   'partner_id',
   'partner_status',
   'partner_reviewed_at',
+  // T-JOIN1b: a test series makes test occurrences.
+  'is_test',
 ] as const;
 
 const selected = RECURRING_PARENT_COLUMNS.split(',').map((c) => c.trim());

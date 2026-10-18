@@ -99,11 +99,13 @@ export type RecurringParentSession = Pick<
   | 'partner_id'
   | 'partner_status'
   | 'partner_reviewed_at'
+  // T-JOIN1b: a test series makes test occurrences.
+  | 'is_test'
 >;
 
 /** Column list matching RecurringParentSession, for the cron's SELECT. */
 export const RECURRING_PARENT_COLUMNS =
-  'id, date, recurrence_pattern, recurrence_end_date, creator_id, currency, description, duration, equipment, gender_preference, is_paid, join_policy, latitude, location, location_lat, location_lng, longitude, max_participants, photos, platform_fee_percent, price_cents, skill_level, sport, start_time, title, visibility, partner_id, partner_status, partner_reviewed_at';
+  'id, date, recurrence_pattern, recurrence_end_date, creator_id, currency, description, duration, equipment, gender_preference, is_paid, join_policy, latitude, location, location_lat, location_lng, longitude, max_participants, photos, platform_fee_percent, price_cents, skill_level, sport, start_time, title, visibility, partner_id, partner_status, partner_reviewed_at, is_test';
 
 /**
  * Every column on public.sessions EXCEPT payment_instructions — enumerated from
@@ -1291,6 +1293,9 @@ export async function createChildSession(
       partner_id: parent.partner_id,
       partner_status: parent.partner_status,
       partner_reviewed_at: parent.partner_reviewed_at,
+      // T-JOIN1b: every occurrence of a test series is a test session too;
+      // without this the cron would publish what the host marked as a test.
+      is_test: parent.is_test ?? false,
     };
 
     const { data: session, error } = await supabase.from('sessions').insert(childData).select('id').single();
