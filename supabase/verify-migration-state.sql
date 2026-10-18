@@ -1041,7 +1041,10 @@ where a.attrelid = 'public.users'::regclass
     -- them. Admin reads it with the service role.
     'signup_src', 'signup_code', 'signup_ref', 'signup_utm_source',
     'signup_utm_medium', 'signup_utm_campaign', 'signup_utm_content',
-    'signup_landing_path', 'signup_first_touch', 'signup_attributed_at'
+    'signup_landing_path', 'signup_first_touch', 'signup_attributed_at',
+    -- 220: images an admin ruled out of a coach's share card. A moderation
+    -- list; the card route reads it with the service role.
+    'card_photo_rejects'
   )
   and not has_column_privilege('authenticated', a.attrelid, a.attnum, 'SELECT')
 union all
@@ -1067,7 +1070,8 @@ from (values
     ('email'),
     ('signup_src'), ('signup_code'), ('signup_ref'), ('signup_utm_source'),
     ('signup_utm_medium'), ('signup_utm_campaign'), ('signup_utm_content'),
-    ('signup_landing_path'), ('signup_first_touch'), ('signup_attributed_at')
+    ('signup_landing_path'), ('signup_first_touch'), ('signup_attributed_at'),
+    ('card_photo_rejects')
 ) as r(column_name)
 where exists (
         select 1 from information_schema.columns c
@@ -2961,6 +2965,45 @@ select '218_t_partner_metric2_revoke_anon',
            then 'MISSING -- anon can still call increment_partner_metric and inflate partner counters'
          when not has_function_privilege('authenticated', to_regprocedure('public.increment_partner_metric(uuid, text)'), 'EXECUTE')
            then 'MISSING -- authenticated lost EXECUTE; the signed-in banner counts nothing'
+         else 'applied'
+       end
+
+union all
+
+-- T-SHARE1 Part C. The coach's link and card photo columns exist; handle is
+-- unique and lowercase; the three public ones are readable by anon (the /i/
+-- page resolves a handle signed out); the rejects list is readable by no client
+-- and only an admin can change it. By to_regclass and (oid, attnum): before 220
+-- runs the columns do not exist and the name forms would raise 42703.
+select '220_t_share1_card_photo_and_handle',
+       case
+         when (select count(*) from pg_attribute
+                where attrelid = to_regclass('public.users') and attnum > 0 and not attisdropped
+                  and attname in ('card_photo_url', 'card_photo_box', 'card_photo_rejects', 'handle')) <> 4
+           then 'MISSING -- not all four users columns (card_photo_url, card_photo_box, card_photo_rejects, handle) exist'
+         when to_regclass('public.users_handle_key') is null
+           then 'MISSING -- users.handle has no unique index; two coaches could claim one link'
+         when not exists (select 1 from pg_constraint
+                           where conrelid = to_regclass('public.users') and conname = 'users_handle_format')
+           then 'MISSING -- users.handle has no format check'
+         when exists (select 1 from pg_attribute a
+                       where a.attrelid = to_regclass('public.users') and a.attnum > 0 and not a.attisdropped
+                         and a.attname in ('handle', 'card_photo_url', 'card_photo_box')
+                         and not has_column_privilege('anon', a.attrelid, a.attnum, 'SELECT'))
+           then 'MISSING -- anon cannot read handle or the card photo; /i/<handle> and the card would fail signed out'
+         when exists (select 1 from pg_attribute a
+                       where a.attrelid = to_regclass('public.users') and a.attnum > 0 and not a.attisdropped
+                         and a.attname = 'card_photo_rejects'
+                         and (has_column_privilege('anon', a.attrelid, a.attnum, 'SELECT')
+                              or has_column_privilege('authenticated', a.attrelid, a.attnum, 'SELECT')))
+           then 'MISSING -- a client role can read card_photo_rejects'
+         when not exists (select 1 from pg_trigger t
+                           where t.tgrelid = to_regclass('public.users')
+                             and t.tgname = 'users_card_photo_rejects_guard' and t.tgenabled <> 'D')
+           then 'MISSING -- the card_photo_rejects guard is absent or disabled; a coach could clear their own rejects'
+         when not exists (select 1 from public.migrations_applied
+                           where migration = '220_t_share1_card_photo_and_handle')
+           then 'MISSING -- 220 is not recorded in migrations_applied'
          else 'applied'
        end
 

@@ -113,8 +113,17 @@ function columnsFromUnappliedMigrations(): Array<{ column: string; migration: st
  *      mirror-sync commit after applying 190 must delete this line.
  */
 const KNOWN_NAME_COLLISIONS: Record<string, string> = {
-  // Empty. 190_community_soft_delete:deleted_at was listed here until 190 was
-  // applied (2026-09-24) and recorded; the rot test below forced its removal.
+  // 190_community_soft_delete:deleted_at was listed here until 190 was applied
+  // (2026-09-24) and recorded; the rot test below forced its removal.
+
+  // T-SHARE1. "handle" is a substring of every handleClick and handleSubmit in
+  // the tree, so this guard cannot tell users.handle apart from them. Rule 1
+  // above does NOT hold for it: the T-SHARE1 branch does read users.handle. The
+  // branch is still held, because it also references card_photo_url,
+  // card_photo_box and card_photo_rejects, unique names this guard does catch.
+  // Delete this line in the mirror-sync commit that records 220.
+  '220_t_share1_card_photo_and_handle:handle':
+    'substring of handleX everywhere; the branch stays held by the card_photo_* columns',
 };
 
 const ROOTS = ['app', 'components', 'lib', 'contexts', 'hooks'];

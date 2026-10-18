@@ -26,6 +26,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useEditProfile } from './useEditProfile';
 import ImageCropModal from '@/components/ImageCropModal';
+import CoachLinkEditor from '@/components/profile/CoachLinkEditor';
 import { parseCommaList, formatCommaList } from '@/lib/format/commaList';
 
 // PAY-01 layer 2: step 3 must not imply Tribe processes or holds money.
@@ -68,6 +69,7 @@ export default function EditProfilePage() {
 
   const {
     tr,
+    user,
     loading,
     error,
     loadedOk,
@@ -691,6 +693,9 @@ export default function EditProfilePage() {
             </>
           )}
         </div>
+
+        {/* T-SHARE1 Part C: the coach's link name and their link's card photo. */}
+        {formData.is_instructor && user?.id && <CoachLinkEditor userId={user.id} />}
 
         {/* Emergency Contact */}
         <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-4">

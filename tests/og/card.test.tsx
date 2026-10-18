@@ -8,8 +8,8 @@ import { headlineLineHeight, headlineSize, renderCard, type CardProps } from '@/
 /**
  * T-SHARE1 Part A. The share card renderer, drawn for real and compared with
  * checked-in PNGs: a short headline, the long one (Funcional), the paper tag,
- * no photo, an accented capital on line 2 (MÁS, T-SHARE1 Part B), and the
- * home tiles. A card may differ from its PNG in at most 0.5
+ * no photo, an accented capital on line 2 (MÁS, T-SHARE1 Part B), the
+ * home tiles, and the coach card with a photo and with the initial (Part C). A card may differ from its PNG in at most 0.5
  * percent of its pixels (font antialiasing across machines); a layout change
  * moves far more than that.
  *
@@ -43,6 +43,23 @@ const CASES: Record<string, CardProps> = {
   },
   'no-photo': { line: ['Preguntas', 'frecuentes'], sub: [], tag: 'Preguntas', lang: 'es' },
   accent: { line: ['Tu gimnasio,', 'más lleno'], sub: [], tag: 'Gimnasios', lang: 'es' },
+  // T-SHARE1 Part C: the coach card, with a photo and with the initial.
+  coach: {
+    line: ['Entrena con', 'Salomón'],
+    sub: ['Boxeo · Muay Thai', 'Zona de Combate', 'Reserva en Tribe'],
+    tag: 'Boxeo',
+    variant: 'coach',
+    photo: '/og/og_mma.jpg',
+    lang: 'es',
+  },
+  'coach-initial': {
+    line: ['Entrena con', 'Alejandro'],
+    sub: ['Entrenador', 'Medellín', 'Reserva en Tribe'],
+    tag: 'Coach',
+    variant: 'coach',
+    initial: 'A',
+    lang: 'es',
+  },
   tiles: {
     line: ['Entrena en', 'Medellín'],
     sub: WEEKLY,

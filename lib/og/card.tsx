@@ -45,6 +45,13 @@ export type CardProps = {
   photo?: string;
   /** The home card's four 300 x 300 tiles. Not with `photo`. */
   tiles?: [Tile, Tile, Tile, Tile];
+  /**
+   * `coach` (T-SHARE1 Part C, the /i/ card): the headline is always 78 px, so
+   * "ENTRENA CON" clears the photo. Every other card is `site`.
+   */
+  variant?: 'site' | 'coach';
+  /** A coach card with no photo: this letter, large and lime, over a faint grid on the right. */
+  initial?: string;
   lang: CardLang;
 };
 
@@ -69,6 +76,9 @@ const ACCENTED_CAPITAL = /[ÁÉÍÓÚÑ]/;
 /** The text block's width; it may run the card's width when nothing is drawn on the right. */
 const TEXT_W = 624;
 const TEXT_W_BARE = CARD_WIDTH - 2 * PAD;
+
+/** The coach card's headline (Part C): "ENTRENA CON" at 78 px clears the photo. */
+const HEADLINE_COACH = 78;
 
 const TILE = 300;
 const TILES_LEFT = 588;
@@ -139,7 +149,7 @@ export async function renderCard(props: CardProps): Promise<ImageResponse> {
   const { line, sub, tag, tagStyle = 'lime', photo, tiles, lang } = props;
   if (photo && tiles) throw new Error('renderCard: photo and tiles are mutually exclusive');
   const upper = upperFor(lang);
-  const size = headlineSize(line);
+  const size = props.variant === 'coach' ? HEADLINE_COACH : headlineSize(line);
   const lineHeight = headlineLineHeight(line[1], lang);
 
   const [fonts, wordmark, photoSrc, tileSrcs] = await Promise.all([
@@ -166,6 +176,42 @@ export async function renderCard(props: CardProps): Promise<ImageResponse> {
             backgroundImage: `linear-gradient(90deg, ${CHARCOAL}, rgba(34,39,45,0))`,
           }}
         />
+      )}
+      {!photoSrc && !tiles && props.initial && (
+        // The coach mock's no-photo card: a faint 48 px grid (4cqw) on the right
+        // 52 percent, and the coach's initial at 22cqw, 9 percent from the edge.
+        <div
+          style={{
+            display: 'flex',
+            position: 'absolute',
+            top: 0,
+            right: 0,
+            width: 624,
+            height: CARD_HEIGHT,
+            backgroundImage:
+              'linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px)',
+            backgroundSize: '48px 48px',
+          }}
+        />
+      )}
+      {!photoSrc && !tiles && props.initial && (
+        <div
+          style={{
+            display: 'flex',
+            position: 'absolute',
+            right: 108,
+            top: 0,
+            height: CARD_HEIGHT,
+            alignItems: 'center',
+            fontFamily: 'Big Shoulders',
+            fontWeight: 900,
+            fontSize: 264,
+            lineHeight: 0.8,
+            color: LIME,
+          }}
+        >
+          {upper(props.initial)}
+        </div>
       )}
       {tiles &&
         tileSrcs &&

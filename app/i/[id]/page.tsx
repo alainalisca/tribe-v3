@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { createClient } from '@/lib/supabase/server';
+import { coachCardVersion, coachGym, isListedCoach, loadCoach } from '@/lib/og/coachCard';
 import { translateSport } from '@/lib/sportTranslationData';
 import InstructorShareClient from './InstructorShareClient';
 import { SITE_URL } from '@/lib/http/siteUrl';
@@ -12,15 +12,11 @@ interface PageProps {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params;
-  const supabase = await createClient();
+  // Service role (lib/og/coachCard): the same row the card route draws, read
+  // once, so the card's ?v= fingerprint and the card itself always agree.
+  const instructor = await loadCoach(id);
 
-  const { data: instructor } = await supabase
-    .from('users')
-    .select('id, name, avatar_url, bio, instructor_bio, sports, average_rating')
-    .eq('id', id)
-    .single();
-
-  if (!instructor) {
+  if (!instructor || !isListedCoach(instructor)) {
     return {
       title: 'Instructor no disponible | Tribe',
       description: 'Este perfil de instructor no está disponible en Tribe.',
@@ -35,32 +31,29 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     ? instructor.sports.map((sp: string) => translateSport(sp, 'es')).join(' · ')
     : 'Entrenamiento';
 
-  const ratingStr = instructor.average_rating ? `${instructor.average_rating.toFixed(1)} ★` : '';
-
   // instructor_bio first, bio second: instructor_bio is the field both
   // instructor-facing editors write, so it matches the storefront. The bio
   // fallback keeps a description for instructors who only filled the older
   // general bio field.
+  const ogName = instructor.name || 'Instructor';
   const storefrontBio = instructor.instructor_bio || instructor.bio;
   const description = storefrontBio
     ? storefrontBio.substring(0, 160)
-    : [instructor.name || 'Instructor', sportsLabel, 'Entrena con quien te hace mejor.'].filter(Boolean).join(' · ');
+    : [ogName, sportsLabel, 'Entrena con quien te hace mejor.'].filter(Boolean).join(' · ');
 
-  const ogName = instructor.name || 'Instructor';
-  const subtitle = sportsLabel;
-
-  // OG image URL
-  const ogParams = new URLSearchParams({
-    type: 'instructor',
-    title: ogName,
-    subtitle,
-    sub2: ratingStr,
-    avatar: instructor.avatar_url || '',
-  });
-
+  // T-SHARE1 Part C: one page, two addresses. The handle when there is one.
+  const slug = instructor.handle || instructor.id;
+  const gym = await coachGym(instructor.id);
   // Trailing slash matches next.config trailingSlash:true, so scrapers fetch
   // the image directly instead of chasing a 308 redirect.
-  const ogImageUrl = `${BASE_URL}/api/og/?${ogParams.toString()}`;
+  const ogImageUrl = `${BASE_URL}/i/${slug}/card/?v=${coachCardVersion(instructor, gym)}`;
+  const image = {
+    url: ogImageUrl,
+    width: 1200,
+    height: 630,
+    type: 'image/jpeg',
+    alt: `Entrena con ${ogName} en Tribe`,
+  };
 
   return {
     title: `${ogName} | Tribe`,
@@ -70,8 +63,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       description,
       type: 'website',
       siteName: 'Tribe - Never Train Alone',
-      url: `${BASE_URL}/i/${id}/`,
-      images: [{ url: ogImageUrl, width: 1200, height: 630, alt: ogName }],
+      url: `${BASE_URL}/i/${slug}/`,
+      images: [image],
     },
     twitter: {
       card: 'summary_large_image',

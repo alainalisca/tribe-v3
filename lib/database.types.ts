@@ -1514,6 +1514,10 @@ export type Database = {
           total_sessions_hosted: number | null
           updated_at: string | null
           username: string | null
+          card_photo_box: Json | null
+          card_photo_rejects: string[]
+          card_photo_url: string | null
+          handle: string | null
           verified_credentials: Json | null
           website_url: string | null
           wompi_merchant_id: string | null
@@ -1595,6 +1599,10 @@ export type Database = {
           total_sessions_hosted?: number | null
           updated_at?: string | null
           username?: string | null
+          card_photo_box?: Json | null
+          card_photo_rejects?: string[]
+          card_photo_url?: string | null
+          handle?: string | null
           verified_credentials?: Json | null
           website_url?: string | null
           wompi_merchant_id?: string | null
@@ -1676,6 +1684,10 @@ export type Database = {
           total_sessions_hosted?: number | null
           updated_at?: string | null
           username?: string | null
+          card_photo_box?: Json | null
+          card_photo_rejects?: string[]
+          card_photo_url?: string | null
+          handle?: string | null
           verified_credentials?: Json | null
           website_url?: string | null
           wompi_merchant_id?: string | null

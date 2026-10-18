@@ -7,6 +7,7 @@ import { Calendar, Clock, Star, Award } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
 import { createClient } from '@/lib/supabase/client';
 import { trackEvent } from '@/lib/analytics';
+import { isUserId, normalizeHandle } from '@/lib/coachLink';
 
 import TribeWordmark from '@/components/TribeWordmark';
 import { Card, CardContent } from '@/components/ui/card';
@@ -60,6 +61,20 @@ export default function InstructorShareClient() {
     try {
       const today = new Date().toISOString().split('T')[0];
 
+      // T-SHARE1: /i/<handle> and /i/<uuid> are one page. A handle is resolved
+      // to the account id first; every query below then runs on the id.
+      let creatorId = instructorId;
+      if (!isUserId(instructorId)) {
+        const { data: byHandle, error: handleError } = await supabase
+          .from('users')
+          .select('id')
+          .eq('handle', normalizeHandle(instructorId))
+          .maybeSingle();
+        if (handleError) console.error('[/i/[id]] handle lookup failed', handleError);
+        if (!byHandle) return;
+        creatorId = byHandle.id;
+      }
+
       const [profileRes, sessionsRes, countRes, userRes] = await Promise.all([
         supabase
           .from('users')
@@ -73,14 +88,14 @@ export default function InstructorShareClient() {
           // fetch, leave `profile` null, and blank the entire share page --
           // not just drop the city line.
           .select('id, name, avatar_url, bio, instructor_bio, sports, average_rating')
-          .eq('id', instructorId)
+          .eq('id', creatorId)
           .single(),
         supabase
           // RLS-H4: read the anon-facing view, not the base table, so this public
           // share page survives the Gate 3 anon revoke.
           .from('sessions_public')
           .select('id, title, sport, date, start_time, location')
-          .eq('creator_id', instructorId)
+          .eq('creator_id', creatorId)
           // status 'active', not just any row. sessions_public filters ONLY on
           // join_policy (158), so it carries cancelled sessions -- 25 of them
           // live right now -- and without this a cancelled class keeps
@@ -95,7 +110,7 @@ export default function InstructorShareClient() {
         // loses SELECT on payment_instructions, '*' expands to a column anon
         // cannot read and 401s — head:true does not exempt it. Only the count is
         // used here, so naming one readable column is both narrower and safe.
-        supabase.from('sessions_public').select('id', { count: 'exact', head: true }).eq('creator_id', instructorId),
+        supabase.from('sessions_public').select('id', { count: 'exact', head: true }).eq('creator_id', creatorId),
         supabase.auth.getUser(),
       ]);
 
@@ -112,7 +127,7 @@ export default function InstructorShareClient() {
       setSessionCount(countRes.count ?? 0);
       if (userRes.data?.user) setUserId(userRes.data.user.id);
 
-      trackEvent('instructor_profile_viewed', { instructor_id: instructorId, source: 'public_share' });
+      trackEvent('instructor_profile_viewed', { instructor_id: creatorId, source: 'public_share' });
     } catch (err) {
       console.error('[/i/[id]] loadData threw', err);
     } finally {

@@ -64,6 +64,16 @@ describe('site share cards', () => {
     expect(siteCardProps('gimnasios', 'es').photo).toBeUndefined();
   });
 
+  it('never types a product name into a headline (Al, 2026-10-17): the logo rule needs the real wordmark', () => {
+    for (const card of SITE_CARDS) {
+      for (const lang of ['es', 'en'] as const) {
+        expect(siteCardProps(card, lang).line.join(' '), `${card} ${lang}`).not.toMatch(/tribe\s*\.?\s*(os|tv)\b/i);
+      }
+    }
+    expect(siteCardProps('tribe-os', 'es').line).toEqual(['Clientes que', 'vuelven']);
+    expect(siteCardProps('tv', 'es')).toMatchObject({ line: ['Historias', 'reales'], tag: 'Tribe.TV' });
+  });
+
   it('every carded page has its card route, prerendered and cached a day', () => {
     const dirs = [...Object.values(ROUTE_DIR), path.join('deportes', '[sport]')];
     for (const dir of dirs) {

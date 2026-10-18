@@ -6,6 +6,7 @@ import { useLanguage } from '@/lib/LanguageContext';
 import { lastSeenLabel } from '@/lib/lastSeen';
 import { ADMIN_USER_FILTERS, type AdminUserFilter, type AdminUserSort } from '@/lib/dal/admin';
 import type { Database } from '@/lib/database.types';
+import AdminCardPhoto from './AdminCardPhoto';
 
 type UserRow = Database['public']['Tables']['users']['Row'];
 /** is_test_account is `boolean NOT NULL DEFAULT false` in production (migration
@@ -79,6 +80,8 @@ export default function UserManagement({
   const isEs = language === 'es';
   const [showBots, setShowBots] = useState(false);
   const [openMenu, setOpenMenu] = useState<string | null>(null);
+  // T-SHARE1 Part C: whose link photo is open for editing.
+  const [cardPhotoFor, setCardPhotoFor] = useState<string | null>(null);
 
   const botCount = users.filter((u) => isBotAccount(u.email)).length;
 
@@ -283,8 +286,18 @@ export default function UserManagement({
                         {isEs ? 'Eliminar cuenta' : 'Delete account'}
                       </button>
                     )}
+                    {u.is_instructor && (
+                      <button
+                        onClick={() => setCardPhotoFor(cardPhotoFor === u.id ? null : u.id)}
+                        aria-expanded={cardPhotoFor === u.id}
+                        className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-tribe-mid text-tribe-dark dark:text-white hover:border-tribe-green transition"
+                      >
+                        {isEs ? 'Foto del link' : 'Link photo'}
+                      </button>
+                    )}
                   </div>
                 )}
+                {menuOpen && cardPhotoFor === u.id && <AdminCardPhoto userId={u.id} />}
               </div>
             );
           })
