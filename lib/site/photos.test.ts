@@ -91,6 +91,15 @@ describe('banned frames (T-SITE1.1 Part B)', () => {
     expect(files.filter((f) => BANNED.test(f.split('/').pop() ?? ''))).toEqual([]);
   });
 
+  // T-SHARE1 Part D: the share card photos are under the same rule. Named on
+  // its own so that a walk which ever stopped reaching public/og/ fails here.
+  it('covers the share card photos in public/og/ too', () => {
+    const og = walk(join(process.cwd(), 'public', 'og'));
+    expect(og.length).toBeGreaterThanOrEqual(12);
+    expect(og.filter((f) => BANNED.test(f.split('/').pop() ?? ''))).toEqual([]);
+    expect(walk(join(process.cwd(), 'public')).filter((f) => f.includes('/public/og/'))).toEqual(og);
+  });
+
   it('the pattern catches the names the old pass used', () => {
     for (const name of ['z9765.jpg', 'IMG_9776.JPG', 'IMG_9860.JPG', 'ronald_01.jpg'])
       expect(BANNED.test(name), name).toBe(true);

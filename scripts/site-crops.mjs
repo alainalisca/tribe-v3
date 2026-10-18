@@ -19,7 +19,8 @@
  * output `size`. The box is made taller (or wider) around its centre until its
  * ratio is exactly the output's, so the resize never stretches; the pixel box
  * is written back (`crop`). Output: public/og/<key>.jpg, JPG only, orientation
- * applied, EXIF stripped, quality 82. `cards` as the only key runs just these.
+ * applied, EXIF stripped, quality 82. `cards` as the only key runs just these;
+ * `--check` checks them without touching the drive (Part D).
  *
  * A banned source stops the run before anything is read: Al's rule, a person
  * who asked not to appear in Tribe media, and frames that are not Al's.
@@ -57,6 +58,36 @@ if (refused.length) {
 }
 
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+
+// T-SHARE1 Part D: `--check` reads nothing from the drive and writes nothing.
+// For every card it asserts the recorded crop sits inside its source frame at
+// exactly the output's shape, and that public/og/<key>.jpg exists at that size.
+if (only[0] === '--check') {
+  const bad = [];
+  for (const card of cards) {
+    const c = card.crop;
+    const [outW, outH] = card.size;
+    const out = path.join(PUBLIC, 'og', `${card.key}.jpg`);
+    if (!c) {
+      bad.push(`${card.key}: no crop recorded; run the script for it`);
+      continue;
+    }
+    const [W, H] = c.of;
+    if (c.left < 0 || c.top < 0 || c.left + c.width > W || c.top + c.height > H)
+      bad.push(`${card.key}: crop ${c.left},${c.top} ${c.width}x${c.height} leaves the ${W}x${H} frame`);
+    if (Math.abs(c.width / c.height / (outW / outH) - 1) > 0.002)
+      bad.push(`${card.key}: crop ratio ${(c.width / c.height).toFixed(4)} is not ${(outW / outH).toFixed(4)}`);
+    if (!fs.existsSync(out)) bad.push(`${card.key}: ${path.relative(process.cwd(), out)} is missing`);
+    else {
+      const m = await sharp(out).metadata();
+      if (m.width !== outW || m.height !== outH)
+        bad.push(`${card.key}: file is ${m.width}x${m.height}, declared ${outW}x${outH}`);
+    }
+  }
+  for (const b of bad) console.error(`FAIL ${b}`);
+  console.log(`${cards.length - new Set(bad.map((b) => b.split(':')[0])).size} of ${cards.length} card crops OK`);
+  process.exit(bad.length ? 1 : 0);
+}
 
 const cardsOnly = only.length === 1 && only[0] === 'cards';
 const wanted = (key) => !only.length || only.includes(key);

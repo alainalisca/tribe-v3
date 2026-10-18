@@ -382,7 +382,7 @@ async function main(): Promise<void> {
     if (e.problem) console.log(`   PROBLEM: ${e.problem}`);
     if (e.upload)
       console.log(
-        `   would upload ${e.upload.file ? path.basename(e.upload.file) : short(e.upload.from!)} -> ${BUCKET}/${e.upload.path}`
+        `   ${apply ? 'uploads' : 'would upload'} ${e.upload.file ? path.basename(e.upload.file) : short(e.upload.from!)} -> ${BUCKET}/${e.upload.path}`
       );
     if (e.set.card_photo_url) console.log(`   card_photo_url  = ${short(e.set.card_photo_url)}`);
     if (e.set.card_photo_box) console.log(`   card_photo_box  = ${JSON.stringify(e.set.card_photo_box)}`);
