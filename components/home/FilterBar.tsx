@@ -19,6 +19,7 @@ import FilterSelects from '@/components/home/FilterSelects';
 import DistanceSlider from '@/components/home/DistanceSlider';
 
 import TribeWordmark from '@/components/TribeWordmark';
+import AdminQuickAccess from '@/components/AdminQuickAccess';
 interface FilterBarProps {
   searchQuery: string;
   setSearchQuery: (q: string) => void;
@@ -159,10 +160,11 @@ export default function FilterBar({
           <TribeWordmark className="h-6 w-auto" />
         </Link>
         <div className="flex items-center gap-2">
-          {/* Premium-only shortcut to /os/dashboard. Renders nothing
-              for non-premium users so the header stays clean for the
-              consumer app's main audience. No admin shortcut here
-              (T-JOIN1): admins reach /admin from Settings. */}
+          {/* Admin shield (admins only, checked by is_app_admin()) and the
+              premium-only shortcut to /os/dashboard. Both render nothing for
+              everyone else, so the header stays clean for the consumer
+              app's main audience. */}
+          <AdminQuickAccess />
           <TribeOSQuickAccess />
           <WhatsNewBadge />
           <NotificationBell />
