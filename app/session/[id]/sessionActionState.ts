@@ -29,19 +29,14 @@ export function athleteBarState(s: {
   return s.isPaid ? 'request' : 'book';
 }
 
-/** When the host's door list ("Quién llegó") is open: from the start until the end. */
-export function doorListOpen(
-  s: { date: string; start_time: string; end_time: string | null; duration?: number | null },
-  now: Date = new Date()
-): boolean {
+/**
+ * When the host's door list ("Quién llegó") shows: from the start time
+ * onward, including after the session ends, so the host can still add who
+ * came once it is over. Never before the start.
+ */
+export function doorListOpen(s: { date: string; start_time: string }, now: Date = new Date()): boolean {
   const start = new Date(`${s.date}T${s.start_time}`);
-  if (Number.isNaN(start.getTime()) || now < start) return false;
-  // A missing end_time closes the list at start plus duration (60 min when
-  // unknown), never "open forever". AttendanceTracker takes over after the end.
-  const end = s.end_time
-    ? new Date(`${s.date}T${s.end_time}`)
-    : new Date(start.getTime() + (s.duration || 60) * 60_000);
-  return now < end;
+  return !Number.isNaN(start.getTime()) && now >= start;
 }
 
 /** Room the fixed bar takes at the bottom of the page, so it never covers content. */

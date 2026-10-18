@@ -12,8 +12,6 @@ interface DoorCheckInCardProps {
   isCreator: boolean;
   sessionDate: string;
   sessionStartTime: string;
-  sessionEndTime: string | null;
-  sessionDuration?: number | null;
   sessionStatus: string | null;
   language: 'en' | 'es';
   /** Refresh the session so the participant count and roster reflect the change. */
@@ -27,8 +25,8 @@ interface AddedGuest {
 
 /**
  * Host-only "add people at the door" card ("Quién llegó"). Renders from the
- * session's start until its end (AttendanceTracker renders after), for the
- * host only (T-UI-SD1). Name only: the host types a name, taps Add, and the input keeps
+ * session's start time onward, ended sessions included, for the host only
+ * (T-UI-SD1). Name only: the host types a name, taps Add, and the input keeps
  * focus so the next name can be typed immediately. Phone/email are not collected.
  */
 export default function DoorCheckInCard({
@@ -36,8 +34,6 @@ export default function DoorCheckInCard({
   isCreator,
   sessionDate,
   sessionStartTime,
-  sessionEndTime,
-  sessionDuration = null,
   sessionStatus,
   language,
   onChange,
@@ -70,14 +66,9 @@ export default function DoorCheckInCard({
     remove: language === 'es' ? 'Quitar' : 'Remove',
   };
 
-  // T-UI-SD1: the host's list, open from the start time to the end (after the
-  // end, AttendanceTracker takes over). Not for admins, and not days ahead.
-  const open = doorListOpen({
-    date: sessionDate,
-    start_time: sessionStartTime,
-    end_time: sessionEndTime,
-    duration: sessionDuration,
-  });
+  // T-UI-SD1: the host's list, from the start time onward (ended sessions
+  // included). Not for admins, and not days ahead.
+  const open = doorListOpen({ date: sessionDate, start_time: sessionStartTime });
   if (!isCreator || !open || sessionStatus === 'cancelled') {
     return null;
   }

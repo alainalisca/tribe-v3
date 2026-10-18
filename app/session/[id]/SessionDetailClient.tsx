@@ -514,8 +514,6 @@ export default function SessionDetailPage() {
             isCreator={isCreator}
             sessionDate={d.session.date}
             sessionStartTime={d.session.start_time}
-            sessionEndTime={d.session.end_time ?? null}
-            sessionDuration={d.session.duration ?? null}
             sessionStatus={d.session.status}
             language={language}
             onChange={d.reloadSilent}

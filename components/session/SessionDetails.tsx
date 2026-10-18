@@ -83,9 +83,11 @@ export default function SessionDetails({
   const { currency: userCurrency } = useUserCurrency();
   return (
     <div className="bg-white dark:bg-tribe-card rounded-xl p-6 shadow-lg">
-      {/* T-UI-SD1: pills keep one line each and wrap as a row at 390px. */}
-      <div className="flex items-start justify-between gap-3 mb-4">
-        <div className="flex flex-wrap items-center gap-2 min-w-0 [&>*]:whitespace-nowrap">
+      {/* T-UI-SD1: the pills share one row and wrap only when out of space;
+          the joined counter moves under them rather than squeezing them into
+          a column at 390px. */}
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-3 mb-4">
+        <div className="flex flex-wrap items-center gap-2 [&>*]:whitespace-nowrap">
           <span className="px-4 py-2 bg-tribe-green text-slate-900 rounded-full text-lg font-bold">
             {translateSport(session.sport, language)}
           </span>
@@ -136,7 +138,7 @@ export default function SessionDetails({
             </Badge>
           )}
         </div>
-        <div className="text-right shrink-0">
+        <div className="ml-auto text-right shrink-0">
           <div className="text-stone-600 dark:text-gray-300 text-sm mb-1 whitespace-nowrap">
             {participants.length}/{session.max_participants} {t('joined')}
           </div>

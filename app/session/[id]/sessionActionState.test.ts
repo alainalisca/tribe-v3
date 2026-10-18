@@ -27,24 +27,21 @@ describe('athleteBarState', () => {
 });
 
 describe('doorListOpen', () => {
-  const s = { date: '2026-11-19', start_time: '11:30:00', end_time: '13:00:00', duration: 90 };
-  const at = (clock: string) => new Date(`2026-11-19T${clock}`);
+  const s = { date: '2026-11-19', start_time: '11:30:00' };
+  const at = (when: string) => new Date(`2026-11-19T${when}`);
 
-  it('is closed before the start, open from the start to the end, closed after', () => {
+  it('is closed before the start and open from the start onward, after the end too', () => {
     expect(doorListOpen(s, at('11:29:59'))).toBe(false);
     expect(doorListOpen(s, at('11:30:00'))).toBe(true);
-    expect(doorListOpen(s, at('12:59:00'))).toBe(true);
-    expect(doorListOpen(s, at('13:00:00'))).toBe(false);
+    expect(doorListOpen(s, at('23:00:00'))).toBe(true);
+    expect(doorListOpen(s, new Date('2027-01-05T09:00:00'))).toBe(true);
   });
 
   it('is never open days ahead (the bug: it showed from the moment the session was created)', () => {
     expect(doorListOpen(s, new Date('2026-10-18T12:00:00'))).toBe(false);
   });
 
-  it('without an end time, closes at start plus duration (60 min when unknown)', () => {
-    expect(doorListOpen({ ...s, end_time: null }, at('12:59:00'))).toBe(true);
-    expect(doorListOpen({ ...s, end_time: null }, at('13:00:01'))).toBe(false);
-    expect(doorListOpen({ ...s, end_time: null, duration: null }, at('12:29:00'))).toBe(true);
-    expect(doorListOpen({ ...s, end_time: null, duration: null }, at('12:31:00'))).toBe(false);
+  it('is closed for a session with no usable start', () => {
+    expect(doorListOpen({ date: '2026-11-19', start_time: '' }, at('12:00:00'))).toBe(false);
   });
 });

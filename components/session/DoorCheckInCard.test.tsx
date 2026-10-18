@@ -4,7 +4,7 @@ import DoorCheckInCard from './DoorCheckInCard';
 import { addSessionGuest } from '@/lib/dal';
 
 vi.mock('@/lib/supabase/client', () => ({ createClient: () => ({}) }));
-// Open the door list (T-UI-SD1: from the start to the end) whatever the clock says.
+// Open the door list (T-UI-SD1: from the start onward) whatever the clock says.
 const door = vi.hoisted(() => ({ open: true }));
 vi.mock('@/app/session/[id]/sessionActionState', () => ({ doorListOpen: () => door.open }));
 vi.mock('@/lib/dal', () => ({ addSessionGuest: vi.fn(), removeSessionGuest: vi.fn() }));
@@ -14,7 +14,6 @@ const baseProps = {
   isCreator: true,
   sessionDate: '2099-01-01',
   sessionStartTime: '10:00:00',
-  sessionEndTime: '11:00:00',
   sessionStatus: 'active',
   language: 'en' as const,
   onChange: vi.fn(),
@@ -32,7 +31,7 @@ describe('DoorCheckInCard', () => {
     door.open = true;
   });
 
-  it('T-UI-SD1: host only, and only while the session is on', () => {
+  it('T-UI-SD1: host only, and only from the start time', () => {
     const { container, rerender } = render(<DoorCheckInCard {...baseProps} isCreator={false} />);
     expect(container).toBeEmptyDOMElement();
     door.open = false;
