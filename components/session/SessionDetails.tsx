@@ -4,6 +4,7 @@ import { formatTime12Hour } from '@/lib/utils';
 import Image from 'next/image';
 import { Calendar, Clock, MapPin, Users, Star, DollarSign, Repeat } from 'lucide-react';
 import LocationMap from '@/components/LocationMap';
+import { firstName } from '@/lib/text/firstName';
 import { Badge } from '@/components/ui/badge';
 import type { Session } from '@/lib/database.types';
 import { useLanguage } from '@/lib/LanguageContext';
@@ -82,8 +83,9 @@ export default function SessionDetails({
   const { currency: userCurrency } = useUserCurrency();
   return (
     <div className="bg-white dark:bg-tribe-card rounded-xl p-6 shadow-lg">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
+      {/* T-UI-SD1: pills keep one line each and wrap as a row at 390px. */}
+      <div className="flex items-start justify-between gap-3 mb-4">
+        <div className="flex flex-wrap items-center gap-2 min-w-0 [&>*]:whitespace-nowrap">
           <span className="px-4 py-2 bg-tribe-green text-slate-900 rounded-full text-lg font-bold">
             {translateSport(session.sport, language)}
           </span>
@@ -134,8 +136,8 @@ export default function SessionDetails({
             </Badge>
           )}
         </div>
-        <div className="text-right">
-          <div className="text-stone-600 dark:text-gray-300 text-sm mb-1">
+        <div className="text-right shrink-0">
+          <div className="text-stone-600 dark:text-gray-300 text-sm mb-1 whitespace-nowrap">
             {participants.length}/{session.max_participants} {t('joined')}
           </div>
           <div className="w-24 h-2 bg-stone-200 dark:bg-tribe-mid rounded-full overflow-hidden">
@@ -147,14 +149,14 @@ export default function SessionDetails({
         </div>
       </div>
 
-      {session.photos && session.photos.length > 0 && (
+      {(session.photos ?? []).some(Boolean) && (
         <div className="mb-6">
           <div className="flex items-center gap-2 mb-2">
             <MapPin className="w-4 h-4 text-muted-foreground" />
             <p className="text-sm font-medium text-stone-700 dark:text-gray-300">{t('locationPhotos')}</p>
           </div>
           <div className="flex gap-2 overflow-x-auto pb-2">
-            {session.photos.map((photo: string, idx: number) => (
+            {(session.photos ?? []).filter(Boolean).map((photo: string, idx: number) => (
               <button
                 key={idx}
                 onClick={() => onOpenLightbox(idx, 'location')}
@@ -254,7 +256,7 @@ export default function SessionDetails({
               <Users className="w-5 h-5 mr-3 text-muted-foreground" />
               <span className="flex items-center gap-2 min-w-0">
                 <span className="truncate">
-                  {t('hostedBy')} {creator.name}
+                  {t('hostedBy')} {firstName(creator.name) || creator.name}
                 </span>
                 {gym && <SessionDetailGymHost gym={gym} coachCount={coachCount} />}
               </span>

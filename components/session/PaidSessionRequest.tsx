@@ -35,6 +35,12 @@ interface PaidSessionRequestProps {
   onRequest: () => void;
   requesting: boolean;
   language: 'en' | 'es';
+  /**
+   * T-UI-SD1: the price card above the button. The session page shows the
+   * price once, in the facts, and puts this button in its sticky bar.
+   */
+  showPriceCard?: boolean;
+  buttonClassName?: string;
 }
 
 export default function PaidSessionRequest({
@@ -45,6 +51,8 @@ export default function PaidSessionRequest({
   onRequest,
   requesting,
   language,
+  showPriceCard = true,
+  buttonClassName,
 }: PaidSessionRequestProps) {
   const [open, setOpen] = useState(false);
   const es = language === 'es';
@@ -76,16 +84,21 @@ export default function PaidSessionRequest({
 
   return (
     <div className="space-y-2">
-      <div className="w-full p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
-        <p className="text-sm text-green-700 dark:text-green-300 font-medium">{copy.paidSession}</p>
-        <p className="text-lg font-bold text-green-800 dark:text-green-200">{priceLabel}</p>
-        <p className="text-xs text-green-700 dark:text-green-300 mt-1">{copy.directNote}</p>
-      </div>
+      {showPriceCard && (
+        <div className="w-full p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+          <p className="text-sm text-green-700 dark:text-green-300 font-medium">{copy.paidSession}</p>
+          <p className="text-lg font-bold text-green-800 dark:text-green-200">{priceLabel}</p>
+          <p className="text-xs text-green-700 dark:text-green-300 mt-1">{copy.directNote}</p>
+        </div>
+      )}
 
       <Button
         onClick={() => setOpen(true)}
         disabled={requesting}
-        className="w-full py-3 font-bold bg-green-600 hover:bg-green-700 text-white flex items-center justify-center gap-2"
+        className={
+          buttonClassName ??
+          'w-full py-3 font-bold bg-green-600 hover:bg-green-700 text-white flex items-center justify-center gap-2'
+        }
       >
         <CreditCard className="w-5 h-5" />
         {copy.requestBtn}

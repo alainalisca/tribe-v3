@@ -40,6 +40,7 @@ export default function SessionPoster({
   gymName,
   language,
   place: placeOverride,
+  priceTag = true,
 }: {
   session: PosterSession;
   creatorName: string | null;
@@ -48,6 +49,12 @@ export default function SessionPoster({
   language: 'es' | 'en';
   /** T-SSR1: the place worked out on the server (never the street address). */
   place?: string | null;
+  /**
+   * T-UI-SD1: the signed-in page shows a paid session's price once, in the
+   * facts (with the ~USD hint), so its poster drops the price tag. "Gratis"
+   * is not a price and stays.
+   */
+  priceTag?: boolean;
 }) {
   const t = useTranslations('sessionPublic');
   const { place } =
@@ -60,13 +67,14 @@ export default function SessionPoster({
           lng: session.location_lng,
           location: session.location,
         });
+  const price = sessionPriceLabel(session, language);
   return (
     <PosterHeader
       title={publicSessionTitle({ title: session.title, sport: session.sport, creatorName }, language)}
       sport={session.sport && session.sport !== 'Other' ? translateSport(session.sport, language) : null}
       photoUrl={(session.photos ?? []).find(Boolean) ?? null}
       caption={place}
-      tag={sessionPriceLabel(session, language) ?? t('free')}
+      tag={price ? (priceTag ? price : null) : t('free')}
     />
   );
 }

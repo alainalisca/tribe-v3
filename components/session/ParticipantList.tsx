@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { useLanguage } from '@/lib/LanguageContext';
 import { athleteRoster } from '@/lib/sessionRoster';
+import { useTranslations } from '@/lib/i18n/useTranslations';
 
 interface CreatorInfo {
   id: string;
@@ -54,6 +55,7 @@ export default function ParticipantList({
   onConfirmPayment,
 }: ParticipantListProps) {
   const { t } = useLanguage();
+  const sd = useTranslations('sessionDetail');
 
   // The host is rendered once, as the host, in the card below. A
   // session_participants row for the host is a duplicate of sessions.creator_id
@@ -68,29 +70,29 @@ export default function ParticipantList({
 
   if (!creator && athletes.length === 0) return null;
 
+  // T-UI-SD1: the host sits above the list as "Anfitrión", with the full name;
+  // "Atletas (N)" counts and lists athletes only.
   return (
     <div className="bg-white dark:bg-tribe-card rounded-xl p-6 shadow-lg">
+      {creator && (
+        <div className="mb-5" data-testid="session-host">
+          <p className="text-xs font-bold uppercase tracking-[0.08em] text-muted-foreground mb-2">{sd('host')}</p>
+          <Link href={`/profile/${creator.id}`} className="flex items-center gap-3">
+            <Avatar className="w-12 h-12">
+              <AvatarImage loading="lazy" src={creator.avatar_url || undefined} alt={creator.name || ''} />
+              <AvatarFallback className="bg-tribe-green text-slate-900 font-bold text-lg">
+                {creator.name?.[0]?.toUpperCase() || 'H'}
+              </AvatarFallback>
+            </Avatar>
+            <p className="font-semibold text-stone-900 dark:text-white">{creator.name || sd('host')}</p>
+          </Link>
+        </div>
+      )}
       <h2 className="text-lg font-bold text-stone-900 dark:text-white mb-4">
-        {t('participants')} ({athletes.length})
+        {sd('athletes', { count: athletes.length })}
       </h2>
+      {athletes.length === 0 && <p className="text-sm text-muted-foreground">{sd('noAthletes')}</p>}
       <div className="grid grid-cols-1 gap-3">
-        {creator && (
-          <div className="flex items-center justify-between p-3 bg-stone-50 dark:bg-tribe-mid rounded-lg">
-            <Link href={`/profile/${creator.id}`} className="flex items-center gap-3 flex-1">
-              <Avatar className="w-12 h-12">
-                <AvatarImage loading="lazy" src={creator.avatar_url || undefined} alt={creator.name || ''} />
-                <AvatarFallback className="bg-tribe-green text-slate-900 font-bold text-lg">
-                  {creator.name?.[0]?.toUpperCase() || 'H'}
-                </AvatarFallback>
-              </Avatar>
-              <div>
-                <p className="font-medium text-stone-900 dark:text-white">{creator.name || t('host')}</p>
-                <p className="text-sm text-muted-foreground">{t('host')}</p>
-              </div>
-            </Link>
-          </div>
-        )}
-
         {athletes.map((participant, index) => {
           // A participant row with a null user_id is a guest. A row with a
           // user_id but no joined user object is a registered athlete whose

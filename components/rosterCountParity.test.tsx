@@ -266,8 +266,10 @@ describe('the host renders once, as the host', () => {
     const hostLinks = container.querySelectorAll(`a[href="/profile/${HOST_ID}"]`);
     expect(hostLinks).toHaveLength(1);
 
-    // And that single link is the host card -- it is labelled as the host.
-    expect(hostLinks[0].textContent).toContain('host');
+    // And that single link is the host card -- it sits in the block labelled as
+    // the host, above the athletes (T-UI-SD1).
+    const hostBlock = hostLinks[0].closest('[data-testid="session-host"]');
+    expect(hostBlock?.textContent).toContain('Host');
   });
 
   it('still renders the guest and the confirmed athletes', () => {
