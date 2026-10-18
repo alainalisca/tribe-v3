@@ -14,6 +14,13 @@
  * inside the crop, writes both back into the job (`crop`, `anchor`), and saves
  * public/<out>.jpg and .webp: orientation applied, EXIF stripped, quality 82.
  *
+ * T-SHARE1 Part A adds `cards`: the share card photos. Each names a camera
+ * original, a box as fractions of the oriented frame (x0, y0, x1, y1) and an
+ * output `size`. The box is made taller (or wider) around its centre until its
+ * ratio is exactly the output's, so the resize never stretches; the pixel box
+ * is written back (`crop`). Output: public/og/<key>.jpg, JPG only, orientation
+ * applied, EXIF stripped, quality 82. `cards` as the only key runs just these.
+ *
  * A banned source stops the run before anything is read: Al's rule, a person
  * who asked not to appear in Tribe media, and frames that are not Al's.
  */
@@ -40,7 +47,10 @@ function bannedBy(source, banned) {
   });
 }
 
-const refused = file.jobs.map((j) => [j.key, j.source, bannedBy(j.source, file.banned)]).filter(([, , b]) => b);
+const cards = file.cards ?? [];
+const refused = [...file.jobs, ...cards]
+  .map((j) => [j.key, j.source, bannedBy(j.source, file.banned)])
+  .filter(([, , b]) => b);
 if (refused.length) {
   for (const [key, source, rule] of refused) console.error(`REFUSED ${key}: ${source} is banned (${rule})`);
   process.exit(1);
@@ -48,8 +58,18 @@ if (refused.length) {
 
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 
+const cardsOnly = only.length === 1 && only[0] === 'cards';
+const wanted = (key) => !only.length || only.includes(key);
+
+/** Oriented width and height of a camera original. */
+async function orientedSize(src) {
+  const meta = await sharp(src).metadata();
+  const turned = (meta.orientation ?? 1) >= 5;
+  return turned ? [meta.height, meta.width] : [meta.width, meta.height];
+}
+
 for (const job of file.jobs) {
-  if (only.length && !only.includes(job.key)) continue;
+  if (cardsOnly || !wanted(job.key)) continue;
   const src = path.join(file.driveRoot, job.source);
   const meta = await sharp(src).metadata();
   const turned = (meta.orientation ?? 1) >= 5;
@@ -87,6 +107,47 @@ for (const job of file.jobs) {
   const kb = (fs.statSync(out).size / 1024).toFixed(0);
   console.log(
     `${job.key.padEnd(12)} ${outW}x${outH} ${kb} KB  crop ${left},${top} ${w}x${h} of ${W}x${H}  anchor ${job.anchor ?? '-'}`
+  );
+}
+
+/**
+ * A fractional box in pixels, grown around its centre to exactly `ratio`
+ * (width / height) and kept inside the frame. Grows, never shrinks, unless the
+ * frame itself is too small in that direction.
+ */
+function snapBox([x0, y0, x1, y1], [W, H], ratio) {
+  let w = (x1 - x0) * W;
+  let h = (y1 - y0) * H;
+  const cx = ((x0 + x1) / 2) * W;
+  const cy = ((y0 + y1) / 2) * H;
+  if (w / h > ratio) h = w / ratio;
+  else w = h * ratio;
+  if (h > H) [w, h] = [H * ratio, H];
+  if (w > W) [w, h] = [W, W / ratio];
+  w = Math.round(w);
+  h = Math.round(h);
+  const left = Math.round(clamp(cx - w / 2, 0, W - w));
+  const top = Math.round(clamp(cy - h / 2, 0, H - h));
+  return { left, top, width: w, height: h, of: [W, H] };
+}
+
+for (const card of cards) {
+  if (!cardsOnly && !wanted(card.key)) continue;
+  const src = path.join(file.driveRoot, card.source);
+  const [outW, outH] = card.size;
+  card.crop = snapBox(card.box, await orientedSize(src), outW / outH);
+  const { left, top, width, height } = card.crop;
+  const out = path.join(PUBLIC, 'og', `${card.key}.jpg`);
+  fs.mkdirSync(path.dirname(out), { recursive: true });
+  await sharp(src)
+    .rotate()
+    .extract({ left, top, width, height })
+    .resize(outW, outH)
+    .jpeg({ quality: 82, mozjpeg: true })
+    .toFile(out);
+  const kb = (fs.statSync(out).size / 1024).toFixed(0);
+  console.log(
+    `${card.key.padEnd(14)} ${outW}x${outH} ${kb} KB  crop ${left},${top} ${width}x${height} of ${card.crop.of.join('x')}`
   );
 }
 

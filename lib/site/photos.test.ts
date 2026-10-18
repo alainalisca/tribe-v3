@@ -39,6 +39,9 @@ describe('site photos (Part C)', () => {
 });
 
 describe('one file, one slot (T-SITE1.1 Part A)', () => {
+  // The site's own photo map only. public/og/ (T-SHARE1 share card photos) is
+  // exempt: a card may show a frame the site also shows (IMG_8942, IMG_0455),
+  // because the card is what the link looks like before anyone opens the page.
   it('no file is registered under two keys', () => {
     const byPath = new Map<string, PhotoKey[]>();
     for (const key of KEYS) byPath.set(SITE_PHOTOS[key], [...(byPath.get(SITE_PHOTOS[key]) ?? []), key]);
