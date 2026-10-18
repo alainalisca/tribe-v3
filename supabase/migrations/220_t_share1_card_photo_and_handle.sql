@@ -175,3 +175,20 @@ VALUES ('220_t_share1_card_photo_and_handle',
 ON CONFLICT (migration) DO NOTHING;
 
 COMMIT;
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- ADDENDUM 2026-10-18: APPLIED
+-- ═══════════════════════════════════════════════════════════════════════════
+--
+-- Applied on production 2026-10-18 (migrations_applied.applied_at
+-- 02:04:41 UTC), pasted whole by Al from branch feat/og-cards at 90d3e8c2, the
+-- editor answering without error. NOT from main: Al waived merge-first for 220
+-- only, because the branch could not merge (migrationAppliedBeforeCode) until
+-- 220 existed, and nothing on main reads these columns.
+--
+-- Read back on the live API, writing nothing: the service role reads all four
+-- columns; anon reads handle, card_photo_url and card_photo_box and is refused
+-- card_photo_rejects (42501); no row has a non-empty card_photo_rejects; 6
+-- handles were prefilled, all fitting the pattern and unique. The rejects guard
+-- trigger was not probed by a write (that needs a signed-in non-admin); the
+-- post-flight block above asserted it exists.

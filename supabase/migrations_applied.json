@@ -39,6 +39,7 @@
     "215_t_grow2_referral_loop",
     "216_t_auth3_google_avatar_backfill",
     "217_t_partner_metric1_increment_partner_metric",
-    "218_t_partner_metric2_revoke_anon"
+    "218_t_partner_metric2_revoke_anon",
+    "220_t_share1_card_photo_and_handle"
   ]
 }
