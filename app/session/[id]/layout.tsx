@@ -1,10 +1,15 @@
 import type { Metadata } from 'next';
-import type { ReactNode } from 'react';
+import { cache, type ReactNode } from 'react';
+import { after } from 'next/server';
 import { SITE_URL } from '@/lib/http/siteUrl';
 import { shareImageOrigin } from '@/lib/http/shareImageOrigin';
-import { loadSessionForCard, sessionCardVersion, type SessionCardRow } from '@/lib/og/sessionCard';
+import {
+  loadSessionForCard,
+  sessionCardVersion,
+  sessionShareDescription,
+  type SessionCardRow,
+} from '@/lib/og/sessionCard';
 import { serializeJsonLd, sessionEventJsonLd, sessionJsonLdInputFromRow } from '@/lib/seo/jsonLd';
-import { cardDateLabelShort, cardPriceLabel } from '@/lib/share/cardCopy';
 import { publicSessionPlace, publicSessionTitle } from '@/lib/share/sessionPublic';
 
 /**
@@ -19,6 +24,9 @@ import { publicSessionPlace, publicSessionTitle } from '@/lib/share/sessionPubli
  */
 type Props = { params: Promise<{ id: string }>; children: ReactNode };
 
+/** One read per request: the metadata and the JSON-LD share it. */
+const load = cache(loadSessionForCard);
+
 function placeOf(row: SessionCardRow, partnerName: string | null) {
   return publicSessionPlace({
     partnerName,
@@ -31,22 +39,25 @@ function placeOf(row: SessionCardRow, partnerName: string | null) {
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;
-  const loaded = await loadSessionForCard(id);
+  const loaded = await load(id);
   if (!loaded) {
     return {
       title: 'Entrenamiento no disponible | Tribe',
       description: 'Este entrenamiento ya no está disponible en Tribe.',
     };
   }
-  const { row, partnerName } = loaded;
+  const { row, partnerName, host } = loaded;
   const title = publicSessionTitle({ title: row.title, sport: row.sport, creatorName: row.creator_name }, 'es');
-  const { place } = placeOf(row, partnerName);
-  const description = [title, place, cardDateLabelShort(row.date), cardPriceLabel(row.price_cents, row.currency)]
-    .filter(Boolean)
-    .join(' · ')
-    .slice(0, 160);
+  const description = sessionShareDescription(row, partnerName);
   // The card on a preview's own host there, tribelatam.com in production.
-  const image = `${shareImageOrigin()}/session/${id}/card/?v=${sessionCardVersion(row, partnerName)}`;
+  const image = `${shareImageOrigin()}/session/${id}/card/?v=${sessionCardVersion(row, partnerName, host)}`;
+  // Warm the card while the scraper reads this page: its next request is the
+  // image, and a cold render (3.1 s measured) can outlast WhatsApp's patience.
+  try {
+    after(() => fetch(image, { headers: { 'user-agent': 'TribeCardWarmup/1.0' } }).catch(() => undefined));
+  } catch {
+    // Outside a request (tests): nothing to warm.
+  }
   return {
     title: `${title} | Tribe`,
     description,
@@ -64,7 +75,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 
 export default async function SessionLayout({ params, children }: Props) {
   const { id } = await params;
-  const loaded = await loadSessionForCard(id);
+  const loaded = await load(id);
   const jsonLd = loaded
     ? sessionEventJsonLd({
         ...sessionJsonLdInputFromRow(loaded.row as unknown as Record<string, unknown>, `${SITE_URL}/session/${id}/`),

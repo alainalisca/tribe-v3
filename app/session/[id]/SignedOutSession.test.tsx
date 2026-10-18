@@ -81,7 +81,7 @@ beforeEach(() => {
 describe('SignedOutSession', () => {
   it('a free session: title fallback, the four facts, one lime "Pedir mi cupo"', () => {
     renderPage();
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Boxeo con Salomon Tabares');
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Boxeo con Salomon');
     for (const label of ['Cuándo', 'Dónde', 'Cuánto', 'Quién'])
       expect(screen.getAllByText(label).length).toBeGreaterThan(0);
     expect(screen.getByText('Directo a Salomon. Tribe no cobra comisión.')).toBeInTheDocument();

@@ -339,7 +339,19 @@ export const CARD_JPEG_QUALITY = 82;
 export async function cardResponse(props: CardProps): Promise<Response> {
   const png = Buffer.from(await (await renderCard(props)).arrayBuffer());
   try {
-    const jpeg = await sharp(png).jpeg({ quality: CARD_JPEG_QUALITY, mozjpeg: true }).toBuffer();
+    // Baseline, not progressive: the format every link scraper decodes
+    // (T-JOIN1, after a WhatsApp preview came back empty). mozjpeg's settings
+    // spelled out without optimiseScans, which would force progressive.
+    const jpeg = await sharp(png)
+      .jpeg({
+        quality: CARD_JPEG_QUALITY,
+        progressive: false,
+        trellisQuantisation: true,
+        overshootDeringing: true,
+        quantisationTable: 3,
+        optimiseCoding: true,
+      })
+      .toBuffer();
     return new Response(new Uint8Array(jpeg), { headers: { 'Content-Type': 'image/jpeg' } });
   } catch (error) {
     logError(error, { action: 'og.cardResponse.jpeg' });

@@ -1,5 +1,4 @@
 import { ACTIVE_CITY, detectNeighborhood } from '@/lib/city-config';
-import { sessionDisplayTitle } from '@/lib/sessionTitle';
 import { neighborhoodFromAddress } from '@/lib/sessionLocation';
 import { translateSport } from '@/lib/sportTranslationData';
 
@@ -11,22 +10,38 @@ import { translateSport } from '@/lib/sportTranslationData';
 export type PublicLang = 'es' | 'en';
 
 /**
- * The title, or the fallback "<Deporte> con <Nombre>" (Al, 2026-10-18: every
- * upcoming session lacks a title). sessionDisplayTitle is the app's own rule
- * (first two words of the name; the sport alone when there is no name).
+ * The title, or the fallback "<Deporte> con <Nombre>": the host's FIRST name
+ * only (Al, 2026-10-18: "Boxeo con Salomón", "Yoga con Neera"), as stored,
+ * accents and all. A trailing word that is the sport itself is dropped first
+ * ("Neera yoga" teaches Yoga: "Yoga con Neera"). With no name, the sport
+ * alone; with the sport "Other", "Sesión" / "Session".
  */
 export function publicSessionTitle(
   s: { title?: string | null; sport?: string | null; creatorName?: string | null },
   lang: PublicLang
 ): string {
+  const given = s.title?.trim();
+  if (given) return given;
   const sportName =
     s.sport && s.sport !== 'Other' ? translateSport(s.sport, lang) : lang === 'en' ? 'Session' : 'Sesión';
-  return sessionDisplayTitle({
-    title: s.title,
-    sportName,
-    instructorName: s.creatorName,
-    withWord: lang === 'en' ? 'with' : 'con',
-  });
+  const first = hostFirstName(s.creatorName, s.sport);
+  return first ? `${sportName} ${lang === 'en' ? 'with' : 'con'} ${first}` : sportName;
+}
+
+const fold = (w: string) =>
+  w
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+
+/** The host's first name as stored, after dropping trailing words that are the sport (in English or Spanish). */
+export function hostFirstName(name: string | null | undefined, sport?: string | null): string {
+  const words = (name ?? '').trim().split(/\s+/).filter(Boolean);
+  if (sport && sport !== 'Other') {
+    const sportWords = new Set([fold(sport), fold(translateSport(sport, 'es')), fold(translateSport(sport, 'en'))]);
+    while (words.length > 1 && sportWords.has(fold(words[words.length - 1]))) words.pop();
+  }
+  return words[0] ?? '';
 }
 
 /**

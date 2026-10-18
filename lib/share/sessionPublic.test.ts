@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { cardWhen, pageWhen, publicSessionPlace, publicSessionTitle } from './sessionPublic';
+import { cardWhen, hostFirstName, pageWhen, publicSessionPlace, publicSessionTitle } from './sessionPublic';
 
 /** T-JOIN1 Part B: what a signed-out visitor sees of a session, worded once. */
 describe('publicSessionTitle', () => {
@@ -8,10 +8,25 @@ describe('publicSessionTitle', () => {
       'Clase abierta'
     );
     expect(publicSessionTitle({ title: null, sport: 'Boxing', creatorName: 'Salomon Tabares Adarve' }, 'es')).toBe(
-      'Boxeo con Salomon Tabares'
+      'Boxeo con Salomon'
     );
     expect(publicSessionTitle({ title: '  ', sport: 'Yoga', creatorName: 'Neera' }, 'en')).toBe('Yoga with Neera');
     expect(publicSessionTitle({ title: null, sport: 'Other', creatorName: 'Leo' }, 'es')).toBe('Sesión con Leo');
+  });
+
+  it("the host's first name only, as stored, with a trailing sport word dropped (Al, 2026-10-18)", () => {
+    expect(publicSessionTitle({ sport: 'Yoga', creatorName: 'Neera yoga' }, 'es')).toBe('Yoga con Neera');
+    expect(publicSessionTitle({ sport: 'Boxing', creatorName: 'Salomón Tabares' }, 'es')).toBe('Boxeo con Salomón');
+    expect(publicSessionTitle({ sport: 'Boxing', creatorName: 'Sofía Boxeo' }, 'es')).toBe('Boxeo con Sofía');
+    expect(publicSessionTitle({ sport: 'Pilates', creatorName: 'Caroline Vanegas ' }, 'en')).toBe(
+      'Pilates with Caroline'
+    );
+    expect(publicSessionTitle({ sport: 'Yoga', creatorName: null }, 'es')).toBe('Yoga');
+  });
+
+  it('never strips the only word, even when it is the sport', () => {
+    expect(hostFirstName('Yoga', 'Yoga')).toBe('Yoga');
+    expect(hostFirstName('  ', 'Yoga')).toBe('');
   });
 });
 

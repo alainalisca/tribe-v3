@@ -1,36 +1,38 @@
 import { createHash } from 'node:crypto';
-import { readFile } from 'node:fs/promises';
-import { join } from 'node:path';
-import { isTribeStorageUrl } from '@/lib/coachLink';
 import { logError } from '@/lib/logger';
-import { cardWhen, publicSessionPlace, publicSessionTitle } from '@/lib/share/sessionPublic';
-import { SITE_PHOTOS } from '@/lib/site/photos';
-import { SPORT_GROUPS } from '@/lib/site/sportGroups';
+import { cardPriceLabel } from '@/lib/share/cardCopy';
+import { cardWhen, hostFirstName, publicSessionPlace, publicSessionTitle } from '@/lib/share/sessionPublic';
 import { translateSport } from '@/lib/sportTranslationData';
 import { getServiceRoleClient } from '@/lib/supabase/admin';
 import { cardResponse, type CardProps } from './card';
-import { cropCardPhoto } from './cardCrop';
-import { cardPhotoCrop } from './coachCard';
+import { cardPhotoCrop, chooseCardPhoto, loadCoach, type CoachRow } from './coachCard';
+import { siteCardImage } from './siteCards';
 
 /**
- * T-JOIN1 Part B. A session's share card, the one WhatsApp shows for
+ * T-JOIN1. A session's share card, the one WhatsApp shows for
  * tribelatam.com/session/<id>/ (and /s/<id>, which redirects there). The
  * T-SHARE1 renderer and its rules (Al, 2026-10-18):
  *
- *   headline  the title, or "<Deporte> con <Nombre>", over two lines
+ *   headline  the title, or "<Deporte> con <Nombre>" with the host's first
+ *             name only, over two lines
  *   sub       the session's day and time, its place (partner gym or barrio,
  *             never the street address; Medellín when there is neither), and
  *             "Reserva en Tribe"
  *   tag       the sport
- *   photo     the session's first photo when it is in Tribe storage, else the
- *             sport's card photo (public/og), else the sport group's site photo
+ *   photo     the HOST's coach-card photo, by the coach card's own chain
+ *             (card_photo_url, then gallery or cover, then a sharp avatar;
+ *             lib/og/coachCard.ts), else the no-photo card with the host's
+ *             initial. Never the session's own images: those are flyers and
+ *             venue shots.
  *
  * Only fixed facts of that session. No spots, no attendee count, nothing that
  * changes: WhatsApp keeps the first preview it fetches in every old message.
+ * And always an image: a session that cannot be drawn gets the no-photo
+ * card, and one that is not public gets the site's home card.
  */
 export const SESSION_CARD_SELECT =
   'id, title, sport, date, start_time, status, location, location_lat, location_lng, photos, ' +
-  'creator_name, partner_id, partner_status, description, end_time, price_cents, currency, is_paid';
+  'creator_id, creator_name, partner_id, partner_status, description, end_time, price_cents, currency, is_paid';
 
 export type SessionCardRow = {
   id: string;
@@ -43,6 +45,7 @@ export type SessionCardRow = {
   location_lat: number | null;
   location_lng: number | null;
   photos: string[] | null;
+  creator_id?: string | null;
   creator_name: string | null;
   partner_id: string | null;
   partner_status: string | null;
@@ -54,39 +57,50 @@ export type SessionCardRow = {
   is_paid?: boolean | null;
 };
 
-/** The session as the public view has it, and its partner's name when that partner is approved and active. */
-export async function loadSessionForCard(
-  id: string
-): Promise<{ row: SessionCardRow; partnerName: string | null } | null> {
+export type LoadedSession = { row: SessionCardRow; partnerName: string | null; host: CoachRow | null };
+
+/** The session as the public view has it, its partner's name when approved and active, and its host. */
+export async function loadSessionForCard(id: string): Promise<LoadedSession | null> {
   const service = getServiceRoleClient();
   const { data, error } = await service.from('sessions_public').select(SESSION_CARD_SELECT).eq('id', id).maybeSingle();
   if (error) logError(error, { action: 'og.loadSessionForCard', sessionId: id });
   const row = (data as SessionCardRow | null) ?? null;
   if (!row) return null;
-  let partnerName: string | null = null;
-  if (row.partner_id && row.partner_status === 'approved') {
-    const { data: partner } = await service
-      .from('featured_partners')
-      .select('business_name, status')
-      .eq('id', row.partner_id)
-      .maybeSingle();
-    if (partner?.status === 'active') partnerName = partner.business_name ?? null;
-  }
-  return { row, partnerName };
+  const [partnerName, host] = await Promise.all([
+    (async () => {
+      if (!row.partner_id || row.partner_status !== 'approved') return null;
+      const { data: partner } = await service
+        .from('featured_partners')
+        .select('business_name, status')
+        .eq('id', row.partner_id)
+        .maybeSingle();
+      return partner?.status === 'active' ? (partner.business_name ?? null) : null;
+    })(),
+    row.creator_id ? loadCoach(row.creator_id).catch(() => null) : Promise.resolve(null),
+  ]);
+  return { row, partnerName, host };
 }
 
-/** The card's six discipline photos (public/og, face-checked in T-SHARE1 Part A), by app sport. */
-const SPORT_CARD_PHOTO: Record<string, string> = {
-  Boxing: '/og/og_boxeo.jpg',
-  'Muay Thai': '/og/og_mma.jpg',
-  Kickboxing: '/og/og_mma.jpg',
-  'Jiu-Jitsu': '/og/og_mma.jpg',
-  CrossFit: '/og/og_crossfit.jpg',
-  HYROX: '/og/og_hyrox.jpg',
-  Yoga: '/og/og_yoga.jpg',
-  Calisthenics: '/og/og_funcional.jpg',
-  Weightlifting: '/og/og_funcional.jpg',
-};
+/**
+ * og:description (Al, 2026-10-18): "<Día DD mes> · <HH:MM> · <barrio> ·
+ * <precio o Gratis> · Reserva en Tribe", the same order free or paid, and
+ * never the title again. The barrio, else the partner gym, else Medellín.
+ */
+export function sessionShareDescription(row: SessionCardRow, partnerName: string | null): string {
+  const { place, barrio } = publicSessionPlace({
+    partnerName,
+    partnerApproved: !!partnerName,
+    lat: row.location_lat,
+    lng: row.location_lng,
+    location: row.location,
+  });
+  return [
+    cardWhen(row.date, row.start_time, 'es'),
+    barrio ?? place ?? 'Medellín',
+    cardPriceLabel(row.is_paid === false ? 0 : row.price_cents, row.currency),
+    'Reserva en Tribe',
+  ].join(' · ');
+}
 
 /** Longest a headline line may be before it is cut, at the card's long size (88 px). */
 const LINE_MAX = 16;
@@ -144,47 +158,40 @@ export function sessionCardProps(row: SessionCardRow, partnerName: string | null
   });
   const sport = row.sport && row.sport !== 'Other' ? translateSport(row.sport, 'es') : null;
   const line = splitHeadline(title);
+  const initial = Array.from(hostFirstName(row.creator_name, row.sport) || 'Tribe')[0];
   return {
     line,
     headlinePx: sessionHeadlinePx(line),
     sub: [cardWhen(row.date, row.start_time, 'es'), place ?? 'Medellín', 'Reserva en Tribe'],
     tag: sport ?? 'Tribe',
-    ...(photo ? { photo } : {}),
+    ...(photo ? { photo } : { initial }),
     lang: 'es',
   };
 }
 
-/** The sport group's site photo, cut to the card's 696 x 630 on the fly (no card crop exists for it). */
-async function groupPhoto(sport: string | null): Promise<string | null> {
-  const group = SPORT_GROUPS.find((g) => g.sports.some((s) => s === sport));
-  if (!group?.img) return null;
+/** The host's coach-card photo (the coach card's chain and its stored crop), or null for the no-photo card. */
+export async function sessionCardPhoto(host: CoachRow | null): Promise<string | null> {
+  if (!host) return null;
   try {
-    const file = await readFile(join(process.cwd(), 'public', SITE_PHOTOS[group.img].replace(/^\/+/, '')));
-    const crop = await cropCardPhoto(file);
-    return `data:image/jpeg;base64,${crop.toString('base64')}`;
+    const picked = await chooseCardPhoto(host);
+    const crop = picked ? await cardPhotoCrop(host.id, picked) : null;
+    return crop ? `data:image/jpeg;base64,${crop.toString('base64')}` : null;
   } catch (error) {
-    logError(error, { action: 'og.sessionCard.groupPhoto', sport });
+    logError(error, { action: 'og.sessionCardPhoto', hostId: host.id });
     return null;
   }
 }
 
-/** The card's photo, in the order in the header. */
-export async function sessionCardPhoto(row: SessionCardRow): Promise<string | null> {
-  const first = (row.photos ?? []).find(Boolean) ?? null;
-  if (first && isTribeStorageUrl(first)) {
-    const crop = await cardPhotoCrop(`session-${row.id}`, { choice: { url: first, box: null, rule: 'chosen' } });
-    if (crop) return `data:image/jpeg;base64,${crop.toString('base64')}`;
-  }
-  const card = row.sport ? SPORT_CARD_PHOTO[row.sport] : undefined;
-  if (card) return card;
-  return groupPhoto(row.sport);
-}
-
 /** A fingerprint of everything the card shows, for its URL (?v=). */
-export function sessionCardVersion(row: SessionCardRow, partnerName: string | null): string {
+export function sessionCardVersion(
+  row: SessionCardRow,
+  partnerName: string | null,
+  host: CoachRow | null = null
+): string {
   return createHash('sha256')
     .update(
       JSON.stringify([
+        'v2-host-photo',
         row.title,
         row.sport,
         row.date,
@@ -192,19 +199,35 @@ export function sessionCardVersion(row: SessionCardRow, partnerName: string | nu
         row.location,
         row.location_lat,
         row.location_lng,
-        (row.photos ?? [])[0] ?? null,
         row.creator_name,
         partnerName,
+        host?.card_photo_url ?? null,
+        host?.card_photo_box ?? null,
+        host?.card_photo_rejects ?? null,
+        host?.cover_image_url ?? null,
+        host?.photos ?? null,
+        host?.avatar_url ?? null,
       ])
     )
     .digest('hex')
     .slice(0, 10);
 }
 
-/** The card route's work. Null when there is no such public session. */
-export async function sessionCardResponse(id: string): Promise<Response | null> {
-  const loaded = await loadSessionForCard(id);
-  if (!loaded) return null;
-  const photo = await sessionCardPhoto(loaded.row);
-  return cardResponse(sessionCardProps(loaded.row, loaded.partnerName, photo));
+/**
+ * The card route's work. Always an image: the host's photo card; if drawing it
+ * fails, the no-photo card; a session that is not public, the site's home card.
+ */
+export async function sessionCardResponse(id: string): Promise<{ res: Response; fallback: boolean }> {
+  const loaded = await loadSessionForCard(id).catch((error) => {
+    logError(error, { action: 'og.sessionCardResponse.load', sessionId: id });
+    return null;
+  });
+  if (!loaded) return { res: await siteCardImage('home', 'es'), fallback: true };
+  const photo = await sessionCardPhoto(loaded.host);
+  try {
+    return { res: await cardResponse(sessionCardProps(loaded.row, loaded.partnerName, photo)), fallback: false };
+  } catch (error) {
+    logError(error, { action: 'og.sessionCardResponse.render', sessionId: id });
+    return { res: await cardResponse(sessionCardProps(loaded.row, loaded.partnerName, null)), fallback: false };
+  }
 }

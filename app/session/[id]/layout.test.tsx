@@ -22,8 +22,14 @@ const row = {
   currency: 'COP',
   is_paid: false,
 };
-vi.mock('@/lib/og/sessionCard', () => ({
-  loadSessionForCard: async (id: string) => (id === row.id ? { row, partnerName: null } : null),
+// React's cache() exists in the server build only; the test runs the client one.
+vi.mock('react', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('react')>()),
+  cache: <T,>(fn: T) => fn,
+}));
+vi.mock('@/lib/og/sessionCard', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/og/sessionCard')>()),
+  loadSessionForCard: async (id: string) => (id === row.id ? { row, partnerName: null, host: null } : null),
   sessionCardVersion: () => 'v123',
 }));
 
@@ -32,7 +38,7 @@ import SessionLayout, { generateMetadata } from './layout';
 describe('/session/<id>/ metadata', () => {
   it('title fallback, the card at /session/<id>/card/, og:url on the session page', async () => {
     const m = await generateMetadata({ params: Promise.resolve({ id: row.id }) });
-    expect(m.title).toBe('Boxeo con Salomon Tabares | Tribe');
+    expect(m.title).toBe('Boxeo con Salomon | Tribe');
     expect(m.openGraph?.url).toMatch(new RegExp(`/session/${row.id}/$`));
     expect(m.openGraph?.images).toEqual([
       expect.objectContaining({
@@ -64,6 +70,13 @@ describe('/session/<id>/ metadata', () => {
     } finally {
       Object.assign(row, { location_lat: saved.lat, location_lng: saved.lng, location: saved.location });
     }
+  });
+
+  it('og:description: day · time · barrio · price · "Reserva en Tribe", never the title again', async () => {
+    const m = await generateMetadata({ params: Promise.resolve({ id: row.id }) });
+    expect(m.description).toMatch(/^\w{3} 21 oct · 18:30 · El Poblado · Gratis · Reserva en Tribe$/);
+    expect(m.openGraph?.description).toBe(m.description);
+    expect(String(m.description)).not.toContain('Salomon');
   });
 
   it('a session that is not public gets a neutral title and no JSON-LD', async () => {
