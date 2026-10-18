@@ -6,12 +6,16 @@ const NOW = '2026-10-18T12:00:00.000Z';
 const byKind = (kind: string) => TARGETS.find((t) => t.kind === kind)!;
 
 describe('trust-purge plan', () => {
-  it('targets exactly what Al decided: Demo, one community, one partner, one gym', () => {
+  it('touches nothing BullBox (Al, 2026-10-18)', () => {
+    expect(TARGETS.filter((t) => /bull/i.test(t.name))).toEqual([]);
+    expect(TARGETS.map((t) => t.id)).not.toContain('d585af30-5ed5-448b-bd9c-ab82b2e99970');
+  });
+
+  it('targets exactly what Al decided: Demo, one community, one partner', () => {
     expect(TARGETS.map((t) => [t.kind, t.name])).toEqual([
       ['delete-user', 'Demo'],
       ['delete-community', 'PRUEBA TZ - borrar'],
       ['hide-partner', 'TEST Tribe pass (not a real gym)'],
-      ['hide-gym', 'BullBox (Prueba)'],
     ]);
   });
 
@@ -56,17 +60,13 @@ describe('trust-purge plan', () => {
     expect(s.update).toEqual({ deleted_at: NOW });
   });
 
-  it('hides the partner and the gym, sending only what differs', () => {
+  it('hides the partner, sending only what differs', () => {
     const p = byKind('hide-partner');
     expect(planStep(p, { id: p.id, business_name: p.name, status: 'pending', pass_active: false }, NOW).update).toEqual(
       {
         status: 'expired',
       }
     );
-    const g = byKind('hide-gym');
-    expect(
-      planStep(g, { id: g.id, name: g.name, deleted_at: null, intelligence_email_enabled: true }, NOW).update
-    ).toEqual({ deleted_at: NOW, intelligence_email_enabled: false });
   });
 
   it('skips a row whose name changed, and a row that is gone', () => {

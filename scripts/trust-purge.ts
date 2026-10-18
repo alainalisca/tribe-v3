@@ -17,10 +17,10 @@
  *           Nothing is hard-deleted; the row stays for the record.
  *   hide    the partner "TEST Tribe pass (not a real gym)": status 'expired'
  *           (public partner lists read status 'active' only).
- *           The Tribe.OS gym "BullBox (Prueba)": deleted_at = now() and
- *           intelligence_email_enabled = false, so it stops sending the digest
- *           and the weekly summary (those senders read the toggle, not
- *           deleted_at). Its owner no longer sees it in Tribe.OS either.
+ *
+ * Nothing BullBox: the Tribe.OS gym "BullBox (Prueba)" stays as it is (demo
+ * data; Al, 2026-10-18), and the script refuses any target whose name says
+ * BullBox until Al has checked every BullBox account himself.
  *   keep    everyone already flagged stays flagged; the script lists them and
  *           changes none of them.
  *
@@ -40,8 +40,7 @@ type Target =
   | { kind: 'flag-user'; table: 'users'; id: string; name: string }
   | { kind: 'delete-user'; table: 'users'; id: string; name: string }
   | { kind: 'delete-community'; table: 'communities'; id: string; name: string }
-  | { kind: 'hide-partner'; table: 'featured_partners'; id: string; name: string }
-  | { kind: 'hide-gym'; table: 'gyms'; id: string; name: string };
+  | { kind: 'hide-partner'; table: 'featured_partners'; id: string; name: string };
 
 /** Ids measured 2026-10-18 (Step 0, read only). */
 export const TARGETS: Target[] = [
@@ -58,7 +57,6 @@ export const TARGETS: Target[] = [
     id: 'c7d38815-75e5-4614-84ec-8d531df6e300',
     name: 'TEST Tribe pass (not a real gym)',
   },
-  { kind: 'hide-gym', table: 'gyms', id: 'd585af30-5ed5-448b-bd9c-ab82b2e99970', name: 'BullBox (Prueba)' },
 ];
 
 /** Real users. Never a target, never on the review list (Al, 2026-10-18). */
@@ -86,13 +84,11 @@ const NAME_COLUMN: Record<Target['table'], string> = {
   users: 'name',
   communities: 'name',
   featured_partners: 'business_name',
-  gyms: 'name',
 };
 const STATE_COLUMNS: Record<Target['table'], string> = {
   users: 'is_test_account, deleted_at',
   communities: 'deleted_at, member_count',
   featured_partners: 'status, pass_active',
-  gyms: 'deleted_at, intelligence_email_enabled, tribe_os_status',
 };
 
 export type Step = {
@@ -124,7 +120,6 @@ export function planStep(target: Target, row: Record<string, unknown> | null, no
   if (target.kind === 'delete-user') update = { deleted_at: row.deleted_at ?? now };
   if (target.kind === 'delete-community') update = { deleted_at: row.deleted_at ?? now };
   if (target.kind === 'hide-partner') update = { status: 'expired', pass_active: false };
-  if (target.kind === 'hide-gym') update = { deleted_at: row.deleted_at ?? now, intelligence_email_enabled: false };
 
   const changes = Object.entries(update).filter(([k, v]) => row[k] !== v);
   if (changes.length === 0) return { target, current: row, update: null, line: `${label}: already done`, undo: null };
@@ -154,6 +149,9 @@ export async function buildPlan(supabase: SupabaseClient, now: string): Promise<
   const protectedIds = new Set(NEVER_FLAG.map((u) => u.id));
   const bad = TARGETS.filter((t) => protectedIds.has(t.id));
   if (bad.length) throw new Error(`refusing: ${bad.map((t) => t.name).join(', ')} is on NEVER_FLAG`);
+  const bull = TARGETS.filter((t) => /bull/i.test(t.name));
+  if (bull.length)
+    throw new Error(`refusing: nothing BullBox until Al says so (${bull.map((t) => t.name).join(', ')})`);
   const steps: Step[] = [];
   for (const t of TARGETS) {
     const { data, error } = await supabase
