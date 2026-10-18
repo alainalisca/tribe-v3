@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { m } from 'framer-motion';
 import BottomNav from '@/components/BottomNav';
+import UserAvatar from '@/components/UserAvatar';
 import { createClient } from '@/lib/supabase/client';
 import { useNotifications } from './useNotifications';
 import type { NotificationWithActor } from '@/lib/dal/notifications';
@@ -218,17 +219,12 @@ export default function NotificationsPage() {
                 }`}
               >
                 {/* Type icon */}
-                <div className="w-10 h-10 rounded-full bg-stone-100 dark:bg-tribe-mid flex items-center justify-center flex-shrink-0 mt-0.5">
-                  {notification.actor?.avatar_url ? (
-                    <img
-                      src={notification.actor.avatar_url}
-                      alt={notification.actor.name}
-                      className="w-10 h-10 rounded-full object-cover"
-                    />
-                  ) : (
-                    TYPE_ICONS[notification.type] || TYPE_ICONS.general
-                  )}
-                </div>
+                <UserAvatar
+                  src={notification.actor?.avatar_url}
+                  name={notification.actor?.name}
+                  className="w-10 h-10 bg-stone-100 dark:bg-tribe-mid mt-0.5"
+                  fallback={TYPE_ICONS[notification.type] || TYPE_ICONS.general}
+                />
 
                 {/* Content */}
                 <div className="flex-1 min-w-0">

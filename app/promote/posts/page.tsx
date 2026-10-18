@@ -11,6 +11,7 @@ import { formatSessionDate } from '@/lib/utils';
 import { Trash2, Pin, Edit2, X, Check, Loader, Eye, Heart, ArrowLeft } from 'lucide-react';
 import Image from 'next/image';
 import BottomNav from '@/components/BottomNav';
+import { formatRelative } from '@/lib/time/formatRelative';
 
 interface InstructorPost {
   id: string;
@@ -405,19 +406,6 @@ export default function PromotePostsPage() {
     await handleSaveEdit(post.id);
   };
 
-  const timeAgo = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-
-    if (seconds < 60) return language === 'es' ? `hace ${seconds}s` : `${seconds}s ago`;
-    if (seconds < 3600)
-      return language === 'es' ? `hace ${Math.floor(seconds / 60)}m` : `${Math.floor(seconds / 60)}m ago`;
-    if (seconds < 86400)
-      return language === 'es' ? `hace ${Math.floor(seconds / 3600)}h` : `${Math.floor(seconds / 3600)}h ago`;
-    return language === 'es' ? `hace ${Math.floor(seconds / 86400)}d` : `${Math.floor(seconds / 86400)}d ago`;
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen bg-theme-page flex items-center justify-center">
@@ -657,7 +645,7 @@ export default function PromotePostsPage() {
 
                     {/* Meta Info */}
                     <div className="mb-4 flex items-center gap-4 text-sm text-theme-secondary">
-                      <span>{timeAgo(post.created_at)}</span>
+                      <span>{formatRelative(post.created_at, language === 'en' ? 'en' : 'es')}</span>
                       <div className="flex items-center gap-4">
                         <div className="flex items-center gap-1">
                           <Heart className="h-4 w-4" />

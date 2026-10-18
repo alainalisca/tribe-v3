@@ -11,11 +11,12 @@ import { formatSessionDate } from '@/lib/utils';
 import { formatSessionLocation } from '@/lib/sessionLocation';
 import { sportTranslations, Language } from '@/lib/translations';
 import { Search as SearchIcon, Loader, MapPin, Calendar, DollarSign, Users } from 'lucide-react';
-import Image from 'next/image';
+import UserAvatar from '@/components/UserAvatar';
 import BottomNav from '@/components/BottomNav';
 import type { Currency } from '@/lib/payments/config';
 import { useUserCurrency } from '@/lib/useUserCurrency';
 import { formatPriceForUser } from '@/lib/userCurrency';
+import { hiddenAdminIds, visibleUsersFilter } from '@/lib/dal/visibleUsers';
 
 interface SearchResult {
   id: string;
@@ -116,13 +117,13 @@ export default function SearchPage() {
       try {
         const query = `%${searchQuery}%`;
 
-        // Search people (exclude soft-deleted accounts)
-        const { data: usersData } = await supabase
-          .from('users')
-          .select('id, name, avatar_url, bio')
-          .ilike('name', query)
-          .is('deleted_at', null)
-          .limit(10);
+        // T-JOIN1: people and session hosts are only visible users
+        // (lib/dal/visibleUsers.ts: no admin, test, banned or deleted account).
+        const adminIds = await hiddenAdminIds(supabase);
+        const { data: usersData } = await visibleUsersFilter(
+          supabase.from('users').select('id, name, avatar_url, bio').ilike('name', query),
+          { idColumn: 'id', adminIds }
+        ).limit(10);
 
         // Search communities
         const { data: communitiesData } = await supabase
@@ -143,12 +144,17 @@ export default function SearchPage() {
           .limit(10);
 
         // Search sessions
-        const { data: sessionsData } = await supabase
-          .from('sessions')
-          .select('id, sport, location, date, price_cents, currency, status, current_participants')
-          .or(`sport.ilike.${query},location.ilike.${query}`)
-          .eq('status', 'scheduled')
-          .limit(10);
+        // status 'active': sessions are never 'scheduled', so this list was always empty.
+        const { data: sessionsData } = await visibleUsersFilter(
+          supabase
+            .from('sessions')
+            .select(
+              'id, sport, location, date, price_cents, currency, status, current_participants, creator:users!sessions_creator_id_fkey!inner(id)'
+            )
+            .or(`sport.ilike.${query},location.ilike.${query}`)
+            .eq('status', 'active'),
+          { prefix: 'creator.', idColumn: 'creator_id', adminIds }
+        ).limit(10);
 
         setResults({
           people: usersData?.map((u) => ({ ...u, type: 'user' })) || [],
@@ -353,15 +359,7 @@ function PeopleResult({ user, currentUserId, language, supabase, onFollowChange 
   return (
     <div className="bg-white dark:bg-tribe-card rounded-xl p-4 border border-stone-200 dark:border-gray-700 flex items-center justify-between">
       <div className="flex items-center gap-3 flex-1">
-        {user.avatar_url && (
-          <Image
-            src={user.avatar_url}
-            alt={user.name}
-            width={48}
-            height={48}
-            className="h-12 w-12 rounded-full object-cover"
-          />
-        )}
+        <UserAvatar src={user.avatar_url} name={user.name} className="h-12 w-12" />
         <div className="flex-1">
           <p className="font-semibold text-theme-primary">{user.name}</p>
           {user.bio && <p className="text-xs text-theme-secondary line-clamp-1">{user.bio}</p>}

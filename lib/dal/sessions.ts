@@ -7,6 +7,7 @@ import type { Session, SessionUpdate, SessionInsert } from '@/lib/database.types
 import { logError } from '@/lib/logger';
 import { signRecapPhotoUrls } from '@/lib/storage/privateMedia';
 import { bogotaToday } from '@/lib/time/bogotaDate';
+import { hiddenAdminIds, visibleUsersFilter } from './visibleUsers';
 
 import type { DalResult, SessionWithCreator } from './types';
 export type { DalResult } from './types';
@@ -399,16 +400,23 @@ export async function fetchUpcomingSessions(supabase: SupabaseClient): Promise<D
     // RLS-H3: the home feed does not render attendee identities, so drop the
     // participants embed (it reads the raw table, which Gate 3 locks) and rely on
     // sessions.current_participants (087 trigger = confirmed count) for any count.
-    const { data, error } = await supabase
+    const query = supabase
       .from('sessions')
       .select(
         `
         *,
-        creator:users!sessions_creator_id_fkey(id, name, avatar_url, average_rating, total_reviews, total_sessions_hosted, cover_image_url)
+        creator:users!sessions_creator_id_fkey!inner(id, name, avatar_url, average_rating, total_reviews, total_sessions_hosted, cover_image_url)
       `
       )
       .eq('status', 'active')
-      .gte('date', today)
+      .gte('date', today);
+    // T-JOIN1: never a session by an admin, a test, banned or deleted account
+    // (lib/dal/visibleUsers.ts). The embed is !inner so the filter drops the row.
+    const { data, error } = await visibleUsersFilter(query, {
+      prefix: 'creator.',
+      idColumn: 'creator_id',
+      adminIds: await hiddenAdminIds(supabase),
+    })
       .order('date', { ascending: true })
       .order('start_time', { ascending: true });
 

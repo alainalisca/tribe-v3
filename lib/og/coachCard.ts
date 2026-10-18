@@ -5,6 +5,7 @@ import { translateSport } from '@/lib/sportTranslationData';
 import { getServiceRoleClient } from '@/lib/supabase/admin';
 import { cardResponse, type CardProps } from './card';
 import { cropCardPhoto, isCardBox, orientedSize, type CardBox } from './cardCrop';
+import { isVisibleUser } from '@/lib/dal/visibleUsers';
 
 /**
  * T-SHARE1 Part C. A coach's own share card, the one WhatsApp shows for
@@ -35,7 +36,7 @@ import { cropCardPhoto, isCardBox, orientedSize, type CardBox } from './cardCrop
 
 export const COACH_SELECT =
   'id, name, sports, avatar_url, cover_image_url, photos, card_photo_url, card_photo_box, ' +
-  'card_photo_rejects, handle, is_instructor, banned, deleted_at, is_test_account, bio, instructor_bio, specialties';
+  'card_photo_rejects, handle, is_instructor, is_admin, banned, deleted_at, is_test_account, bio, instructor_bio, specialties';
 
 export type CoachRow = {
   id: string;
@@ -52,6 +53,7 @@ export type CoachRow = {
   banned: boolean | null;
   deleted_at: string | null;
   is_test_account: boolean | null;
+  is_admin?: boolean | null;
   bio: string | null;
   instructor_bio: string | null;
   /** Shown on the coach page (Part E), never on the card. */
@@ -69,7 +71,7 @@ const MAX_IMAGE_BYTES = 20 * 1024 * 1024;
 
 /** A coach the card is drawn for: an instructor, not banned, deleted or a test account. */
 export function isListedCoach(c: CoachRow): boolean {
-  return !!c.is_instructor && !c.banned && !c.deleted_at && !c.is_test_account;
+  return !!c.is_instructor && isVisibleUser(c);
 }
 
 /** /i/<x>: the account id when it looks like one, the handle otherwise. */

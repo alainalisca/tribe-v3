@@ -8,6 +8,7 @@ import StorefrontPackageCard from '@/components/storefront/StorefrontPackageCard
 import ReviewsList from '@/components/instructor/ReviewsList';
 import ProfileLightbox from '@/app/profile/[userId]/ProfileLightbox';
 import type { Session, ServicePackage, StorefrontMedia, InstructorPost } from '@/app/storefront/[id]/useStorefrontData';
+import { formatRelative } from '@/lib/time/formatRelative';
 
 interface StorefrontTabPanelsProps {
   activeTab: string;
@@ -22,15 +23,6 @@ interface StorefrontTabPanelsProps {
   joinedSessionIds: Set<string>;
   onSessionJoined: (id: string) => void;
   onPostLike: (id: string) => void;
-}
-
-function timeAgo(dateString: string, language: 'en' | 'es') {
-  const seconds = Math.floor((Date.now() - new Date(dateString).getTime()) / 1000);
-  if (seconds < 60) return language === 'es' ? 'Ahora' : 'Now';
-  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ${language === 'es' ? 'atrás' : 'ago'}`;
-  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ${language === 'es' ? 'atrás' : 'ago'}`;
-  if (seconds < 2592000) return `${Math.floor(seconds / 86400)}d ${language === 'es' ? 'atrás' : 'ago'}`;
-  return `${Math.floor(seconds / 2592000)}mo ${language === 'es' ? 'atrás' : 'ago'}`;
 }
 
 function EmptyState({ text }: { text: string }) {
@@ -199,7 +191,7 @@ export default function StorefrontTabPanels(props: StorefrontTabPanelsProps) {
                   <span>{post.views_count}</span>
                 </div>
               </div>
-              <span>{timeAgo(post.created_at, language)}</span>
+              <span>{formatRelative(post.created_at, language)}</span>
             </div>
           </div>
         ))}

@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/client';
 import { useLanguage } from '@/lib/LanguageContext';
 import { fetchInstructors, type InstructorProfile } from '@/lib/dal/instructors';
 import { SPORTS_TRANSLATIONS, type Sport } from '@/lib/sports';
-import Image from 'next/image';
+import UserAvatar from '@/components/UserAvatar';
 import { Star } from 'lucide-react';
 import Link from 'next/link';
 
@@ -79,17 +79,7 @@ export default function MatchingInstructorResults({ selectedSports }: Props) {
             className="block rounded-xl bg-stone-100 dark:bg-tribe-surface p-3 hover:ring-2 hover:ring-tribe-green transition"
           >
             <div className="flex items-center gap-2 mb-2">
-              {inst.avatar_url ? (
-                <Image
-                  src={inst.avatar_url}
-                  alt={inst.name || ''}
-                  width={36}
-                  height={36}
-                  className="rounded-full object-cover w-9 h-9"
-                />
-              ) : (
-                <div className="w-9 h-9 rounded-full bg-stone-300 dark:bg-tribe-mid" />
-              )}
+              <UserAvatar src={inst.avatar_url} name={inst.name} alt={inst.name || ''} className="w-9 h-9" />
               <div className="min-w-0">
                 <p className="text-sm font-semibold text-theme-primary truncate">
                   {inst.name || (isEs ? 'Instructor' : 'Instructor')}

@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import Image from 'next/image';
+import UserAvatar from '@/components/UserAvatar';
 import { UserPlus } from 'lucide-react';
 import { sportTranslations } from '@/lib/translations';
 import type { TrainingPartner } from '@/lib/dal/connections';
@@ -25,26 +25,16 @@ export default function TrainingPartnerCard({ partner, language, onInvite }: Tra
   const shown = partner.sports.slice(0, 2);
   const overflow = partner.sports.length - shown.length;
 
-  const initials = partner.name
-    .split(' ')
-    .map((n) => n[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2);
-
   return (
     <div className="flex-shrink-0 w-40 bg-white dark:bg-tribe-mid rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow">
       <Link href={`/profile/${partner.id}`}>
         {/* Avatar section */}
-        <div className="relative h-32 bg-gradient-to-br from-tribe-green-light to-tribe-green-hover">
-          {partner.avatar_url ? (
-            <Image src={partner.avatar_url} alt={partner.name} fill className="w-full h-full object-cover" />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-4xl font-bold text-stone-700">
-              {initials}
-            </div>
-          )}
-        </div>
+        <UserAvatar
+          src={partner.avatar_url}
+          name={partner.name}
+          className="flex h-32 w-full rounded-none bg-transparent dark:bg-transparent bg-gradient-to-br from-tribe-green-light to-tribe-green-hover"
+          textClassName="text-4xl text-stone-700 dark:text-stone-700"
+        />
 
         {/* Content section */}
         <div className="p-3 space-y-1.5">

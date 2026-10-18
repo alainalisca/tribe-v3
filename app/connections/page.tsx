@@ -4,7 +4,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import Image from 'next/image';
+import UserAvatar from '@/components/UserAvatar';
 import { ArrowLeft, MessageCircle, UserX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -295,26 +295,12 @@ export default function ConnectionsPage() {
                       <div className="flex items-center gap-3">
                         {/* Avatar */}
                         <Link href={`/profile/${conn.id}`} className="flex-shrink-0">
-                          <div className="w-12 h-12 bg-stone-300 dark:bg-tribe-mid rounded-full flex items-center justify-center text-sm font-semibold overflow-hidden">
-                            {conn.avatar_url ? (
-                              <Image
-                                src={conn.avatar_url}
-                                alt={conn.name}
-                                width={48}
-                                height={48}
-                                className="w-full h-full object-cover"
-                              />
-                            ) : (
-                              <span className="text-stone-700 dark:text-gray-300">
-                                {conn.name
-                                  .split(' ')
-                                  .map((n) => n[0])
-                                  .join('')
-                                  .toUpperCase()
-                                  .slice(0, 2)}
-                              </span>
-                            )}
-                          </div>
+                          <UserAvatar
+                            src={conn.avatar_url}
+                            name={conn.name}
+                            className="w-12 h-12"
+                            textClassName="font-semibold text-stone-700 dark:text-gray-300"
+                          />
                         </Link>
 
                         {/* Info */}
@@ -374,26 +360,12 @@ export default function ConnectionsPage() {
                     <div className="flex items-center gap-3">
                       {/* Avatar */}
                       <Link href={`/profile/${req.requester.id}`} className="flex-shrink-0">
-                        <div className="w-12 h-12 bg-stone-300 dark:bg-tribe-mid rounded-full flex items-center justify-center text-sm font-semibold overflow-hidden">
-                          {req.requester.avatar_url ? (
-                            <Image
-                              src={req.requester.avatar_url}
-                              alt={req.requester.name}
-                              width={48}
-                              height={48}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <span className="text-stone-700 dark:text-gray-300">
-                              {req.requester.name
-                                .split(' ')
-                                .map((n) => n[0])
-                                .join('')
-                                .toUpperCase()
-                                .slice(0, 2)}
-                            </span>
-                          )}
-                        </div>
+                        <UserAvatar
+                          src={req.requester.avatar_url}
+                          name={req.requester.name}
+                          className="w-12 h-12"
+                          textClassName="font-semibold text-stone-700 dark:text-gray-300"
+                        />
                       </Link>
 
                       {/* Info */}

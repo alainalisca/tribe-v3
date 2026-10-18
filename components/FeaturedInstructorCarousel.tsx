@@ -7,6 +7,7 @@ import { logError } from '@/lib/logger';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Star, CheckCircle, Zap, TrendingUp } from 'lucide-react';
 import type { InstructorProfile } from '@/lib/dal/instructors';
+import { hiddenAdminIds, withoutAdmins } from '@/lib/dal/visibleUsers';
 
 interface Props {
   language: 'en' | 'es';
@@ -74,11 +75,13 @@ export default function FeaturedInstructorCarousel({ language }: Props) {
       // users_discoverable (migration 114): coords rounded to 2dp server-side.
       // The view also excludes soft-deleted/banned/test accounts, so a deleted
       // instructor can no longer appear in the featured carousel.
-      const { data: proData } = await supabase
-        .from('users_discoverable')
-        .select(SELECT_COLS)
-        .eq('is_instructor', true)
-        .eq('storefront_tier', 'pro');
+      // T-JOIN1: and never an admin (lib/dal/visibleUsers.ts).
+      const adminIds = await hiddenAdminIds(supabase);
+      const { data: proData } = await withoutAdmins(
+        supabase.from('users_discoverable').select(SELECT_COLS).eq('is_instructor', true).eq('storefront_tier', 'pro'),
+        'id',
+        adminIds
+      );
 
       const boostedIds = new Set<string>((boostData || []).map((r: { instructor_id: string }) => r.instructor_id));
       const proProfiles = (proData || []).map(toProfile);
@@ -87,11 +90,11 @@ export default function FeaturedInstructorCarousel({ language }: Props) {
 
       let boostedProfiles: InstructorProfile[] = [];
       if (missingIds.length > 0) {
-        const { data } = await supabase
-          .from('users_discoverable')
-          .select(SELECT_COLS)
-          .in('id', missingIds)
-          .eq('is_instructor', true);
+        const { data } = await withoutAdmins(
+          supabase.from('users_discoverable').select(SELECT_COLS).in('id', missingIds).eq('is_instructor', true),
+          'id',
+          adminIds
+        );
         boostedProfiles = (data || []).map(toProfile);
       }
 

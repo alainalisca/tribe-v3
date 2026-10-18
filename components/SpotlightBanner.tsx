@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Star, Sparkles } from 'lucide-react';
+import UserAvatar from '@/components/UserAvatar';
 import { createClient } from '@/lib/supabase/client';
 import { getCurrentSpotlight, type SpotlightWithInstructor } from '@/lib/dal/spotlight';
 import { trackEvent } from '@/lib/analytics';
@@ -75,13 +76,12 @@ export default function SpotlightBanner({ language }: SpotlightBannerProps) {
       <div className="px-5 pb-5 -mt-10 relative">
         <div className="flex items-end gap-3">
           <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-[#84cc16] bg-theme-surface relative flex-shrink-0">
-            {instructor.avatar_url ? (
-              <Image src={instructor.avatar_url} alt={instructor.name} fill sizes="80px" className="object-cover" />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-2xl text-white">
-                {instructor.name.charAt(0).toUpperCase()}
-              </div>
-            )}
+            <UserAvatar
+              src={instructor.avatar_url}
+              name={instructor.name}
+              className="h-full w-full bg-transparent dark:bg-transparent"
+              textClassName="text-2xl font-normal text-white dark:text-white"
+            />
           </div>
           <div className="flex-1 min-w-0 pb-1">
             <h3 className="text-lg font-bold text-white truncate">{instructor.name}</h3>

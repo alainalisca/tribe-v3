@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import Image from 'next/image';
+import UserAvatar from '@/components/UserAvatar';
 import type { PartnerInstructor } from '@/lib/dal/featuredPartners';
 import { useTranslations } from '@/lib/i18n/useTranslations';
 
@@ -19,19 +19,13 @@ export default function PartnerInstructorRoster({ instructors }: Props) {
       <div className="flex gap-3 overflow-x-auto pb-2">
         {instructors.map((inst) => (
           <Link key={inst.id} href={`/storefront/${inst.instructor_id}`} className="flex-shrink-0 w-24 text-center">
-            <div className="relative w-14 h-14 rounded-full bg-tribe-mid border-2 border-tribe-green mx-auto mb-1.5 overflow-hidden flex items-center justify-center">
-              {inst.user?.avatar_url ? (
-                <Image
-                  src={inst.user.avatar_url}
-                  alt={inst.user.name || 'Instructor avatar'}
-                  fill
-                  className="object-cover"
-                  unoptimized
-                />
-              ) : (
-                <span className="text-lg text-white font-bold">{(inst.user?.name || 'I')[0].toUpperCase()}</span>
-              )}
-            </div>
+            <UserAvatar
+              src={inst.user?.avatar_url}
+              name={inst.user?.name || 'Instructor'}
+              alt={inst.user?.name || 'Instructor avatar'}
+              className="flex w-14 h-14 bg-tribe-mid dark:bg-tribe-mid border-2 border-tribe-green mx-auto mb-1.5"
+              textClassName="text-lg text-white dark:text-white"
+            />
             <p className="text-xs font-semibold text-stone-900 dark:text-white truncate">
               {inst.user?.name || 'Instructor'}
             </p>

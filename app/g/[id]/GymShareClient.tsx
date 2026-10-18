@@ -31,6 +31,7 @@ import TribeWordmark from '@/components/TribeWordmark';
 import { Card, CardContent } from '@/components/ui/card';
 import { translateSport } from '@/lib/sportTranslationData';
 import { sessionDisplayTitle } from '@/lib/sessionTitle';
+import { gymTimetable, gymTimetableWindow } from '@/lib/gymTimetable';
 
 interface VenueSession {
   id: string;
@@ -39,6 +40,7 @@ interface VenueSession {
   sport: string;
   date: string;
   start_time: string | null;
+  duration: number | null;
   location: string | null;
   /** Denormalised onto sessions_public, so the derived title needs no join. */
   creator_name: string | null;
@@ -57,7 +59,8 @@ export default function GymShareClient({ partner }: { partner: PublicPartner }) 
     let cancelled = false;
 
     async function load() {
-      const today = new Date().toISOString().split('T')[0];
+      // The next seven days, Bogotá dates; finished classes dropped below (T-JOIN1).
+      const { from, to } = gymTimetableWindow();
 
       // Every row links to /session/<id>/, signed in or not (T-JOIN1), so no
       // auth read is needed here.
@@ -67,7 +70,7 @@ export default function GymShareClient({ partner }: { partner: PublicPartner }) 
         // DAL is mocked) and returns zero rows for every logged-out visitor.
         // 158 added the three partner columns to this view for exactly this.
         .from('sessions_public')
-        .select('id, title, sport, date, start_time, location, creator_name')
+        .select('id, title, sport, date, start_time, duration, location, creator_name')
         .eq('partner_id', partner.id)
         // Only sessions the gym has approved carry its name. Anything below
         // 'approved' is a claim the gym has not agreed to.
@@ -79,10 +82,11 @@ export default function GymShareClient({ partner }: { partner: PublicPartner }) 
         // reads sessions already filters this (gymDirectory:29,63,115,164;
         // the feed at sessions.ts:409); these two share pages did not.
         .eq('status', 'active')
-        .gte('date', today)
+        .gte('date', from)
+        .lte('date', to)
         .order('date', { ascending: true })
         .order('start_time', { ascending: true })
-        .limit(10);
+        .limit(60);
 
       if (cancelled) return;
 
@@ -91,7 +95,7 @@ export default function GymShareClient({ partner }: { partner: PublicPartner }) 
         // "/s/[id] session not found" bug for months.
         console.error('[/g/[id]] venue sessions fetch failed', sessionsRes.error);
       }
-      setSessions(sessionsRes.data ?? []);
+      setSessions(gymTimetable(sessionsRes.data ?? []));
     }
 
     load();

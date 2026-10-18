@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client';
 import { useLanguage } from '@/lib/LanguageContext';
 import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
 import StarRating from '@/components/StarRating';
+import UserAvatar from '@/components/UserAvatar';
 import { logError } from '@/lib/logger';
 import { showSuccess, showError } from '@/lib/toast';
 import { shareSession, type SessionShareData } from '@/lib/share';
@@ -266,17 +267,12 @@ export default function PostSessionPrompt({
         <div className="bg-white dark:bg-tribe-card rounded-2xl p-6 shadow-2xl border border-gray-200 dark:border-gray-700">
           {/* Instructor Avatar */}
           <div className="flex justify-center mb-5">
-            {instructorAvatar ? (
-              <img
-                src={instructorAvatar}
-                alt={instructorName}
-                className="w-16 h-16 rounded-full object-cover border-3 border-tribe-green/50"
-              />
-            ) : (
-              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-tribe-green/30 to-tribe-green/10 flex items-center justify-center border-3 border-tribe-green/50">
-                <span className="text-2xl font-bold text-tribe-green">{instructorName.charAt(0).toUpperCase()}</span>
-              </div>
-            )}
+            <UserAvatar
+              src={instructorAvatar}
+              name={instructorName}
+              className="w-16 h-16 border-3 border-tribe-green/50 bg-transparent dark:bg-transparent bg-gradient-to-br from-tribe-green/30 to-tribe-green/10"
+              textClassName="text-2xl text-tribe-green dark:text-tribe-green"
+            />
           </div>
 
           {/* Title */}

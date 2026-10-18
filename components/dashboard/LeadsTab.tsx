@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
+import UserAvatar from '@/components/UserAvatar';
 import { MessageCircle, UserIcon, X, ChevronDown, ChevronUp, UserPlus } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import {
@@ -101,19 +101,12 @@ export default function LeadsTab({ instructorId, language }: LeadsTabProps) {
       >
         <div className="flex items-start gap-3">
           <div className="w-10 h-10 rounded-full bg-theme-surface overflow-hidden flex-shrink-0 relative">
-            {entry.athlete.avatar_url ? (
-              <Image
-                src={entry.athlete.avatar_url}
-                alt={entry.athlete.name}
-                fill
-                sizes="40px"
-                className="object-cover"
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-sm text-stone-500">
-                {(entry.athlete.name || '?').charAt(0).toUpperCase()}
-              </div>
-            )}
+            <UserAvatar
+              src={entry.athlete.avatar_url}
+              name={entry.athlete.name}
+              className="h-full w-full bg-transparent dark:bg-transparent"
+              textClassName="font-normal text-stone-500 dark:text-stone-500"
+            />
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between gap-2">

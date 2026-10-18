@@ -210,7 +210,7 @@ describe('GymDashboard: Agregar atleta', () => {
     const { container } = render(<GymDashboard view={owner()} />);
     await pick(container);
     expect(h.search).toHaveBeenCalledWith(expect.anything(), GYM_PARTNER_ID, 'die');
-    expect(container.querySelector('[data-add-results]')?.textContent).toBe('DDiego Prueba');
+    expect(container.querySelector('[data-add-results]')?.textContent).toBe('DPDiego Prueba'); // UserAvatar initials block (two letters)
     fireEvent.change(container.querySelector('[data-add-whatsapp]') as HTMLElement, {
       target: { value: '300 555 1234' },
     });

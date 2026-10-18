@@ -10,6 +10,7 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { logError } from '@/lib/logger';
 import type { DalResult } from './types';
+import { hiddenAdminIds, visibleUsersFilter } from './visibleUsers';
 import { GYM_IDENTITY_COLUMNS, ORGANIZATION_TYPES, type GymIdentity } from './gymVenue';
 
 /**
@@ -90,14 +91,18 @@ export async function fetchGymsAndStudios(supabase: SupabaseClient): Promise<Dal
 
     // One roster query for every gym on the page, counted in memory. A count
     // per gym would be a request per tile.
-    const { data: roster, error: rosterError } = await supabase
-      .from('partner_instructors')
-      .select('partner_id')
-      .in(
-        'partner_id',
-        partners.map((p) => p.id)
-      )
-      .eq('is_active', true);
+    // Only visible coaches count (T-JOIN1, lib/dal/visibleUsers.ts).
+    const { data: roster, error: rosterError } = await visibleUsersFilter(
+      supabase
+        .from('partner_instructors')
+        .select('partner_id, user:users!inner(id)')
+        .in(
+          'partner_id',
+          partners.map((p) => p.id)
+        )
+        .eq('is_active', true),
+      { prefix: 'user.', idColumn: 'instructor_id', adminIds: await hiddenAdminIds(supabase) }
+    );
 
     if (rosterError) return { success: false, error: rosterError.message };
 

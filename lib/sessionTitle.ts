@@ -39,11 +39,15 @@ export function sessionDisplayTitle({
   const given = title?.trim();
   if (given) return given;
 
+  // T-JOIN1: "Otro con Neera" never renders. The sport "Other" (Otro) names
+  // nothing, so the title is a session with the coach: "Sesión con Neera".
+  const sport = /^(otro|other|otra)$/i.test(sportName.trim()) ? (withWord === 'con' ? 'Sesión' : 'Session') : sportName;
+
   const who = shortName(instructorName);
   // BEHAVIOUR CHANGE vs the inline version this replaces: with no instructor
   // name, `${sport} ${with} ${''}`.trim() produced a title ending in a dangling
   // "with" -- "CrossFit with". sessions_public exposes creator_name, so this is
   // reachable for any session whose creator row is missing or unnamed. The
   // sport alone is the honest fallback.
-  return who ? `${sportName} ${withWord} ${who}` : sportName;
+  return who ? `${sport} ${withWord} ${who}` : sport;
 }

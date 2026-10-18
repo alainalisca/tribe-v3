@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Image from 'next/image';
+import UserAvatar from '@/components/UserAvatar';
 import { ShieldOff } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useLanguage } from '@/lib/LanguageContext';
@@ -110,15 +110,13 @@ export default function BlockedUsersPage() {
               });
               return (
                 <li key={row.id} className="bg-stone-100 dark:bg-tribe-surface rounded-xl p-4 flex items-center gap-3">
-                  <div className="relative w-10 h-10 rounded-full bg-stone-300 dark:bg-tribe-mid overflow-hidden flex-shrink-0">
-                    {avatar ? (
-                      <Image src={avatar} alt={`${name} avatar`} fill className="object-cover" sizes="40px" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-sm font-bold text-stone-500 dark:text-gray-400">
-                        {name.charAt(0).toUpperCase()}
-                      </div>
-                    )}
-                  </div>
+                  <UserAvatar
+                    src={avatar}
+                    name={name}
+                    alt={`${name} avatar`}
+                    className="w-10 h-10"
+                    textClassName="text-stone-500 dark:text-gray-400"
+                  />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold truncate">{name}</p>
                     <p className="text-xs text-stone-500 dark:text-gray-400 mt-0.5">

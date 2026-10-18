@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Image from 'next/image';
+import UserAvatar from '@/components/UserAvatar';
 import Link from 'next/link';
 import { CalendarDays, MapPin, Plus, Loader2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
@@ -103,13 +103,6 @@ export default function InviteToSessionSheet({ open, onClose, athlete, language 
     }
   };
 
-  const initials = athlete.name
-    .split(' ')
-    .map((n) => n[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2);
-
   return (
     <Dialog
       open={open}
@@ -123,13 +116,12 @@ export default function InviteToSessionSheet({ open, onClose, athlete, language 
         {/* Athlete header */}
         <div className="flex items-center gap-3 p-5 border-b border-tribe-surface">
           <div className="relative w-12 h-12 rounded-full overflow-hidden bg-gradient-to-br from-tribe-green-light to-tribe-green-hover flex-shrink-0">
-            {athlete.avatar_url ? (
-              <Image src={athlete.avatar_url} alt={athlete.name} fill className="object-cover" />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-lg font-bold text-stone-700">
-                {initials}
-              </div>
-            )}
+            <UserAvatar
+              src={athlete.avatar_url}
+              name={athlete.name}
+              className="h-full w-full bg-transparent dark:bg-transparent"
+              textClassName="text-lg text-stone-700 dark:text-stone-700"
+            />
           </div>
           <div>
             <h3 className="font-semibold text-white">{athlete.name}</h3>

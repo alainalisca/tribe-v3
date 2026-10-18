@@ -67,9 +67,6 @@ export default function SettingsPage() {
     toggleNotifications,
     openDeleteConfirm,
     closeDeleteConfirm,
-    debugInfo,
-    debugRunning,
-    runNotificationDiagnostic,
     locationSectionState,
     storedLocation,
     loadingLocation,
@@ -294,30 +291,6 @@ export default function SettingsPage() {
             </button>
           )}
         </div>
-
-        {/* Notification Debug Section — admin only */}
-        {userIsAdmin && (
-          <div className="bg-tribe-dark rounded-2xl p-5 border border-gray-700">
-            <div className="flex items-center gap-3 mb-4">
-              <Bug className="w-5 h-5 text-yellow-400" />
-              <h2 className="text-lg font-bold text-yellow-400">Notification Debug</h2>
-            </div>
-            <button
-              onClick={runNotificationDiagnostic}
-              disabled={debugRunning}
-              className="w-full p-3 rounded-xl text-left transition font-semibold bg-yellow-500 text-black dark:text-white hover:bg-yellow-400 disabled:opacity-50 mb-3"
-            >
-              {debugRunning ? 'Running...' : 'Run Diagnostic'}
-            </button>
-            {debugInfo.length > 0 && (
-              <div className="bg-black rounded-lg p-3 font-mono text-xs text-green-400 space-y-1 max-h-64 overflow-y-auto">
-                {debugInfo.map((line, i) => (
-                  <div key={i}>{line}</div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
 
         {/* Appearance Section */}
         <div className="bg-white dark:bg-tribe-card rounded-2xl p-5 border border-stone-200 dark:border-gray-700">

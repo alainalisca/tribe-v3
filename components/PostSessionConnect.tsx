@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import Image from 'next/image';
+import UserAvatar from '@/components/UserAvatar';
 import { createClient } from '@/lib/supabase/client';
 import { sendConnectionRequest } from '@/lib/dal/connections';
 import { Button } from '@/components/ui/button';
@@ -114,25 +114,12 @@ export default function PostSessionConnect({
               className="flex items-center gap-3 p-3 bg-stone-100 dark:bg-tribe-surface rounded-lg"
             >
               {/* Avatar */}
-              <div className="relative w-10 h-10 flex-shrink-0">
-                {participant.avatar_url ? (
-                  <Image
-                    src={participant.avatar_url}
-                    alt={participant.name}
-                    fill
-                    className="w-full h-full object-cover rounded-full"
-                  />
-                ) : (
-                  <div className="w-full h-full bg-tribe-green-light rounded-full flex items-center justify-center text-xs font-bold text-stone-900">
-                    {participant.name
-                      .split(' ')
-                      .map((n) => n[0])
-                      .join('')
-                      .toUpperCase()
-                      .slice(0, 2)}
-                  </div>
-                )}
-              </div>
+              <UserAvatar
+                src={participant.avatar_url}
+                name={participant.name}
+                className="w-10 h-10 bg-tribe-green-light dark:bg-tribe-green-light"
+                textClassName="text-xs text-stone-900 dark:text-stone-900"
+              />
 
               {/* Info */}
               <div className="flex-1 min-w-0">

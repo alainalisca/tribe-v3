@@ -2,6 +2,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { siteT, type SiteLanguage } from '@/lib/site/i18n';
 import { isOptimizableImage } from '@/lib/site/imageHosts';
+import { usableAvatarUrl } from '@/lib/avatarSrc';
 import type { RosterCoach } from '@/lib/site/rosterBuild';
 import { translateSport } from '@/lib/sportTranslationData';
 import b from './base.module.css';
@@ -40,7 +41,8 @@ export default function RosterGrid({
         <li key={c.id}>
           <Link href={c.href}>
             <figure className={r.ph}>
-              {isOptimizableImage(c.avatarUrl) ? (
+              {/* A stock photo is not the coach (T-JOIN1): initials, like no photo. */}
+              {isOptimizableImage(c.avatarUrl) && usableAvatarUrl(c.avatarUrl) ? (
                 // The name is right below: the photo is decorative.
                 <Image src={c.avatarUrl} alt="" aria-hidden="true" fill sizes="(max-width: 900px) 46vw, 16vw" />
               ) : (

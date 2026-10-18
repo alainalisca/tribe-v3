@@ -6,6 +6,7 @@ import { cookieNames, hasAuthCookieName } from '@/lib/site/authCookie';
 import { logError } from '@/lib/logger';
 import { ArrowUpRight } from './icons';
 import StoreButton from './StoreButton';
+import UserAvatar from '@/components/UserAvatar';
 import c from './chrome.module.css';
 
 type Me = { name: string; avatarUrl: string | null };
@@ -49,12 +50,15 @@ export default function NavActions({ signIn, download, myFeed }: { signIn: strin
     <div className={c.right}>
       {me ? (
         <Link href="/" aria-label={myFeed}>
-          {me.avatarUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element -- remote avatar of unknown host, 32px
-            <img className={c.avatar} src={me.avatarUrl} alt="" width={32} height={32} />
-          ) : (
-            <span className={c.avatar} aria-hidden="true" />
-          )}
+          <span className={c.avatar}>
+            <UserAvatar
+              src={me.avatarUrl}
+              name={me.name}
+              alt=""
+              className="h-full w-full bg-transparent dark:bg-transparent"
+              textClassName="text-[11px] text-[#f1efe8] dark:text-[#f1efe8]"
+            />
+          </span>
         </Link>
       ) : (
         <Link className={c.enter} href="/auth/">

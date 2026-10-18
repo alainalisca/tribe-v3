@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
+import UserAvatar from '@/components/UserAvatar';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Search, Users, Zap } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
@@ -273,15 +273,12 @@ export default function InstructorDiscoverPage() {
                   className="bg-white dark:bg-tribe-surface border border-stone-200 dark:border-tribe-mid rounded-2xl p-4"
                 >
                   <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 rounded-full bg-stone-200 dark:bg-tribe-dark overflow-hidden relative flex-shrink-0">
-                      {a.avatar_url ? (
-                        <Image src={a.avatar_url} alt={a.name} fill sizes="40px" className="object-cover" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-sm text-theme-secondary">
-                          {(a.name || '?').charAt(0).toUpperCase()}
-                        </div>
-                      )}
-                    </div>
+                    <UserAvatar
+                      src={a.avatar_url}
+                      name={a.name}
+                      className="w-10 h-10 bg-stone-200 dark:bg-tribe-dark"
+                      textClassName="font-normal text-[#4B5563] dark:text-[#D4D9E0]"
+                    />
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-theme-primary">
                         {firstAndInitial(a.name)}

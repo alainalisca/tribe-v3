@@ -13,6 +13,7 @@ import { pageWhen, publicSessionPlace } from '@/lib/share/sessionPublic';
 import { SITE_FONT_CLASS } from '@/lib/site/fonts';
 import { useMarkMarketingSurface } from '@/lib/site/marketingSurface';
 import { isOptimizableImage } from '@/lib/site/imageHosts';
+import { usableAvatarUrl } from '@/lib/avatarSrc';
 import { translateSport } from '@/lib/sportTranslationData';
 import { createClient } from '@/lib/supabase/client';
 import type { Session } from '@/lib/database.types';
@@ -274,7 +275,7 @@ export default function SignedOutSession({
       </button>
     );
 
-  const avatarOk = isOptimizableImage(creator?.avatar_url) && !/unsplash\.com/.test(creator?.avatar_url ?? '');
+  const avatarOk = isOptimizableImage(creator?.avatar_url) && !!usableAvatarUrl(creator?.avatar_url);
 
   return (
     <div className={`${br.bridge} ${SITE_FONT_CLASS} ${s.page}`}>
