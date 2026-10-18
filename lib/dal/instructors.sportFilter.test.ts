@@ -42,14 +42,16 @@ function complete(over: Record<string, unknown>): Record<string, unknown> {
 function client(rows: unknown[]) {
   const calls: { method: string; args: unknown[] }[] = [];
   const builder: Record<string, unknown> = {};
-  for (const m of ['select', 'eq', 'contains', 'ilike', 'order', 'limit', 'not']) {
+  for (const m of ['select', 'eq', 'contains', 'ilike', 'order', 'limit', 'not', 'gte', 'lte']) {
     builder[m] = vi.fn((...args: unknown[]) => {
       calls.push({ method: m, args });
       return builder;
     });
   }
   builder.then = (resolve: (v: unknown) => unknown) => resolve({ data: rows, error: null });
-  return { client: { from: vi.fn(() => builder) } as never, calls };
+  // rpc: the admin lookup (T-JOIN1), none here.
+  const rpc = vi.fn(async () => ({ data: [], error: null }));
+  return { client: { from: vi.fn(() => builder), rpc } as never, calls };
 }
 
 describe('fetchInstructors filters on the canonical sports column', () => {

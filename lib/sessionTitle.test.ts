@@ -44,3 +44,22 @@ describe('sessionDisplayTitle', () => {
     expect(sessionDisplayTitle({ ...base, title: null, instructorName: '  ' })).toBe('CrossFit');
   });
 });
+
+describe('T-JOIN1: "Otro con <Nombre>" never renders', () => {
+  it.each([
+    ['Otro', 'con', 'Neera Yoga', 'Sesión con Neera Yoga'],
+    ['Other', 'with', 'Neera Yoga', 'Session with Neera Yoga'],
+    ['otro', 'con', null, 'Sesión'],
+  ])('%s %s %s gives %s', (sportName, withWord, instructorName, expected) => {
+    expect(sessionDisplayTitle({ title: null, sportName, instructorName, withWord })).toBe(expected);
+  });
+
+  it('a real sport and a given title are untouched', () => {
+    expect(sessionDisplayTitle({ title: null, sportName: 'Boxeo', instructorName: 'Salomon', withWord: 'con' })).toBe(
+      'Boxeo con Salomon'
+    );
+    expect(sessionDisplayTitle({ title: 'Otro plan', sportName: 'Otro', instructorName: 'X', withWord: 'con' })).toBe(
+      'Otro plan'
+    );
+  });
+});

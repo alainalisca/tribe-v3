@@ -1,0 +1,243 @@
+/*
+ * T-JOIN1 Part A. The bridge: the Jornada site's elements carried into the
+ * app. Big Shoulders for the words that matter, JetBrains Mono for numbers and
+ * labels, square-cornered photos with the black caption tag, hairline rules
+ * instead of card borders, lime on one action per screen. Scoped under
+ * .bridge so none of it reaches other app styles; the fonts are the site's
+ * (lib/site/fonts.ts puts their variables on the same element).
+ *
+ * Works on the paper background (#F4F3EE) and on the app's light background:
+ * ink text, and lime only as a fill (lime text on a light ground is about
+ * 1.5:1).
+ */
+.bridge {
+  --paper: #f4f3ee;
+  --ink: #121417;
+  --lime: #a8da36;
+  --mute: #5b6168;
+  --hair: rgba(18, 20, 23, 0.14);
+  --disp: var(--font-site-disp), 'Arial Narrow', Impact, sans-serif;
+  --mono: var(--font-site-mono), ui-monospace, Menlo, monospace;
+  color: var(--ink);
+}
+
+.disp {
+  font-family: var(--disp);
+  font-variation-settings: 'opsz' 72;
+  font-weight: 900;
+  text-transform: uppercase;
+  line-height: 0.9;
+  letter-spacing: -0.005em;
+}
+.mono {
+  font-family: var(--mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* ── PosterHeader ─────────────────────────────────────────────────────────── */
+.poster {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  overflow: hidden;
+  background: var(--ink);
+}
+.poster img {
+  object-fit: cover;
+}
+/* Darkens the lower part so the title reads over any photo. */
+.shade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(18, 20, 23, 0.86) 0%, rgba(18, 20, 23, 0.4) 38%, rgba(18, 20, 23, 0) 62%);
+}
+/* No photo: ink with a faint 24px grid. */
+.grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+.posterText {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: 52px;
+  color: #ffffff;
+}
+.posterSport {
+  display: block;
+  margin-bottom: 10px;
+  color: var(--lime);
+  font-size: 13px;
+}
+.posterTitle {
+  margin: 0;
+  font-size: clamp(32px, 10vw, 72px);
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.caption {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  padding: 7px 9px;
+  background: var(--ink);
+  color: var(--paper);
+  font-size: 10.5px;
+}
+.limeTag {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  padding: 7px 10px;
+  background: var(--lime);
+  color: var(--ink);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* ── FixtureRow, app tone ─────────────────────────────────────────────────── */
+.fx {
+  display: grid;
+  grid-template-columns: 50px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: start;
+  padding-block: 14px;
+  border-bottom: 1px solid var(--hair);
+  color: var(--ink);
+  text-decoration: none;
+}
+.fx:hover {
+  background: rgba(18, 20, 23, 0.03);
+}
+.when {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.when b {
+  font-family: var(--mono);
+  font-size: 14px;
+  font-weight: 700;
+}
+.when small {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--mute);
+}
+.main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.sport {
+  font-family: var(--disp);
+  font-variation-settings: 'opsz' 72;
+  font-weight: 800;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+.title {
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.meta {
+  font-size: 13px;
+  color: var(--mute);
+}
+.end {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+.price {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 700;
+}
+.free {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 2px 6px;
+  background: var(--lime);
+  color: var(--ink);
+}
+.spots {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--mute);
+}
+
+/* ── DayHeader ────────────────────────────────────────────────────────────── */
+.day {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 6px;
+  border-bottom: 2px solid var(--ink);
+}
+.dayLabel {
+  margin: 0;
+  font-size: 34px;
+}
+.dayCount {
+  font-size: 12px;
+  color: var(--mute);
+}
+
+/* ── FactsLedger ──────────────────────────────────────────────────────────── */
+.ledger {
+  margin: 0;
+}
+.fact {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  gap: 12px;
+  padding-block: 12px;
+  border-bottom: 1px solid var(--hair);
+}
+.fact:first-child {
+  border-top: 1px solid var(--hair);
+}
+.factLabel {
+  font-size: 11px;
+  color: var(--mute);
+  padding-top: 3px;
+}
+.factValue {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.factSub {
+  display: block;
+  margin-top: 2px;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--mute);
+}

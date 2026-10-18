@@ -62,6 +62,10 @@ const nextConfig: NextConfig = {
       { source: '/for-instructors{/}?', destination: '/coaches/', statusCode: 301 },
       { source: '/faq{/}?', destination: '/preguntas/', statusCode: 301 },
       { source: '/about{/}?', destination: '/#manifiesto', statusCode: 301 },
+      // T-JOIN1 Part B: a share link lands on the session itself. 308 keeps the
+      // method; every /s/<id> link already shared keeps working, and the short
+      // links lib/referral/shareLinks.ts makes still use /s/ (with ?ref=).
+      { source: '/s/:id{/}?', destination: '/session/:id/', permanent: true },
     ];
   },
   async rewrites() {

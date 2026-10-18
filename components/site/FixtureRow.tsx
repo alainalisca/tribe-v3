@@ -1,71 +1,120 @@
 import Link from 'next/link';
-import { siteT, type SiteLanguage } from '@/lib/site/i18n';
-import { daysLabel, rowTitle } from '@/lib/site/weekBoard';
-import { formatPrice } from '@/lib/site/weekFormat';
-import type { WeekRow } from '@/lib/site/weekTypes';
-import { translateSport } from '@/lib/sportTranslationData';
+import { SITE_FONT_CLASS } from '@/lib/site/fonts';
+import br from '../bridge/bridge.module.css';
 import { ArrowRight } from './icons';
 import w from './week.module.css';
 
 /**
- * One session row of "La semana" (Part B): days, time, title with its tags,
- * place, coach, "Pedir cupo". Also the rows of a sport page's week block
- * (T-SHARE1), inside the same `w.table` list, and of the coach page (Part E),
- * in a `w.paper` table, with `action` "Reserva" and, for a session past this
- * week, `day` as its date.
+ * One session as a row. The site's "La semana" board (T-SITE1 Part B), a sport
+ * page's week block and the coach page (T-SHARE1) render it in the site frame
+ * (`tone="site"`, inside a `w.table`, or a `w.table w.paper` on paper). T-JOIN1
+ * Part A adapted it for the app (`tone="app"`): the bridge's compact row, time
+ * on the left, sport over a two-line title, price or "Gratis" on the right.
+ *
+ * It takes a Fixture already worded in the page's language and its labels, and
+ * imports no site copy, so a client page can render it without shipping
+ * messages/site to the browser. lib/site/fixture.ts builds both from a board
+ * row on the server.
+ *
+ * The whole row is one link, and its accessible name is its visible text (no
+ * aria-label, Al 2026-10-17: a voice-control user can say any of it, WCAG 2.5.3).
  */
+export type Fixture = {
+  id: string;
+  href: string;
+  /** "Lun a vie", "Sáb", or a date for a session past this week. */
+  days: string | null;
+  /** "06:00". */
+  time: string;
+  /** The sport's name in the page language; null for "Other". */
+  sport: string | null;
+  /** The title, or the fallback "<Deporte> con <Nombre>". */
+  title: string;
+  /** The site row's small line: "Boxeo · 60 min · 25.000". */
+  detail: string | null;
+  place: string | null;
+  coach: string | null;
+  /** The price as shown ("25.000"), or 'free'. */
+  price: string | 'free';
+  spots: number | null;
+};
+
+export type FixtureLabels = {
+  free: string;
+  /** "{n} cupos". */
+  spots: string;
+  spotsOne: string;
+  /** The site row's action: "Pedir cupo", or "Reserva" on the coach page. */
+  action: string;
+};
+
+const spotsText = (n: number, l: FixtureLabels) => (n === 1 ? l.spotsOne : l.spots.replace('{n}', String(n)));
+
 export default function FixtureRow({
-  lang,
-  row: r,
-  action,
-  day,
+  fixture: f,
+  labels,
+  tone = 'site',
 }: {
-  lang: SiteLanguage;
-  row: WeekRow;
-  action?: string;
-  day?: string;
+  fixture: Fixture;
+  labels: FixtureLabels;
+  tone?: 'site' | 'app';
 }) {
-  const t = siteT(lang);
-  const sport = translateSport(r.sport, lang);
-  const title = rowTitle(r, lang);
+  if (tone === 'app') {
+    const meta = [f.place, f.coach].filter(Boolean).join(' · ');
+    return (
+      <li className={`${br.bridge} ${SITE_FONT_CLASS}`}>
+        <Link className={br.fx} href={f.href}>
+          <span className={br.when}>
+            <b>{f.time}</b>
+            {f.days && <small>{f.days}</small>}
+          </span>
+          <span className={br.main}>
+            {f.sport && <span className={br.sport}>{f.sport}</span>}
+            <span className={br.title}>{f.title}</span>
+            {meta && <span className={br.meta}>{meta}</span>}
+          </span>
+          <span className={br.end}>
+            {f.price === 'free' ? (
+              <span className={br.free}>{labels.free}</span>
+            ) : (
+              <span className={br.price}>{f.price}</span>
+            )}
+            {f.spots !== null && <span className={br.spots}>{spotsText(f.spots, labels)}</span>}
+          </span>
+        </Link>
+      </li>
+    );
+  }
+
   // Rendered twice: after the title on wide screens, on the place line on
   // phones; the hidden copy is display:none, so it is read once.
   const tags = (
     <>
-      {r.price === null ? (
-        <span className={w.tag}>{t('site.week.free')}</span>
+      {f.price === 'free' ? (
+        <span className={w.tag}>{labels.free}</span>
       ) : (
-        <span className={`${w.tag} ${w.priceTag}`}>{formatPrice(r.price, lang)}</span>
+        <span className={`${w.tag} ${w.priceTag}`}>{f.price}</span>
       )}
-      {r.spotsLeft !== null && (
-        <span className={w.tag}>
-          {r.spotsLeft === 1 ? t('site.week.spotsOne') : t('site.week.spots', { n: r.spotsLeft })}
-        </span>
-      )}
+      {f.spots !== null && <span className={w.tag}>{spotsText(f.spots, labels)}</span>}
     </>
   );
   return (
     <li>
-      {/* No aria-label (Al, 2026-10-17): the row's visible text is its name, so
-          a voice-control user can say any of it (WCAG 2.5.3). */}
-      <Link className={w.row} href={`/s/${r.id}/`}>
-        <span className={w.day}>{day ?? daysLabel(r.weekdays, lang)}</span>
-        <span className={w.hr}>{r.startTime}</span>
+      <Link className={w.row} href={f.href}>
+        <span className={w.day}>{f.days}</span>
+        <span className={w.hr}>{f.time}</span>
         <span className={w.ses}>
-          {title}
+          {f.title}
           <span className={w.tags}>{tags}</span>
-          <small>
-            {r.title && sport ? `${sport} · ` : ''}
-            {r.duration} min{r.price ? ` · ${formatPrice(r.price, lang)}` : ''}
-          </small>
+          {f.detail && <small>{f.detail}</small>}
         </span>
         <span className={w.loc}>
-          {r.place}
+          {f.place}
           <span className={w.tagsPhone}>{tags}</span>
         </span>
-        <span className={w.who}>{r.creatorName}</span>
+        <span className={w.who}>{f.coach}</span>
         <span className={w.go}>
-          {action ?? t('site.week.ask')} <ArrowRight />
+          {labels.action} <ArrowRight />
         </span>
       </Link>
     </li>

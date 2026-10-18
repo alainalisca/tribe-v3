@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
+import UserAvatar from '@/components/UserAvatar';
 import { Star } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import {
@@ -12,6 +12,7 @@ import {
   type ReviewDistribution,
 } from '@/lib/dal/reviews';
 import { sportTranslations } from '@/lib/translations';
+import { formatRelative } from '@/lib/time/formatRelative';
 
 interface ReviewsListProps {
   hostId: string;
@@ -25,35 +26,6 @@ interface ReviewsListProps {
 }
 
 const PAGE_SIZE = 10;
-
-function formatRelativeTime(iso: string, language: 'en' | 'es'): string {
-  const now = Date.now();
-  const then = new Date(iso).getTime();
-  const diffMs = Math.max(0, now - then);
-  const diffMin = Math.floor(diffMs / 60000);
-  const diffHr = Math.floor(diffMin / 60);
-  const diffDay = Math.floor(diffHr / 24);
-  const diffWeek = Math.floor(diffDay / 7);
-  const diffMonth = Math.floor(diffDay / 30);
-  const diffYear = Math.floor(diffDay / 365);
-
-  if (language === 'es') {
-    if (diffMin < 1) return 'justo ahora';
-    if (diffMin < 60) return `hace ${diffMin} min`;
-    if (diffHr < 24) return `hace ${diffHr} h`;
-    if (diffDay < 7) return `hace ${diffDay} d`;
-    if (diffWeek < 5) return `hace ${diffWeek} sem`;
-    if (diffMonth < 12) return `hace ${diffMonth} mes`;
-    return `hace ${diffYear} a`;
-  }
-  if (diffMin < 1) return 'just now';
-  if (diffMin < 60) return `${diffMin}m ago`;
-  if (diffHr < 24) return `${diffHr}h ago`;
-  if (diffDay < 7) return `${diffDay}d ago`;
-  if (diffWeek < 5) return `${diffWeek}w ago`;
-  if (diffMonth < 12) return `${diffMonth}mo ago`;
-  return `${diffYear}y ago`;
-}
 
 function StarRow({ rating }: { rating: number }) {
   return (
@@ -230,19 +202,13 @@ export default function ReviewsList({ hostId, limit = 10, showAll = false, langu
             <li key={review.id} className="bg-theme-card rounded-xl p-4 border border-transparent">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-full overflow-hidden bg-theme-surface flex-shrink-0 relative">
-                  {review.reviewer?.avatar_url ? (
-                    <Image
-                      src={review.reviewer.avatar_url}
-                      alt={review.reviewer.name || ''}
-                      fill
-                      sizes="32px"
-                      className="object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-xs text-theme-tertiary">
-                      {(review.reviewer?.name || '?').charAt(0).toUpperCase()}
-                    </div>
-                  )}
+                  <UserAvatar
+                    src={review.reviewer?.avatar_url}
+                    name={review.reviewer?.name}
+                    alt={review.reviewer?.name || ''}
+                    className="h-full w-full bg-transparent dark:bg-transparent"
+                    textClassName="text-xs font-normal text-[#5B616B] dark:text-[#B2BAC6]"
+                  />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
@@ -250,7 +216,7 @@ export default function ReviewsList({ hostId, limit = 10, showAll = false, langu
                       {review.reviewer?.name || (language === 'es' ? 'Atleta' : 'Athlete')}
                     </span>
                     <span className="text-xs text-gray-500 flex-shrink-0">
-                      {formatRelativeTime(review.created_at, language)}
+                      {formatRelative(review.created_at, language)}
                     </span>
                   </div>
                   <div className="mt-0.5 flex items-center gap-2">

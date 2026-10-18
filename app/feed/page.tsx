@@ -24,10 +24,12 @@ import {
 } from 'lucide-react';
 import Image from 'next/image';
 import BottomNav from '@/components/BottomNav';
+import UserAvatar from '@/components/UserAvatar';
 import PostCommentSection from '@/components/PostCommentSection';
 import type { Currency } from '@/lib/payments/config';
 import { useUserCurrency } from '@/lib/useUserCurrency';
 import { formatPriceForUser } from '@/lib/userCurrency';
+import { formatRelative } from '@/lib/time/formatRelative';
 
 interface InstructorPost {
   id: string;
@@ -421,19 +423,6 @@ export default function FeedPage() {
   );
 }
 
-export function formatTimeAgo(dateString: string, language: string) {
-  const date = new Date(dateString);
-  const now = new Date();
-  const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-
-  if (seconds < 60) return language === 'es' ? `hace ${seconds}s` : `${seconds}s ago`;
-  if (seconds < 3600)
-    return language === 'es' ? `hace ${Math.floor(seconds / 60)}m` : `${Math.floor(seconds / 60)}m ago`;
-  if (seconds < 86400)
-    return language === 'es' ? `hace ${Math.floor(seconds / 3600)}h` : `${Math.floor(seconds / 3600)}h ago`;
-  return language === 'es' ? `hace ${Math.floor(seconds / 86400)}d` : `${Math.floor(seconds / 86400)}d ago`;
-}
-
 interface PostCardProps {
   post: InstructorPost;
   isLiked: boolean;
@@ -497,21 +486,15 @@ function PostCard({
     <div className="bg-white dark:bg-tribe-card rounded-2xl p-5 border border-stone-200 dark:border-gray-700">
       {/* Author Info */}
       <div className="mb-4 flex items-center gap-3">
-        {post.author.avatar_url && (
-          <Image
-            src={post.author.avatar_url}
-            alt={post.author.name}
-            width={48}
-            height={48}
-            className="h-12 w-12 rounded-full object-cover"
-          />
-        )}
+        <UserAvatar src={post.author.avatar_url} name={post.author.name} className="h-12 w-12" />
         <div className="flex-1">
           <div className="flex items-center gap-2">
             <h3 className="font-semibold text-theme-primary">{post.author.name}</h3>
             {post.author.is_verified_instructor && <CheckCircle className="h-4 w-4 text-tribe-green" />}
           </div>
-          <p className="text-xs text-theme-secondary">{formatTimeAgo(post.created_at, language)}</p>
+          <p className="text-xs text-theme-secondary">
+            {formatRelative(post.created_at, language === 'en' ? 'en' : 'es')}
+          </p>
         </div>
       </div>
 

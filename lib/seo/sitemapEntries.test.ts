@@ -24,7 +24,7 @@ describe('buildSitemapEntries', () => {
       'https://tribelatam.com/preguntas/',
       'https://tribelatam.com/g/bullbox/',
       'https://tribelatam.com/i/11111111-1111-4111-8111-111111111111/',
-      'https://tribelatam.com/s/22222222-2222-4222-8222-222222222222/',
+      'https://tribelatam.com/session/22222222-2222-4222-8222-222222222222/',
     ]);
   });
 

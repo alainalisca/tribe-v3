@@ -7,6 +7,8 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { createClient } from '@/lib/supabase/client';
 import { logError } from '@/lib/logger';
 import { useTranslations } from '@/lib/i18n/useTranslations';
+import { useLanguage } from '@/lib/LanguageContext';
+import { formatRelative } from '@/lib/time/formatRelative';
 
 interface PostAuthor {
   id: string;
@@ -40,6 +42,7 @@ interface RawInstructorPost {
 
 export default function FeedPostPreview() {
   const t = useTranslations('home');
+  const { language } = useLanguage();
   const [post, setPost] = useState<InstructorPost | null>(null);
   const [error, setError] = useState(false);
 
@@ -106,7 +109,7 @@ export default function FeedPostPreview() {
 
   if (!post) return null;
 
-  const timeAgo = getTimeAgo(post.created_at, t);
+  const timeAgo = formatRelative(post.created_at, language);
 
   return (
     <Link href="/feed" className="block">
@@ -144,18 +147,4 @@ export default function FeedPostPreview() {
       </div>
     </Link>
   );
-}
-
-function getTimeAgo(dateStr: string, t: (key: string, vars?: Record<string, string | number>) => string): string {
-  const seconds = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
-  if (seconds < 3600) {
-    const mins = Math.floor(seconds / 60);
-    return t('minsAgo', { n: mins });
-  }
-  if (seconds < 86400) {
-    const hours = Math.floor(seconds / 3600);
-    return t('hoursAgo', { n: hours });
-  }
-  const days = Math.floor(seconds / 86400);
-  return t('daysAgo', { n: days });
 }

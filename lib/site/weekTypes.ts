@@ -5,7 +5,7 @@
  * data, the creator as first name and last initial.
  */
 export type WeekRow = {
-  /** The next occurrence: the row links to /s/{id}/. */
+  /** The next occurrence: the row links to /session/{id}/. */
   id: string;
   /** The series root (seriesParentId); a one-off is its own. */
   seriesId: string;

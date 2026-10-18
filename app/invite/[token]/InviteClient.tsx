@@ -193,18 +193,18 @@ export default function InviteClient({ token, initialInvite }: Props) {
       // unexpired), derives status from join_policy, and enforces capacity
       // server-side. Running as owner, it also fixes the challenge_participants
       // recursion that 500s the current direct guest insert.
-      const { data: guestResult, error: guestError } = await supabase.rpc('join_session_as_guest', {
-        p_session_id: session.id,
-        p_invite_token: token,
-        p_guest_name: guestData.name,
-        p_guest_phone: guestData.phone,
-        p_guest_email: guestData.email || null,
+      // T-JOIN1 Part B: through /api/sessions/[id]/guest (phone to E.164,
+      // IP rate limit, one join per phone), which calls the same RPC with the
+      // service role; after migration 221 the browser may not call it directly.
+      const guestRes = await fetch(`/api/sessions/${session.id}/guest/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: guestData.name, phone: guestData.phone, inviteToken: token }),
       });
-      if (guestError) throw new Error(guestError.message);
-      const guestBody = typeof guestResult === 'string' ? JSON.parse(guestResult) : guestResult;
+      const guestBody = (await guestRes.json().catch(() => null)) as { success?: boolean; error?: string } | null;
       if (!guestBody?.success) {
         showError(
-          guestBody?.error === 'Session is full'
+          guestBody?.error === 'session_full'
             ? t('sessionFullMsg')
             : getErrorMessage(guestBody?.error, 'accept_invite', language)
         );

@@ -8,7 +8,6 @@ import Link from 'next/link';
 import LanguageToggle from '@/components/LanguageToggle';
 import NotificationBell from '@/components/NotificationBell';
 import TribeOSQuickAccess from '@/components/TribeOSQuickAccess';
-import AdminQuickAccess from '@/components/AdminQuickAccess';
 import WhatsNewBadge from '@/components/WhatsNewBadge';
 import type { TranslationKey } from '@/lib/translations';
 import { useTranslations } from '@/lib/i18n/useTranslations';
@@ -162,9 +161,8 @@ export default function FilterBar({
         <div className="flex items-center gap-2">
           {/* Premium-only shortcut to /os/dashboard. Renders nothing
               for non-premium users so the header stays clean for the
-              consumer app's main audience. Admin shortcut sits next
-              to it, also conditionally rendered. */}
-          <AdminQuickAccess />
+              consumer app's main audience. No admin shortcut here
+              (T-JOIN1): admins reach /admin from Settings. */}
           <TribeOSQuickAccess />
           <WhatsNewBadge />
           <NotificationBell />

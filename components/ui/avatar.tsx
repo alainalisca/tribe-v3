@@ -4,6 +4,7 @@ import * as React from 'react';
 import * as AvatarPrimitive from '@radix-ui/react-avatar';
 
 import { cn } from '@/lib/utils';
+import { usableAvatarUrl } from '@/lib/avatarSrc';
 
 const Avatar = React.forwardRef<
   React.ElementRef<typeof AvatarPrimitive.Root>,
@@ -32,7 +33,15 @@ const AvatarImage = React.forwardRef<
   // broken. It belongs here, once.
   //
   // components/ui/avatar.objectCover.test.ts fails if it is removed.
-  <AvatarPrimitive.Image ref={ref} className={cn('aspect-square h-full w-full object-cover', className)} {...props} />
+  // T-JOIN1: a stock (Unsplash) or malformed URL is not drawn at all, so the
+  // caller's AvatarFallback shows, as it already does when an image fails to
+  // load (lib/avatarSrc.ts).
+  <AvatarPrimitive.Image
+    ref={ref}
+    className={cn('aspect-square h-full w-full object-cover', className)}
+    {...props}
+    src={usableAvatarUrl(typeof props.src === 'string' ? props.src : null) ?? undefined}
+  />
 ));
 AvatarImage.displayName = AvatarPrimitive.Image.displayName;
 

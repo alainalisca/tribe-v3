@@ -23,6 +23,8 @@ export default function NotificationPreferencesPage() {
   const supabase = createClient();
   const [prefs, setPrefs] = useState<Prefs | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -41,6 +43,11 @@ export default function NotificationPreferencesPage() {
         const { user_id, ...rest } = res.data;
         void user_id;
         setPrefs(rest);
+        setLoadFailed(false);
+      } else {
+        // T-JOIN1: a failed read used to leave "Cargando…" on screen forever
+        // (loading false, prefs still null). Say so and offer a retry.
+        setLoadFailed(true);
       }
       setLoading(false);
     }
@@ -48,7 +55,7 @@ export default function NotificationPreferencesPage() {
     return () => {
       cancelled = true;
     };
-  }, [supabase, router]);
+  }, [supabase, router, attempt]);
 
   const t = {
     title: language === 'es' ? 'Preferencias de Notificaciones' : 'Notification Preferences',
@@ -56,6 +63,8 @@ export default function NotificationPreferencesPage() {
     saved: language === 'es' ? 'Preferencias guardadas' : 'Preferences saved',
     error: language === 'es' ? 'No se pudo guardar' : 'Could not save',
     loading: language === 'es' ? 'Cargando…' : 'Loading…',
+    loadFailed: language === 'es' ? 'No se pudieron cargar tus preferencias.' : 'Could not load your preferences.',
+    retry: language === 'es' ? 'Reintentar' : 'Try again',
     // Rendered from the single source of truth so the gating invariant test can
     // read the same list. Do not inline categories here; edit
     // lib/notifications/settingsCategories.ts.
@@ -102,7 +111,21 @@ export default function NotificationPreferencesPage() {
           <h1 className="text-2xl font-extrabold">{t.title}</h1>
         </div>
 
-        {loading || !prefs ? (
+        {loadFailed && !loading ? (
+          <div className="py-12 text-center space-y-3">
+            <p className="text-sm text-theme-tertiary">{t.loadFailed}</p>
+            <button
+              type="button"
+              onClick={() => {
+                setLoading(true);
+                setAttempt((n) => n + 1);
+              }}
+              className="px-4 py-2 rounded-lg bg-tribe-green text-slate-900 text-sm font-semibold"
+            >
+              {t.retry}
+            </button>
+          </div>
+        ) : loading || !prefs ? (
           <p className="py-12 text-center text-sm text-theme-tertiary">{t.loading}</p>
         ) : (
           <>

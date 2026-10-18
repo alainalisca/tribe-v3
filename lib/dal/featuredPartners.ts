@@ -2,6 +2,7 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { logError } from '@/lib/logger';
 import type { DalResult } from './types';
+import { hiddenAdminIds, visibleUsersFilter } from './visibleUsers';
 
 export interface FeaturedPartner {
   id: string;
@@ -182,16 +183,19 @@ export async function fetchPartnerInstructors(
   partnerId: string
 ): Promise<DalResult<PartnerInstructor[]>> {
   try {
-    // `users!inner` so partner_instructor rows whose user is flagged as a
-    // test account (or has been deleted) get dropped from the result rather
-    // than appearing with a null `user`. Filter is `users.is_test_account=eq.false`.
-    // Migration 052.
-    const { data, error } = await supabase
+    // `users!inner` so a partner_instructor row whose user is not visible is
+    // dropped rather than returned with a null `user`. T-JOIN1: the one rule,
+    // lib/dal/visibleUsers.ts (admins, test, banned and deleted accounts).
+    const query = supabase
       .from('partner_instructors')
       .select('*, user:users!inner(id, name, avatar_url, specialties, is_test_account)')
       .eq('partner_id', partnerId)
-      .eq('is_active', true)
-      .eq('user.is_test_account', false);
+      .eq('is_active', true);
+    const { data, error } = await visibleUsersFilter(query, {
+      prefix: 'user.',
+      idColumn: 'instructor_id',
+      adminIds: await hiddenAdminIds(supabase),
+    });
 
     if (error) return { success: false, error: error.message };
     return { success: true, data: data ?? [] };
@@ -219,14 +223,13 @@ export async function fetchPartnerSessions(supabase: SupabaseClient, partnerId: 
     const candidateIds = [...(instructors?.map((i) => i.instructor_id) ?? []), ...(partner ? [partner.user_id] : [])];
     if (candidateIds.length === 0) return { success: true, data: [] };
 
-    // Drop any candidate user that's flagged as a test account (migration
-    // 052). The partner's own user_id wasn't covered by the inner-join
-    // filter on `fetchPartnerInstructors`, so it's checked here too.
-    const { data: liveUsers, error: liveErr } = await supabase
-      .from('users')
-      .select('id')
-      .in('id', candidateIds)
-      .eq('is_test_account', false);
+    // Drop any candidate who is not visible (T-JOIN1, lib/dal/visibleUsers.ts).
+    // The partner's own user_id is not covered by fetchPartnerInstructors'
+    // filter, so it is checked here too.
+    const { data: liveUsers, error: liveErr } = await visibleUsersFilter(
+      supabase.from('users').select('id').in('id', candidateIds),
+      { idColumn: 'id', adminIds: await hiddenAdminIds(supabase) }
+    );
 
     if (liveErr) return { success: false, error: liveErr.message };
     const instructorIds = (liveUsers ?? []).map((u) => u.id);

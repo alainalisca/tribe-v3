@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import Image from 'next/image';
+import UserAvatar from '@/components/UserAvatar';
 import { MessageCircle, ChevronRight, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -241,29 +241,14 @@ function MessagesContent() {
                       <CardContent className="p-4">
                         <div className="flex items-center gap-3 relative">
                           <div className="relative flex-shrink-0">
-                            <div className="w-12 h-12 bg-stone-300 dark:bg-tribe-mid rounded-full flex items-center justify-center text-sm font-semibold overflow-hidden">
-                              {conv.other_user.avatar_url ? (
-                                <Image
-                                  src={conv.other_user.avatar_url}
-                                  alt={conv.other_user.name}
-                                  width={48}
-                                  height={48}
-                                  className="w-full h-full object-cover"
-                                />
-                              ) : (
-                                <span className="text-stone-700 dark:text-gray-300">
-                                  {/* other_user.name is typed string but can be
-                                      null at runtime; a null here previously
-                                      crashed the whole list on .split(). */}
-                                  {(conv.other_user.name || 'Unknown')
-                                    .split(' ')
-                                    .map((n) => n[0])
-                                    .join('')
-                                    .toUpperCase()
-                                    .slice(0, 2)}
-                                </span>
-                              )}
-                            </div>
+                            {/* other_user.name is typed string but can be null at
+                                runtime; UserAvatar handles a null name. */}
+                            <UserAvatar
+                              src={conv.other_user.avatar_url}
+                              name={conv.other_user.name || 'Unknown'}
+                              className="w-12 h-12"
+                              textClassName="font-semibold text-stone-700 dark:text-gray-300"
+                            />
                             {conv.unread_count > 0 && (
                               <div className="absolute top-0 right-0 w-3 h-3 bg-blue-500 rounded-full" />
                             )}

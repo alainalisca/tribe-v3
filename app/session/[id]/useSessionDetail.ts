@@ -43,6 +43,9 @@ export function useSessionDetail(sessionId: string, language: 'en' | 'es', onNav
   // former. 'session_not_found' = real; anything else = recoverable.
   const [loadError, setLoadError] = useState<string | null>(null);
   const [user, setUser] = useState<AuthUser | null>(null);
+  // T-JOIN1 Part B: true once the visitor's auth is known, so the page picks the
+  // signed-out or signed-in layout without flashing the wrong one.
+  const [userChecked, setUserChecked] = useState(false);
   const [userIsAdmin, setUserIsAdmin] = useState(false);
   const [hasJoined, setHasJoined] = useState(false);
   const [isPending, setIsPending] = useState(false);
@@ -170,6 +173,7 @@ export function useSessionDetail(sessionId: string, language: 'en' | 'es', onNav
       data: { user },
     } = await supabase.auth.getUser();
     setUser(user);
+    setUserChecked(true);
     if (user) {
       const result = await fetchUserIsAdmin(supabase, user.id);
       setUserIsAdmin(result.success ? !!result.data : false);
@@ -358,6 +362,7 @@ export function useSessionDetail(sessionId: string, language: 'en' | 'es', onNav
     reload: loadSession,
     reloadSilent: () => loadSession({ silent: true }),
     user,
+    userChecked,
     userIsAdmin,
     hasJoined,
     isPending,

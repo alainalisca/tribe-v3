@@ -4,8 +4,8 @@ import { useEffect, useRef, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { fetchPostComments, insertPostComment, deletePostComment, PostCommentWithAuthor } from '@/lib/dal/comments';
 import { Trash2, Send } from 'lucide-react';
-import Image from 'next/image';
-import { formatTimeAgo } from '@/app/feed/page';
+import UserAvatar from '@/components/UserAvatar';
+import { formatRelative } from '@/lib/time/formatRelative';
 import { logError } from '@/lib/logger';
 
 interface PostCommentSectionProps {
@@ -200,22 +200,21 @@ function CommentItem({ comment, currentUserId, postAuthorId, language, onDelete 
 
   return (
     <div className="flex gap-2">
-      {comment.author?.avatar_url && (
-        <Image
-          src={comment.author.avatar_url}
-          alt={comment.author.name}
-          width={32}
-          height={32}
-          className="h-8 w-8 rounded-full object-cover flex-shrink-0"
-        />
-      )}
+      <UserAvatar
+        src={comment.author?.avatar_url}
+        name={comment.author?.name}
+        className="h-8 w-8"
+        textClassName="text-xs"
+      />
       <div className="flex-1">
         <div className="bg-stone-100 dark:bg-tribe-surface rounded-lg px-3 py-2">
           <p className="text-sm font-semibold text-theme-primary">{comment.author?.name || 'User'}</p>
           <p className="text-sm text-theme-primary whitespace-pre-wrap break-words">{comment.content}</p>
         </div>
         <div className="flex items-center gap-2 mt-1">
-          <p className="text-xs text-theme-secondary">{formatTimeAgo(comment.created_at, language)}</p>
+          <p className="text-xs text-theme-secondary">
+            {formatRelative(comment.created_at, language === 'en' ? 'en' : 'es')}
+          </p>
           {canDelete && (
             <button
               onClick={() => onDelete(comment.id)}

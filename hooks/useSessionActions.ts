@@ -21,7 +21,6 @@ import { getJoinErrorMessages } from './sessionActionTypes';
 import {
   insertGuestParticipant,
   storeGuestLocally,
-  notifyHostOfGuestJoin,
   notifyHostOfLeave,
   sendGuestConfirmationEmail,
   removeGuestParticipant,
@@ -170,7 +169,7 @@ export function useSessionActions({
       storeGuestLocally(session.id, guestData, data.guest_token);
       setGuestHasJoined(true);
       setGuestParticipantId(data.id);
-      notifyHostOfGuestJoin(session, guestData.name);
+      // The guest route notifies the host (T-JOIN1).
       sendGuestConfirmationEmail(session, guestData, language);
       haptic('success');
       showSuccess(language === 'es' ? '¡Confirmado! Te esperamos' : 'Confirmed! See you there');

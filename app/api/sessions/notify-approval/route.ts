@@ -35,6 +35,7 @@ import { z } from 'zod';
 import { log, logError } from '@/lib/logger';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { notificationCopy, toLang } from '@/lib/notification-i18n';
+import { publicSessionTitle } from '@/lib/share/sessionPublic';
 
 const schema = z.object({
   session_id: z.string().uuid(),
@@ -125,7 +126,16 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       .maybeSingle();
     const recipientLang = toLang((recipientRaw as { preferred_language?: string | null } | null)?.preferred_language);
 
-    const sessionLabel = session.title || session.sport || '';
+    // "<Deporte> con <Nombre>" when the session has no title (T-JOIN1 decision 5).
+    let hostName: string | null = null;
+    if (!session.title?.trim()) {
+      const { data: host } = await service.from('users').select('name').eq('id', session.creator_id).maybeSingle();
+      hostName = (host as { name?: string | null } | null)?.name ?? null;
+    }
+    const sessionLabel = publicSessionTitle(
+      { title: session.title, sport: session.sport, creatorName: hostName },
+      recipientLang
+    );
     const { title, body } = notificationCopy('request_approved', recipientLang, { session: sessionLabel });
 
     // Push only — the bell is created by the approve call sites.

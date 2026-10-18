@@ -184,6 +184,21 @@ export function isPublicPath(pathname: string): boolean {
     return true;
   }
 
+  // T-JOIN1 Part B: the guest join route. A guest is signed out by definition;
+  // the handler validates the phone, rate-limits by IP and calls the guest RPC
+  // with the service role. Exactly this path: the rest of /api/sessions stays
+  // behind the gate.
+  if (/^\/api\/sessions\/[0-9a-f-]{36}\/guest\/?$/i.test(pathname)) {
+    return true;
+  }
+
+  // T-JOIN1 Part A: /dev/bridge, the bridge components' review page, opens
+  // signed out in development only. In production the page itself is a 404
+  // and this branch never runs, so the path stays behind the gate there too.
+  if (process.env.NODE_ENV !== 'production' && (pathname === '/dev/bridge' || pathname === '/dev/bridge/')) {
+    return true;
+  }
+
   return false;
 }
 

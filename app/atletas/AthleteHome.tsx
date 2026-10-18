@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import BottomNav from '@/components/BottomNav';
+import UserAvatar from '@/components/UserAvatar';
 import { useTranslations } from '@/lib/i18n/useTranslations';
 import type { AthleteHomeView, AthleteMemberView } from '@/lib/atletas/athleteHomeView';
 import AthleteLinkCard from './AthleteLinkCard';
@@ -62,17 +63,16 @@ function NotInProgram() {
 
 function Hero({ view }: { view: AthleteMemberView }) {
   const t = useTranslations('athleteHome');
-  const initial = (view.firstName ?? '?').charAt(0).toUpperCase();
   return (
     <section className="mt-4 flex items-center gap-4 rounded-2xl bg-tribe-dark p-5">
-      {view.avatarUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element -- a user photo of unknown host; object-top keeps faces in frame
-        <img src={view.avatarUrl} alt="" className="h-20 w-20 flex-shrink-0 rounded-full object-cover object-top" />
-      ) : (
-        <div className="flex h-20 w-20 flex-shrink-0 items-center justify-center rounded-full bg-white/10 text-2xl font-bold text-white">
-          {initial}
-        </div>
-      )}
+      {/* object-top keeps faces in frame */}
+      <UserAvatar
+        src={view.avatarUrl}
+        name={view.firstName}
+        alt=""
+        className="h-20 w-20 bg-white/10 dark:bg-white/10 [&_img]:object-top"
+        textClassName="text-2xl text-white dark:text-white"
+      />
       <div className="min-w-0">
         {view.firstName ? <p className="truncate text-xl font-extrabold text-white">{view.firstName}</p> : null}
         <p className="mt-1 text-sm text-white/80">{t('atGym', { gym: view.partnerName })}</p>

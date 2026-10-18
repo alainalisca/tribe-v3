@@ -47,7 +47,7 @@ describe('/deportes/<sport>/', () => {
     render(await SportPage(params('boxeo')));
     expect(fetchWeekSportRows).toHaveBeenCalledWith(['Boxing'], 6);
     const block = screen.getByRole('heading', { name: 'Esta semana en boxeo' }).parentElement as HTMLElement;
-    expect(within(block).getAllByRole('link').map(hrefOf)).toEqual(['/s/b1', '/s/b2']);
+    expect(within(block).getAllByRole('link').map(hrefOf)).toEqual(['/session/b1', '/session/b2']);
     const groups = screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent);
     expect(groups.slice(0, 2)).toEqual(['Esta semana en boxeo', 'Combate']);
   });

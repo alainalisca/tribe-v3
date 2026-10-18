@@ -5,6 +5,7 @@ import { siteT, type SiteLanguage } from '@/lib/site/i18n';
 import { WEEK_BOARD_MAX } from '@/lib/site/weekBoard';
 import { weekBoardJsonLd } from '@/lib/site/weekJsonLd';
 import type { WeekRow } from '@/lib/site/weekTypes';
+import { fixtureFromWeekRow, fixtureLabels } from '@/lib/site/fixture';
 import FixtureRow from './FixtureRow';
 import { ArrowRight } from './icons';
 import b from './base.module.css';
@@ -20,6 +21,7 @@ import w from './week.module.css';
 export default function WeekBoard({ lang, rows }: { lang: SiteLanguage; rows: WeekRow[] }) {
   const t = siteT(lang);
   const shown = rows.slice(0, WEEK_BOARD_MAX);
+  const labels = fixtureLabels(lang);
   const jsonLd = weekBoardJsonLd(shown, lang, CANONICAL_SITE_URL);
 
   return (
@@ -32,7 +34,7 @@ export default function WeekBoard({ lang, rows }: { lang: SiteLanguage; rows: We
       </div>
       <ul className={w.table}>
         {shown.map((r) => (
-          <FixtureRow key={r.id} lang={lang} row={r} />
+          <FixtureRow key={r.id} fixture={fixtureFromWeekRow(r, lang)} labels={labels} />
         ))}
         {shown.length < 3 && (
           <li>

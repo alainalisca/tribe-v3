@@ -4,11 +4,6 @@ vi.mock('server-only', () => ({}));
 vi.mock('next/headers', () => ({ cookies: async () => ({ get: () => undefined }) }));
 vi.mock('@/lib/site/coachPage', () => ({ coachHeroPhoto: async () => null, fetchCoachSessions: async () => [] }));
 vi.mock('@/lib/site/week', () => ({ fetchWeekBoard: async () => [] }));
-vi.mock('next/font/google', () => ({
-  Big_Shoulders: () => ({ variable: 'd' }),
-  Instrument_Sans: () => ({ variable: 'b' }),
-  JetBrains_Mono: () => ({ variable: 'm' }),
-}));
 
 /** T-SHARE1 Part C: /i/<handle> and /i/<uuid> are one page with one card. */
 const row = {

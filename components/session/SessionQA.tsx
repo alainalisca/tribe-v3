@@ -11,8 +11,8 @@ import {
   SessionCommentWithAuthor,
 } from '@/lib/dal/sessionComments';
 import { MessageCircle, Send, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
-import Image from 'next/image';
-import { formatTimeAgo } from '@/app/feed/page';
+import UserAvatar from '@/components/UserAvatar';
+import { formatRelative } from '@/lib/time/formatRelative';
 
 interface SessionQAProps {
   sessionId: string;
@@ -219,21 +219,12 @@ function CommentItem({ comment, currentUserId, isCreator, sessionCreatorId, lang
 
   return (
     <div className="flex gap-2">
-      {comment.author?.avatar_url ? (
-        <Image
-          src={comment.author.avatar_url}
-          alt={comment.author.name}
-          width={32}
-          height={32}
-          className="h-8 w-8 rounded-full object-cover flex-shrink-0"
-        />
-      ) : (
-        <div className="h-8 w-8 rounded-full bg-stone-200 dark:bg-stone-600 flex-shrink-0 flex items-center justify-center">
-          <span className="text-xs font-bold text-theme-secondary">
-            {(comment.author?.name || '?')[0].toUpperCase()}
-          </span>
-        </div>
-      )}
+      <UserAvatar
+        src={comment.author?.avatar_url}
+        name={comment.author?.name}
+        className="h-8 w-8 bg-stone-200 dark:bg-stone-600"
+        textClassName="text-xs text-[#4B5563] dark:text-[#D4D9E0]"
+      />
       <div className="flex-1 min-w-0">
         <div className="bg-stone-100 dark:bg-tribe-surface rounded-lg px-3 py-2">
           <div className="flex items-center gap-2">
@@ -249,7 +240,9 @@ function CommentItem({ comment, currentUserId, isCreator, sessionCreatorId, lang
           <p className="text-sm text-theme-primary whitespace-pre-wrap break-words">{comment.content}</p>
         </div>
         <div className="flex items-center gap-2 mt-1">
-          <p className="text-xs text-theme-secondary">{formatTimeAgo(comment.created_at, language)}</p>
+          <p className="text-xs text-theme-secondary">
+            {formatRelative(comment.created_at, language === 'en' ? 'en' : 'es')}
+          </p>
           {canDelete && (
             <button
               onClick={() => onDelete(comment.id)}

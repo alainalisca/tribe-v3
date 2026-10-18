@@ -8,6 +8,7 @@ import { normalizeWhatsApp } from '@/lib/pase/phone';
 import { SEARCH_MIN_CHARS, searchAthleteCandidates, type AthleteCandidate } from '@/lib/dal/athleteGym';
 import { addProgramAthlete } from '@/lib/dal/athleteGymWrites';
 import { useGymWrite } from './useGymWrite';
+import UserAvatar from '@/components/UserAvatar';
 
 /**
  * T-AV26 "Agregar atleta" (owner and admin only).
@@ -132,14 +133,13 @@ export default function GymAddAthlete({ partnerId, maxAthletes }: GymAddAthleteP
                     : 'flex w-full items-center gap-3 rounded-xl border border-stone-300 bg-white px-3 py-2 text-left'
                 }
               >
-                {r.avatarUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element -- a user photo of unknown host, as on /atletas/
-                  <img src={r.avatarUrl} alt="" className="h-9 w-9 rounded-full object-cover object-top" />
-                ) : (
-                  <span className="flex h-9 w-9 items-center justify-center rounded-full bg-stone-200 text-sm font-bold text-tribe-dark">
-                    {r.name.charAt(0).toUpperCase()}
-                  </span>
-                )}
+                <UserAvatar
+                  src={r.avatarUrl}
+                  name={r.name}
+                  alt=""
+                  className="h-9 w-9 bg-stone-200 dark:bg-stone-200 [&_img]:object-top"
+                  textClassName="text-tribe-dark dark:text-tribe-dark"
+                />
                 <span className="truncate text-sm font-semibold text-tribe-dark">{r.name}</span>
               </button>
             </li>

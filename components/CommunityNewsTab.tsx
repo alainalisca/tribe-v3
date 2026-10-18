@@ -7,6 +7,7 @@ import { logError } from '@/lib/logger';
 import { fetchCommunityNews, type CommunityNewsArticle, type NewsCategory } from '@/lib/dal/communityNews';
 import { SkeletonCard } from '@/components/Skeleton';
 import { ExternalLink, Newspaper } from 'lucide-react';
+import { formatRelative } from '@/lib/time/formatRelative';
 
 const CATEGORIES: { key: string; en: string; es: string }[] = [
   { key: 'all', en: 'All', es: 'Todos' },
@@ -22,36 +23,7 @@ const getTranslations = (language: 'en' | 'es') => ({
   noNewsDesc:
     language === 'es' ? '¡Vuelve pronto para ver las últimas noticias!' : 'Check back soon for the latest updates!',
   readMore: language === 'es' ? 'Leer más' : 'Read more',
-  daysAgo: language === 'es' ? 'hace {n} días' : '{n} days ago',
-  hoursAgo: language === 'es' ? 'hace {n} horas' : '{n} hours ago',
-  today: language === 'es' ? 'Hoy' : 'Today',
-  yesterday: language === 'es' ? 'Ayer' : 'Yesterday',
 });
-
-function getRelativeTime(dateStr: string, language: 'en' | 'es'): string {
-  const now = new Date();
-  const date = new Date(dateStr);
-  const diffMs = now.getTime() - date.getTime();
-  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-
-  if (diffHours < 1) {
-    return language === 'es' ? 'Hace un momento' : 'Just now';
-  }
-  if (diffHours < 24) {
-    return language === 'es' ? `hace ${diffHours}h` : `${diffHours}h ago`;
-  }
-  if (diffDays === 1) {
-    return language === 'es' ? 'Ayer' : 'Yesterday';
-  }
-  if (diffDays < 30) {
-    return language === 'es' ? `hace ${diffDays} días` : `${diffDays} days ago`;
-  }
-  return date.toLocaleDateString(language === 'es' ? 'es-CO' : 'en-US', {
-    month: 'short',
-    day: 'numeric',
-  });
-}
 
 const SOURCE_COLORS: Record<string, string> = {
   INDER: 'bg-blue-500/20 text-blue-400',
@@ -92,7 +64,7 @@ function NewsCard({ article, language }: { article: CommunityNewsArticle; langua
         <div className="flex items-center justify-between">
           <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${sourceColor}`}>{article.source}</span>
           <span className="text-xs text-stone-400 dark:text-gray-500">
-            {getRelativeTime(article.published_at, language)}
+            {formatRelative(article.published_at, language)}
           </span>
         </div>
 

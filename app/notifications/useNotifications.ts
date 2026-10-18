@@ -10,6 +10,7 @@ import {
   type NotificationWithActor,
 } from '@/lib/dal/notifications';
 import { getNotificationTranslations } from './translations';
+import { formatRelative } from '@/lib/time/formatRelative';
 
 export function useNotifications() {
   const supabase = createClient();
@@ -70,15 +71,9 @@ export function useNotifications() {
   const formatTime = (createdAt: string) => {
     const now = new Date();
     const created = new Date(createdAt);
-    const diffMs = now.getTime() - created.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
-
-    if (diffMins < 1) return language === 'es' ? 'ahora' : 'now';
-    if (diffMins < 60) return language === 'es' ? `${diffMins}m atrás` : `${diffMins}m ago`;
-    if (diffHours < 24) return language === 'es' ? `${diffHours}h atrás` : `${diffHours}h ago`;
-    if (diffDays < 7) return language === 'es' ? `${diffDays}d atrás` : `${diffDays}d ago`;
+    // Within a week, the relative label (T-JOIN1: one helper, correct plurals); older, the date.
+    if (now.getTime() - created.getTime() < 7 * 86400000)
+      return formatRelative(created, language === 'en' ? 'en' : 'es', now);
 
     return created.toLocaleDateString(language === 'es' ? 'es-CO' : 'en-US');
   };

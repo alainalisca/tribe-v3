@@ -31,13 +31,13 @@ describe('sitemap', () => {
     const urls = (await sitemap()).map((e) => e.url);
     expect(urls.some((u) => u.endsWith('/g/bullbox/'))).toBe(true);
     expect(urls.some((u) => u.endsWith('/i/i1/'))).toBe(true);
-    expect(urls.some((u) => u.endsWith('/s/s1/'))).toBe(true);
+    expect(urls.some((u) => u.endsWith('/session/s1/'))).toBe(true);
   });
 
   it('omits a section whose DAL failed and keeps the rest', async () => {
     vi.mocked(fetchSitemapSessions).mockResolvedValue({ success: false, error: 'boom' });
     const urls = (await sitemap()).map((e) => e.url);
-    expect(urls.some((u) => u.includes('/s/'))).toBe(false);
+    expect(urls.some((u) => u.includes('/session/'))).toBe(false);
     expect(urls.some((u) => u.endsWith('/g/bullbox/'))).toBe(true);
   });
 

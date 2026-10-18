@@ -50,6 +50,12 @@ export type CardProps = {
    * "ENTRENA CON" clears the photo. Every other card is `site`.
    */
   variant?: 'site' | 'coach';
+  /**
+   * The headline size, when the caller fits it to its own words (T-JOIN1: a
+   * session card's "<Deporte> con <Nombre>" is longer than any site card's).
+   * Overrides `variant`'s size.
+   */
+  headlinePx?: number;
   /** A coach card with no photo: this letter, large and lime, over a faint grid on the right. */
   initial?: string;
   lang: CardLang;
@@ -149,7 +155,7 @@ export async function renderCard(props: CardProps): Promise<ImageResponse> {
   const { line, sub, tag, tagStyle = 'lime', photo, tiles, lang } = props;
   if (photo && tiles) throw new Error('renderCard: photo and tiles are mutually exclusive');
   const upper = upperFor(lang);
-  const size = props.variant === 'coach' ? HEADLINE_COACH : headlineSize(line);
+  const size = props.headlinePx ?? (props.variant === 'coach' ? HEADLINE_COACH : headlineSize(line));
   const lineHeight = headlineLineHeight(line[1], lang);
 
   const [fonts, wordmark, photoSrc, tileSrcs] = await Promise.all([
@@ -333,7 +339,19 @@ export const CARD_JPEG_QUALITY = 82;
 export async function cardResponse(props: CardProps): Promise<Response> {
   const png = Buffer.from(await (await renderCard(props)).arrayBuffer());
   try {
-    const jpeg = await sharp(png).jpeg({ quality: CARD_JPEG_QUALITY, mozjpeg: true }).toBuffer();
+    // Baseline, not progressive: the format every link scraper decodes
+    // (T-JOIN1, after a WhatsApp preview came back empty). mozjpeg's settings
+    // spelled out without optimiseScans, which would force progressive.
+    const jpeg = await sharp(png)
+      .jpeg({
+        quality: CARD_JPEG_QUALITY,
+        progressive: false,
+        trellisQuantisation: true,
+        overshootDeringing: true,
+        quantisationTable: 3,
+        optimiseCoding: true,
+      })
+      .toBuffer();
     return new Response(new Uint8Array(jpeg), { headers: { 'Content-Type': 'image/jpeg' } });
   } catch (error) {
     logError(error, { action: 'og.cardResponse.jpeg' });

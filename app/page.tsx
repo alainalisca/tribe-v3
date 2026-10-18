@@ -55,9 +55,12 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useHomeFeed } from './useHomeFeed';
 import StaleSessionToSite from './StaleSessionToSite';
+import { isFeedLite } from '@/lib/features/feedLite';
 
 export default function HomePage() {
   const f = useHomeFeed();
+  // T-JOIN1 Part D: NEXT_PUBLIC_FEED_LITE drops the nine interstitials (lib/features/feedLite.ts).
+  const lite = isFeedLite();
   const { pullDistance, isRefreshing, handlers } = usePullToRefresh({
     onRefresh: async () => {
       await f.loadSessions();
@@ -136,13 +139,15 @@ export default function HomePage() {
         <PullToRefreshIndicator pullDistance={pullDistance} isRefreshing={isRefreshing} threshold={80} />
         <div className="max-w-2xl md:max-w-4xl mx-auto p-4 md:p-6">
           {/* ── Stories ── */}
-          <div className="mb-2">
-            <StoriesRow
-              userId={f.user?.id || null}
-              userAvatar={f.userProfile?.avatar_url}
-              liveUserIds={f.liveUserIdSet}
-            />
-          </div>
+          {!lite && (
+            <div className="mb-2">
+              <StoriesRow
+                userId={f.user?.id || null}
+                userAvatar={f.userProfile?.avatar_url}
+                liveUserIds={f.liveUserIdSet}
+              />
+            </div>
+          )}
 
           {/* ── Combined City Greeting + Weather (single line) ── */}
           <CityGreeting activeHood={ACTIVE_CITY.neighborhoods.find((n) => n.id === f.selectedNeighborhood) || null} />
@@ -263,12 +268,12 @@ export default function HomePage() {
               {f.user && (
                 <>
                   <FeaturedInstructors language={f.language} />
-                  <FeaturedPartnerBanner />
+                  {!lite && <FeaturedPartnerBanner />}
                   <FindTrainingPartners language={f.language} />
                   <LocalFitnessEventsSection language={f.language} />
-                  <StoriesCarousel language={f.language} userId={f.user?.id || null} />
-                  <PopularVenuesSection language={f.language} />
-                  <PopularRoutesSection language={f.language} />
+                  {!lite && <StoriesCarousel language={f.language} userId={f.user?.id || null} />}
+                  {!lite && <PopularVenuesSection language={f.language} />}
+                  {!lite && <PopularRoutesSection language={f.language} />}
                 </>
               )}
             </div>
@@ -306,7 +311,7 @@ export default function HomePage() {
                             />
                           );
                         }
-                        return <StreakBanner key="banner-streak" userId={f.user.id} />;
+                        return lite ? null : <StreakBanner key="banner-streak" userId={f.user.id} />;
                       })()
                     : null,
                   // After 4th card and onward: lazy-mount.
@@ -315,11 +320,12 @@ export default function HomePage() {
                       <FeaturedInstructors language={f.language} />
                     </LazyMount>
                   ) : null,
-                  5: f.user ? (
-                    <LazyMount key="disc-featured-partner-lazy" minHeight="150px">
-                      <FeaturedPartnerBanner />
-                    </LazyMount>
-                  ) : null,
+                  5:
+                    f.user && !lite ? (
+                      <LazyMount key="disc-featured-partner-lazy" minHeight="150px">
+                        <FeaturedPartnerBanner />
+                      </LazyMount>
+                    ) : null,
                   6: f.user ? (
                     <LazyMount key="disc-partners-lazy" minHeight="200px">
                       <FindTrainingPartners language={f.language} />
@@ -327,7 +333,7 @@ export default function HomePage() {
                   ) : null,
                   // After 7th card: instructor upsell (only for non-instructors)
                   7:
-                    f.user && f.userProfile && !f.userProfile.is_instructor ? (
+                    f.user && f.userProfile && !f.userProfile.is_instructor && !lite ? (
                       <LazyMount key="banner-instructor-upsell-lazy" minHeight="120px">
                         <InstructorUpsellBanner userId={f.user.id} language={f.language} />
                       </LazyMount>
@@ -338,26 +344,30 @@ export default function HomePage() {
                     </LazyMount>
                   ) : null,
                   // After 10th card: referral
-                  10: f.user ? (
-                    <LazyMount key="banner-referral-lazy" minHeight="120px">
-                      <ReferralBanner />
-                    </LazyMount>
-                  ) : null,
-                  12: f.user ? (
-                    <LazyMount key="disc-stories-lazy" minHeight="180px">
-                      <StoriesCarousel language={f.language} userId={f.user?.id || null} />
-                    </LazyMount>
-                  ) : null,
-                  15: f.user ? (
-                    <LazyMount key="disc-venues-lazy" minHeight="220px">
-                      <PopularVenuesSection language={f.language} />
-                    </LazyMount>
-                  ) : null,
-                  18: f.user ? (
-                    <LazyMount key="disc-routes-lazy" minHeight="220px">
-                      <PopularRoutesSection language={f.language} />
-                    </LazyMount>
-                  ) : null,
+                  10:
+                    f.user && !lite ? (
+                      <LazyMount key="banner-referral-lazy" minHeight="120px">
+                        <ReferralBanner />
+                      </LazyMount>
+                    ) : null,
+                  12:
+                    f.user && !lite ? (
+                      <LazyMount key="disc-stories-lazy" minHeight="180px">
+                        <StoriesCarousel language={f.language} userId={f.user?.id || null} />
+                      </LazyMount>
+                    ) : null,
+                  15:
+                    f.user && !lite ? (
+                      <LazyMount key="disc-venues-lazy" minHeight="220px">
+                        <PopularVenuesSection language={f.language} />
+                      </LazyMount>
+                    ) : null,
+                  18:
+                    f.user && !lite ? (
+                      <LazyMount key="disc-routes-lazy" minHeight="220px">
+                        <PopularRoutesSection language={f.language} />
+                      </LazyMount>
+                    ) : null,
                 };
 
                 const items: React.ReactNode[] = [];
@@ -414,7 +424,7 @@ export default function HomePage() {
           )}
 
           {/* ── Explore City Neighborhoods ── */}
-          <ExploreCitySection />
+          {!lite && <ExploreCitySection />}
         </div>
       </div>
 

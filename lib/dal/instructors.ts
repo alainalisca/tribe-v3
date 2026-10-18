@@ -8,6 +8,8 @@ import { isInstructorProfileComplete } from '@/lib/instructorProfile';
 import type { DalResult } from './types';
 import { fetchOrganizationUserIds } from './gymDirectory';
 import { buildExclusionFilter } from '@/lib/instructorExclusion';
+import { bogotaDateOffset, bogotaToday } from '@/lib/time/bogotaDate';
+import { hiddenAdminIds, visibleUsersFilter, withoutAdmins } from './visibleUsers';
 
 /** Full instructor profile for Browse Instructors page */
 export interface InstructorProfile {
@@ -43,6 +45,12 @@ export async function fetchInstructors(
     lat?: number;
     lng?: number;
     limit?: number;
+    /**
+     * Admins to leave out. A signed-out page cannot read them (migration 113),
+     * so its server passes them from a service-role read; otherwise they are
+     * read here with the caller's client.
+     */
+    adminIds?: string[];
   }
 ): Promise<DalResult<InstructorProfile[]>> {
   try {
@@ -72,25 +80,21 @@ export async function fetchInstructors(
       query = query.ilike('name', `%${options.searchQuery}%`);
     }
 
-    // Sort
+    // Sort. 'sessions' (the default, and 'nearest' before the client sorts by
+    // distance) is sessions in the last 30 days, then newest (T-JOIN1): it is
+    // counted below and applied after the fetch, so the limit is too.
     const sortBy = options?.sortBy ?? 'sessions';
-    switch (sortBy) {
-      case 'rating':
-        query = query.order('average_rating', { ascending: false, nullsFirst: false });
-        break;
-      case 'newest':
-        query = query.order('created_at', { ascending: false });
-        break;
-      case 'nearest':
-      case 'sessions':
-      default:
-        query = query.order('total_sessions_hosted', { ascending: false, nullsFirst: false });
-        break;
-    }
+    const byRecent = sortBy !== 'rating' && sortBy !== 'newest';
+    if (sortBy === 'rating') query = query.order('average_rating', { ascending: false, nullsFirst: false });
+    else query = query.order('created_at', { ascending: false });
 
-    if (options?.limit) {
+    if (options?.limit && !byRecent) {
       query = query.limit(options.limit);
     }
+
+    // T-JOIN1: never an admin (lib/dal/visibleUsers.ts). The view already
+    // leaves out test, banned and deleted accounts.
+    query = withoutAdmins(query, 'id', options?.adminIds ?? (await hiddenAdminIds(supabase)));
 
     // T-GYM1: gym and studio accounts are ordinary users rows with
     // is_instructor = true -- there is no account_type column -- so without
@@ -114,7 +118,12 @@ export async function fetchInstructors(
     // required fields (photo, bio, specialty, location, years of experience).
     // Filtered on the raw rows so the check sees bio/instructor_bio before the
     // InstructorProfile mapping drops them.
-    const complete = (data || []).filter((row) => isInstructorProfileComplete(row));
+    let complete = (data || []).filter((row) => isInstructorProfileComplete(row));
+    if (byRecent) {
+      const recent = await recentSessionCounts(supabase);
+      complete = orderByRecentSessions(complete, recent);
+      if (options?.limit) complete = complete.slice(0, options.limit);
+    }
 
     const instructors: InstructorProfile[] = complete.map((row) => {
       // Coords arrive pre-rounded to 2dp (~1.1km) from users_discoverable. The
@@ -162,6 +171,40 @@ export interface FeaturedInstructor {
   years_experience: number | null;
 }
 
+/** Sessions each coach held in the last 30 days (Bogotá dates, cancelled ones not counted). */
+export async function recentSessionCounts(supabase: SupabaseClient): Promise<Map<string, number>> {
+  const counts = new Map<string, number>();
+  const { data, error } = await supabase
+    .from('sessions_public')
+    .select('creator_id')
+    .eq('status', 'active')
+    .gte('date', bogotaDateOffset(-30))
+    .lte('date', bogotaToday())
+    .limit(5000);
+  if (error) {
+    logError(error, { action: 'recentSessionCounts' });
+    return counts;
+  }
+  for (const row of (data ?? []) as { creator_id: string | null }[]) {
+    if (row.creator_id) counts.set(row.creator_id, (counts.get(row.creator_id) ?? 0) + 1);
+  }
+  return counts;
+}
+
+/**
+ * The instructor list's order (T-JOIN1): most sessions in the last 30 days,
+ * then newest account. Never by admin status or a lifetime counter.
+ */
+export function orderByRecentSessions<T extends { id: string; created_at?: string | null }>(
+  rows: T[],
+  recent: Map<string, number>
+): T[] {
+  return [...rows].sort(
+    (a, b) =>
+      (recent.get(b.id) ?? 0) - (recent.get(a.id) ?? 0) || (b.created_at ?? '').localeCompare(a.created_at ?? '')
+  );
+}
+
 /**
  * Fetch featured instructors for the home feed teaser.
  * Prioritizes: verified instructors, high ratings, most sessions hosted.
@@ -172,17 +215,14 @@ export async function fetchFeaturedInstructors(
   limit: number = 6
 ): Promise<DalResult<FeaturedInstructor[]>> {
   try {
-    const { data, error } = await supabase
+    const base = supabase
       .from('users')
       .select(
         'id, name, avatar_url, photos, specialties, average_rating, total_reviews, total_sessions_hosted, storefront_tagline, is_verified_instructor, location, years_experience'
       )
-      .eq('is_instructor', true)
-      // Hide seeded/test accounts from the home-page Featured Instructors
-      // carousel. Migration 052.
-      .eq('is_test_account', false)
-      // Hide soft-deleted accounts.
-      .is('deleted_at', null)
+      .eq('is_instructor', true);
+    // T-JOIN1: never an admin, test, banned or deleted account (lib/dal/visibleUsers.ts).
+    const { data, error } = await visibleUsersFilter(base, { idColumn: 'id', adminIds: await hiddenAdminIds(supabase) })
       .order('is_verified_instructor', { ascending: false, nullsFirst: false })
       .order('average_rating', { ascending: false, nullsFirst: false })
       .order('total_sessions_hosted', { ascending: false, nullsFirst: false })

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
+import UserAvatar from '@/components/UserAvatar';
 import { Heart, MessageCircle, Share2, Pin, ShieldCheck, Play } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import {
@@ -16,25 +16,12 @@ import { showError } from '@/lib/toast';
 import { haptic } from '@/lib/haptics';
 import { trackEvent } from '@/lib/analytics';
 import { sportTranslations } from '@/lib/translations';
+import { formatRelative } from '@/lib/time/formatRelative';
 
 interface InstructorPostCardProps {
   post: PostWithAuthor;
   viewerId: string | null;
   language: 'en' | 'es';
-}
-
-function formatRelative(iso: string, language: 'en' | 'es'): string {
-  const diffMin = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 60000));
-  const diffHr = Math.floor(diffMin / 60);
-  const diffDay = Math.floor(diffHr / 24);
-  if (language === 'es') {
-    if (diffMin < 60) return `hace ${Math.max(1, diffMin)} min`;
-    if (diffHr < 24) return `hace ${diffHr} h`;
-    return `hace ${diffDay} d`;
-  }
-  if (diffMin < 60) return `${Math.max(1, diffMin)}m ago`;
-  if (diffHr < 24) return `${diffHr}h ago`;
-  return `${diffDay}d ago`;
 }
 
 function postTypeLabel(type: PostWithAuthor['post_type'], language: 'en' | 'es'): string | null {
@@ -156,13 +143,12 @@ export default function InstructorPostCard({ post, viewerId, language }: Instruc
       {/* Author */}
       <header className="flex items-center gap-3">
         <div className="w-10 h-10 rounded-full bg-theme-surface overflow-hidden relative flex-shrink-0">
-          {post.author?.avatar_url ? (
-            <Image src={post.author.avatar_url} alt={post.author.name} fill sizes="40px" className="object-cover" />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-sm text-theme-tertiary">
-              {(post.author?.name || '?').charAt(0).toUpperCase()}
-            </div>
-          )}
+          <UserAvatar
+            src={post.author?.avatar_url}
+            name={post.author?.name}
+            className="h-full w-full bg-transparent dark:bg-transparent"
+            textClassName="font-normal text-[#5B616B] dark:text-[#B2BAC6]"
+          />
         </div>
         <div className="flex-1 min-w-0">
           <Link
@@ -258,9 +244,12 @@ export default function InstructorPostCard({ post, viewerId, language }: Instruc
             {comments.map((c) => (
               <li key={c.id} className="flex items-start gap-2">
                 <div className="w-6 h-6 rounded-full bg-theme-surface overflow-hidden relative flex-shrink-0">
-                  {c.user?.avatar_url ? (
-                    <Image src={c.user.avatar_url} alt={c.user.name} fill sizes="24px" className="object-cover" />
-                  ) : null}
+                  <UserAvatar
+                    src={c.user?.avatar_url}
+                    name={c.user?.name}
+                    className="h-full w-full bg-transparent dark:bg-transparent"
+                    textClassName="text-[10px] font-normal text-[#5B616B] dark:text-[#B2BAC6]"
+                  />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs">

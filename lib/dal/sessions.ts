@@ -7,6 +7,8 @@ import type { Session, SessionUpdate, SessionInsert } from '@/lib/database.types
 import { logError } from '@/lib/logger';
 import { signRecapPhotoUrls } from '@/lib/storage/privateMedia';
 import { bogotaToday } from '@/lib/time/bogotaDate';
+import { cardFieldsChanged, warmSessionCard } from '@/lib/share/warmSessionCard';
+import { hiddenAdminIds, visibleUsersFilter } from './visibleUsers';
 
 import type { DalResult, SessionWithCreator } from './types';
 export type { DalResult } from './types';
@@ -399,16 +401,23 @@ export async function fetchUpcomingSessions(supabase: SupabaseClient): Promise<D
     // RLS-H3: the home feed does not render attendee identities, so drop the
     // participants embed (it reads the raw table, which Gate 3 locks) and rely on
     // sessions.current_participants (087 trigger = confirmed count) for any count.
-    const { data, error } = await supabase
+    const query = supabase
       .from('sessions')
       .select(
         `
         *,
-        creator:users!sessions_creator_id_fkey(id, name, avatar_url, average_rating, total_reviews, total_sessions_hosted, cover_image_url)
+        creator:users!sessions_creator_id_fkey!inner(id, name, avatar_url, average_rating, total_reviews, total_sessions_hosted, cover_image_url)
       `
       )
       .eq('status', 'active')
-      .gte('date', today)
+      .gte('date', today);
+    // T-JOIN1: never a session by an admin, a test, banned or deleted account
+    // (lib/dal/visibleUsers.ts). The embed is !inner so the filter drops the row.
+    const { data, error } = await visibleUsersFilter(query, {
+      prefix: 'creator.',
+      idColumn: 'creator_id',
+      adminIds: await hiddenAdminIds(supabase),
+    })
       .order('date', { ascending: true })
       .order('start_time', { ascending: true });
 
@@ -712,7 +721,9 @@ export async function updateSessionAsHost(
 
     const { data: session, error: fetchError } = await supabase
       .from('sessions')
-      .select('creator_id, date, start_time, is_recurring, recurring_parent_id')
+      .select(
+        'creator_id, date, start_time, is_recurring, recurring_parent_id, title, sport, location, location_lat, location_lng, partner_id, partner_status'
+      )
       .eq('id', sessionId)
       .single();
     if (fetchError || !session) return { success: false, error: fetchError?.message || 'Session not found' };
@@ -762,6 +773,10 @@ export async function updateSessionAsHost(
 
     const { error } = await supabase.from('sessions').update(update).eq('id', sessionId);
     if (error) return { success: false, error: error.message };
+    // T-JOIN1: a change the share card shows makes a new card; warm it.
+    if (cardFieldsChanged(session as Record<string, unknown>, update as Record<string, unknown>)) {
+      warmSessionCard(sessionId);
+    }
     return { success: true };
   } catch (error) {
     logError(error, { action: 'updateSessionAsHost', sessionId });
@@ -882,6 +897,8 @@ export async function insertSession(supabase: SupabaseClient, data: SessionInser
 
     const { data: session, error } = await supabase.from('sessions').insert(data).select().single();
     if (error) return { success: false, error: error.message };
+    // T-JOIN1: its share card into the CDN before anyone shares the link.
+    if (session?.id) warmSessionCard(session.id);
     return { success: true, data: session };
   } catch (error) {
     logError(error, { action: 'insertSession' });

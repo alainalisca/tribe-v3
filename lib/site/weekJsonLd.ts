@@ -19,7 +19,7 @@ export function weekBoardJsonLd(
   const items = rows
     .map((r) =>
       sessionEventJsonLd({
-        url: `${base}/s/${r.id}/`,
+        url: `${base}/session/${r.id}/`,
         title: rowTitle(r, lang),
         sport: r.sport,
         description: null,

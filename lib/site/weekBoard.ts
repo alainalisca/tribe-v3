@@ -6,9 +6,9 @@
  * The rules (Al, 2026-10-16):
  * - Published only: active, public, not yet started (Bogotá time), today
  *   through seven days out.
- * - Never staff or test sessions: creators who are admins, test accounts,
- *   banned or deleted are left out. TODO(T-TRUST1): switch to users.is_staff
- *   when that column exists; it does not yet.
+ * - Never staff or test sessions: creators who are admins, test accounts
+ *   (users.is_test_account), banned or deleted are left out
+ *   (lib/dal/visibleUsers.ts, shared with every public list since T-JOIN1).
  * - One row per series per WEEK: every occurrence of a recurring series in the
  *   window collapses into one row that names its days ("Lun a vie · 06:00") and
  *   links to the next occurrence.
@@ -20,6 +20,7 @@
  *   only be the city, the row has no place and its title carries it.
  */
 import { seriesParentId } from '@/lib/dal/sessions';
+import { isVisibleUser } from '@/lib/dal/visibleUsers';
 import { ACTIVE_CITY } from '@/lib/city-config';
 import { neighborhoodFromAddress } from '@/lib/sessionLocation';
 import { translateSport } from '@/lib/sportTranslationData';
@@ -57,11 +58,11 @@ export type BoardSessionRow = {
   } | null;
 };
 
-/** Staff, test, banned and deleted accounts never appear. TODO(T-TRUST1): users.is_staff. */
+/** Staff, test, banned and deleted accounts never appear: the one rule, lib/dal/visibleUsers.ts (T-JOIN1). */
 export function isListedCreator(
   creator: BoardSessionRow['creator']
 ): creator is NonNullable<BoardSessionRow['creator']> {
-  return !!creator && !creator.is_admin && !creator.is_test_account && !creator.banned && !creator.deleted_at;
+  return isVisibleUser(creator);
 }
 
 /**
