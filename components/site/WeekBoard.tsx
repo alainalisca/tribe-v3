@@ -2,11 +2,10 @@ import Link from 'next/link';
 import { CANONICAL_SITE_URL } from '@/lib/http/siteUrl';
 import { serializeJsonLd } from '@/lib/seo/jsonLd';
 import { siteT, type SiteLanguage } from '@/lib/site/i18n';
-import { daysLabel, rowTitle, WEEK_BOARD_MAX } from '@/lib/site/weekBoard';
+import { WEEK_BOARD_MAX } from '@/lib/site/weekBoard';
 import { weekBoardJsonLd } from '@/lib/site/weekJsonLd';
-import { formatPrice } from '@/lib/site/weekFormat';
 import type { WeekRow } from '@/lib/site/weekTypes';
-import { translateSport } from '@/lib/sportTranslationData';
+import FixtureRow from './FixtureRow';
 import { ArrowRight } from './icons';
 import b from './base.module.css';
 import w from './week.module.css';
@@ -32,52 +31,9 @@ export default function WeekBoard({ lang, rows }: { lang: SiteLanguage; rows: We
         <p className={b.phoneHide}>{t('site.week.lede')}</p>
       </div>
       <ul className={w.table}>
-        {shown.map((r) => {
-          const sport = translateSport(r.sport, lang);
-          const title = rowTitle(r, lang);
-          // Rendered twice: after the title on wide screens, on the place line on
-          // phones; the hidden copy is display:none, so it is read once.
-          const tags = (
-            <>
-              {r.price === null ? (
-                <span className={w.tag}>{t('site.week.free')}</span>
-              ) : (
-                <span className={`${w.tag} ${w.priceTag}`}>{formatPrice(r.price, lang)}</span>
-              )}
-              {r.spotsLeft !== null && (
-                <span className={w.tag}>
-                  {r.spotsLeft === 1 ? t('site.week.spotsOne') : t('site.week.spots', { n: r.spotsLeft })}
-                </span>
-              )}
-            </>
-          );
-          return (
-            <li key={r.id}>
-              {/* No aria-label (Al, 2026-10-17): the row's visible text is its name, so
-                  a voice-control user can say any of it (WCAG 2.5.3). */}
-              <Link className={w.row} href={`/s/${r.id}/`}>
-                <span className={w.day}>{daysLabel(r.weekdays, lang)}</span>
-                <span className={w.hr}>{r.startTime}</span>
-                <span className={w.ses}>
-                  {title}
-                  <span className={w.tags}>{tags}</span>
-                  <small>
-                    {r.title && sport ? `${sport} · ` : ''}
-                    {r.duration} min{r.price ? ` · ${formatPrice(r.price, lang)}` : ''}
-                  </small>
-                </span>
-                <span className={w.loc}>
-                  {r.place}
-                  <span className={w.tagsPhone}>{tags}</span>
-                </span>
-                <span className={w.who}>{r.creatorName}</span>
-                <span className={w.go}>
-                  {t('site.week.ask')} <ArrowRight />
-                </span>
-              </Link>
-            </li>
-          );
-        })}
+        {shown.map((r) => (
+          <FixtureRow key={r.id} lang={lang} row={r} />
+        ))}
         {shown.length < 3 && (
           <li>
             <Link className={`${w.row} ${w.publish}`} href="/coaches/">

@@ -39,6 +39,9 @@ describe('site photos (Part C)', () => {
 });
 
 describe('one file, one slot (T-SITE1.1 Part A)', () => {
+  // The site's own photo map only. public/og/ (T-SHARE1 share card photos) is
+  // exempt: a card may show a frame the site also shows (IMG_8942, IMG_0455),
+  // because the card is what the link looks like before anyone opens the page.
   it('no file is registered under two keys', () => {
     const byPath = new Map<string, PhotoKey[]>();
     for (const key of KEYS) byPath.set(SITE_PHOTOS[key], [...(byPath.get(SITE_PHOTOS[key]) ?? []), key]);
@@ -86,6 +89,15 @@ describe('banned frames (T-SITE1.1 Part B)', () => {
     const files = walk(join(process.cwd(), 'public'));
     expect(files.length).toBeGreaterThan(50);
     expect(files.filter((f) => BANNED.test(f.split('/').pop() ?? ''))).toEqual([]);
+  });
+
+  // T-SHARE1 Part D: the share card photos are under the same rule. Named on
+  // its own so that a walk which ever stopped reaching public/og/ fails here.
+  it('covers the share card photos in public/og/ too', () => {
+    const og = walk(join(process.cwd(), 'public', 'og'));
+    expect(og.length).toBeGreaterThanOrEqual(12);
+    expect(og.filter((f) => BANNED.test(f.split('/').pop() ?? ''))).toEqual([]);
+    expect(walk(join(process.cwd(), 'public')).filter((f) => f.includes('/public/og/'))).toEqual(og);
   });
 
   it('the pattern catches the names the old pass used', () => {

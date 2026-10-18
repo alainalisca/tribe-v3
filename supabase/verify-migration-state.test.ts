@@ -227,6 +227,10 @@ describe('public.users columns added after 067 carry an explicit SELECT grant', 
         'signup_attributed_at',
       ].map((c) => [c, 'withheld from clients by design (214): arrival and inviter are not public'])
     ),
+    // 220 (T-SHARE1 Part C): images an admin ruled out of a coach's share card.
+    // A moderation list read by the card route with the service role; 220's own
+    // post-flight asserts no client role can read it.
+    card_photo_rejects: 'withheld from clients by design (220): a moderation list',
   };
 
   /** Strip block and line comments so commented-out DDL never counts. */

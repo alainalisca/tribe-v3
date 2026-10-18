@@ -1,0 +1,125 @@
+/*
+ * T-SHARE1 Part E: the public coach page (/i/<handle>) in the Jornada frame,
+ * matching the coach's share card. Charcoal hero with the card's photo, then a
+ * paper body in ink. Lime appears as the dot after the name, the "Reserva"
+ * fill and, with no photo, the initial: never as text on paper.
+ */
+.hero {
+  background: var(--char);
+}
+.photo {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  overflow: hidden;
+  background: var(--char2);
+}
+.photo img {
+  object-fit: cover;
+}
+@media (min-width: 900px) {
+  .photo {
+    aspect-ratio: 16 / 9;
+  }
+}
+/* No photo: the card's charcoal, its faint grid and the initial. */
+.initials {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+.initials span {
+  font-family: var(--disp);
+  font-variation-settings: 'opsz' 72;
+  font-weight: 900;
+  font-size: clamp(180px, 42vw, 440px);
+  line-height: 0.8;
+  color: var(--lime);
+  text-transform: uppercase;
+}
+.head {
+  padding-block: 26px 34px;
+}
+.name {
+  font-size: clamp(54px, 9vw, 128px);
+  overflow-wrap: anywhere;
+}
+.dot {
+  display: inline-block;
+  width: 0.16em;
+  height: 0.16em;
+  border-radius: 50%;
+  background: var(--lime);
+  margin-left: 0.06em;
+}
+.meta {
+  margin-top: 14px;
+  color: var(--soft);
+  font-size: 13px;
+}
+.body {
+  background: var(--paper);
+  color: var(--ink);
+  color-scheme: light;
+}
+.block {
+  padding-block: 40px 44px;
+}
+.block + .block {
+  border-top: 1px solid var(--rule-d);
+}
+.label {
+  display: block;
+  color: #4a5058;
+  margin-bottom: 16px;
+}
+.empty {
+  background: var(--ink);
+  color: var(--paper);
+  padding: 22px 24px;
+  font-size: 17px;
+}
+.bio {
+  max-width: 62ch;
+  font-size: 17px;
+  line-height: 1.6;
+  white-space: pre-line;
+}
+.sub {
+  display: block;
+  color: #4a5058;
+  margin: 28px 0 12px;
+}
+.chips {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.lines {
+  margin: 0;
+  padding-left: 18px;
+  max-width: 62ch;
+  font-size: 16px;
+  line-height: 1.6;
+}
+.lines + .chips,
+.chips + .lines {
+  margin-top: 12px;
+}
+.chips li {
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 6px 10px;
+  box-shadow: inset 0 0 0 1px var(--ink);
+}

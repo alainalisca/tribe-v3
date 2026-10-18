@@ -185,3 +185,58 @@
     grid-area: loc;
   }
 }
+
+/*
+ * T-SHARE1 Part E: the rows on a paper body (the coach page, in a `.paper`
+ * table). Ink on paper throughout: lime text on paper measures about 1.5:1, so
+ * lime is only the "Reserva" fill, the page's one lime action. The coach column
+ * is hidden (it is their own page), and on a phone "Reserva" stays visible.
+ */
+.paper {
+  border-top-color: var(--ink);
+}
+.paper .row {
+  color: var(--ink);
+  border-bottom-color: var(--rule-d);
+  grid-template-columns: 150px 70px minmax(0, 1.6fr) minmax(0, 1fr) auto;
+}
+.paper .row:hover {
+  background: rgba(18, 20, 23, 0.04);
+}
+.paper .hr {
+  color: var(--ink);
+}
+.paper .ses small,
+.paper .loc {
+  color: #4a5058;
+}
+.paper .tag {
+  background: transparent;
+  color: var(--ink);
+  box-shadow: inset 0 0 0 1px var(--ink);
+}
+.paper .who {
+  display: none;
+}
+.paper .go {
+  background: var(--lime);
+  color: var(--ink);
+  padding: 9px 14px;
+}
+@media (max-width: 900px) {
+  .paper .row {
+    grid-template-columns: 74px minmax(0, 1fr) auto;
+    grid-template-areas: 'day ses go' 'hr loc go';
+    padding-block: 12px;
+  }
+  .paper .go {
+    display: inline-flex;
+    grid-area: go;
+    align-self: center;
+    padding: 7px 10px;
+    font-size: 13px;
+  }
+  .paper .loc {
+    color: #4a5058;
+  }
+}

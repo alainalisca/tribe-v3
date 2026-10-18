@@ -11,6 +11,7 @@ import BottomNav from '@/components/BottomNav';
 import StorefrontEditor from '@/components/dashboard/StorefrontEditor';
 import SessionManager from '@/components/dashboard/SessionManager';
 import SportDemandSummary from '@/components/instructor/SportDemandSummary';
+import CoachLinkBlock from '@/components/instructor/CoachLinkBlock';
 import TribeOSEntryCard from '@/components/tribe-os/TribeOSEntryCard';
 import InstructorProfileIncompleteBanner from '@/components/InstructorProfileIncompleteBanner';
 import InstructorAnalytics from '@/components/dashboard/InstructorAnalytics';
@@ -234,6 +235,9 @@ export default function InstructorDashboardPage() {
             page is instructor-gated (it redirects a non-instructor above),
             which matches the RPC's own gate. */}
         <SportDemandSummary language={language} />
+
+        {/* T-SHARE1 Part C: the coach's own link, to copy or send on WhatsApp. */}
+        {profile?.id && <CoachLinkBlock userId={profile.id} language={language} className="mt-4" />}
 
         {/* Tab Bar */}
         <div className="mt-4 flex gap-1 bg-white dark:bg-tribe-surface rounded-xl p-1 border border-stone-200 dark:border-tribe-mid">

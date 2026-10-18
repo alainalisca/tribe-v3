@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   buildWeekBoard,
+  buildWeekSeries,
   collapseSeries,
   daysLabel,
   isoWeekday,
@@ -9,6 +10,7 @@ import {
   rowTitle,
   shortName,
   sportCounts,
+  sportRows,
   type BoardSessionRow,
 } from './weekBoard';
 import { weekBoardJsonLd } from './weekJsonLd';
@@ -292,5 +294,22 @@ describe('JSON-LD for the board', () => {
 
   it('emits nothing for an empty board', () => {
     expect(weekBoardJsonLd([], 'es', 'https://tribelatam.com')).toBeNull();
+  });
+});
+
+describe("a sport page's week block (T-SHARE1)", () => {
+  it("shows up to six of its own rows, past the board's two per sport and one per coach", () => {
+    const raw = [
+      ...Array.from({ length: 8 }, (_, i) =>
+        session({ sport: 'Boxing', creatorId: i < 4 ? 'c1' : `c${i}`, start_time: `0${i + 1}:00:00` })
+      ),
+      session({ sport: 'Yoga', creatorId: 'y1' }),
+    ];
+    const series = buildWeekSeries(raw, TODAY, LAST, NOW);
+    expect(buildWeekBoard(raw, TODAY, LAST, NOW).filter((r) => r.sport === 'Boxing')).toHaveLength(2);
+    const boxing = sportRows(series, ['Boxing'], 6);
+    expect(boxing).toHaveLength(6);
+    expect(boxing.map((r) => r.startTime)).toEqual(['01:00', '02:00', '03:00', '04:00', '05:00', '06:00']);
+    expect(sportRows(series, ['Muay Thai', 'Kickboxing'], 6)).toEqual([]);
   });
 });

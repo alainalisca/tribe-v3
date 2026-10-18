@@ -113,8 +113,10 @@ function columnsFromUnappliedMigrations(): Array<{ column: string; migration: st
  *      mirror-sync commit after applying 190 must delete this line.
  */
 const KNOWN_NAME_COLLISIONS: Record<string, string> = {
-  // Empty. 190_community_soft_delete:deleted_at was listed here until 190 was
-  // applied (2026-09-24) and recorded; the rot test below forced its removal.
+  // 190_community_soft_delete:deleted_at was listed here until 190 was applied
+  // (2026-09-24) and recorded; the rot test below forced its removal.
+  // 220_t_share1_card_photo_and_handle:handle was listed here until 220 was
+  // applied (2026-10-18) and recorded; the rot test below forced its removal.
 };
 
 const ROOTS = ['app', 'components', 'lib', 'contexts', 'hooks'];

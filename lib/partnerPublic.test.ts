@@ -152,7 +152,9 @@ describe('the share pages hide cancelled sessions', () => {
   // rows -- 25 of them in production when this was written. Without an explicit
   // status filter a cancelled class keeps advertising itself on a gym's public
   // page, and no behavioural test can see it because the client is mocked.
-  it.each(['app/g/[id]/GymShareClient.tsx', 'app/i/[id]/InstructorShareClient.tsx'])(
+  // The coach page's sessions read moved to lib/site/coachPage.ts when T-SHARE1
+  // Part E made /i/ server-rendered (it reads sessions, as the week board does).
+  it.each(['app/g/[id]/GymShareClient.tsx', 'lib/site/coachPage.ts'])(
     '%s filters status=active on its sessions_public read',
     (file) => {
       const src = readFileSync(join(process.cwd(), file), 'utf8');

@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import AthletesContent from '@/components/site/pages/AthletesContent';
 import { siteLanguage } from '@/lib/site/i18n';
 import { siteMetadata } from '@/lib/site/metadata';
-import { photo } from '@/lib/site/photos';
+import { siteCardPath } from '@/lib/site/paths';
 import { fetchWeekBoard } from '@/lib/site/week';
 
 /**
@@ -13,7 +13,8 @@ import { fetchWeekBoard } from '@/lib/site/week';
 type Props = { params: Promise<{ lang: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  return siteMetadata('para-atletas', '/para-atletas/', photo('hero_ath'), siteLanguage((await params).lang));
+  const lang = siteLanguage((await params).lang);
+  return siteMetadata('para-atletas', '/para-atletas/', siteCardPath('para-atletas', lang), lang);
 }
 
 export default async function ParaAtletasPage({ params }: Props) {

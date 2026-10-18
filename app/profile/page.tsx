@@ -21,6 +21,7 @@ import PartnerDashboardEntryCard from '@/components/partner/PartnerDashboardEntr
 import AthletesEntryCard from '@/components/atletas/AthletesEntryCard';
 import BringAFriendCard from '@/components/referral/BringAFriendCard';
 import { useMyReferralCode } from '@/hooks/useMyReferralCode';
+import CoachLinkBlock from '@/components/instructor/CoachLinkBlock';
 export default function ProfilePage() {
   const { language, t } = useLanguage();
   const {
@@ -264,6 +265,11 @@ export default function ProfilePage() {
                 {language === 'es' ? 'Panel del Instructor' : 'Instructor Dashboard'}
               </span>
             </Link>
+          )}
+
+          {/* T-SHARE1 Part C: the coach's own link, as a row under their dashboard. */}
+          {profile?.is_instructor && profile?.id && (
+            <CoachLinkBlock userId={profile.id} language={language} className="mt-3" />
           )}
 
           {/* Gym dashboard — the way into the venue-request queue. Auto-hides

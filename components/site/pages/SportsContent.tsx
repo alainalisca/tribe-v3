@@ -3,11 +3,20 @@ import Link from 'next/link';
 import { siteT, type SiteLanguage } from '@/lib/site/i18n';
 import { faceProps, photo } from '@/lib/site/photos';
 import { SITE_SPORT_COUNT } from '@/lib/site/sportCount';
-import { SPORT_GROUPS } from '@/lib/site/sportGroups';
+import { SPORT_GROUPS, type SportGroupKey } from '@/lib/site/sportGroups';
+import type { WeekRow } from '@/lib/site/weekTypes';
 import { translateSport } from '@/lib/sportTranslationData';
+import FixtureRow from '../FixtureRow';
 import { ArrowRight } from '../icons';
 import b from '../base.module.css';
+import w from '../week.module.css';
 import p from './pages.module.css';
+
+/**
+ * A sport page (/deportes/boxeo/ and five more, T-SHARE1 Part B): the sport's
+ * name in a sentence ("boxeo"), the group to open with, and this week's rows.
+ */
+export type SportFocus = { inline: string; group: SportGroupKey; rows: WeekRow[] };
 
 /**
  * Page: /deportes/ (T-SITE1 Part E, mock "Deportes"). The app's sports in the
@@ -16,9 +25,21 @@ import p from './pages.module.css';
  * counts this week's sessions from the live board query, so the page is never
  * stale. "Other" reads "Tu deporte".
  */
-export default function SportsContent({ lang, counts }: { lang: SiteLanguage; counts: Record<string, number> }) {
+export default function SportsContent({
+  lang,
+  counts,
+  focus,
+}: {
+  lang: SiteLanguage;
+  counts: Record<string, number>;
+  focus?: SportFocus;
+}) {
   const tr = siteT(lang);
   const t = (k: string, vars?: Record<string, string | number>) => tr(`site.sports.${k}`, vars);
+  // A sport page opens on its own group; the others follow in their usual order.
+  const groups = focus
+    ? [...SPORT_GROUPS.filter((g) => g.key === focus.group), ...SPORT_GROUPS.filter((g) => g.key !== focus.group)]
+    : SPORT_GROUPS;
   return (
     <section className={`${b.sec} ${b.g} ${p.top}`} aria-labelledby="pagina-titulo">
       <span className={`${b.mono} ${b.kick}`}>{t('kicker')}</span>
@@ -30,8 +51,27 @@ export default function SportsContent({ lang, counts }: { lang: SiteLanguage; co
         </h1>
         <p>{t('lede')}</p>
       </div>
+      {focus && (
+        <div className={p.sportWeek}>
+          <h2>{t('weekTitle', { sport: focus.inline })}</h2>
+          {focus.rows.length > 0 ? (
+            <ul className={w.table}>
+              {focus.rows.map((r) => (
+                <FixtureRow key={r.id} lang={lang} row={r} />
+              ))}
+            </ul>
+          ) : (
+            <div className={p.sportEmpty}>
+              <p>{t('weekEmpty', { sport: focus.inline })}</p>
+              <Link className={b.ulink} href="/coaches/">
+                {tr('site.week.publishGo')}
+              </Link>
+            </div>
+          )}
+        </div>
+      )}
       <div>
-        {SPORT_GROUPS.map((g, i) => (
+        {groups.map((g, i) => (
           <div key={g.key} className={p.sg}>
             <div className={p.gname}>
               <span className={`${b.mono} ${p.num}`}>{String(i + 1).padStart(2, '0')}</span>

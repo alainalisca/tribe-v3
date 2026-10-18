@@ -41,6 +41,12 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_APP_VERSION: (process.env.VERCEL_GIT_COMMIT_SHA ?? 'local').slice(0, 7),
   },
   trailingSlash: true,
+  // T-SHARE1: the site's share cards (lib/og/card.tsx) read their fonts, photos
+  // and the wordmark from public/ when Vercel redraws one (revalidate). public/
+  // is served by the CDN and is not in a function's files unless named here.
+  outputFileTracingIncludes: {
+    '/sitio/**': ['./public/fonts/*.ttf', './public/og/*.jpg', './public/tribe-wordmark.png'],
+  },
   // Security headers (CSP, HSTS, X-Frame-Options, etc.) live in middleware.ts
   // so every response goes through one codepath. See middleware.ts docblock.
   async redirects() {
