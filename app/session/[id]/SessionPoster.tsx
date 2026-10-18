@@ -39,21 +39,27 @@ export default function SessionPoster({
   creatorName,
   gymName,
   language,
+  place: placeOverride,
 }: {
   session: PosterSession;
   creatorName: string | null;
   /** The partner gym's name when the session is at an approved, active partner. */
   gymName: string | null;
   language: 'es' | 'en';
+  /** T-SSR1: the place worked out on the server (never the street address). */
+  place?: string | null;
 }) {
   const t = useTranslations('sessionPublic');
-  const { place } = publicSessionPlace({
-    partnerName: gymName,
-    partnerApproved: session.partner_status === 'approved' && !!gymName,
-    lat: session.location_lat,
-    lng: session.location_lng,
-    location: session.location,
-  });
+  const { place } =
+    placeOverride !== undefined
+      ? { place: placeOverride }
+      : publicSessionPlace({
+          partnerName: gymName,
+          partnerApproved: session.partner_status === 'approved' && !!gymName,
+          lat: session.location_lat,
+          lng: session.location_lng,
+          location: session.location,
+        });
   return (
     <PosterHeader
       title={publicSessionTitle({ title: session.title, sport: session.sport, creatorName }, language)}

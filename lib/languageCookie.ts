@@ -41,3 +41,20 @@ export function writeLanguageCookie(lang: CookieLanguage): void {
   if (typeof document === 'undefined') return;
   document.cookie = languageCookieString(lang);
 }
+
+/**
+ * T-SSR1: the language a server render picks for a visitor, in the client's
+ * own order (lib/LanguageContext.tsx): the tribe_lang cookie, then the
+ * browser's languages (Accept-Language), then Spanish. So a page rendered on
+ * the server is in the language the client would have chosen, and does not
+ * flip after hydration.
+ */
+export function serverLanguage(cookieValue: string | null | undefined, acceptLanguage: string | null): CookieLanguage {
+  if (cookieValue === 'en' || cookieValue === 'es') return cookieValue;
+  for (const part of (acceptLanguage ?? '').split(',')) {
+    const tag = part.split(';')[0].trim().toLowerCase();
+    if (tag.startsWith('es')) return 'es';
+    if (tag.startsWith('en')) return 'en';
+  }
+  return 'es';
+}

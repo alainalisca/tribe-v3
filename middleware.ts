@@ -6,6 +6,17 @@ import { canonicalLinkHeader } from '@/lib/seo/canonicalLink';
 import { hasAuthCookieName } from '@/lib/site/authCookie';
 import { LANGUAGE_COOKIE, languageFromCookie } from '@/lib/languageCookie';
 import { internalSitePath, isSiteCardPath, publicPathForInternal, siteSlugOf } from '@/lib/site/paths';
+import {
+  accessTokenFromCookies,
+  coachVerdict,
+  gateTargetFor,
+  hostOrAdminVerdict,
+  readGateRow,
+  sessionVerdict,
+  type CoachRow,
+  type GateTarget,
+  type SessionRow,
+} from '@/lib/site/publicPageGate';
 
 /**
  * Tribe middleware does three things, in order:
@@ -337,6 +348,25 @@ export function applySecurityHeaders(response: NextResponse, pathname?: string):
   return response;
 }
 
+/**
+ * T-SSR1: whether a public session or coach page exists for this visitor
+ * (lib/site/publicPageGate.ts). Only a signed-in visitor on a TEST session
+ * costs more than the one read: Supabase is asked who they are (host, or
+ * is_app_admin()), so the host and the admins still get the page with its
+ * "Sesión de prueba" note.
+ */
+async function publicGateVerdict(request: NextRequest, target: GateTarget): Promise<'hide' | 'show'> {
+  if (target.kind === 'notFound') return 'hide';
+  const env = { url: process.env.NEXT_PUBLIC_SUPABASE_URL!, anonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY! };
+  const row = await readGateRow(target, env);
+  if (row === 'error') return 'show';
+  if (target.kind === 'coach') return coachVerdict(row as CoachRow | null);
+  const signedIn = hasAuthCookieName(request.cookies.getAll().map((c) => c.name));
+  const verdict = sessionVerdict(row as SessionRow | null, signedIn);
+  if (verdict !== 'ask') return verdict;
+  return hostOrAdminVerdict(row as SessionRow, accessTokenFromCookies(request.cookies.getAll()), env);
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -378,6 +408,23 @@ export async function middleware(request: NextRequest) {
   // notFound() cannot set a 404 once the root loading boundary has started
   // streaming. Exact prefixes only; see lib/features/athleteValueGate.ts.
   const gated = isAthletesGatedPath(pathname);
+
+  // T-SSR1: a public session or coach page that must not exist for this visitor
+  // is a real 404, decided here because the root loading boundary has already
+  // streamed a 200 by the time the page could say so. One indexed read, on the
+  // page paths only; Server-Timing reports what it cost.
+  const gateTarget = gateTargetFor(pathname);
+  if (gateTarget) {
+    const started = Date.now();
+    const verdict = await publicGateVerdict(request, gateTarget);
+    const timing = `tribe-gate;dur=${Date.now() - started}`;
+    const res =
+      verdict === 'hide'
+        ? NextResponse.rewrite(new URL(GATED_NOT_FOUND_PATH, request.url), { status: 404 })
+        : NextResponse.next();
+    res.headers.set('Server-Timing', timing);
+    return applySecurityHeaders(res, pathname);
+  }
 
   // Public routes don't need auth but still need security headers.
   if (isPublicPath(pathname) && !gated) {

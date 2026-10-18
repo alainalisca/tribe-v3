@@ -76,6 +76,7 @@ export default function SignedOutSession({
   language,
   isPast,
   isFull,
+  place: placeOverride,
 }: {
   session: PublicSession;
   creator: { id: string; name: string | null; avatar_url: string | null } | null;
@@ -84,6 +85,12 @@ export default function SignedOutSession({
   language: 'es' | 'en';
   isPast: boolean;
   isFull: boolean;
+  /**
+   * T-SSR1: the place already worked out on the server, so a server render
+   * never hands the street address (session.location) to the browser. Absent
+   * when the page renders in the browser, which works it out here.
+   */
+  place?: { place: string | null; barrio: string | null };
 }) {
   const t = useTranslations('sessionPublic');
   // The Jornada frame: the app's feedback bubble and install banner stay off it,
@@ -109,13 +116,15 @@ export default function SignedOutSession({
   const coachName = creator?.name?.trim() || '';
   const hostFirst = coachName.split(/\s+/)[0] || t('coachFallback');
   const sport = session.sport && session.sport !== 'Other' ? translateSport(session.sport, language) : null;
-  const { place, barrio } = publicSessionPlace({
-    partnerName: gymName,
-    partnerApproved: session.partner_status === 'approved' && !!gymName,
-    lat: session.location_lat,
-    lng: session.location_lng,
-    location: session.location,
-  });
+  const { place, barrio } =
+    placeOverride ??
+    publicSessionPlace({
+      partnerName: gymName,
+      partnerApproved: session.partner_status === 'approved' && !!gymName,
+      lat: session.location_lat,
+      lng: session.location_lng,
+      location: session.location,
+    });
   const paid = !!session.is_paid && (session.price_cents ?? 0) > 0;
   const price = sessionPriceLabel(session, language);
   const spotsLeft = Math.max(0, (session.max_participants ?? 0) - going);
@@ -299,7 +308,13 @@ export default function SignedOutSession({
         </Link>
       </div>
       <div className={s.column}>
-        <SessionPoster session={session} creatorName={coachName} gymName={gymName} language={language} />
+        <SessionPoster
+          session={session}
+          creatorName={coachName}
+          gymName={gymName}
+          language={language}
+          place={placeOverride?.place}
+        />
         <div className={s.body}>
           {creator && (
             <Link className={s.coach} href={`/i/${creator.id}/`}>
