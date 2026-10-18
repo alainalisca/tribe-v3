@@ -4,7 +4,9 @@ import { render, screen } from '@testing-library/react';
 const lang = vi.hoisted(() => ({ current: 'es' as 'es' | 'en' }));
 vi.mock('@/lib/LanguageContext', () => ({ useLanguage: () => ({ language: lang.current, t: (k: string) => k }) }));
 vi.mock('react-leaflet', () => ({ MapContainer: () => null, TileLayer: () => null, Marker: () => null }));
-vi.mock('leaflet', () => ({ default: { Icon: { Default: { prototype: {}, mergeOptions: () => {} } } } }));
+// The component reads L.Icon off the module namespace (named export), after the test may have ended.
+const icon = vi.hoisted(() => ({ Default: { prototype: {}, mergeOptions: () => {} } }));
+vi.mock('leaflet', () => ({ Icon: icon, default: { Icon: icon } }));
 
 import LocationMap from './LocationMap';
 
