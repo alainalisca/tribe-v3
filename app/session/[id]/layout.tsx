@@ -10,6 +10,7 @@ import {
   sessionCardVersion,
   sessionShareDescription,
   sharesAsHomeCard,
+  cancelledShareText,
   type SessionCardRow,
 } from '@/lib/og/sessionCard';
 import { serializeJsonLd, sessionEventJsonLd, sessionJsonLdInputFromRow } from '@/lib/seo/jsonLd';
@@ -52,14 +53,22 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     };
   }
   const { row, partnerName, host } = loaded;
-  const title = publicSessionTitle({ title: row.title, sport: row.sport, creatorName: row.creator_name }, 'es');
-  const description = sessionShareDescription(row, partnerName);
+  const cancelled = row.status === 'cancelled';
+  // T-JOIN1b: a cancelled session says so when shared, and points at the host.
+  const { title, description } = cancelled
+    ? cancelledShareText(row, 'es')
+    : {
+        title: publicSessionTitle({ title: row.title, sport: row.sport, creatorName: row.creator_name }, 'es'),
+        description: sessionShareDescription(row, partnerName),
+      };
   // The card on a preview's own host there, tribelatam.com in production.
   const image = `${shareImageOrigin()}/session/${id}/card/?v=${sessionCardVersion(row, partnerName, host)}`;
   // Warm the card while the scraper reads this page: its next request is the
   // image, and a cold render (3.1 s measured) can outlast WhatsApp's patience.
   try {
-    after(() => fetch(image, { headers: { 'user-agent': 'TribeCardWarmup/1.0' } }).catch(() => undefined));
+    // Nothing of its own to warm for a cancelled session: it shares as the home card.
+    if (!cancelled)
+      after(() => fetch(image, { headers: { 'user-agent': 'TribeCardWarmup/1.0' } }).catch(() => undefined));
   } catch {
     // Outside a request (tests): nothing to warm.
   }
@@ -76,7 +85,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     },
     twitter: { card: 'summary_large_image', title, description, images: [image] },
     // T-JOIN1b: a cancelled session stays up for whoever has the link, out of search.
-    ...(row.status === 'cancelled' ? { robots: { index: false, follow: true } } : {}),
+    ...(cancelled ? { robots: { index: false, follow: true } } : {}),
   };
 }
 

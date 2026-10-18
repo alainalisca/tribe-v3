@@ -10,6 +10,7 @@ import {
   sessionHeadlinePx,
   sessionShareDescription,
   sharesAsHomeCard,
+  cancelledShareText,
   splitHeadline,
   type SessionCardRow,
 } from './sessionCard';
@@ -169,5 +170,32 @@ describe('T-JOIN1b: what shares as the home card', () => {
     const v = sessionCardVersion(row, null);
     expect(sessionCardVersion({ ...row, is_test: true }, null)).not.toBe(v);
     expect(sessionCardVersion({ ...row, status: 'cancelled' }, null)).not.toBe(v);
+  });
+});
+
+describe('cancelledShareText (T-JOIN1b)', () => {
+  const cancelled = {
+    ...row,
+    status: 'cancelled',
+    date: '2026-11-17',
+    start_time: '12:12:00',
+    sport: 'HYROX',
+    creator_name: 'Ronald Gallego',
+  };
+  it('Spanish and English, with the day and the host first name, no time or price', () => {
+    expect(cancelledShareText(cancelled, 'es')).toEqual({
+      title: 'HYROX con Ronald (cancelada)',
+      description: 'Sesión cancelada · Mar 17 nov · Mira otras clases de Ronald en Tribe',
+    });
+    expect(cancelledShareText(cancelled, 'en')).toEqual({
+      title: 'HYROX with Ronald (cancelled)',
+      description: 'Session cancelled · Tue Nov 17 · See other classes with Ronald on Tribe',
+    });
+  });
+
+  it('without a host name the sentence drops it', () => {
+    expect(cancelledShareText({ ...cancelled, creator_name: null }, 'es').description).toBe(
+      'Sesión cancelada · Mar 17 nov · Mira otras clases en Tribe'
+    );
   });
 });

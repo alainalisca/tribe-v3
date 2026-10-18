@@ -132,10 +132,26 @@ describe('T-JOIN1b: test and cancelled sessions', () => {
   it('a cancelled session stays up, is noindex, and has no Event JSON-LD', async () => {
     await withRow({ status: 'cancelled' }, async () => {
       const m = await generateMetadata(params);
-      expect(m.title).toBe('Boxeo con Salomon | Tribe');
+      expect(m.title).toBe('Boxeo con Salomon (cancelada) | Tribe');
       expect(m.robots).toEqual({ index: false, follow: true });
+      // The share text says it is cancelled and points at the host, in og and twitter alike.
+      const og = m.openGraph as { title?: string; description?: string };
+      const tw = m.twitter as { title?: string; description?: string };
+      expect(og.title).toBe('Boxeo con Salomon (cancelada)');
+      expect(og.description).toMatch(/^Sesión cancelada · \w{3} 21 oct · Mira otras clases de Salomon en Tribe$/);
+      expect(tw.title).toBe(og.title);
+      expect(tw.description).toBe(og.description);
+      expect(String(og.description)).not.toMatch(/Gratis|Reserva|18:30/);
       const html = renderToStaticMarkup(await SessionLayout({ ...params, children: null }));
       expect(html).not.toContain('ld+json');
+    });
+  });
+
+  it('a test session keeps the neutral metadata, cancelled or not', async () => {
+    await withRow({ is_test: true, status: 'cancelled' }, async () => {
+      const m = await generateMetadata(params);
+      expect(m.title).toBe('Entrenamiento no disponible | Tribe');
+      expect(JSON.stringify(m)).not.toMatch(/cancelada|Salomon/);
     });
   });
 });

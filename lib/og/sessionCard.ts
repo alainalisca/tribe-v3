@@ -94,6 +94,31 @@ export async function loadSessionForCard(id: string): Promise<LoadedSession | nu
 }
 
 /**
+ * T-JOIN1b (Al, 2026-10-18): what a cancelled session says when shared.
+ *   title        "<title> (cancelada)" / "<title> (cancelled)"
+ *   description  "Sesión cancelada · <Día DD mes> · Mira otras clases de
+ *                <Nombre> en Tribe" / "Session cancelled · <date> · See other
+ *                classes with <Name> on Tribe". Without a host name, the
+ *                sentence drops the name.
+ * The metadata uses Spanish, like the card: scrapers send no language.
+ */
+export function cancelledShareText(row: SessionCardRow, lang: 'es' | 'en'): { title: string; description: string } {
+  const title = publicSessionTitle({ title: row.title, sport: row.sport, creatorName: row.creator_name }, lang);
+  const day = cardWhen(row.date, null, lang);
+  const first = hostFirstName(row.creator_name, row.sport);
+  if (lang === 'en') {
+    return {
+      title: `${title} (cancelled)`,
+      description: `Session cancelled · ${day} · ${first ? `See other classes with ${first} on Tribe` : 'See other classes on Tribe'}`,
+    };
+  }
+  return {
+    title: `${title} (cancelada)`,
+    description: `Sesión cancelada · ${day} · ${first ? `Mira otras clases de ${first} en Tribe` : 'Mira otras clases en Tribe'}`,
+  };
+}
+
+/**
  * og:description (Al, 2026-10-18): "<Día DD mes> · <HH:MM> · <barrio> ·
  * <precio o Gratis> · Reserva en Tribe", the same order free or paid, and
  * never the title again. The barrio, else the partner gym, else Medellín.
