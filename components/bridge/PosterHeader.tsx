@@ -39,12 +39,16 @@ export default function PosterHeader({
         <>
           {isOptimizableImage(photoUrl) ? (
             // T-SSR1: the poster is never wider than the 560px session column
-            // (signed out; signed in it shows only with no photo).
+            // (signed out; signed in it shows only with no photo). Next 16's
+            // `priority` no longer raises the fetch priority: preload plus
+            // fetchPriority, as the site's heroes do, or the photo queues
+            // behind the scripts on a slow phone.
             <Image
               src={photoUrl}
               alt=""
               fill
-              priority
+              preload
+              fetchPriority="high"
               sizes="(min-width: 560px) 560px, 100vw"
               style={{ objectPosition: anchor }}
             />

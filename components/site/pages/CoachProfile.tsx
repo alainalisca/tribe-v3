@@ -75,7 +75,8 @@ export default function CoachProfile({
               src={photo.url}
               alt={t('site.coachPage.photoAlt', { name: first })}
               fill
-              priority
+              preload
+              fetchPriority="high"
               sizes="100vw"
               style={{ objectPosition: `${photo.x}% ${photo.y}%` }}
             />
