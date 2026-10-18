@@ -54,10 +54,17 @@ vi.mock('@/lib/og/sessionCard', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/lib/og/sessionCard')>()),
   loadSessionForCard: async (id: string) => {
     const r = rows.current[id];
-    return r ? { row: r, partnerName: null, host: null } : null;
+    return r ? { row: r, partnerName: null, host: { id: 'c1' } } : null;
   },
 }));
-vi.mock('./SessionDetailClient', () => ({ default: () => <div data-testid="app-session-page" /> }));
+vi.mock('./SessionDetailClient', () => ({
+  default: ({ hostHero }: { hostHero?: { url: string } | null }) => (
+    <div data-testid="app-session-page" data-hero={hostHero?.url ?? 'none'} />
+  ),
+}));
+vi.mock('@/lib/site/coachPage', () => ({
+  coachHeroPhoto: async (host: { id: string }) => ({ url: `https://x/card-${host.id}.jpg`, x: 50, y: 20 }),
+}));
 vi.mock('@/lib/supabase/client', () => ({ createClient: vi.fn(() => ({})) }));
 vi.mock('@/lib/analytics', () => ({ trackEvent: vi.fn() }));
 const insertGuestParticipant = vi.fn();
@@ -112,9 +119,11 @@ describe('/session/<id>/ (T-SSR1)', () => {
     expect(out).not.toContain('Pedir mi cupo');
   });
 
-  it('signed in: the app’s session page, exactly as before', async () => {
+  it('signed in: the app’s session page, with the host’s card photo as its hero (T-UI-SD1)', async () => {
     request.cookies = [{ name: 'sb-ref-auth-token', value: 'x' }];
-    expect(await html()).toContain('app-session-page');
+    const out = await html();
+    expect(out).toContain('app-session-page');
+    expect(out).toContain('data-hero="https://x/card-c1.jpg"');
   });
 
   it('a test session or an id outside the public view keeps the client page', async () => {

@@ -2,7 +2,7 @@ import { cookies, headers } from 'next/headers';
 import { FixedLanguage } from '@/lib/LanguageContext';
 import { LANGUAGE_COOKIE, serverLanguage } from '@/lib/languageCookie';
 import { hasAuthCookieName } from '@/lib/site/authCookie';
-import { loadPublicSession, signedOutProps } from '@/lib/session/publicSession';
+import { hostHeroFor, loadPublicSession, signedOutProps } from '@/lib/session/publicSession';
 import SessionDetailClient from './SessionDetailClient';
 import SignedOutSession from './SignedOutSession';
 
@@ -25,7 +25,9 @@ import SignedOutSession from './SignedOutSession';
 export default async function SessionPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const cookieStore = await cookies();
-  if (hasAuthCookieName(cookieStore.getAll().map((c) => c.name))) return <SessionDetailClient />;
+  // Signed in: the app's page, with the host's coach-card photo as its hero (T-UI-SD1).
+  if (hasAuthCookieName(cookieStore.getAll().map((c) => c.name)))
+    return <SessionDetailClient hostHero={await hostHeroFor(id)} />;
 
   const loaded = await loadPublicSession(id);
   // Nothing public to render (or a test session): the client page keeps its own handling.

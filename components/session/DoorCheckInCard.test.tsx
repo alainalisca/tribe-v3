@@ -4,17 +4,16 @@ import DoorCheckInCard from './DoorCheckInCard';
 import { addSessionGuest } from '@/lib/dal';
 
 vi.mock('@/lib/supabase/client', () => ({ createClient: () => ({}) }));
-// Bypass the not-ended gate without pulling AttendanceTracker's whole dep tree.
-vi.mock('@/components/AttendanceTracker', () => ({ sessionHasEnded: () => false }));
+// Open the door list (T-UI-SD1: from the start onward) whatever the clock says.
+const door = vi.hoisted(() => ({ open: true }));
+vi.mock('@/app/session/[id]/sessionActionState', () => ({ doorListOpen: () => door.open }));
 vi.mock('@/lib/dal', () => ({ addSessionGuest: vi.fn(), removeSessionGuest: vi.fn() }));
 
 const baseProps = {
   sessionId: 's-1',
   isCreator: true,
-  isAdmin: false,
   sessionDate: '2099-01-01',
   sessionStartTime: '10:00:00',
-  sessionEndTime: '11:00:00',
   sessionStatus: 'active',
   language: 'en' as const,
   onChange: vi.fn(),
@@ -27,7 +26,21 @@ function addName(value: string) {
 }
 
 describe('DoorCheckInCard', () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    door.open = true;
+  });
+
+  it('T-UI-SD1: host only, and only from the start time', () => {
+    const { container, rerender } = render(<DoorCheckInCard {...baseProps} isCreator={false} />);
+    expect(container).toBeEmptyDOMElement();
+    door.open = false;
+    rerender(<DoorCheckInCard {...baseProps} />);
+    expect(container).toBeEmptyDOMElement();
+    door.open = true;
+    rerender(<DoorCheckInCard {...baseProps} />);
+    expect(screen.getByText('Who showed up')).toBeInTheDocument();
+  });
 
   it('keeps the added person in the local list and makes Remove reachable after a successful add', async () => {
     (addSessionGuest as Mock).mockResolvedValue({ success: true, data: { participantId: 'p-1' } });

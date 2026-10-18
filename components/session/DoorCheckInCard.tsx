@@ -5,15 +5,13 @@ import { X, Plus, Loader2 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
 import { addSessionGuest, removeSessionGuest } from '@/lib/dal';
-import { sessionHasEnded } from '@/components/AttendanceTracker';
+import { doorListOpen } from '@/app/session/[id]/sessionActionState';
 
 interface DoorCheckInCardProps {
   sessionId: string;
   isCreator: boolean;
-  isAdmin: boolean;
   sessionDate: string;
   sessionStartTime: string;
-  sessionEndTime: string | null;
   sessionStatus: string | null;
   language: 'en' | 'es';
   /** Refresh the session so the participant count and roster reflect the change. */
@@ -26,18 +24,16 @@ interface AddedGuest {
 }
 
 /**
- * Host-only "add people at the door" card. Renders before the session ends
- * (mirror image of AttendanceTracker, which renders only after) for the creator
- * or an admin. Name only: the host types a name, taps Add, and the input keeps
+ * Host-only "add people at the door" card ("Quién llegó"). Renders from the
+ * session's start time onward, ended sessions included, for the host only
+ * (T-UI-SD1). Name only: the host types a name, taps Add, and the input keeps
  * focus so the next name can be typed immediately. Phone/email are not collected.
  */
 export default function DoorCheckInCard({
   sessionId,
   isCreator,
-  isAdmin,
   sessionDate,
   sessionStartTime,
-  sessionEndTime,
   sessionStatus,
   language,
   onChange,
@@ -70,9 +66,10 @@ export default function DoorCheckInCard({
     remove: language === 'es' ? 'Quitar' : 'Remove',
   };
 
-  const canManage = isCreator || isAdmin;
-  const ended = sessionHasEnded(sessionDate, sessionStartTime, sessionEndTime);
-  if (!canManage || ended || sessionStatus === 'cancelled') {
+  // T-UI-SD1: the host's list, from the start time onward (ended sessions
+  // included). Not for admins, and not days ahead.
+  const open = doorListOpen({ date: sessionDate, start_time: sessionStartTime });
+  if (!isCreator || !open || sessionStatus === 'cancelled') {
     return null;
   }
 

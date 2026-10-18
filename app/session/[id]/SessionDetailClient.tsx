@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react';
 import { notFound, useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Share2 } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
 import { copyToClipboard, getSessionShareUrl, nativeShare } from '@/lib/share';
 import BottomNav from '@/components/BottomNav';
@@ -29,9 +29,13 @@ import ConfirmDialog from '@/components/ConfirmDialog';
 
 import type { RecapPhotoWithUser, SessionStoryJoined } from './types';
 import PhotoLightbox from '@/components/PhotoLightbox';
-import ActionButtons from './ActionButtons';
+import SessionActionBar from './SessionActionBar';
+import AthleteShareButton from './AthleteShareButton';
+import ManageSessionSheet from './ManageSessionSheet';
+import { ACTION_BAR_CLEARANCE, athleteBarState } from './sessionActionState';
 import SignedOutSession, { type PublicSession } from './SignedOutSession';
 import SessionPoster, { type PosterSession } from './SessionPoster';
+import type { HeroPhoto } from '@/lib/site/coachPage';
 import { publicSessionTitle } from '@/lib/share/sessionPublic';
 import SessionStatusNotice from './SessionStatusNotice';
 import InviteModal from './InviteModal';
@@ -48,11 +52,12 @@ import PostSessionFlow from '@/components/PostSessionFlow';
 import SessionQA from '@/components/session/SessionQA';
 import { trackEvent } from '@/lib/analytics';
 import { pathBefore, sessionViewSourceFrom } from '@/lib/navigationSource';
-import { downloadCalendarEvent, getGoogleCalendarUrl } from '@/lib/calendar';
-import { Calendar as CalendarIcon } from 'lucide-react';
+import AddToCalendarRow from '@/components/session/AddToCalendarRow';
+import { useTranslations } from '@/lib/i18n/useTranslations';
+import { firstName } from '@/lib/text/firstName';
 
 import TribeWordmark from '@/components/TribeWordmark';
-export default function SessionDetailPage() {
+export default function SessionDetailPage({ hostHero = null }: { hostHero?: HeroPhoto | null } = {}) {
   const params = useParams();
   const router = useRouter();
   const { t, language } = useLanguage();
@@ -61,6 +66,9 @@ export default function SessionDetailPage() {
   // T-GROW2: called before any early return so the hook order never changes.
   const myRefCode = useMyReferralCode(d.user?.id);
   const [showPostSessionFlow, setShowPostSessionFlow] = useState(false);
+  // T-UI-SD1: the host's "Gestionar" sheet.
+  const [showManage, setShowManage] = useState(false);
+  const sd = useTranslations('sessionDetail');
 
   async function shareSession() {
     if (!d.session) return;
@@ -255,6 +263,14 @@ export default function SessionDetailPage() {
     { title: d.session.title, sport: d.session.sport, creatorName: d.creator?.name ?? null },
     language
   );
+  // T-UI-SD1: one primary action per role in a bar pinned to the bottom; no
+  // bar on a cancelled session (nothing to book or manage).
+  const showActionBar = !isCancelled;
+  const isPaidSession = !!d.session.is_paid && d.session.price_cents > 0;
+  const isSeriesMember = !!d.session.is_recurring || d.session.recurring_parent_id != null;
+  const isSeriesParent = !!d.session.is_recurring && d.session.recurring_parent_id == null;
+  const hostFirstName = d.creator?.name ? firstName(d.creator.name) : '';
+
   if (!d.user) {
     return (
       <SignedOutSession
@@ -273,7 +289,10 @@ export default function SessionDetailPage() {
   }
 
   return (
-    <div className="min-h-screen bg-theme-page pb-nav">
+    <div
+      className="min-h-screen bg-theme-page pb-nav"
+      style={showActionBar ? { paddingBottom: ACTION_BAR_CLEARANCE } : undefined}
+    >
       {d.lightboxOpen && currentPhotos && (
         <PhotoLightbox photos={currentPhotos} initialIndex={d.currentPhotoIndex} onClose={() => history.back()} />
       )}
@@ -294,17 +313,19 @@ export default function SessionDetailPage() {
         {isCancelled && (
           <SessionStatusNotice kind="cancelled" hostId={d.session.creator_id} hostName={d.creator?.name ?? null} />
         )}
-        {/* T-JOIN1 Part B: a session with no photo opens with its poster. */}
-        {!(d.session.photos ?? []).some(Boolean) && (
-          <div className="mx-auto max-w-md overflow-hidden rounded-xl">
-            <SessionPoster
-              session={d.session as unknown as PosterSession}
-              creatorName={d.creator?.name ?? null}
-              gymName={gymName}
-              language={language}
-            />
-          </div>
-        )}
+        {/* T-JOIN1 Part B poster; T-UI-SD1: every session opens with it, on
+            the host's coach-card photo (never the session's own photos, which
+            stay in "Fotos del Lugar"), or with no photo. */}
+        <div className="mx-auto max-w-md overflow-hidden rounded-xl">
+          <SessionPoster
+            session={d.session as unknown as PosterSession}
+            creatorName={d.creator?.name ?? null}
+            gymName={gymName}
+            language={language}
+            priceTag={false}
+            photo={hostHero}
+          />
+        </div>
         <SessionDetails
           gym={d.gym}
           coachCount={d.gymCoachCount}
@@ -322,15 +343,8 @@ export default function SessionDetailPage() {
         {/* Share button — BUG-022: previously bg-theme-surface blended into
             the page background. Tribe-green pill gives clear contrast in
             light AND dark mode. */}
-        <div className="flex justify-end">
-          <button
-            onClick={shareSession}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-tribe-green text-slate-900 hover:bg-lime-500 transition text-sm font-semibold"
-          >
-            <Share2 className="w-4 h-4" />
-            {language === 'es' ? 'Compartir' : 'Share'}
-          </button>
-        </div>
+        {/* T-UI-SD1: athletes share from here (the host shares from the bar). */}
+        {!isCreator && <AthleteShareButton sessionId={d.session.id} title={displayTitle} />}
 
         <LiveStatusSection
           canGoLive={canGoLive}
@@ -353,23 +367,17 @@ export default function SessionDetailPage() {
           language={language}
         />
 
-        {/* No booking, guest or host buttons on a cancelled session (T-JOIN1b). */}
-        {!isCancelled && (
-          <ActionButtons
-            language={language}
-            user={d.user}
-            session={d.session}
-            isCreator={isCreator}
-            hasJoined={d.hasJoined}
-            isPending={d.isPending}
-            isPast={isPast}
-            isFull={isFull}
-            canViewPaymentInstructions={canViewPaymentInstructions}
-            paymentInstructions={d.paymentInstructions}
-            sessionActions={d.sessionActions}
-            onEdit={() => router.push(`/session/${params.id}/edit`)}
-            onInvite={d.generateInviteLink}
-            creatingInvite={d.creatingInvite}
+        {/* T-UI-SD1: the calendar as one row, for whoever is going. */}
+        {(d.hasJoined || isCreator) && !isPast && !isCancelled && (
+          <AddToCalendarRow
+            sessionId={d.session.id}
+            title={displayTitle}
+            hostName={d.creator?.name ?? null}
+            date={d.session.date}
+            startTime={d.session.start_time}
+            durationMinutes={d.session.duration}
+            location={d.session.location}
+            userState={isCreator ? 'creator' : 'joined'}
           />
         )}
 
@@ -428,56 +436,6 @@ export default function SessionDetailPage() {
           onAccepted={() => d.loadSession()}
         />
 
-        {/* Calendar Integration — shown when user has joined and session is upcoming */}
-        {d.hasJoined && !isPast && d.session && (
-          <div className="mt-4 p-4 bg-tribe-green/10 border border-tribe-green/30 rounded-xl space-y-2">
-            <p className="text-sm font-semibold text-theme-primary">
-              {language === 'es' ? '¡Estás inscrito!' : "You're in!"}
-            </p>
-            <p className="text-xs text-theme-tertiary">
-              {language === 'es'
-                ? 'Agrega a tu calendario para no olvidar'
-                : "Add to your calendar so you don't forget"}
-            </p>
-            <div className="flex gap-2">
-              <button
-                onClick={() => {
-                  const sessionDate = new Date(`${d.session!.date}T${d.session!.start_time || '00:00'}`);
-                  downloadCalendarEvent({
-                    title: displayTitle,
-                    description: `Session with ${d.session!.creator?.name || 'Instructor'} on Tribe.\n${window.location.origin}/session/${d.session!.id}/`,
-                    startDate: sessionDate,
-                    durationMinutes: d.session!.duration || 60,
-                    location: d.session!.location || undefined,
-                    url: `${window.location.origin}/session/${d.session!.id}/`,
-                  });
-                  trackEvent('session_calendar_added', { session_id: d.session!.id, method: 'ics' });
-                }}
-                className="flex-1 flex items-center justify-center gap-2 py-2.5 px-3 bg-theme-surface text-theme-primary text-sm font-semibold rounded-lg border border-theme hover:opacity-90 transition"
-              >
-                <CalendarIcon className="w-4 h-4" />
-                Apple Calendar
-              </button>
-              <a
-                href={getGoogleCalendarUrl({
-                  title: displayTitle,
-                  description: `Session with ${d.session!.creator?.name || 'Instructor'} on Tribe.`,
-                  startDate: new Date(`${d.session!.date}T${d.session!.start_time || '00:00'}`),
-                  durationMinutes: d.session!.duration || 60,
-                  location: d.session!.location || undefined,
-                })}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={() => trackEvent('session_calendar_added', { session_id: d.session!.id, method: 'google' })}
-                className="flex-1 flex items-center justify-center gap-2 py-2.5 px-3 bg-theme-surface text-theme-primary text-sm font-semibold rounded-lg border border-theme hover:opacity-90 transition"
-              >
-                <CalendarIcon className="w-4 h-4" />
-                Google
-              </a>
-            </div>
-          </div>
-        )}
-
         <RecapPhotos
           session={d.session}
           recapPhotos={d.recapPhotos}
@@ -496,9 +454,7 @@ export default function SessionDetailPage() {
         {!isCreator && d.creator?.id && (
           <div className="mt-4">
             <h3 className="text-sm font-semibold text-theme-primary mb-2">
-              {language === 'es'
-                ? `Lo que dicen los atletas sobre ${d.creator.name || ''}`
-                : `What athletes say about ${d.creator.name || ''}`}
+              {sd('reviewsAbout', { name: hostFirstName })}
             </h3>
             <ReviewsList
               hostId={d.creator.id}
@@ -547,14 +503,12 @@ export default function SessionDetailPage() {
           onViewStories={() => d.setShowStoryViewer(true)}
         />
 
-        {d.user && (
+        {isCreator && (
           <DoorCheckInCard
             sessionId={params.id as string}
             isCreator={isCreator}
-            isAdmin={d.userIsAdmin}
             sessionDate={d.session.date}
             sessionStartTime={d.session.start_time}
-            sessionEndTime={d.session.end_time ?? null}
             sessionStatus={d.session.status}
             language={language}
             onChange={d.reloadSilent}
@@ -584,11 +538,62 @@ export default function SessionDetailPage() {
             sessionEndTime={d.session.end_time ?? null}
           />
         )}
-
-        {/* Tribe.OS premium-only: per-client attendance + payment tracking. */}
-        {/* Renders silently for non-creators or non-premium instructors. */}
-        {d.user ? <SessionAttendanceSection sessionId={params.id as string} isCreator={isCreator} /> : null}
       </div>
+
+      {showActionBar &&
+        (isCreator ? (
+          <SessionActionBar role="host" isPast={isPast} onShare={shareSession} onManage={() => setShowManage(true)} />
+        ) : (
+          <SessionActionBar
+            role="athlete"
+            state={athleteBarState({
+              hasJoined: d.hasJoined,
+              isPending: d.isPending,
+              isPast,
+              isFull,
+              isPaid: isPaidSession,
+              joinPolicy: d.session.join_policy,
+            })}
+            isPaid={isPaidSession}
+            joining={d.sessionActions.joining}
+            onJoin={d.sessionActions.handleJoin}
+            onLeave={d.sessionActions.handleLeave}
+            paid={
+              isPaidSession
+                ? {
+                    priceCents: d.session.price_cents,
+                    currency: d.session.currency || 'COP',
+                    paymentInstructions: d.paymentInstructions,
+                    canViewPaymentInstructions,
+                  }
+                : null
+            }
+            language={language}
+          />
+        ))}
+
+      {isCreator && (
+        <ManageSessionSheet
+          open={showManage}
+          onClose={() => setShowManage(false)}
+          sessionId={d.session.id}
+          language={language}
+          isTest={isTestSession}
+          isPast={isPast}
+          isSeriesMember={isSeriesMember}
+          isSeriesParent={isSeriesParent}
+          creatingInvite={d.creatingInvite}
+          onEdit={() => router.push(`/session/${params.id}/edit`)}
+          onInvite={d.generateInviteLink}
+          onCancel={d.sessionActions.handleCancel}
+          onCancelOccurrence={d.sessionActions.handleCancelOccurrence}
+          onEndSeries={d.sessionActions.handleEndSeries}
+        >
+          {/* Tribe.OS premium-only: per-client attendance + payment tracking.
+              Renders nothing for a host without Tribe.OS. */}
+          <SessionAttendanceSection sessionId={params.id as string} isCreator={isCreator} />
+        </ManageSessionSheet>
+      )}
 
       {d.showInviteModal && (
         <InviteModal

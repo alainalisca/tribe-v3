@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { MapPin, Navigation } from 'lucide-react';
+import { useTranslations } from '@/lib/i18n/useTranslations';
 
 interface LocationMapProps {
   latitude?: number | null;
@@ -10,6 +11,7 @@ interface LocationMapProps {
 }
 
 export default function LocationMap({ latitude, longitude, location }: LocationMapProps) {
+  const t = useTranslations('sessionDetail');
   const [mapReady, setMapReady] = useState(false);
   // REASON: react-leaflet components are dynamically imported and their generic types are complex — using broad ComponentType
   const [MapContainer, setMapContainer] = useState<React.ComponentType<any> | null>(null); // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -93,10 +95,10 @@ export default function LocationMap({ latitude, longitude, location }: LocationM
       </div>
       <button
         onClick={openInMaps}
-        className="w-full flex items-center justify-center gap-2 py-3 bg-blue-500 text-white font-medium hover:bg-blue-600 transition"
+        className="w-full flex items-center justify-center gap-2 py-3 bg-tribe-green text-slate-900 font-bold hover:bg-lime-500 transition"
       >
         <Navigation className="w-5 h-5" />
-        Get Directions
+        {t('directions')}
       </button>
     </div>
   );
