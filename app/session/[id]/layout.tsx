@@ -1,12 +1,16 @@
 import type { Metadata } from 'next';
 import { cache, type ReactNode } from 'react';
+import { notFound } from 'next/navigation';
 import { after } from 'next/server';
 import { SITE_URL } from '@/lib/http/siteUrl';
+import { viewerCanSeeTestSession } from '@/lib/session/testSessionAccess';
 import { shareImageOrigin } from '@/lib/http/shareImageOrigin';
 import {
   loadSessionForCard,
   sessionCardVersion,
   sessionShareDescription,
+  sharesAsHomeCard,
+  cancelledShareText,
   type SessionCardRow,
 } from '@/lib/og/sessionCard';
 import { serializeJsonLd, sessionEventJsonLd, sessionJsonLdInputFromRow } from '@/lib/seo/jsonLd';
@@ -40,21 +44,31 @@ function placeOf(row: SessionCardRow, partnerName: string | null) {
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;
   const loaded = await load(id);
-  if (!loaded) {
+  // T-JOIN1b: a test session tells a scraper nothing, not even its title.
+  if (!loaded || loaded.row.is_test) {
     return {
       title: 'Entrenamiento no disponible | Tribe',
       description: 'Este entrenamiento ya no está disponible en Tribe.',
+      robots: { index: false, follow: false },
     };
   }
   const { row, partnerName, host } = loaded;
-  const title = publicSessionTitle({ title: row.title, sport: row.sport, creatorName: row.creator_name }, 'es');
-  const description = sessionShareDescription(row, partnerName);
+  const cancelled = row.status === 'cancelled';
+  // T-JOIN1b: a cancelled session says so when shared, and points at the host.
+  const { title, description } = cancelled
+    ? cancelledShareText(row, 'es')
+    : {
+        title: publicSessionTitle({ title: row.title, sport: row.sport, creatorName: row.creator_name }, 'es'),
+        description: sessionShareDescription(row, partnerName),
+      };
   // The card on a preview's own host there, tribelatam.com in production.
   const image = `${shareImageOrigin()}/session/${id}/card/?v=${sessionCardVersion(row, partnerName, host)}`;
   // Warm the card while the scraper reads this page: its next request is the
   // image, and a cold render (3.1 s measured) can outlast WhatsApp's patience.
   try {
-    after(() => fetch(image, { headers: { 'user-agent': 'TribeCardWarmup/1.0' } }).catch(() => undefined));
+    // Nothing of its own to warm for a cancelled session: it shares as the home card.
+    if (!cancelled)
+      after(() => fetch(image, { headers: { 'user-agent': 'TribeCardWarmup/1.0' } }).catch(() => undefined));
   } catch {
     // Outside a request (tests): nothing to warm.
   }
@@ -70,20 +84,26 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
       images: [{ url: image, width: 1200, height: 630, type: 'image/jpeg', alt: title }],
     },
     twitter: { card: 'summary_large_image', title, description, images: [image] },
+    // T-JOIN1b: a cancelled session stays up for whoever has the link, out of search.
+    ...(cancelled ? { robots: { index: false, follow: true } } : {}),
   };
 }
 
 export default async function SessionLayout({ params, children }: Props) {
   const { id } = await params;
   const loaded = await load(id);
-  const jsonLd = loaded
-    ? sessionEventJsonLd({
-        ...sessionJsonLdInputFromRow(loaded.row as unknown as Record<string, unknown>, `${SITE_URL}/session/${id}/`),
-        // The city when there is neither a partner gym nor a barrio, as on the
-        // share card: an Event needs a location, and the street is never shown.
-        location: placeOf(loaded.row, loaded.partnerName).place ?? 'Medellín',
-      })
-    : null;
+  // T-JOIN1b: a test session is a 404 for everyone but its host and the admins.
+  if (loaded?.row.is_test && !(await viewerCanSeeTestSession(loaded.row.creator_id))) notFound();
+  // No Event for a test or a cancelled session: nothing to attend.
+  const jsonLd =
+    loaded && !sharesAsHomeCard(loaded.row)
+      ? sessionEventJsonLd({
+          ...sessionJsonLdInputFromRow(loaded.row as unknown as Record<string, unknown>, `${SITE_URL}/session/${id}/`),
+          // The city when there is neither a partner gym nor a barrio, as on the
+          // share card: an Event needs a location, and the street is never shown.
+          location: placeOf(loaded.row, loaded.partnerName).place ?? 'Medellín',
+        })
+      : null;
   return (
     <>
       {jsonLd && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }} />}

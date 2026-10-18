@@ -16,7 +16,7 @@ import BottomNav from '@/components/BottomNav';
 import type { Currency } from '@/lib/payments/config';
 import { useUserCurrency } from '@/lib/useUserCurrency';
 import { formatPriceForUser } from '@/lib/userCurrency';
-import { hiddenAdminIds, visibleUsersFilter } from '@/lib/dal/visibleUsers';
+import { visibleUsersFilter } from '@/lib/dal/visibleUsers';
 
 interface SearchResult {
   id: string;
@@ -118,11 +118,10 @@ export default function SearchPage() {
         const query = `%${searchQuery}%`;
 
         // T-JOIN1: people and session hosts are only visible users
-        // (lib/dal/visibleUsers.ts: no admin, test, banned or deleted account).
-        const adminIds = await hiddenAdminIds(supabase);
+        // (lib/dal/visibleUsers.ts: no test, banned or deleted account).
         const { data: usersData } = await visibleUsersFilter(
           supabase.from('users').select('id, name, avatar_url, bio').ilike('name', query),
-          { idColumn: 'id', adminIds }
+          {}
         ).limit(10);
 
         // Search communities
@@ -152,8 +151,10 @@ export default function SearchPage() {
               'id, sport, location, date, price_cents, currency, status, current_participants, creator:users!sessions_creator_id_fkey!inner(id)'
             )
             .or(`sport.ilike.${query},location.ilike.${query}`)
-            .eq('status', 'active'),
-          { prefix: 'creator.', idColumn: 'creator_id', adminIds }
+            .eq('status', 'active')
+            // T-JOIN1b: never a test session.
+            .eq('is_test', false),
+          { prefix: 'creator.' }
         ).limit(10);
 
         setResults({

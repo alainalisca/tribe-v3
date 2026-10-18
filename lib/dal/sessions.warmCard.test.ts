@@ -75,3 +75,26 @@ describe('card warm-up on write', () => {
     expect(warm).not.toHaveBeenCalled();
   });
 });
+
+describe('T-JOIN1b: the test-session switch saves', () => {
+  it('create sends is_test with the new session', async () => {
+    const inserted: Record<string, unknown>[] = [];
+    const { c } = client();
+    const from = (c as unknown as { from: (t: string) => Record<string, unknown> }).from;
+    (c as unknown as { from: unknown }).from = (table: string) => {
+      const q = from(table);
+      const insert = q.insert as (row: Record<string, unknown>) => unknown;
+      q.insert = (row: Record<string, unknown>) => (inserted.push(row), insert(row));
+      return q;
+    };
+    await insertSession(c, { creator_id: 'host', sport: 'Yoga', date: '2030-10-21', is_test: true } as never);
+    expect(inserted[0]).toMatchObject({ is_test: true });
+  });
+
+  it('edit sends is_test, and marking a session as a test re-warms its card', async () => {
+    const { c, updates } = client();
+    await updateSessionAsHost(c, SESSION, { is_test: true } as never);
+    expect(updates[0]).toMatchObject({ is_test: true });
+    expect(warm).toHaveBeenCalledWith(SESSION);
+  });
+});

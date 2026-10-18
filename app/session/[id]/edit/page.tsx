@@ -16,6 +16,7 @@ import { getEditSessionTranslations } from './translations';
 import { useEditSession } from './useEditSession';
 import PhotoUploadSection from '@/app/create/PhotoUploadSection';
 import RecurringSessionToggle from '@/components/RecurringSessionToggle';
+import TestSessionToggle from '@/components/session/TestSessionToggle';
 import PriceSection from './PriceSection';
 
 export default function EditSessionPage() {
@@ -272,6 +273,12 @@ export default function EditSessionPage() {
               <RecurringSessionToggle value={recurringValue} onChange={setRecurringValue} />
             </div>
           )}
+
+          {/* ─── Sesión de prueba (T-JOIN1b) ─── */}
+          <TestSessionToggle
+            value={formData.is_test}
+            onChange={(next) => setFormData((prev) => ({ ...prev, is_test: next }))}
+          />
 
           {/* Cover photo — reuses the same upload component as the create flow */}
           {userId && (

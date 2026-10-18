@@ -772,6 +772,14 @@
     "alreadyJoined": "Ese WhatsApp ya pidió cupo en esta sesión.",
     "rateLimited": "Demasiados intentos. Prueba de nuevo en una hora.",
     "sessionFull": "La sesión ya está llena.",
-    "joinFailed": "No se pudo pedir el cupo. Intenta de nuevo."
+    "joinFailed": "No se pudo pedir el cupo. Intenta de nuevo.",
+    "cancelledNotice": "Esta sesión fue cancelada",
+    "coachLink": "Ver el perfil de {name}"
+  },
+  "sessionTest": {
+    "label": "Sesión de prueba",
+    "hint": "Solo tú y los admins la ven. No aparece en el feed, la búsqueda, el sitio ni en las tarjetas para compartir.",
+    "noteHost": "Sesión de prueba, solo tú la ves",
+    "noteAdmin": "Sesión de prueba: solo su anfitrión y los admins la ven"
   }
 }

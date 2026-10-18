@@ -6,9 +6,9 @@
  * The rules (Al, 2026-10-16):
  * - Published only: active, public, not yet started (Bogotá time), today
  *   through seven days out.
- * - Never staff or test sessions: creators who are admins, test accounts
- *   (users.is_test_account), banned or deleted are left out
- *   (lib/dal/visibleUsers.ts, shared with every public list since T-JOIN1).
+ * - Never a test session or a hidden creator: sessions marked is_test (T-JOIN1b)
+ *   and creators who are test accounts (users.is_test_account), banned or
+ *   deleted are left out (lib/dal/visibleUsers.ts, every public list's rule).
  * - One row per series per WEEK: every occurrence of a recurring series in the
  *   window collapses into one row that names its days ("Lun a vie · 06:00") and
  *   links to the next occurrence.
@@ -51,14 +51,13 @@ export type BoardSessionRow = {
     id: string;
     name: string | null;
     avatar_url: string | null;
-    is_admin: boolean | null;
     is_test_account: boolean | null;
     banned: boolean | null;
     deleted_at: string | null;
   } | null;
 };
 
-/** Staff, test, banned and deleted accounts never appear: the one rule, lib/dal/visibleUsers.ts (T-JOIN1). */
+/** Test, banned and deleted accounts never appear: the one rule, lib/dal/visibleUsers.ts (T-JOIN1, T-JOIN1b). */
 export function isListedCreator(
   creator: BoardSessionRow['creator']
 ): creator is NonNullable<BoardSessionRow['creator']> {

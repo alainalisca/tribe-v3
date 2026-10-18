@@ -46,7 +46,6 @@ function session(over: Partial<BoardSessionRow> & { creatorId?: string; creatorN
       id: creatorId,
       name: creatorName,
       avatar_url: null,
-      is_admin: false,
       is_test_account: false,
       banned: false,
       deleted_at: null,
@@ -150,17 +149,21 @@ describe('eight rows: two per sport, one per coach (T-SITE1.1)', () => {
 });
 
 describe('what the board leaves out', () => {
-  it('drops staff, test, banned and deleted creators (decision 1; TODO T-TRUST1)', () => {
+  it('drops test, banned and deleted creators; an admin host is ordinary (T-JOIN1b)', () => {
     const base = session().creator!;
     const rows = [
       session({ id: 'ok' }),
-      session({ id: 'admin', creator: { ...base, id: 'x1', is_admin: true } }),
+      session({ id: 'admin', creator: { ...base, id: 'x1', is_admin: true } as typeof base }),
       session({ id: 'test', creator: { ...base, id: 'x2', is_test_account: true } }),
       session({ id: 'banned', creator: { ...base, id: 'x3', banned: true } }),
       session({ id: 'deleted', creator: { ...base, id: 'x4', deleted_at: '2026-10-01T00:00:00Z' } }),
       session({ id: 'orphan', creator: null }),
     ];
-    expect(board(rows).map((r) => r.id)).toEqual(['ok']);
+    expect(
+      board(rows)
+        .map((r) => r.id)
+        .sort()
+    ).toEqual(['admin', 'ok']);
   });
 
   it('drops cancelled sessions, sessions outside the window and sessions that already started today', () => {

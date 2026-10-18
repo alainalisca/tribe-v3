@@ -104,3 +104,17 @@ describe('createChildSession carries the venue', () => {
     expect(captured[0].date).toBe('2026-09-17');
   });
 });
+
+describe('createChildSession carries the test flag (T-JOIN1b)', () => {
+  it('an occurrence of a test series is a test session', async () => {
+    const { client, captured } = captureInsert();
+    await createChildSession(client, { ...PARENT, is_test: true } as RecurringParentSession, '2026-09-17');
+    expect(captured[0].is_test).toBe(true);
+  });
+
+  it('an ordinary series makes ordinary occurrences', async () => {
+    const { client, captured } = captureInsert();
+    await createChildSession(client, PARENT, '2026-09-17');
+    expect(captured[0].is_test).toBe(false);
+  });
+});

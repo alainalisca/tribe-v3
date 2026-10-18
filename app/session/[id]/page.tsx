@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { notFound, useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Share2 } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
@@ -33,6 +33,7 @@ import ActionButtons from './ActionButtons';
 import SignedOutSession, { type PublicSession } from './SignedOutSession';
 import SessionPoster, { type PosterSession } from './SessionPoster';
 import { publicSessionTitle } from '@/lib/share/sessionPublic';
+import SessionStatusNotice from './SessionStatusNotice';
 import InviteModal from './InviteModal';
 import SubscribeButton from '@/components/SubscribeButton';
 import SessionStories from './SessionStories';
@@ -209,6 +210,19 @@ export default function SessionDetailPage() {
   })();
   const isFull = d.session.current_participants >= d.session.max_participants;
   const isCreator = d.session.creator_id === d.user?.id;
+  // T-JOIN1b: a test session is for its host and the admins only (the server
+  // layout already answered 404 to anyone else; this covers in-app navigation).
+  const isTestSession = !!(d.session as { is_test?: boolean | null }).is_test;
+  const isCancelled = d.session.status === 'cancelled';
+  if (isTestSession && !isCreator) {
+    if (!d.adminChecked)
+      return (
+        <div className="min-h-screen bg-theme-page">
+          <LoadingSpinner className="flex items-center justify-center min-h-screen" />
+        </div>
+      );
+    if (!d.userIsAdmin) notFound();
+  }
   const canKick = isCreator || d.userIsAdmin;
   const canUploadRecap = !!d.user && (isCreator || d.wasMarkedAttended) && isPast && d.userPhotoCount < 3;
   const canModerate = isCreator || d.userIsAdmin;
@@ -274,6 +288,12 @@ export default function SessionDetailPage() {
       />
 
       <div className="pt-header max-w-2xl md:max-w-4xl mx-auto p-4 md:p-6 space-y-4">
+        {/* T-JOIN1b: a test session says so to the two people who can see it; a
+            cancelled one says so to everyone and points at the host's page. */}
+        {isTestSession && <SessionStatusNotice kind={isCreator ? 'testHost' : 'testAdmin'} />}
+        {isCancelled && (
+          <SessionStatusNotice kind="cancelled" hostId={d.session.creator_id} hostName={d.creator?.name ?? null} />
+        )}
         {/* T-JOIN1 Part B: a session with no photo opens with its poster. */}
         {!(d.session.photos ?? []).some(Boolean) && (
           <div className="mx-auto max-w-md overflow-hidden rounded-xl">
@@ -333,22 +353,25 @@ export default function SessionDetailPage() {
           language={language}
         />
 
-        <ActionButtons
-          language={language}
-          user={d.user}
-          session={d.session}
-          isCreator={isCreator}
-          hasJoined={d.hasJoined}
-          isPending={d.isPending}
-          isPast={isPast}
-          isFull={isFull}
-          canViewPaymentInstructions={canViewPaymentInstructions}
-          paymentInstructions={d.paymentInstructions}
-          sessionActions={d.sessionActions}
-          onEdit={() => router.push(`/session/${params.id}/edit`)}
-          onInvite={d.generateInviteLink}
-          creatingInvite={d.creatingInvite}
-        />
+        {/* No booking, guest or host buttons on a cancelled session (T-JOIN1b). */}
+        {!isCancelled && (
+          <ActionButtons
+            language={language}
+            user={d.user}
+            session={d.session}
+            isCreator={isCreator}
+            hasJoined={d.hasJoined}
+            isPending={d.isPending}
+            isPast={isPast}
+            isFull={isFull}
+            canViewPaymentInstructions={canViewPaymentInstructions}
+            paymentInstructions={d.paymentInstructions}
+            sessionActions={d.sessionActions}
+            onEdit={() => router.push(`/session/${params.id}/edit`)}
+            onInvite={d.generateInviteLink}
+            creatingInvite={d.creatingInvite}
+          />
+        )}
 
         {/* T-GROW2 share moment 2: after joining. A confirmed participant of an
             upcoming session who is not the host, and only once their code has

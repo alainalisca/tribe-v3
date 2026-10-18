@@ -25,8 +25,6 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { fetchInstructors, type InstructorProfile } from '@/lib/dal/instructors';
-import { hiddenAdminIds } from '@/lib/dal/visibleUsers';
-import { getServiceRoleClient } from '@/lib/supabase/admin';
 import { fetchGymsAndStudios, type GymDirectoryEntry } from '@/lib/dal/gymDirectory';
 import { logError } from '@/lib/logger';
 import InstructorsPageClient from './InstructorsPageClient';
@@ -77,13 +75,7 @@ export default async function InstructorsPage({ searchParams }: PageProps) {
     // allSettled, not all: these two fetches are independent, and with
     // Promise.all a rejection from either emptied BOTH lists. The gym
     // directory failing is not a reason to report zero instructors.
-    // A signed-out visitor cannot read who is an admin (migration 113); the
-    // server can, so the list leaves admins out for everyone (T-JOIN1).
-    const adminIds = await hiddenAdminIds(getServiceRoleClient(), { serviceRole: true }).catch(() => []);
-    const [result, gymResult] = await Promise.allSettled([
-      fetchInstructors(supabase, { adminIds }),
-      fetchGymsAndStudios(supabase),
-    ]);
+    const [result, gymResult] = await Promise.allSettled([fetchInstructors(supabase), fetchGymsAndStudios(supabase)]);
 
     const instructorOutcome = resolveFetchOutcome(result, 'fetchInstructors');
     initialInstructors = instructorOutcome.data;

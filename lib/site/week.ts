@@ -28,7 +28,7 @@ export const WEEK_SESSION_SELECT =
   'id, sport, title, date, start_time, duration, location, max_participants, current_participants, ' +
   'is_paid, price_cents, currency, status, recurring_parent_id, partner_status, ' +
   'partner:featured_partners(business_name, status), ' +
-  'creator:users!sessions_creator_id_fkey(id, name, avatar_url, is_admin, is_test_account, banned, deleted_at)';
+  'creator:users!sessions_creator_id_fkey(id, name, avatar_url, is_test_account, banned, deleted_at)';
 
 /** How many raw occurrences to read: enough for eight varied rows after collapsing series. */
 const QUERY_LIMIT = 300;
@@ -48,6 +48,8 @@ async function queryWeek(today: string): Promise<WeekData> {
     .select(WEEK_SESSION_SELECT)
     .eq('status', 'active')
     .eq('visibility', 'public')
+    // T-JOIN1b: never a test session (Sesión de prueba).
+    .eq('is_test', false)
     .gte('date', today)
     .lte('date', lastDay)
     .order('date', { ascending: true })

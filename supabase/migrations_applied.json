@@ -41,6 +41,7 @@
     "217_t_partner_metric1_increment_partner_metric",
     "218_t_partner_metric2_revoke_anon",
     "220_t_share1_card_photo_and_handle",
-    "221_t_join1_guest_join_hardening"
+    "221_t_join1_guest_join_hardening",
+    "222_t_join1b_session_is_test"
   ]
 }

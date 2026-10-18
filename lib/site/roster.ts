@@ -21,7 +21,7 @@ import { buildRoster, ROSTER_WINDOW_DAYS, type RosterCoach, type RosterSessionRo
  */
 const SELECT =
   'sport, date, status, partner_status, partner:featured_partners(business_name, status), ' +
-  'creator:users!sessions_creator_id_fkey(id, name, avatar_url, is_admin, is_test_account, banned, deleted_at, is_instructor, created_at)';
+  'creator:users!sessions_creator_id_fkey(id, name, avatar_url, is_test_account, banned, deleted_at, is_instructor, created_at)';
 
 /** Every public session in 60 days is a few hundred rows today; this is the ceiling. */
 const QUERY_LIMIT = 3000;
@@ -34,6 +34,8 @@ async function queryRoster(today: string): Promise<RosterCoach[]> {
     .select(SELECT)
     .eq('status', 'active')
     .eq('visibility', 'public')
+    // T-JOIN1b: a test session counts for nobody.
+    .eq('is_test', false)
     .gte('date', addDays(today, -ROSTER_WINDOW_DAYS))
     .order('date', { ascending: false })
     .limit(QUERY_LIMIT);

@@ -20,6 +20,9 @@ export const CARD_FIELDS = [
   'location_lng',
   'partner_id',
   'partner_status',
+  // T-JOIN1b: marking or unmarking a test session changes what it shares as.
+  'is_test',
+  'status',
 ] as const;
 
 /** Whether an update changes anything the card shows, compared with the row as it was. */

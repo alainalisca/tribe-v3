@@ -9,6 +9,8 @@ import {
   sessionCardVersion,
   sessionHeadlinePx,
   sessionShareDescription,
+  sharesAsHomeCard,
+  cancelledShareText,
   splitHeadline,
   type SessionCardRow,
 } from './sessionCard';
@@ -153,5 +155,47 @@ describe('sessionCardVersion', () => {
     expect(sessionCardVersion(row, 'BullBox')).not.toBe(v);
     const host = { card_photo_url: 'a.jpg' } as never;
     expect(sessionCardVersion(row, null, host)).not.toBe(v);
+  });
+});
+
+describe('T-JOIN1b: what shares as the home card', () => {
+  it('a test session and a cancelled one; an ordinary session does not', () => {
+    expect(sharesAsHomeCard({ is_test: true, status: 'active' })).toBe(true);
+    expect(sharesAsHomeCard({ is_test: false, status: 'cancelled' })).toBe(true);
+    expect(sharesAsHomeCard({ is_test: false, status: 'active' })).toBe(false);
+    expect(sharesAsHomeCard({ status: 'active' })).toBe(false);
+  });
+
+  it('marking or cancelling changes the card URL, so WhatsApp fetches it again', () => {
+    const v = sessionCardVersion(row, null);
+    expect(sessionCardVersion({ ...row, is_test: true }, null)).not.toBe(v);
+    expect(sessionCardVersion({ ...row, status: 'cancelled' }, null)).not.toBe(v);
+  });
+});
+
+describe('cancelledShareText (T-JOIN1b)', () => {
+  const cancelled = {
+    ...row,
+    status: 'cancelled',
+    date: '2026-11-17',
+    start_time: '12:12:00',
+    sport: 'HYROX',
+    creator_name: 'Ronald Gallego',
+  };
+  it('Spanish and English, with the day and the host first name, no time or price', () => {
+    expect(cancelledShareText(cancelled, 'es')).toEqual({
+      title: 'HYROX con Ronald (cancelada)',
+      description: 'Sesión cancelada · Mar 17 nov · Mira otras clases de Ronald en Tribe',
+    });
+    expect(cancelledShareText(cancelled, 'en')).toEqual({
+      title: 'HYROX with Ronald (cancelled)',
+      description: 'Session cancelled · Tue Nov 17 · See other classes with Ronald on Tribe',
+    });
+  });
+
+  it('without a host name the sentence drops it', () => {
+    expect(cancelledShareText({ ...cancelled, creator_name: null }, 'es').description).toBe(
+      'Sesión cancelada · Mar 17 nov · Mira otras clases en Tribe'
+    );
   });
 });

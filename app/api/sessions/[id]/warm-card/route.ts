@@ -1,7 +1,7 @@
 import { after, NextResponse } from 'next/server';
 import { shareImageOrigin } from '@/lib/http/shareImageOrigin';
 import { logError } from '@/lib/logger';
-import { loadSessionForCard, sessionCardVersion } from '@/lib/og/sessionCard';
+import { loadSessionForCard, sessionCardVersion, sharesAsHomeCard } from '@/lib/og/sessionCard';
 
 /**
  * POST /api/sessions/[id]/warm-card (T-JOIN1): render a session's share card
@@ -21,7 +21,8 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
   try {
     const loaded = await loadSessionForCard(id);
     // Not public (yet): nothing a share could show, nothing to warm.
-    if (!loaded) return NextResponse.json({ warmed: false }, { status: 202 });
+    // A test or cancelled session shares as the home card (T-JOIN1b): nothing of its own to warm.
+    if (!loaded || sharesAsHomeCard(loaded.row)) return NextResponse.json({ warmed: false }, { status: 202 });
     const url = `${shareImageOrigin()}/session/${id}/card/?v=${sessionCardVersion(loaded.row, loaded.partnerName, loaded.host)}`;
     after(() => fetch(url, { headers: { 'user-agent': 'TribeCardWarmup/1.0' } }).catch(() => undefined));
     return NextResponse.json({ warmed: true, url }, { status: 202 });
