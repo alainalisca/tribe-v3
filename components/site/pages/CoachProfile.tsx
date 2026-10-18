@@ -3,6 +3,7 @@ import { coachFirstName, coachSports } from '@/lib/og/coachCard';
 import type { HeroPhoto } from '@/lib/site/coachPage';
 import { siteT, type SiteLanguage } from '@/lib/site/i18n';
 import type { WeekRow } from '@/lib/site/weekTypes';
+import { fixtureFromWeekRow, fixtureLabels } from '@/lib/site/fixture';
 import FixtureRow from '../FixtureRow';
 import b from '../base.module.css';
 import w from '../week.module.css';
@@ -105,10 +106,10 @@ export default function CoachProfile({
               {sessions.map((r) => (
                 <FixtureRow
                   key={r.id}
-                  lang={lang}
-                  row={r}
-                  action={t('site.coachPage.book')}
-                  day={r.date > weekEnd ? dateLabel(r.date, lang) : undefined}
+                  fixture={fixtureFromWeekRow(r, lang, {
+                    days: r.date > weekEnd ? dateLabel(r.date, lang) : undefined,
+                  })}
+                  labels={fixtureLabels(lang, t('site.coachPage.book'))}
                 />
               ))}
             </ul>

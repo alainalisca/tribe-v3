@@ -6,6 +6,7 @@ import { SITE_SPORT_COUNT } from '@/lib/site/sportCount';
 import { SPORT_GROUPS, type SportGroupKey } from '@/lib/site/sportGroups';
 import type { WeekRow } from '@/lib/site/weekTypes';
 import { translateSport } from '@/lib/sportTranslationData';
+import { fixtureFromWeekRow, fixtureLabels } from '@/lib/site/fixture';
 import FixtureRow from '../FixtureRow';
 import { ArrowRight } from '../icons';
 import b from '../base.module.css';
@@ -57,7 +58,7 @@ export default function SportsContent({
           {focus.rows.length > 0 ? (
             <ul className={w.table}>
               {focus.rows.map((r) => (
-                <FixtureRow key={r.id} lang={lang} row={r} />
+                <FixtureRow key={r.id} fixture={fixtureFromWeekRow(r, lang)} labels={fixtureLabels(lang)} />
               ))}
             </ul>
           ) : (

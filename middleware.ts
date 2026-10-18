@@ -184,6 +184,13 @@ export function isPublicPath(pathname: string): boolean {
     return true;
   }
 
+  // T-JOIN1 Part A: /dev/bridge, the bridge components' review page, opens
+  // signed out in development only. In production the page itself is a 404
+  // and this branch never runs, so the path stays behind the gate there too.
+  if (process.env.NODE_ENV !== 'production' && (pathname === '/dev/bridge' || pathname === '/dev/bridge/')) {
+    return true;
+  }
+
   return false;
 }
 
