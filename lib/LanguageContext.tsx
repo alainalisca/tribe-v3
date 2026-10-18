@@ -204,6 +204,23 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   return <LanguageContext.Provider value={{ language, setLanguage, t }}>{children}</LanguageContext.Provider>;
 }
 
+/**
+ * T-SSR1: a subtree in a language the server already chose (a page rendered
+ * on the server, such as the signed-out session page). LanguageProvider
+ * starts in English and settles after hydration; inside this, the server's
+ * choice holds from the first paint, so nothing flips. setLanguage still
+ * reaches the app-wide provider.
+ */
+export function FixedLanguage({ language, children }: { language: Language; children: ReactNode }) {
+  const parent = useContext(LanguageContext);
+  const t = (key: TranslationKey): string => translations[language][key] || translations.en[key] || key;
+  return (
+    <LanguageContext.Provider value={{ language, setLanguage: parent?.setLanguage ?? (() => {}), t }}>
+      {children}
+    </LanguageContext.Provider>
+  );
+}
+
 export function useLanguage() {
   const context = useContext(LanguageContext);
   if (!context) {

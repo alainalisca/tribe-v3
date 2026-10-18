@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { languageCookieString, languageFromCookie, readLanguageCookie } from './languageCookie';
+import { languageCookieString, languageFromCookie, readLanguageCookie, serverLanguage } from './languageCookie';
 
 describe('tribe_lang cookie (T-SITE1)', () => {
   it('is Spanish unless it says English', () => {
@@ -19,5 +19,15 @@ describe('tribe_lang cookie (T-SITE1)', () => {
 
   it('is written site wide for a year', () => {
     expect(languageCookieString('en')).toBe('tribe_lang=en; Path=/; Max-Age=31536000; SameSite=Lax');
+  });
+
+  it('server render (T-SSR1): cookie, then Accept-Language, then Spanish', () => {
+    expect(serverLanguage('en', 'es-CO,es;q=0.9')).toBe('en');
+    expect(serverLanguage('es', 'en-US')).toBe('es');
+    expect(serverLanguage(undefined, 'en-US,en;q=0.9,es;q=0.8')).toBe('en');
+    expect(serverLanguage('fr', 'es-CO')).toBe('es');
+    expect(serverLanguage(undefined, 'fr-FR,de;q=0.9,en;q=0.5')).toBe('en');
+    expect(serverLanguage(undefined, 'fr-FR')).toBe('es');
+    expect(serverLanguage(undefined, null)).toBe('es');
   });
 });

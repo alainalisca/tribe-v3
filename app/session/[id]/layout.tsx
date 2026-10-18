@@ -1,12 +1,12 @@
 import type { Metadata } from 'next';
-import { cache, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { notFound } from 'next/navigation';
 import { after } from 'next/server';
 import { SITE_URL } from '@/lib/http/siteUrl';
+import { loadPublicSession } from '@/lib/session/publicSession';
 import { viewerCanSeeTestSession } from '@/lib/session/testSessionAccess';
 import { shareImageOrigin } from '@/lib/http/shareImageOrigin';
 import {
-  loadSessionForCard,
   sessionCardVersion,
   sessionShareDescription,
   sharesAsHomeCard,
@@ -28,8 +28,8 @@ import { publicSessionPlace, publicSessionTitle } from '@/lib/share/sessionPubli
  */
 type Props = { params: Promise<{ id: string }>; children: ReactNode };
 
-/** One read per request: the metadata and the JSON-LD share it. */
-const load = cache(loadSessionForCard);
+/** One read per request, shared with the page (lib/session/publicSession.ts). */
+const load = loadPublicSession;
 
 function placeOf(row: SessionCardRow, partnerName: string | null) {
   return publicSessionPlace({

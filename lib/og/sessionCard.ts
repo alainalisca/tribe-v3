@@ -33,7 +33,9 @@ import { siteCardImage } from './siteCards';
  */
 export const SESSION_CARD_SELECT =
   'id, title, sport, date, start_time, status, location, location_lat, location_lng, photos, ' +
-  'creator_id, creator_name, partner_id, partner_status, description, end_time, price_cents, currency, is_paid, is_test';
+  'creator_id, creator_name, partner_id, partner_status, description, end_time, price_cents, currency, is_paid, is_test, ' +
+  // T-SSR1: what the signed-out session page renders on the server.
+  'duration, max_participants, current_participants, creator_avatar_url';
 
 export type SessionCardRow = {
   id: string;
@@ -58,6 +60,11 @@ export type SessionCardRow = {
   is_paid?: boolean | null;
   /** T-JOIN1b: a test session (Sesión de prueba). */
   is_test?: boolean | null;
+  /** T-SSR1: for the signed-out session page rendered on the server. */
+  duration?: number | null;
+  max_participants?: number | null;
+  current_participants?: number | null;
+  creator_avatar_url?: string | null;
 };
 
 /**

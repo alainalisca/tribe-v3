@@ -38,7 +38,20 @@ export default function PosterHeader({
       {photoUrl ? (
         <>
           {isOptimizableImage(photoUrl) ? (
-            <Image src={photoUrl} alt="" fill priority sizes="100vw" style={{ objectPosition: anchor }} />
+            // T-SSR1: the poster is never wider than the 560px session column
+            // (signed out; signed in it shows only with no photo). Next 16's
+            // `priority` no longer raises the fetch priority: preload plus
+            // fetchPriority, as the site's heroes do, or the photo queues
+            // behind the scripts on a slow phone.
+            <Image
+              src={photoUrl}
+              alt=""
+              fill
+              preload
+              fetchPriority="high"
+              sizes="(min-width: 560px) 560px, 100vw"
+              style={{ objectPosition: anchor }}
+            />
           ) : (
             // A host next/image is not configured for: a plain image, never a broken one.
             // eslint-disable-next-line @next/next/no-img-element
