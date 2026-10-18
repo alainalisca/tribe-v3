@@ -284,6 +284,7 @@ export default function SessionDetailPage({ hostHero = null }: { hostHero?: Hero
         language={language}
         isPast={isPast}
         isFull={isFull}
+        photo={hostHero}
       />
     );
   }

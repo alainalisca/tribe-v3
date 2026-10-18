@@ -77,6 +77,7 @@ export default function SignedOutSession({
   isPast,
   isFull,
   place: placeOverride,
+  photo = null,
 }: {
   session: PublicSession;
   creator: { id: string; name: string | null; avatar_url: string | null } | null;
@@ -91,6 +92,13 @@ export default function SignedOutSession({
    * when the page renders in the browser, which works it out here.
    */
   place?: { place: string | null; barrio: string | null };
+  /**
+   * The hero photo: the host's coach-card photo, the same chain as the
+   * WhatsApp card and the signed-in page (lib/session/publicSession
+   * hostHeroFor). Null for the poster with no photo; never the session's own
+   * photos.
+   */
+  photo?: { url: string; x: number; y: number } | null;
 }) {
   const t = useTranslations('sessionPublic');
   // The Jornada frame: the app's feedback bubble and install banner stay off it,
@@ -314,6 +322,7 @@ export default function SignedOutSession({
           gymName={gymName}
           language={language}
           place={placeOverride?.place}
+          photo={photo}
         />
         <div className={s.body}>
           {creator && (

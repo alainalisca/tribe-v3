@@ -98,6 +98,15 @@ describe('/session/<id>/ (T-SSR1)', () => {
     expect(insertGuestParticipant).not.toHaveBeenCalled();
   });
 
+  it("signed out: the hero is the host's coach-card photo, never the session's own photo", async () => {
+    rows.current = {
+      [row.id]: { ...row, photos: ['https://x.supabase.co/storage/v1/object/public/session-photos/building.jpg'] },
+    };
+    const out = await html();
+    expect(out).toContain('card-c1.jpg');
+    expect(out).not.toContain('building.jpg');
+  });
+
   it('never writes the street address into the HTML (props included)', async () => {
     const out = await html();
     expect(out).not.toContain(STREET);

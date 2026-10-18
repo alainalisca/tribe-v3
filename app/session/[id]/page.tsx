@@ -35,9 +35,12 @@ export default async function SessionPage({ params }: { params: Promise<{ id: st
 
   const language = serverLanguage(cookieStore.get(LANGUAGE_COOKIE)?.value, (await headers()).get('accept-language'));
   const props = signedOutProps(loaded);
+  // The host's coach-card photo as the hero, as on the signed-in page and the
+  // WhatsApp card (same cached pick, same 1.5 s cap).
+  const photo = await hostHeroFor(id);
   return (
     <FixedLanguage language={language}>
-      <SignedOutSession {...props} language={language} />
+      <SignedOutSession {...props} language={language} photo={photo} />
     </FixedLanguage>
   );
 }
