@@ -225,6 +225,20 @@ export function pickBoard(rows: readonly WeekRow[], max = WEEK_BOARD_MAX): WeekR
   return picked;
 }
 
+/**
+ * Every series this week, one row each, soonest first: the board before it
+ * picks eight. A sport page's week block (T-SHARE1) filters this, so a sport
+ * shows up to six of its own rows, not the board's two.
+ */
+export function buildWeekSeries(
+  rows: readonly BoardSessionRow[],
+  today: string,
+  lastDay: string,
+  nowTime: string
+): WeekRow[] {
+  return collapseSeries(upcoming(rows, today, lastDay, nowTime));
+}
+
 /** The board, from the raw query rows. `now` decides today and what has already started. */
 export function buildWeekBoard(
   rows: readonly BoardSessionRow[],
@@ -232,7 +246,12 @@ export function buildWeekBoard(
   lastDay: string,
   nowTime: string
 ): WeekRow[] {
-  return pickBoard(collapseSeries(upcoming(rows, today, lastDay, nowTime)));
+  return pickBoard(buildWeekSeries(rows, today, lastDay, nowTime));
+}
+
+/** A sport page's week block: that page's sports, soonest first, at most `max`. */
+export function sportRows(series: readonly WeekRow[], sports: readonly string[], max: number): WeekRow[] {
+  return series.filter((r) => sports.includes(r.sport)).slice(0, max);
 }
 
 /**

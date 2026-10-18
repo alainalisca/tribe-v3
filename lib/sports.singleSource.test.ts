@@ -101,6 +101,12 @@ const KNOWN_RIVAL_LISTS: Record<string, string> = {
   // The component offers exactly those three. Not drift: the narrowest correct
   // list, enforced by the database.
   'components/PopularRoutesSection.tsx': 'popular_routes.sport_type, pinned by a CHECK constraint to 3 values',
+
+  // T-SHARE1: SITE_SPORT_SLUGS are the Spanish URL slugs of the six
+  // /deportes/<slug>/ pages ('boxeo', 'mma', 'funcional'...), public addresses
+  // Ana shares, not sports anyone picks. lib/site/sportPages.ts maps each one
+  // onto SPORTS_LIST, and its test fails if a mapped sport is not canonical.
+  'lib/site/paths.ts': 'URL slugs of the /deportes/<slug>/ pages, mapped onto SPORTS_LIST in lib/site/sportPages.ts',
 };
 
 /**

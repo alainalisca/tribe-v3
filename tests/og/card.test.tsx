@@ -3,12 +3,13 @@ import fs from 'node:fs';
 import path from 'node:path';
 import sharp from 'sharp';
 import { describe, it, expect } from 'vitest';
-import { headlineSize, renderCard, type CardProps } from '@/lib/og/card';
+import { headlineLineHeight, headlineSize, renderCard, type CardProps } from '@/lib/og/card';
 
 /**
  * T-SHARE1 Part A. The share card renderer, drawn for real and compared with
  * checked-in PNGs: a short headline, the long one (Funcional), the paper tag,
- * no photo, and the home tiles. A card may differ from its PNG in at most 0.5
+ * no photo, an accented capital on line 2 (MÁS, T-SHARE1 Part B), and the
+ * home tiles. A card may differ from its PNG in at most 0.5
  * percent of its pixels (font antialiasing across machines); a layout change
  * moves far more than that.
  *
@@ -40,12 +41,8 @@ const CASES: Record<string, CardProps> = {
     photo: '/og/og_ath.jpg',
     lang: 'es',
   },
-  'no-photo': {
-    line: ['Tu gimnasio,', 'más lleno'],
-    sub: ['Primera clase gratis', 'Pases y reportes', 'Sin comisión'],
-    tag: 'Gimnasios',
-    lang: 'es',
-  },
+  'no-photo': { line: ['Preguntas', 'frecuentes'], sub: [], tag: 'Preguntas', lang: 'es' },
+  accent: { line: ['Tu gimnasio,', 'más lleno'], sub: [], tag: 'Gimnasios', lang: 'es' },
   tiles: {
     line: ['Entrena en', 'Medellín'],
     sub: WEEKLY,
@@ -105,6 +102,15 @@ describe('renderCard', () => {
     expect(headlineSize(['CrossFit en', 'Medellín'])).toBe(101);
     expect(headlineSize(['Entrena en', 'Medellín'])).toBe(101);
     expect(headlineSize(['Encuentra', 'tu grupo'])).toBe(101);
+  });
+
+  it('opens the lines to 0.92 when line 2 carries an accented capital, else keeps 0.87', () => {
+    expect(headlineLineHeight('más lleno', 'es')).toBe(0.92);
+    expect(headlineLineHeight('Medellín', 'en')).toBe(0.92);
+    expect(headlineLineHeight('Ñandú', 'es')).toBe(0.92);
+    expect(headlineLineHeight('tu grupo', 'es')).toBe(0.87);
+    // Only line 2: an accent on line 1 has the card's top margin above it.
+    expect(headlineLineHeight('frecuentes', 'es')).toBe(0.87);
   });
 
   it('refuses a photo and tiles together', async () => {

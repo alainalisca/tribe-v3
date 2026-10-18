@@ -931,3 +931,32 @@
   margin-top: 22px !important;
   font-weight: 700;
 }
+
+/* T-SHARE1: a sport page's week block, above its group. */
+.sportWeek {
+  margin-block: 36px 44px;
+}
+.sportWeek h2 {
+  font-family: var(--disp);
+  font-variation-settings: 'opsz' 72;
+  font-weight: 900;
+  text-transform: uppercase;
+  font-size: clamp(36px, 5vw, 72px);
+  line-height: 0.9;
+  margin: 0 0 18px;
+}
+/* No sessions of this sport this week: one line on ink, then the Coaches link. */
+.sportEmpty {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+  padding: 22px 24px;
+  background: var(--ink);
+  color: var(--paper);
+}
+.sportEmpty p {
+  margin: 0;
+  font-size: 17px;
+}

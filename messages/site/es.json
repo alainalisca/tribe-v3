@@ -70,6 +70,10 @@
     "preguntas": {
       "title": "Preguntas frecuentes · Tribe",
       "description": "Cómo funciona Tribe, qué cuesta y cómo se paga. Tribe no cobra comisión; los atletas le pagan directo al instructor."
+    },
+    "sport": {
+      "title": "{sport} en Medellín · Tribe",
+      "description": "Clases de {inline} en Medellín esta semana: quién las da, cuándo y dónde. Reserva tu cupo en Tribe."
     }
   },
   "alt": {
@@ -372,7 +376,9 @@
     "yourSport": "Tu deporte",
     "find": "Busca una sesión",
     "publish": "¿Das clases de uno de estos? Publica gratis",
-    "noPhoto": "sin foto todavía"
+    "noPhoto": "sin foto todavía",
+    "weekTitle": "Esta semana en {sport}",
+    "weekEmpty": "Sin sesiones de {sport} esta semana todavía"
   },
   "tv": {
     "onAir": "Episodios completos · grabados en sesiones reales",
@@ -508,5 +514,97 @@
   "roster": {
     "empty": "Los coaches aparecen aquí cuando publican su primera sesión.",
     "emptyCta": "Publica la tuya"
+  },
+  "og": {
+    "weekly1": "Clases todas las semanas",
+    "weekly2": "Coaches con nombre",
+    "weekly3": "Reserva en Tribe",
+    "home": {
+      "line1": "Entrena en",
+      "line2": "Medellín",
+      "tag": "Tribe"
+    },
+    "athletes": {
+      "line1": "Encuentra",
+      "line2": "tu grupo",
+      "sub1": "Sesiones cerca de ti",
+      "sub2": "Sabes quién da la clase",
+      "sub3": "Reserva en Tribe",
+      "tag": "Para atletas"
+    },
+    "coaches": {
+      "line1": "Llena",
+      "line2": "tu grupo",
+      "sub1": "Publica gratis",
+      "sub2": "Sin comisión",
+      "sub3": "Un link para tu bio",
+      "tag": "Para coaches"
+    },
+    "gyms": {
+      "line1": "Tu gimnasio,",
+      "line2": "más lleno",
+      "tag": "Gimnasios"
+    },
+    "os": {
+      "line1": "Tribe.OS hace",
+      "line2": "que se quede",
+      "tag": "Tribe.OS"
+    },
+    "tv": {
+      "line1": "Tribe",
+      "line2": "TV",
+      "sub1": "Episodios completos",
+      "sub2": "Grabados en sesiones reales",
+      "tag": "Tribe.TV"
+    },
+    "faq": {
+      "line1": "Preguntas",
+      "line2": "frecuentes",
+      "tag": "Preguntas"
+    },
+    "tiles": {
+      "boxeo": "Boxeo",
+      "crossfit": "CrossFit",
+      "hyrox": "HYROX",
+      "yoga": "Yoga"
+    },
+    "sport": {
+      "boxeo": {
+        "name": "Boxeo",
+        "inline": "boxeo",
+        "line1": "Boxeo en",
+        "line2": "Medellín"
+      },
+      "mma": {
+        "name": "MMA",
+        "inline": "MMA",
+        "line1": "MMA en",
+        "line2": "Medellín"
+      },
+      "crossfit": {
+        "name": "CrossFit",
+        "inline": "CrossFit",
+        "line1": "CrossFit en",
+        "line2": "Medellín"
+      },
+      "hyrox": {
+        "name": "HYROX",
+        "inline": "HYROX",
+        "line1": "HYROX en",
+        "line2": "Medellín"
+      },
+      "yoga": {
+        "name": "Yoga",
+        "inline": "yoga",
+        "line1": "Yoga en",
+        "line2": "Medellín"
+      },
+      "funcional": {
+        "name": "Funcional",
+        "inline": "funcional",
+        "line1": "Funcional",
+        "line2": "en Medellín"
+      }
+    }
   }
 }

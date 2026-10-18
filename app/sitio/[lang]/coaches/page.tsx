@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import CoachesContent from '@/components/site/pages/CoachesContent';
 import { siteLanguage } from '@/lib/site/i18n';
 import { siteMetadata } from '@/lib/site/metadata';
-import { photo } from '@/lib/site/photos';
+import { siteCardPath } from '@/lib/site/paths';
 import { fetchRoster } from '@/lib/site/roster';
 
 /**
@@ -13,7 +13,8 @@ import { fetchRoster } from '@/lib/site/roster';
 type Props = { params: Promise<{ lang: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  return siteMetadata('coaches', '/coaches/', photo('hero_coach'), siteLanguage((await params).lang));
+  const lang = siteLanguage((await params).lang);
+  return siteMetadata('coaches', '/coaches/', siteCardPath('coaches', lang), lang);
 }
 
 export default async function CoachesPage({ params }: Props) {

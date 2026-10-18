@@ -70,6 +70,10 @@
     "preguntas": {
       "title": "Frequently asked questions · Tribe",
       "description": "How Tribe works, what it costs and how payment works. Tribe charges no commission; athletes pay the instructor directly."
+    },
+    "sport": {
+      "title": "{sport} in Medellín · Tribe",
+      "description": "{inline} classes in Medellín this week: who teaches, when and where. Book your spot on Tribe."
     }
   },
   "alt": {
@@ -372,7 +376,9 @@
     "yourSport": "Your sport",
     "find": "Find a session",
     "publish": "Teach one of these? Publish for free",
-    "noPhoto": "no photo yet"
+    "noPhoto": "no photo yet",
+    "weekTitle": "This week in {sport}",
+    "weekEmpty": "No {sport} sessions this week yet"
   },
   "tv": {
     "onAir": "Full episodes · filmed in real sessions",
@@ -508,5 +514,97 @@
   "roster": {
     "empty": "Coaches show up here once they publish their first session.",
     "emptyCta": "Publish yours"
+  },
+  "og": {
+    "weekly1": "Classes every week",
+    "weekly2": "Coaches with names",
+    "weekly3": "Book on Tribe",
+    "home": {
+      "line1": "Train in",
+      "line2": "Medellín",
+      "tag": "Tribe"
+    },
+    "athletes": {
+      "line1": "Find",
+      "line2": "your group",
+      "sub1": "Sessions near you",
+      "sub2": "You know who teaches",
+      "sub3": "Book on Tribe",
+      "tag": "For athletes"
+    },
+    "coaches": {
+      "line1": "Fill",
+      "line2": "your group",
+      "sub1": "Post for free",
+      "sub2": "No commission",
+      "sub3": "One link for your bio",
+      "tag": "For coaches"
+    },
+    "gyms": {
+      "line1": "Your gym,",
+      "line2": "fuller",
+      "tag": "Gyms"
+    },
+    "os": {
+      "line1": "Tribe.OS makes",
+      "line2": "them stay",
+      "tag": "Tribe.OS"
+    },
+    "tv": {
+      "line1": "Tribe",
+      "line2": "TV",
+      "sub1": "Full episodes",
+      "sub2": "Filmed in real sessions",
+      "tag": "Tribe.TV"
+    },
+    "faq": {
+      "line1": "Frequently asked",
+      "line2": "questions",
+      "tag": "Questions"
+    },
+    "tiles": {
+      "boxeo": "Boxing",
+      "crossfit": "CrossFit",
+      "hyrox": "HYROX",
+      "yoga": "Yoga"
+    },
+    "sport": {
+      "boxeo": {
+        "name": "Boxing",
+        "inline": "boxing",
+        "line1": "Boxing in",
+        "line2": "Medellín"
+      },
+      "mma": {
+        "name": "MMA",
+        "inline": "MMA",
+        "line1": "MMA in",
+        "line2": "Medellín"
+      },
+      "crossfit": {
+        "name": "CrossFit",
+        "inline": "CrossFit",
+        "line1": "CrossFit in",
+        "line2": "Medellín"
+      },
+      "hyrox": {
+        "name": "HYROX",
+        "inline": "HYROX",
+        "line1": "HYROX in",
+        "line2": "Medellín"
+      },
+      "yoga": {
+        "name": "Yoga",
+        "inline": "yoga",
+        "line1": "Yoga in",
+        "line2": "Medellín"
+      },
+      "funcional": {
+        "name": "Functional",
+        "inline": "functional training",
+        "line1": "Functional",
+        "line2": "in Medellín"
+      }
+    }
   }
 }

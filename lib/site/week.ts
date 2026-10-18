@@ -4,7 +4,7 @@ import { unstable_cache } from 'next/cache';
 import { logError } from '@/lib/logger';
 import { getServiceRoleClient } from '@/lib/supabase/admin';
 import { bogotaDateOffset, bogotaToday } from '@/lib/time/bogotaDate';
-import { buildWeekBoard, sportCounts, WEEK_BOARD_DAYS, type BoardSessionRow } from './weekBoard';
+import { pickBoard, sportCounts, sportRows, buildWeekSeries, WEEK_BOARD_DAYS, type BoardSessionRow } from './weekBoard';
 import type { WeekRow } from './weekTypes';
 
 /**
@@ -35,8 +35,9 @@ const QUERY_LIMIT = 300;
 
 export const WEEK_BOARD_REVALIDATE_SECONDS = 300;
 
-type WeekData = { rows: WeekRow[]; counts: Record<string, number> };
-const EMPTY: WeekData = { rows: [], counts: {} };
+/** `series`: every series this week, before the board picks eight (sport pages, T-SHARE1). */
+type WeekData = { rows: WeekRow[]; counts: Record<string, number>; series: WeekRow[] };
+const EMPTY: WeekData = { rows: [], counts: {}, series: [] };
 
 async function queryWeek(today: string): Promise<WeekData> {
   const now = new Date();
@@ -57,16 +58,15 @@ async function queryWeek(today: string): Promise<WeekData> {
     return EMPTY;
   }
   const raw = (data ?? []) as unknown as BoardSessionRow[];
-  return {
-    rows: buildWeekBoard(raw, today, lastDay, nowTime),
-    counts: sportCounts(raw, today, lastDay, nowTime),
-  };
+  const series = buildWeekSeries(raw, today, lastDay, nowTime);
+  return { rows: pickBoard(series), counts: sportCounts(raw, today, lastDay, nowTime), series };
 }
 
 const fetchWeek = cache(async (): Promise<WeekData> => {
   const today = bogotaToday();
   try {
-    return await unstable_cache(() => queryWeek(today), ['site-week', today], {
+    // v2: T-SHARE1 added `series`; a cached entry from before it must not be read.
+    return await unstable_cache(() => queryWeek(today), ['site-week-v2', today], {
       revalidate: WEEK_BOARD_REVALIDATE_SECONDS,
       tags: ['site-week-board'],
     })();
@@ -79,6 +79,11 @@ const fetchWeek = cache(async (): Promise<WeekData> => {
 /** The board's rows, at most eight, soonest first. Empty on any failure. */
 export async function fetchWeekBoard(): Promise<WeekRow[]> {
   return (await fetchWeek()).rows;
+}
+
+/** A sport page's week block (T-SHARE1): up to `max` series of those sports. Empty on any failure. */
+export async function fetchWeekSportRows(sports: readonly string[], max: number): Promise<WeekRow[]> {
+  return sportRows((await fetchWeek()).series ?? [], sports, max);
 }
 
 /** Sessions this week per sport key (Deportes chips). Empty on any failure. */

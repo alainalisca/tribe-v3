@@ -1,6 +1,8 @@
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { ImageResponse } from 'next/og';
+import sharp from 'sharp';
+import { logError } from '@/lib/logger';
 
 /**
  * T-SHARE1 Part A. The one share card every public link renders: charcoal,
@@ -16,7 +18,12 @@ import { ImageResponse } from 'next/og';
  * disk (node:fs keeps it out of any client bundle). A route that uses it runs
  * on the Node runtime, and a route that re-renders on Vercel (revalidate) needs
  * public/fonts, public/og and the wordmark traced into its function
- * (outputFileTracingIncludes; Part B adds it with the routes).
+ * (next.config.ts outputFileTracingIncludes).
+ *
+ * Routes serve cardResponse(): the same card as a JPEG at quality 82. The PNG
+ * renderCard() makes is 650 to 850 KB with a photo, and WhatsApp drops preview
+ * images much past 300 KB; the JPEG is a fraction of that (Al, 2026-10-17:
+ * every card under 250 KB, tested in tests/og/siteCards.test.ts).
  */
 
 export type CardLang = 'es' | 'en';
@@ -55,6 +62,13 @@ const HEADLINE = 101;
 const HEADLINE_LONG = 88;
 /** Longer than this, counting the dot as the last character of line 2, drops to HEADLINE_LONG. */
 const LONG_AFTER = 11;
+const LINE_HEIGHT = 0.87;
+/** Line 2 with an accented capital: its accent would touch line 1's letters at 0.87 (Al, 2026-10-17). */
+const LINE_HEIGHT_ACCENT = 0.92;
+const ACCENTED_CAPITAL = /[ÁÉÍÓÚÑ]/;
+/** The text block's width; it may run the card's width when nothing is drawn on the right. */
+const TEXT_W = 624;
+const TEXT_W_BARE = CARD_WIDTH - 2 * PAD;
 
 const TILE = 300;
 const TILES_LEFT = 588;
@@ -68,6 +82,13 @@ const TILE_GAP = 12;
  */
 export function headlineSize([first, second]: [string, string]): number {
   return first.length > LONG_AFTER || second.length + 1 > LONG_AFTER ? HEADLINE_LONG : HEADLINE;
+}
+
+const upperFor = (lang: CardLang) => (s: string) => s.toLocaleUpperCase(lang === 'en' ? 'en-US' : 'es-CO');
+
+/** 0.92 when line 2, uppercased, carries Á É Í Ó Ú or Ñ ("MÁS", "MEDELLÍN"); else the mock's 0.87. */
+export function headlineLineHeight(second: string, lang: CardLang): number {
+  return ACCENTED_CAPITAL.test(upperFor(lang)(second)) ? LINE_HEIGHT_ACCENT : LINE_HEIGHT;
 }
 
 // The static cuts from scripts/buildCardFonts.py (Satori ignores a variable
@@ -117,8 +138,9 @@ const WORDMARK = { src: '/tribe-wordmark.png', width: 180, height: Math.round((1
 export async function renderCard(props: CardProps): Promise<ImageResponse> {
   const { line, sub, tag, tagStyle = 'lime', photo, tiles, lang } = props;
   if (photo && tiles) throw new Error('renderCard: photo and tiles are mutually exclusive');
-  const upper = (s: string) => s.toLocaleUpperCase(lang === 'en' ? 'en-US' : 'es-CO');
+  const upper = upperFor(lang);
   const size = headlineSize(line);
+  const lineHeight = headlineLineHeight(line[1], lang);
 
   const [fonts, wordmark, photoSrc, tileSrcs] = await Promise.all([
     loadFonts(),
@@ -192,7 +214,7 @@ export async function renderCard(props: CardProps): Promise<ImageResponse> {
           position: 'absolute',
           left: PAD,
           top: 170,
-          width: 624,
+          width: photo || tiles ? TEXT_W : TEXT_W_BARE,
           color: '#FFFFFF',
         }}
       >
@@ -203,7 +225,7 @@ export async function renderCard(props: CardProps): Promise<ImageResponse> {
             fontFamily: 'Big Shoulders',
             fontWeight: 900,
             fontSize: size,
-            lineHeight: `${Math.round(size * 0.87)}px`,
+            lineHeight: `${Math.round(size * lineHeight)}px`,
           }}
         >
           <div style={{ display: 'flex' }}>{upper(line[0])}</div>
@@ -252,4 +274,23 @@ export async function renderCard(props: CardProps): Promise<ImageResponse> {
     </div>,
     { width: CARD_WIDTH, height: CARD_HEIGHT, fonts }
   );
+}
+
+export const CARD_JPEG_QUALITY = 82;
+
+/**
+ * The card as a JPEG response, for every card route (the header says why not
+ * PNG). If sharp cannot run where the card is redrawn, the PNG goes out
+ * instead: too heavy for some WhatsApp previews, but never an error a scraper
+ * would cache.
+ */
+export async function cardResponse(props: CardProps): Promise<Response> {
+  const png = Buffer.from(await (await renderCard(props)).arrayBuffer());
+  try {
+    const jpeg = await sharp(png).jpeg({ quality: CARD_JPEG_QUALITY, mozjpeg: true }).toBuffer();
+    return new Response(new Uint8Array(jpeg), { headers: { 'Content-Type': 'image/jpeg' } });
+  } catch (error) {
+    logError(error, { action: 'og.cardResponse.jpeg' });
+    return new Response(new Uint8Array(png), { headers: { 'Content-Type': 'image/png' } });
+  }
 }

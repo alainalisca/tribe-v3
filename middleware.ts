@@ -5,7 +5,7 @@ import { athletesGateAllows, isAthletesGatedPath, GATED_NOT_FOUND_PATH } from '@
 import { canonicalLinkHeader } from '@/lib/seo/canonicalLink';
 import { hasAuthCookieName } from '@/lib/site/authCookie';
 import { LANGUAGE_COOKIE, languageFromCookie } from '@/lib/languageCookie';
-import { internalSitePath, publicPathForInternal, siteSlugOf } from '@/lib/site/paths';
+import { internalSitePath, isSiteCardPath, publicPathForInternal, siteSlugOf } from '@/lib/site/paths';
 
 /**
  * Tribe middleware does three things, in order:
@@ -336,6 +336,12 @@ export async function middleware(request: NextRequest) {
   // with no Supabase auth cookie: everyone else gets the feed, app/page.tsx,
   // which sends an expired session back here. Internal URLs and the old /inicio
   // redirect to their public path, so each page has one address.
+  // T-SHARE1: a site page's share card is the one internal URL served as it is
+  // (WhatsApp and the other scrapers fetch it from og:image). No canonical: it
+  // is an image, not a page.
+  if (isSiteCardPath(pathname)) {
+    return applySecurityHeaders(NextResponse.next());
+  }
   const publicForInternal = publicPathForInternal(pathname);
   const oldInicio = pathname === '/inicio' || pathname === '/inicio/';
   if (publicForInternal !== null || oldInicio) {
