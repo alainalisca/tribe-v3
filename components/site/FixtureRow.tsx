@@ -10,9 +10,21 @@ import w from './week.module.css';
 /**
  * One session row of "La semana" (Part B): days, time, title with its tags,
  * place, coach, "Pedir cupo". Also the rows of a sport page's week block
- * (T-SHARE1), inside the same `w.table` list.
+ * (T-SHARE1), inside the same `w.table` list, and of the coach page (Part E),
+ * in a `w.paper` table, with `action` "Reserva" and, for a session past this
+ * week, `day` as its date.
  */
-export default function FixtureRow({ lang, row: r }: { lang: SiteLanguage; row: WeekRow }) {
+export default function FixtureRow({
+  lang,
+  row: r,
+  action,
+  day,
+}: {
+  lang: SiteLanguage;
+  row: WeekRow;
+  action?: string;
+  day?: string;
+}) {
   const t = siteT(lang);
   const sport = translateSport(r.sport, lang);
   const title = rowTitle(r, lang);
@@ -37,7 +49,7 @@ export default function FixtureRow({ lang, row: r }: { lang: SiteLanguage; row: 
       {/* No aria-label (Al, 2026-10-17): the row's visible text is its name, so
           a voice-control user can say any of it (WCAG 2.5.3). */}
       <Link className={w.row} href={`/s/${r.id}/`}>
-        <span className={w.day}>{daysLabel(r.weekdays, lang)}</span>
+        <span className={w.day}>{day ?? daysLabel(r.weekdays, lang)}</span>
         <span className={w.hr}>{r.startTime}</span>
         <span className={w.ses}>
           {title}
@@ -53,7 +65,7 @@ export default function FixtureRow({ lang, row: r }: { lang: SiteLanguage; row: 
         </span>
         <span className={w.who}>{r.creatorName}</span>
         <span className={w.go}>
-          {t('site.week.ask')} <ArrowRight />
+          {action ?? t('site.week.ask')} <ArrowRight />
         </span>
       </Link>
     </li>

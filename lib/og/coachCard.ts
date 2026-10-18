@@ -35,7 +35,7 @@ import { cropCardPhoto, isCardBox, orientedSize, type CardBox } from './cardCrop
 
 export const COACH_SELECT =
   'id, name, sports, avatar_url, cover_image_url, photos, card_photo_url, card_photo_box, ' +
-  'card_photo_rejects, handle, is_instructor, banned, deleted_at, is_test_account, bio, instructor_bio';
+  'card_photo_rejects, handle, is_instructor, banned, deleted_at, is_test_account, bio, instructor_bio, specialties';
 
 export type CoachRow = {
   id: string;
@@ -54,6 +54,8 @@ export type CoachRow = {
   is_test_account: boolean | null;
   bio: string | null;
   instructor_bio: string | null;
+  /** Shown on the coach page (Part E), never on the card. */
+  specialties?: string[] | null;
 };
 
 export type PhotoRule = 'chosen' | 'gallery' | 'avatar';
@@ -215,12 +217,12 @@ export function coachFirstName(name: string | null | undefined): string {
 export const SPORT_LINE_MAX = 24;
 
 /**
- * Up to two sports, in Spanish (scrapers send no language; the market is
- * Colombia). The second only when both fit the line. "Other" is not a sport
- * to show.
+ * Up to two sports, in Spanish on the card (scrapers send no language; the
+ * market is Colombia) and in the visitor's language on the page. The second
+ * only when both fit the line. "Other" is not a sport to show.
  */
-export function coachSports(sports: string[] | null | undefined): string[] {
-  const names = (sports ?? []).filter((s) => s && s !== 'Other').map((s) => translateSport(s, 'es'));
+export function coachSports(sports: string[] | null | undefined, lang: 'es' | 'en' = 'es'): string[] {
+  const names = (sports ?? []).filter((s) => s && s !== 'Other').map((s) => translateSport(s, lang));
   if (names.length < 2) return names;
   return `${names[0]} · ${names[1]}`.length <= SPORT_LINE_MAX ? names.slice(0, 2) : names.slice(0, 1);
 }

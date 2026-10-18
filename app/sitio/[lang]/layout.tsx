@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
-import { Big_Shoulders, Instrument_Sans, JetBrains_Mono } from 'next/font/google';
 import SiteLayout from '@/components/site/SiteLayout';
+import { SITE_FONT_CLASS } from '@/lib/site/fonts';
 import { SITE_LANGUAGES, siteLanguage } from '@/lib/site/i18n';
 import { fetchWeekBoard } from '@/lib/site/week';
 import { tickerLead } from '@/lib/site/weekBoard';
@@ -13,9 +13,8 @@ import { tickerLead } from '@/lib/site/weekBoard';
  * their public ones (lib/site/paths). So every page is static HTML with its copy
  * already in the visitor's language, and no message file ships to the browser.
  *
- * The three faces load here and nowhere else, so the app routes never download
- * them. "Big Shoulders Display" ships on Google Fonts as "Big Shoulders" with an
- * optical-size axis; opsz 72 (set in base.module.css .disp) is the Display cut.
+ * The three faces (lib/site/fonts.ts) load here and on the public coach page
+ * (/i/, T-SHARE1 Part E) and nowhere else, so the app routes never download them.
  */
 export const dynamicParams = false;
 
@@ -30,37 +29,6 @@ export function generateStaticParams() {
   return SITE_LANGUAGES.map((lang) => ({ lang }));
 }
 
-// T-SITE1 Part F: Latin only (every Spanish and English character is in it;
-// latin-ext was a second 45 KB file preloaded ahead of the hero image).
-const display = Big_Shoulders({
-  subsets: ['latin'],
-  axes: ['opsz'],
-  variable: '--font-site-disp',
-  display: 'swap',
-  fallback: ['Arial Narrow', 'Impact', 'sans-serif'],
-  // next/font has no metrics for this family, so it cannot size a fallback
-  // and logs an error every build. The headline sits in fixed-height blocks;
-  // CLS is measured in Part F.
-  adjustFontFallback: false,
-});
-
-const body = Instrument_Sans({
-  subsets: ['latin'],
-  variable: '--font-site-body',
-  display: 'swap',
-  fallback: ['Helvetica Neue', 'Arial', 'sans-serif'],
-});
-
-// Small mono labels only: not preloaded, so it never competes with the hero.
-const mono = JetBrains_Mono({
-  subsets: ['latin'],
-  weight: ['500', '700'],
-  preload: false,
-  variable: '--font-site-mono',
-  display: 'swap',
-  fallback: ['ui-monospace', 'Menlo', 'monospace'],
-});
-
 export default async function SiteLangLayout({
   children,
   params,
@@ -71,7 +39,7 @@ export default async function SiteLangLayout({
   const lang = siteLanguage((await params).lang);
   const lead = tickerLead(await fetchWeekBoard(), lang);
   return (
-    <SiteLayout lang={lang} lead={lead} fontClassName={`${display.variable} ${body.variable} ${mono.variable}`}>
+    <SiteLayout lang={lang} lead={lead} fontClassName={SITE_FONT_CLASS}>
       {children}
     </SiteLayout>
   );

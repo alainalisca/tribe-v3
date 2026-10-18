@@ -606,5 +606,15 @@
         "line2": "in Medellín"
       }
     }
+  },
+  "coachPage": {
+    "upcoming": "Upcoming classes",
+    "book": "Book",
+    "none": "No classes published yet",
+    "about": "About {name}",
+    "specialties": "Specialties",
+    "coach": "Coach",
+    "city": "Medellín",
+    "photoAlt": "{name} training"
   }
 }

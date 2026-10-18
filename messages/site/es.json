@@ -606,5 +606,15 @@
         "line2": "en Medellín"
       }
     }
+  },
+  "coachPage": {
+    "upcoming": "Próximas clases",
+    "book": "Reserva",
+    "none": "Todavía no hay clases publicadas",
+    "about": "Sobre {name}",
+    "specialties": "Especialidades",
+    "coach": "Entrenador",
+    "city": "Medellín",
+    "photoAlt": "{name} entrenando"
   }
 }

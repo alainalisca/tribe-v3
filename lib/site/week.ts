@@ -24,7 +24,7 @@ import type { WeekRow } from './weekTypes';
  * NEVER THROWS. A missing key at build time or a database hiccup renders the
  * empty state (the "Publica la tuya" row), never an error page.
  */
-const SELECT =
+export const WEEK_SESSION_SELECT =
   'id, sport, title, date, start_time, duration, location, max_participants, current_participants, ' +
   'is_paid, price_cents, currency, status, recurring_parent_id, partner_status, ' +
   'partner:featured_partners(business_name, status), ' +
@@ -45,7 +45,7 @@ async function queryWeek(today: string): Promise<WeekData> {
   const nowTime = now.toLocaleTimeString('en-GB', { timeZone: 'America/Bogota', hour12: false }).slice(0, 5);
   const { data, error } = await getServiceRoleClient()
     .from('sessions')
-    .select(SELECT)
+    .select(WEEK_SESSION_SELECT)
     .eq('status', 'active')
     .eq('visibility', 'public')
     .gte('date', today)

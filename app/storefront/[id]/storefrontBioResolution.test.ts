@@ -6,7 +6,7 @@ import { describe, it, expect } from 'vitest';
  * surfaces that changed in fix/storefront-reads-instructor-bio:
  *   - components/storefront/StorefrontProfileColumn.tsx (storefront sidebar)
  *   - app/i/[id]/page.tsx (share-page metadata description)
- *   - app/i/[id]/InstructorShareClient.tsx (share card body)
+ *   - app/i/[id]/page.tsx (the coach page's bio, T-SHARE1 Part E)
  *
  * All three render `instructor_bio || bio`. instructor_bio is what both
  * instructor-facing editors write (the Storefront Editor and profile-edit's

@@ -1,5 +1,15 @@
 import { describe, it, expect, vi } from 'vitest';
 
+vi.mock('server-only', () => ({}));
+vi.mock('next/headers', () => ({ cookies: async () => ({ get: () => undefined }) }));
+vi.mock('@/lib/site/coachPage', () => ({ coachHeroPhoto: async () => null, fetchCoachSessions: async () => [] }));
+vi.mock('@/lib/site/week', () => ({ fetchWeekBoard: async () => [] }));
+vi.mock('next/font/google', () => ({
+  Big_Shoulders: () => ({ variable: 'd' }),
+  Instrument_Sans: () => ({ variable: 'b' }),
+  JetBrains_Mono: () => ({ variable: 'm' }),
+}));
+
 /** T-SHARE1 Part C: /i/<handle> and /i/<uuid> are one page with one card. */
 const row = {
   id: '34d56f30-f8d2-4588-beaa-07ee53d13d1d',
@@ -21,7 +31,7 @@ vi.mock('@/lib/og/coachCard', () => ({
   isListedCoach: (c: typeof row) => c.is_instructor && !c.banned && !c.deleted_at,
 }));
 
-import { generateMetadata } from './page';
+import PublicInstructorPage, { generateMetadata } from './page';
 
 const meta = (id: string) => generateMetadata({ params: Promise.resolve({ id }) });
 
@@ -37,5 +47,9 @@ describe('/i/<handle> and /i/<uuid>', () => {
 
   it('an unknown handle is not a coach page', async () => {
     expect((await meta('nobody')).title).toBe('Instructor no disponible | Tribe');
+  });
+
+  it('the page is a 404 for anything that is not a listed coach', async () => {
+    await expect(PublicInstructorPage({ params: Promise.resolve({ id: 'nobody' }) })).rejects.toThrow();
   });
 });
