@@ -9,6 +9,7 @@ import { useLanguage } from '@/lib/LanguageContext';
 import { Button } from '@/components/ui/button';
 import { showInfo } from '@/lib/toast';
 import { trackEvent } from '@/lib/analytics';
+import { publicSessionTitle } from '@/lib/share/sessionPublic';
 import WhatsAppShareButton from '@/components/session/WhatsAppShareButton';
 import PaidSessionRequest from '@/components/session/PaidSessionRequest';
 import CancelSeriesDialog from '@/components/session/CancelSeriesDialog';
@@ -69,7 +70,10 @@ export default function ActionButtons({
 
   const isPaidSession = !!session.is_paid && session.price_cents > 0;
   const calendarData = {
-    title: `${session.sport} — ${session.title || 'Tribe Session'}`,
+    title: publicSessionTitle(
+      { title: session.title, sport: session.sport, creatorName: session.creator?.name },
+      _language
+    ),
     description: `Session with ${session.creator?.name || 'Instructor'} on Tribe.`,
     startDate: new Date(`${session.date}T${session.start_time || '00:00'}`),
     durationMinutes: session.duration || 60,
@@ -95,6 +99,12 @@ export default function ActionButtons({
         ) : isFull ? (
           <Button disabled className="w-full py-3 font-bold">
             {t('sessionFull')}
+          </Button>
+        ) : isPaidSession ? (
+          // T-JOIN1 Part B: a paid session needs an account (T-PAY3), so no
+          // guest door; sign in and come back to this session.
+          <Button asChild className="w-full py-3 font-bold">
+            <Link href={`/auth/?returnTo=${encodeURIComponent(`/session/${session.id}/`)}`}>{t('signInToAsk')}</Link>
           </Button>
         ) : (
           <Button onClick={() => sessionActions.setShowGuestModal(true)} className="w-full py-3 font-bold">

@@ -56,7 +56,7 @@ describe('Inicio, "La semana" (T-SITE1 Part B)', () => {
   it('two rows: both sessions plus "Publica la tuya", titles never blank', async () => {
     fetchWeekBoard.mockResolvedValue([row(0), row(1)]);
     const { board, links } = await renderInicio();
-    expect(links.map(hrefOf)).toEqual(['/s/s0', '/s/s1', '/coaches']);
+    expect(links.map(hrefOf)).toEqual(['/session/s0', '/session/s1', '/coaches']);
     expect(within(board).getByText('Boxeo con Coach0')).toBeTruthy();
     expect(within(board).getByText('Lun a vie')).toBeTruthy();
     const ld = JSON.parse(board.querySelector('script[type="application/ld+json"]')?.textContent ?? '{}');
@@ -97,7 +97,7 @@ describe('Inicio, "La semana" (T-SITE1 Part B)', () => {
     fetchWeekBoard.mockResolvedValue(Array.from({ length: 10 }, (_, i) => row(i)));
     const { links } = await renderInicio();
     expect(links).toHaveLength(8);
-    expect(links.every((l) => hrefOf(l).startsWith('/s/'))).toBe(true);
+    expect(links.every((l) => hrefOf(l).startsWith('/session/'))).toBe(true);
   });
 
   it('renders in English for /sitio/en', async () => {

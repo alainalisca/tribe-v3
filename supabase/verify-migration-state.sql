@@ -3009,4 +3009,27 @@ select '220_t_share1_card_photo_and_handle',
          else 'applied'
        end
 
+union all
+
+-- T-JOIN1 Part B. The guest door holds on the server: E.164 phones, one join
+-- per phone per session, and only the service role (the rate-limited route)
+-- can call it. By to_regprocedure, so this reads MISSING before 221 runs.
+select '221_t_join1_guest_join_hardening',
+       case
+         when to_regprocedure('public.join_session_as_guest(uuid, text, text, text, text)') is null
+           then 'MISSING -- join_session_as_guest is absent'
+         when pg_get_functiondef(to_regprocedure('public.join_session_as_guest(uuid, text, text, text, text)')) !~ 'invalid_phone'
+           then 'MISSING -- join_session_as_guest accepts any phone text'
+         when pg_get_functiondef(to_regprocedure('public.join_session_as_guest(uuid, text, text, text, text)')) !~ 'already_joined'
+           then 'MISSING -- join_session_as_guest lets one phone join a session twice'
+         when has_function_privilege('anon', to_regprocedure('public.join_session_as_guest(uuid, text, text, text, text)'), 'EXECUTE')
+           then 'MISSING -- anon can call join_session_as_guest directly and skip the route''s rate limit'
+         when not has_function_privilege('service_role', to_regprocedure('public.join_session_as_guest(uuid, text, text, text, text)'), 'EXECUTE')
+           then 'MISSING -- service_role cannot call join_session_as_guest; every guest join fails'
+         when not exists (select 1 from public.migrations_applied
+                           where migration = '221_t_join1_guest_join_hardening')
+           then 'MISSING -- 221 is not recorded in migrations_applied'
+         else 'applied'
+       end
+
 order by migration;

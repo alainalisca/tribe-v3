@@ -69,7 +69,7 @@ export function buildSitemapEntries(input: SitemapInput): MetadataRoute.Sitemap 
       priority: 0.7,
     })),
     ...input.sessions.map((s) => ({
-      url: `${base}/s/${encodeURIComponent(s.id)}/`,
+      url: `${base}/session/${encodeURIComponent(s.id)}/`,
       lastModified: now,
       changeFrequency: 'daily' as const,
       priority: 0.6,

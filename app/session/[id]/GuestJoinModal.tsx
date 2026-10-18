@@ -1,67 +1,106 @@
 'use client';
 
-import { useLanguage } from '@/lib/LanguageContext';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { useState } from 'react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { normalizeGuestPhone } from '@/lib/guestPhone';
+import { useTranslations } from '@/lib/i18n/useTranslations';
+import { SITE_FONT_CLASS } from '@/lib/site/fonts';
+import br from '@/components/bridge/bridge.module.css';
+import s from './signedOut.module.css';
 
-interface GuestJoinModalProps {
-  language: 'en' | 'es';
-  guestData: { name: string; phone: string; email: string };
-  joiningAsGuest: boolean;
-  onClose: () => void;
-  onGuestDataChange: (data: { name: string; phone: string; email: string }) => void;
-  onSubmit: () => void;
-}
-
+/**
+ * T-JOIN1 Part B: "Pedir mi cupo", the guest's two fields, in the bridge
+ * style. Name and WhatsApp only (the email field is gone; the column stays and
+ * is sent empty). The phone is checked here with the server's own rule
+ * (lib/guestPhone.ts) so a typo is caught before anything is sent; the route
+ * checks it again.
+ */
 export default function GuestJoinModal({
-  language: _language,
-  guestData,
-  joiningAsGuest,
+  hostName,
+  joining,
+  error,
+  signInHref,
   onClose,
-  onGuestDataChange,
   onSubmit,
-}: GuestJoinModalProps) {
-  const { t } = useLanguage();
+}: {
+  /** The coach's first name, for "<Nombre> te confirma". */
+  hostName: string;
+  joining: boolean;
+  /** A refusal from the server, already worded. */
+  error: string | null;
+  signInHref: string;
+  onClose: () => void;
+  onSubmit: (name: string, phone: string) => void;
+}) {
+  const t = useTranslations('sessionPublic');
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [problem, setProblem] = useState<string | null>(null);
+
+  function submit() {
+    if (!name.trim()) return setProblem(t('nameMissing'));
+    if (!normalizeGuestPhone(phone)) return setProblem(t('phoneInvalid'));
+    setProblem(null);
+    onSubmit(name.trim(), phone);
+  }
+
+  const shown = problem ?? error;
   return (
-    <Dialog open={true} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent data-modal="true" className="bg-white dark:bg-tribe-card rounded-xl max-w-md w-full p-6">
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent data-modal="true" className={`${br.bridge} ${SITE_FONT_CLASS} ${s.modal}`}>
         <DialogHeader>
-          <DialogTitle className="text-lg font-bold text-theme-primary">{t('joinAsGuest')}</DialogTitle>
-          <DialogDescription className="text-sm text-stone-600 dark:text-gray-300">
-            {t('enterDetailsToConfirm')}
-          </DialogDescription>
+          <DialogTitle className={`${br.disp} ${s.modalTitle}`}>{t('modalTitle')}</DialogTitle>
+          <DialogDescription className={s.modalSub}>{t('modalSub', { name: hostName })}</DialogDescription>
         </DialogHeader>
-        <div className="space-y-3">
-          <Input
-            type="text"
-            placeholder={t('fullName')}
-            value={guestData.name}
-            onChange={(e) => onGuestDataChange({ ...guestData, name: e.target.value })}
-            className="h-auto py-3 dark:border-tribe-mid bg-white dark:bg-tribe-mid text-theme-primary"
-          />
-          <Input
-            type="tel"
-            placeholder={t('phone')}
-            value={guestData.phone}
-            onChange={(e) => onGuestDataChange({ ...guestData, phone: e.target.value })}
-            className="h-auto py-3 dark:border-tribe-mid bg-white dark:bg-tribe-mid text-theme-primary"
-          />
-          <Input
-            type="email"
-            placeholder={t('emailOptional')}
-            value={guestData.email}
-            onChange={(e) => onGuestDataChange({ ...guestData, email: e.target.value })}
-            className="h-auto py-3 dark:border-tribe-mid bg-white dark:bg-tribe-mid text-theme-primary"
-          />
-        </div>
-        <Button onClick={onSubmit} disabled={joiningAsGuest} className="w-full mt-4 py-3 font-bold">
-          {joiningAsGuest ? t('confirming') : t('confirmAttendance')}
-        </Button>
-        <p className="text-xs text-center text-stone-500 dark:text-gray-400 mt-3">
-          {t('alreadyHaveAccount')}{' '}
-          <a href="/auth" className="text-tribe-green hover:underline">
-            {t('signInLink')}
+        <form
+          className={s.form}
+          onSubmit={(e) => {
+            e.preventDefault();
+            submit();
+          }}
+          noValidate
+        >
+          <label className={s.field}>
+            <span className={`${br.mono} ${s.label}`}>{t('nameLabel')}</span>
+            <input
+              className={s.input}
+              type="text"
+              autoComplete="name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              maxLength={80}
+            />
+          </label>
+          <label className={s.field}>
+            <span className={`${br.mono} ${s.label}`}>{t('phoneLabel')}</span>
+            <input
+              className={s.input}
+              type="tel"
+              inputMode="tel"
+              autoComplete="tel"
+              placeholder="300 123 4567"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              aria-describedby="guest-phone-hint"
+              aria-invalid={!!problem && problem === t('phoneInvalid')}
+            />
+            <span id="guest-phone-hint" className={s.hint}>
+              {t('phoneHint')}
+            </span>
+          </label>
+          {shown && (
+            <p className={s.error} role="alert">
+              {shown}
+            </p>
+          )}
+          <button type="submit" className={s.limeButton} disabled={joining}>
+            {joining ? t('confirming') : t('confirm')}
+          </button>
+        </form>
+        <p className={s.modalFoot}>
+          {t('haveAccount')}{' '}
+          <a href={signInHref} className={s.footLink}>
+            {t('signIn')}
           </a>
         </p>
       </DialogContent>

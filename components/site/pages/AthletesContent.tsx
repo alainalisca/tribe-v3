@@ -68,7 +68,7 @@ export default function AthletesContent({ lang, soonest }: { lang: SiteLanguage;
               title: t('step2Title'),
               body: t('step2Body'),
               extra: (
-                <Link className={`${b.ulink} ${p.stepLink}`} href={soonest ? `/s/${soonest.id}/` : '/#semana'}>
+                <Link className={`${b.ulink} ${p.stepLink}`} href={soonest ? `/session/${soonest.id}/` : '/#semana'}>
                   {t('step2Link')}
                 </Link>
               ),

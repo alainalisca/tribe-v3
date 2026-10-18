@@ -262,3 +262,29 @@ describe('the /ingest rewrites (T-ANALYTICS1 part E)', () => {
     }
   });
 });
+
+describe('T-JOIN1 Part B: shares land on /session/<id>/', () => {
+  const ID = 'f8230509-9aa3-4a79-98e4-afa7b6e695ef';
+
+  it('the session page, its card and the guest route skip the auth gate', () => {
+    expect(isPublicPath(`/session/${ID}/`)).toBe(true);
+    expect(isPublicPath(`/session/${ID}/card/`)).toBe(true);
+    expect(isPublicPath(`/api/sessions/${ID}/guest/`)).toBe(true);
+    expect(isPublicPath(`/api/sessions/${ID}/guest`)).toBe(true);
+  });
+
+  it('no other /api/sessions route is opened by the guest exemption', () => {
+    expect(isPublicPath('/api/sessions/notify-approval/')).toBe(false);
+    expect(isPublicPath(`/api/sessions/${ID}/guest/extra/`)).toBe(false);
+  });
+
+  it('/s/<id> is a permanent (308) redirect to /session/<id>/, with or without the slash', async () => {
+    const redirects = await nextConfig.redirects!();
+    const rule = redirects.find((r) => r.source === '/s/:id{/}?');
+    expect(rule).toMatchObject({ destination: '/session/:id/', permanent: true });
+    // Every share link already sent keeps working: the pattern takes both forms.
+    const pattern = new RegExp('^/s/([^/]+)/?$');
+    expect(`/s/${ID}/`.replace(pattern, '/session/$1/')).toBe(`/session/${ID}/`);
+    expect(`/s/${ID}`.replace(pattern, '/session/$1/')).toBe(`/session/${ID}/`);
+  });
+});

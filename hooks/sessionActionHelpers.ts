@@ -11,26 +11,27 @@ export async function insertGuestParticipant(
   session: Session,
   guestData: GuestData
 ): Promise<{ id: string; guest_token: string | null }> {
-  // T-SEC1 Gate 2.5b: join via join_session_as_guest, not a direct insert
-  // (Gate 3 removes the direct-insert RLS). This is the in-app guest modal, which
-  // has no invite token — the RPC allows a token-less guest ONLY when the session
-  // is open (curated/invite_only fail closed server-side). The RPC also derives
-  // status, enforces capacity atomically, and returns guest_token (needed by the
-  // guest-leave flow). Running as owner, it sidesteps the challenge_participants
-  // recursion that 500s the current direct guest insert.
-  const { data: rpcResult, error } = await supabase.rpc('join_session_as_guest', {
-    p_session_id: session.id,
-    p_invite_token: null,
-    p_guest_name: guestData.name,
-    p_guest_phone: guestData.phone,
-    p_guest_email: guestData.email || null,
+  // T-JOIN1 Part B: through /api/sessions/[id]/guest, which normalises the
+  // phone to E.164, rate-limits by IP, refuses a second join by the same phone
+  // and calls join_session_as_guest with the service role (after migration 221
+  // nobody else may). The RPC still derives status, enforces capacity and
+  // returns guest_token for the guest-leave flow. `supabase` is unused now and
+  // kept so callers do not change.
+  void supabase;
+  const res = await fetch(`/api/sessions/${session.id}/guest/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: guestData.name, phone: guestData.phone }),
   });
-  if (error) throw new Error(error.message);
-
-  const body = typeof rpcResult === 'string' ? JSON.parse(rpcResult) : rpcResult;
+  const body = (await res.json().catch(() => null)) as {
+    success?: boolean;
+    error?: string;
+    participant_id?: string;
+    guest_token?: string | null;
+  } | null;
   if (!body?.success) {
     // Preserve the caller's full-session UX (it maps SESSION_FULL to a toast).
-    if (body?.error === 'Session is full') throw new Error('SESSION_FULL');
+    if (body?.error === 'session_full') throw new Error('SESSION_FULL');
     throw new Error(body?.error || 'join_failed');
   }
 
@@ -44,24 +45,9 @@ export function storeGuestLocally(sessionId: string, guestData: GuestData, guest
   if (guestToken) localStorage.setItem(`guest_token_${sessionId}`, guestToken);
 }
 
-/** Fire-and-forget notification to session host about a guest join */
-export function notifyHostOfGuestJoin(session: Session, guestName: string): void {
-  // Via the narrow notify-join route (recipient + copy derived
-  // server-side); /api/notifications/send is internal-only now.
-  fetch('/api/sessions/notify-join', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      session_id: session.id,
-      joiner_name: guestName,
-      kind: 'guest',
-    }),
-  }).catch((err) => logError(err, { action: 'handleGuestJoin', sessionId: session.id }));
-}
-
 /**
  * T-NOTIF1: fire-and-forget notify the host that a registered athlete left,
- * mirroring notifyHostOfGuestJoin. Call only after a confirmed delete so the
+ * Call only after a confirmed delete so the
  * host is never told about a leave that did not persist.
  */
 export function notifyHostOfLeave(session: Session, leaverName: string): void {

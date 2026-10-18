@@ -144,23 +144,23 @@ export async function chooseCardPhoto(
   return null;
 }
 
-/** Where a crop is kept: one file per coach, source and box. */
-export function cardPhotoPath(userId: string, choice: PhotoChoice): string {
+/** Where a crop is kept: one file per owner (a coach's id, or "session-<id>"), source and box. */
+export function cardPhotoPath(key: string, choice: PhotoChoice): string {
   const hash = createHash('sha256')
     .update(`${choice.url}\n${JSON.stringify(choice.box)}`)
     .digest('hex')
     .slice(0, 16);
-  return `card-photos/${userId}-${hash}.jpg`;
+  return `card-photos/${key}-${hash}.jpg`;
 }
 
 /** The 696 x 630 crop: from storage when it was cut before, else cut now and kept. */
 export async function cardPhotoCrop(
-  userId: string,
+  key: string,
   picked: { choice: PhotoChoice; image?: Buffer },
   load: FetchImage = fetchImage
 ): Promise<Buffer | null> {
   const bucket = getServiceRoleClient().storage.from(CARD_PHOTO_BUCKET);
-  const path = cardPhotoPath(userId, picked.choice);
+  const path = cardPhotoPath(key, picked.choice);
   const cached = await bucket.download(path);
   if (cached.data) return Buffer.from(await cached.data.arrayBuffer());
 

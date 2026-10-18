@@ -63,7 +63,7 @@ describe('the coach page', () => {
     render(<CoachProfile lang="es" coach={salomon} photo={photo} sessions={[row('s1'), row('s2')]} {...base} />);
     const list = screen.getByRole('heading', { name: 'Próximas clases' }).parentElement as HTMLElement;
     const links = within(list).getAllByRole('link');
-    expect(links.map(hrefOf)).toEqual(['/s/s1', '/s/s2']);
+    expect(links.map(hrefOf)).toEqual(['/session/s1', '/session/s2']);
     for (const l of links) expect(l.textContent).toContain('Reserva');
     expect(list.textContent).not.toContain('Pedir cupo');
   });

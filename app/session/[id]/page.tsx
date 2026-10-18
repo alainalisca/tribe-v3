@@ -30,7 +30,9 @@ import ConfirmDialog from '@/components/ConfirmDialog';
 import type { RecapPhotoWithUser, SessionStoryJoined } from './types';
 import PhotoLightbox from '@/components/PhotoLightbox';
 import ActionButtons from './ActionButtons';
-import GuestJoinModal from './GuestJoinModal';
+import SignedOutSession, { type PublicSession } from './SignedOutSession';
+import SessionPoster, { type PosterSession } from './SessionPoster';
+import { publicSessionTitle } from '@/lib/share/sessionPublic';
 import InviteModal from './InviteModal';
 import SubscribeButton from '@/components/SubscribeButton';
 import SessionStories from './SessionStories';
@@ -62,7 +64,10 @@ export default function SessionDetailPage() {
   async function shareSession() {
     if (!d.session) return;
     const shareUrl = getSessionShareUrl(d.session.id);
-    const titleForShare = d.session.title || d.session.sport;
+    const titleForShare = publicSessionTitle(
+      { title: d.session.title, sport: d.session.sport, creatorName: d.creator?.name ?? null },
+      language
+    );
     const shareText = language === 'es' ? `${titleForShare} — Únete en Tribe` : `${titleForShare} — Join on Tribe`;
     // A cancelled share sheet is not an error and not a share: nativeShare
     // reports it and nothing happens. It used to be an unhandled rejection
@@ -132,7 +137,7 @@ export default function SessionDetailPage() {
     }
   }
 
-  if (d.loading)
+  if (d.loading || !d.userChecked)
     return (
       <div className="min-h-screen bg-theme-page">
         <LoadingSpinner className="flex items-center justify-center min-h-screen" />
@@ -226,6 +231,33 @@ export default function SessionDetailPage() {
   const currentPhotos =
     d.photoType === 'location' ? d.session.photos : d.recapPhotos.map((p: RecapPhotoWithUser) => p.photo_url);
 
+  // T-JOIN1 Part B: someone not signed in (every share link lands here) gets
+  // the Jornada-frame page with the guest request; the signed-in page below is
+  // unchanged.
+  // venue is set only for an approved, active partner (lib/sessionGym.ts).
+  const gymName = d.gym?.venue?.business_name ?? null;
+  // "<Deporte> con <Nombre>" for a session with no title (T-JOIN1 decision 5).
+  const displayTitle = publicSessionTitle(
+    { title: d.session.title, sport: d.session.sport, creatorName: d.creator?.name ?? null },
+    language
+  );
+  if (!d.user) {
+    return (
+      <SignedOutSession
+        session={d.session as unknown as PublicSession}
+        creator={
+          d.creator
+            ? { id: d.creator.id, name: d.creator.name ?? null, avatar_url: d.creator.avatar_url ?? null }
+            : null
+        }
+        gymName={gymName}
+        language={language}
+        isPast={isPast}
+        isFull={isFull}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen bg-theme-page pb-nav">
       {d.lightboxOpen && currentPhotos && (
@@ -242,6 +274,17 @@ export default function SessionDetailPage() {
       />
 
       <div className="pt-header max-w-2xl md:max-w-4xl mx-auto p-4 md:p-6 space-y-4">
+        {/* T-JOIN1 Part B: a session with no photo opens with its poster. */}
+        {!(d.session.photos ?? []).some(Boolean) && (
+          <div className="mx-auto max-w-md overflow-hidden rounded-xl">
+            <SessionPoster
+              session={d.session as unknown as PosterSession}
+              creatorName={d.creator?.name ?? null}
+              gymName={gymName}
+              language={language}
+            />
+          </div>
+        )}
         <SessionDetails
           gym={d.gym}
           coachCount={d.gymCoachCount}
@@ -312,7 +355,7 @@ export default function SessionDetailPage() {
             loaded, so the card never renders a link with no ref. */}
         {d.user && d.hasJoined && !isCreator && !isPast && myRefCode && (
           <BringAFriendCard
-            context={{ kind: 'session', sessionId: d.session.id, title: d.session.title || d.session.sport }}
+            context={{ kind: 'session', sessionId: d.session.id, title: displayTitle }}
             code={myRefCode}
             language={language}
           />
@@ -341,7 +384,7 @@ export default function SessionDetailPage() {
           d.user && (
             <PendingRequestsPanel
               sessionId={d.session.id}
-              sessionTitle={d.session.title || d.session.sport}
+              sessionTitle={displayTitle}
               hostId={d.user.id}
               language={language}
               t={t}
@@ -378,7 +421,7 @@ export default function SessionDetailPage() {
                 onClick={() => {
                   const sessionDate = new Date(`${d.session!.date}T${d.session!.start_time || '00:00'}`);
                   downloadCalendarEvent({
-                    title: `${d.session!.sport} — ${d.session!.title || 'Tribe Session'}`,
+                    title: displayTitle,
                     description: `Session with ${d.session!.creator?.name || 'Instructor'} on Tribe.\n${window.location.origin}/session/${d.session!.id}/`,
                     startDate: sessionDate,
                     durationMinutes: d.session!.duration || 60,
@@ -394,7 +437,7 @@ export default function SessionDetailPage() {
               </button>
               <a
                 href={getGoogleCalendarUrl({
-                  title: `${d.session!.sport} — ${d.session!.title || 'Tribe Session'}`,
+                  title: displayTitle,
                   description: `Session with ${d.session!.creator?.name || 'Instructor'} on Tribe.`,
                   startDate: new Date(`${d.session!.date}T${d.session!.start_time || '00:00'}`),
                   durationMinutes: d.session!.duration || 60,
@@ -524,17 +567,6 @@ export default function SessionDetailPage() {
         {d.user ? <SessionAttendanceSection sessionId={params.id as string} isCreator={isCreator} /> : null}
       </div>
 
-      {d.sessionActions.showGuestModal && (
-        <GuestJoinModal
-          language={language}
-          guestData={d.sessionActions.guestData}
-          joiningAsGuest={d.sessionActions.joiningAsGuest}
-          onClose={() => d.sessionActions.setShowGuestModal(false)}
-          onGuestDataChange={d.sessionActions.setGuestData}
-          onSubmit={d.sessionActions.handleGuestJoin}
-        />
-      )}
-
       {d.showInviteModal && (
         <InviteModal
           language={language}
@@ -586,7 +618,7 @@ export default function SessionDetailPage() {
             }))}
           language={language}
           hasReviewed={d.hasReviewed}
-          sessionTitle={d.session.title || d.session.sport}
+          sessionTitle={displayTitle}
           sessionDate={d.session.date}
           sessionTime={d.session.start_time}
           locationName={d.session.location}

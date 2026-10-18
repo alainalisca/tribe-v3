@@ -285,7 +285,7 @@ describe('JSON-LD for the board', () => {
     const [first, second] = ld.itemListElement.map((e) => e.item);
     expect(first['@type']).toBe('Event');
     expect(first.startDate).toBe('2026-10-19T06:00:00-05:00');
-    expect(first.url).toBe('https://tribelatam.com/s/a/');
+    expect(first.url).toBe('https://tribelatam.com/session/a/');
     expect(first.location).toEqual({ '@type': 'Place', name: 'El Poblado', address: 'El Poblado' });
     expect(first.offers).toMatchObject({ price: '25000', priceCurrency: 'COP' });
     expect(second.name).toBe('Yoga con Leo');

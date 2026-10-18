@@ -16,7 +16,7 @@ export function fixtureFromWeekRow(r: WeekRow, lang: SiteLanguage, opts: { days?
   const sport = translateSport(r.sport, lang);
   return {
     id: r.id,
-    href: `/s/${r.id}/`,
+    href: `/session/${r.id}/`,
     days: opts.days ?? daysLabel(r.weekdays, lang),
     time: r.startTime,
     sport: r.sport && r.sport !== 'Other' ? sport : null,
