@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { Calendar, Clock, MapPin, Users, Star, DollarSign, Repeat } from 'lucide-react';
 import LocationMap from '@/components/LocationMap';
 import { firstName } from '@/lib/text/firstName';
+import { useTranslations } from '@/lib/i18n/useTranslations';
 import { Badge } from '@/components/ui/badge';
 import type { Session } from '@/lib/database.types';
 import { useLanguage } from '@/lib/LanguageContext';
@@ -80,6 +81,7 @@ export default function SessionDetails({
   onOpenLightbox,
 }: SessionDetailsProps) {
   const { t } = useLanguage();
+  const sd = useTranslations('sessionDetail');
   const { currency: userCurrency } = useUserCurrency();
   return (
     <div className="bg-white dark:bg-tribe-card rounded-xl p-6 shadow-lg">
@@ -134,7 +136,7 @@ export default function SessionDetails({
           {(session.is_recurring || session.recurring_parent_id) && (
             <Badge className="px-3 py-1 rounded-full text-sm border-transparent bg-tribe-sky text-tribe-dark flex items-center gap-1">
               <Repeat className="w-3.5 h-3.5" />
-              {language === 'es' ? 'Parte de una serie' : 'Part of a series'}
+              {sd('series')}
             </Badge>
           )}
         </div>

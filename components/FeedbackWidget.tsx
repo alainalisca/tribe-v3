@@ -20,6 +20,7 @@ import { useLanguage } from '@/lib/LanguageContext';
 import { isPublicShareRoute } from '@/lib/publicShareRoutes';
 import { useIsMarketingSurface } from '@/lib/site/marketingSurface';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useAnyDialogOpen } from '@/lib/ui/useAnyDialogOpen';
 import type { FeedbackCategory, DeviceInfo, FeedbackSubmitPayload, FeedbackSubmitResponse } from '@/types/feedback';
 
 // ---------------------------------------------------------------------------
@@ -144,6 +145,8 @@ function FeedbackWidgetInner({ appVersion, bottomOffset = 80 }: FeedbackWidgetPr
   const supabase = createClient();
   const { resolvedTheme } = useTheme();
   const t = useWidgetTranslations();
+  // T-UI-SD1: no bubble on top of an open bottom sheet or dialog.
+  const sheetOpen = useAnyDialogOpen();
   const isDark = resolvedTheme === 'dark';
 
   // State
@@ -263,7 +266,7 @@ function FeedbackWidgetInner({ appVersion, bottomOffset = 80 }: FeedbackWidgetPr
   return (
     <>
       {/* ── Floating Action Button ── */}
-      {!isOpen && (
+      {!isOpen && !sheetOpen && (
         <button
           onClick={() => setIsOpen(true)}
           aria-label={t.sendFeedback}

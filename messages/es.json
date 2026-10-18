@@ -811,6 +811,11 @@
     "noAthletes": "Aún no hay atletas.",
     "reviewsAbout": "Lo que dicen los atletas sobre {name}",
     "directions": "Cómo llegar",
-    "close": "Cerrar"
+    "close": "Cerrar",
+    "series": "Serie",
+    "copyLink": "Copiar enlace",
+    "whatsapp": "WhatsApp",
+    "linkCopied": "¡Enlace copiado!",
+    "shareText": "{title} — Únete en Tribe"
   }
 }

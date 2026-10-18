@@ -2,6 +2,7 @@ import { cache } from 'react';
 import { loadSessionForCard, type LoadedSession } from '@/lib/og/sessionCard';
 import { publicSessionPlace } from '@/lib/share/sessionPublic';
 import { sessionEndsAtBogota } from '@/lib/gymTimetable';
+import type { HeroPhoto } from '@/lib/site/coachPage';
 import type { PublicSession } from '@/app/session/[id]/SignedOutSession';
 
 /**
@@ -57,4 +58,35 @@ export function signedOutProps(loaded: LoadedSession, now: Date = new Date()) {
     isPast: sessionEndsAtBogota({ date: row.date, start_time: row.start_time, duration: row.duration }) < now,
     isFull: (row.current_participants ?? 0) >= (row.max_participants ?? 0) && (row.max_participants ?? 0) > 0,
   };
+}
+
+/** How long the signed-in page waits for the host's hero photo before showing the poster without it. */
+export const HOST_HERO_TIMEOUT_MS = 1500;
+
+/**
+ * T-UI-SD1: the signed-in session page's hero, the host's coach-card photo by
+ * the same chain as the WhatsApp card and the /i/ page (lib/og/coachCard:
+ * card_photo_url, then gallery or cover, then a sharp avatar), anchored on
+ * the card's box. Null means the poster with no photo. Never the session's own
+ * photos (those stay in "Fotos del Lugar"). Cached per coach by
+ * coachHeroPhoto; a slow first pick never holds the page past the timeout.
+ */
+export async function hostHeroFor(id: string, timeoutMs: number = HOST_HERO_TIMEOUT_MS): Promise<HeroPhoto | null> {
+  const pick = (async () => {
+    const loaded = await loadPublicSession(id);
+    if (!loaded?.host) return null;
+    // Loaded here, not at the top: lib/site/coachPage is server-only, and this
+    // module is shared with the layout.
+    const { coachHeroPhoto } = await import('@/lib/site/coachPage');
+    return coachHeroPhoto(loaded.host);
+  })().catch(() => null);
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<null>((resolve) => {
+    timer = setTimeout(() => resolve(null), timeoutMs);
+  });
+  try {
+    return await Promise.race([pick, timeout]);
+  } finally {
+    clearTimeout(timer);
+  }
 }

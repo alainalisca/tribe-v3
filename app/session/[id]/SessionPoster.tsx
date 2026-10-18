@@ -41,6 +41,7 @@ export default function SessionPoster({
   language,
   place: placeOverride,
   priceTag = true,
+  photo,
 }: {
   session: PosterSession;
   creatorName: string | null;
@@ -55,6 +56,12 @@ export default function SessionPoster({
    * is not a price and stays.
    */
   priceTag?: boolean;
+  /**
+   * T-UI-SD1: the hero photo chosen by the caller, with its object-position
+   * (the host's coach-card photo on the signed-in page; null for none). Left
+   * out, the poster uses the session's first photo as before (signed out).
+   */
+  photo?: { url: string; x: number; y: number } | null;
 }) {
   const t = useTranslations('sessionPublic');
   const { place } =
@@ -72,7 +79,8 @@ export default function SessionPoster({
     <PosterHeader
       title={publicSessionTitle({ title: session.title, sport: session.sport, creatorName }, language)}
       sport={session.sport && session.sport !== 'Other' ? translateSport(session.sport, language) : null}
-      photoUrl={(session.photos ?? []).find(Boolean) ?? null}
+      photoUrl={photo !== undefined ? (photo?.url ?? null) : ((session.photos ?? []).find(Boolean) ?? null)}
+      anchor={photo ? `${photo.x}% ${photo.y}%` : undefined}
       caption={place}
       tag={price ? (priceTag ? price : null) : t('free')}
     />

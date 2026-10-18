@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react';
 import { notFound, useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Share2 } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
 import { copyToClipboard, getSessionShareUrl, nativeShare } from '@/lib/share';
 import BottomNav from '@/components/BottomNav';
@@ -30,10 +30,12 @@ import ConfirmDialog from '@/components/ConfirmDialog';
 import type { RecapPhotoWithUser, SessionStoryJoined } from './types';
 import PhotoLightbox from '@/components/PhotoLightbox';
 import SessionActionBar from './SessionActionBar';
+import AthleteShareButton from './AthleteShareButton';
 import ManageSessionSheet from './ManageSessionSheet';
 import { ACTION_BAR_CLEARANCE, athleteBarState } from './sessionActionState';
 import SignedOutSession, { type PublicSession } from './SignedOutSession';
 import SessionPoster, { type PosterSession } from './SessionPoster';
+import type { HeroPhoto } from '@/lib/site/coachPage';
 import { publicSessionTitle } from '@/lib/share/sessionPublic';
 import SessionStatusNotice from './SessionStatusNotice';
 import InviteModal from './InviteModal';
@@ -55,7 +57,7 @@ import { useTranslations } from '@/lib/i18n/useTranslations';
 import { firstName } from '@/lib/text/firstName';
 
 import TribeWordmark from '@/components/TribeWordmark';
-export default function SessionDetailPage() {
+export default function SessionDetailPage({ hostHero = null }: { hostHero?: HeroPhoto | null } = {}) {
   const params = useParams();
   const router = useRouter();
   const { t, language } = useLanguage();
@@ -312,7 +314,8 @@ export default function SessionDetailPage() {
           <SessionStatusNotice kind="cancelled" hostId={d.session.creator_id} hostName={d.creator?.name ?? null} />
         )}
         {/* T-JOIN1 Part B poster; T-UI-SD1: every session opens with it, on
-            the session's photo when it has one. */}
+            the host's coach-card photo (never the session's own photos, which
+            stay in "Fotos del Lugar"), or with no photo. */}
         <div className="mx-auto max-w-md overflow-hidden rounded-xl">
           <SessionPoster
             session={d.session as unknown as PosterSession}
@@ -320,6 +323,7 @@ export default function SessionDetailPage() {
             gymName={gymName}
             language={language}
             priceTag={false}
+            photo={hostHero}
           />
         </div>
         <SessionDetails
@@ -339,17 +343,8 @@ export default function SessionDetailPage() {
         {/* Share button — BUG-022: previously bg-theme-surface blended into
             the page background. Tribe-green pill gives clear contrast in
             light AND dark mode. */}
-        {!isCreator && (
-          <div className="flex justify-end">
-            <button
-              onClick={shareSession}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-tribe-green text-slate-900 hover:bg-lime-500 transition text-sm font-semibold"
-            >
-              <Share2 className="w-4 h-4" />
-              {sd('share')}
-            </button>
-          </div>
-        )}
+        {/* T-UI-SD1: athletes share from here (the host shares from the bar). */}
+        {!isCreator && <AthleteShareButton sessionId={d.session.id} title={displayTitle} />}
 
         <LiveStatusSection
           canGoLive={canGoLive}
