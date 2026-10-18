@@ -47,6 +47,8 @@ export function useSessionDetail(sessionId: string, language: 'en' | 'es', onNav
   // signed-out or signed-in layout without flashing the wrong one.
   const [userChecked, setUserChecked] = useState(false);
   const [userIsAdmin, setUserIsAdmin] = useState(false);
+  // T-JOIN1b: whether userIsAdmin is settled (a test session waits for it).
+  const [adminChecked, setAdminChecked] = useState(false);
   const [hasJoined, setHasJoined] = useState(false);
   const [isPending, setIsPending] = useState(false);
   // Kept out of the session object on purpose: it is fetched separately and only
@@ -178,6 +180,7 @@ export function useSessionDetail(sessionId: string, language: 'en' | 'es', onNav
       const result = await fetchUserIsAdmin(supabase, user.id);
       setUserIsAdmin(result.success ? !!result.data : false);
     }
+    setAdminChecked(true);
   }
 
   // `silent` refetches session + participants (and the rest) WITHOUT flipping the
@@ -364,6 +367,7 @@ export function useSessionDetail(sessionId: string, language: 'en' | 'es', onNav
     user,
     userChecked,
     userIsAdmin,
+    adminChecked,
     hasJoined,
     isPending,
     paymentInstructions,

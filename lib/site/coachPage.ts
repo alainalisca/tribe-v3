@@ -36,6 +36,8 @@ export async function fetchCoachSessions(coachId: string, now = new Date()): Pro
       .eq('creator_id', coachId)
       .eq('status', 'active')
       .eq('visibility', 'public')
+      // T-JOIN1b: never a test session on a coach's page.
+      .eq('is_test', false)
       .gte('date', today)
       .lte('date', lastDay)
       .order('date', { ascending: true })

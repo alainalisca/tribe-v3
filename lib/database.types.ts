@@ -1241,6 +1241,7 @@ export type Database = {
           is_immediate: boolean | null
           is_paid: boolean | null
           is_recurring: boolean | null
+          is_test: boolean
           is_training_now: boolean | null
           join_policy: string | null
           latitude: number | null
@@ -1293,6 +1294,7 @@ export type Database = {
           is_immediate?: boolean | null
           is_paid?: boolean | null
           is_recurring?: boolean | null
+          is_test?: boolean
           is_training_now?: boolean | null
           join_policy?: string | null
           latitude?: number | null
@@ -1345,6 +1347,7 @@ export type Database = {
           is_immediate?: boolean | null
           is_paid?: boolean | null
           is_recurring?: boolean | null
+          is_test?: boolean
           is_training_now?: boolean | null
           join_policy?: string | null
           latitude?: number | null

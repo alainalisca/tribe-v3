@@ -30,7 +30,6 @@ function session({
       id,
       name,
       avatar_url: `https://x.supabase.co/storage/v1/object/public/avatars/${id}.jpg`,
-      is_admin: false,
       is_test_account: false,
       banned: false,
       deleted_at: null,
@@ -52,7 +51,7 @@ describe('who is on the roster', () => {
         session({ id: 'stale', date: addDays(TODAY, -61) }),
         session({ id: 'cancelled', status: 'cancelled' }),
         session({ id: 'athlete', instructor: false }),
-        session({ id: 'admin', flags: { is_admin: true } }),
+        session({ id: 'admin', flags: { is_admin: true } as never }),
         session({ id: 'test', flags: { is_test_account: true } }),
         session({ id: 'banned', flags: { banned: true } }),
         session({ id: 'deleted', flags: { deleted_at: '2026-10-01T00:00:00Z' } }),
@@ -60,7 +59,8 @@ describe('who is on the roster', () => {
       ],
       TODAY
     );
-    expect(roster.map((c) => c.id).sort()).toEqual(['edge', 'recent', 'upcoming']);
+    // An admin who coaches is on the roster like anyone (T-JOIN1b).
+    expect(roster.map((c) => c.id).sort()).toEqual(['admin', 'edge', 'recent', 'upcoming']);
   });
 
   it('one card per coach however many sessions', () => {

@@ -9,6 +9,7 @@ import {
   sessionCardVersion,
   sessionHeadlinePx,
   sessionShareDescription,
+  sharesAsHomeCard,
   splitHeadline,
   type SessionCardRow,
 } from './sessionCard';
@@ -153,5 +154,20 @@ describe('sessionCardVersion', () => {
     expect(sessionCardVersion(row, 'BullBox')).not.toBe(v);
     const host = { card_photo_url: 'a.jpg' } as never;
     expect(sessionCardVersion(row, null, host)).not.toBe(v);
+  });
+});
+
+describe('T-JOIN1b: what shares as the home card', () => {
+  it('a test session and a cancelled one; an ordinary session does not', () => {
+    expect(sharesAsHomeCard({ is_test: true, status: 'active' })).toBe(true);
+    expect(sharesAsHomeCard({ is_test: false, status: 'cancelled' })).toBe(true);
+    expect(sharesAsHomeCard({ is_test: false, status: 'active' })).toBe(false);
+    expect(sharesAsHomeCard({ status: 'active' })).toBe(false);
+  });
+
+  it('marking or cancelling changes the card URL, so WhatsApp fetches it again', () => {
+    const v = sessionCardVersion(row, null);
+    expect(sessionCardVersion({ ...row, is_test: true }, null)).not.toBe(v);
+    expect(sessionCardVersion({ ...row, status: 'cancelled' }, null)).not.toBe(v);
   });
 });

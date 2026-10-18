@@ -36,7 +36,7 @@ import { isVisibleUser } from '@/lib/dal/visibleUsers';
 
 export const COACH_SELECT =
   'id, name, sports, avatar_url, cover_image_url, photos, card_photo_url, card_photo_box, ' +
-  'card_photo_rejects, handle, is_instructor, is_admin, banned, deleted_at, is_test_account, bio, instructor_bio, specialties';
+  'card_photo_rejects, handle, is_instructor, banned, deleted_at, is_test_account, bio, instructor_bio, specialties';
 
 export type CoachRow = {
   id: string;
@@ -53,7 +53,6 @@ export type CoachRow = {
   banned: boolean | null;
   deleted_at: string | null;
   is_test_account: boolean | null;
-  is_admin?: boolean | null;
   bio: string | null;
   instructor_bio: string | null;
   /** Shown on the coach page (Part E), never on the card. */
@@ -191,6 +190,7 @@ export async function coachGym(userId: string, today = new Date()): Promise<stri
     .select('partner_status, partner:featured_partners(business_name, status)')
     .eq('creator_id', userId)
     .eq('status', 'active')
+    .eq('is_test', false)
     .gte('date', since)
     .limit(500);
   if (error) {

@@ -9,7 +9,7 @@ import type { DalResult } from './types';
 import { fetchOrganizationUserIds } from './gymDirectory';
 import { buildExclusionFilter } from '@/lib/instructorExclusion';
 import { bogotaDateOffset, bogotaToday } from '@/lib/time/bogotaDate';
-import { hiddenAdminIds, visibleUsersFilter, withoutAdmins } from './visibleUsers';
+import { visibleUsersFilter } from './visibleUsers';
 
 /** Full instructor profile for Browse Instructors page */
 export interface InstructorProfile {
@@ -45,12 +45,6 @@ export async function fetchInstructors(
     lat?: number;
     lng?: number;
     limit?: number;
-    /**
-     * Admins to leave out. A signed-out page cannot read them (migration 113),
-     * so its server passes them from a service-role read; otherwise they are
-     * read here with the caller's client.
-     */
-    adminIds?: string[];
   }
 ): Promise<DalResult<InstructorProfile[]>> {
   try {
@@ -91,10 +85,6 @@ export async function fetchInstructors(
     if (options?.limit && !byRecent) {
       query = query.limit(options.limit);
     }
-
-    // T-JOIN1: never an admin (lib/dal/visibleUsers.ts). The view already
-    // leaves out test, banned and deleted accounts.
-    query = withoutAdmins(query, 'id', options?.adminIds ?? (await hiddenAdminIds(supabase)));
 
     // T-GYM1: gym and studio accounts are ordinary users rows with
     // is_instructor = true -- there is no account_type column -- so without
@@ -221,8 +211,8 @@ export async function fetchFeaturedInstructors(
         'id, name, avatar_url, photos, specialties, average_rating, total_reviews, total_sessions_hosted, storefront_tagline, is_verified_instructor, location, years_experience'
       )
       .eq('is_instructor', true);
-    // T-JOIN1: never an admin, test, banned or deleted account (lib/dal/visibleUsers.ts).
-    const { data, error } = await visibleUsersFilter(base, { idColumn: 'id', adminIds: await hiddenAdminIds(supabase) })
+    // T-JOIN1: never a test, banned or deleted account (lib/dal/visibleUsers.ts).
+    const { data, error } = await visibleUsersFilter(base)
       .order('is_verified_instructor', { ascending: false, nullsFirst: false })
       .order('average_rating', { ascending: false, nullsFirst: false })
       .order('total_sessions_hosted', { ascending: false, nullsFirst: false })

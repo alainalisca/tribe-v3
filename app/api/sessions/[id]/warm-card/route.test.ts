@@ -13,6 +13,7 @@ const loadSessionForCard = vi.fn();
 vi.mock('@/lib/og/sessionCard', () => ({
   loadSessionForCard: (id: string) => loadSessionForCard(id),
   sessionCardVersion: () => 'abc123',
+  sharesAsHomeCard: (row: { is_test?: boolean; status?: string }) => !!row.is_test || row.status === 'cancelled',
 }));
 
 import { POST } from './route';
@@ -41,6 +42,16 @@ describe('POST /api/sessions/[id]/warm-card', () => {
 
   it('a session that is not public: nothing to warm', async () => {
     loadSessionForCard.mockResolvedValue(null);
+    const res = await POST(new Request('http://x', { method: 'POST' }), ctx());
+    expect((await res.json()).warmed).toBe(false);
+    expect(afterCallbacks).toHaveLength(0);
+  });
+
+  it.each([
+    ['a test session', { is_test: true }],
+    ['a cancelled session', { status: 'cancelled' }],
+  ])('%s shares as the home card: nothing of its own to warm (T-JOIN1b)', async (_label, over) => {
+    loadSessionForCard.mockResolvedValue({ ...loaded, row: { ...loaded.row, ...over } });
     const res = await POST(new Request('http://x', { method: 'POST' }), ctx());
     expect((await res.json()).warmed).toBe(false);
     expect(afterCallbacks).toHaveLength(0);

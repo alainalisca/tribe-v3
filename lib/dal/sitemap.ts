@@ -58,6 +58,8 @@ export async function fetchSitemapSessions(
       .from('sessions_public')
       .select('id, date')
       .eq('status', 'active')
+      // T-JOIN1b: never a test session in the sitemap.
+      .eq('is_test', false)
       .gte('date', todayBogota)
       .order('date', { ascending: true })
       .limit(limit);

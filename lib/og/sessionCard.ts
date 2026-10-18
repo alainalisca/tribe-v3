@@ -28,11 +28,12 @@ import { siteCardImage } from './siteCards';
  * Only fixed facts of that session. No spots, no attendee count, nothing that
  * changes: WhatsApp keeps the first preview it fetches in every old message.
  * And always an image: a session that cannot be drawn gets the no-photo
- * card, and one that is not public gets the site's home card.
+ * card, and one that is not public, a test session or a cancelled one gets
+ * the site's home card (T-JOIN1b).
  */
 export const SESSION_CARD_SELECT =
   'id, title, sport, date, start_time, status, location, location_lat, location_lng, photos, ' +
-  'creator_id, creator_name, partner_id, partner_status, description, end_time, price_cents, currency, is_paid';
+  'creator_id, creator_name, partner_id, partner_status, description, end_time, price_cents, currency, is_paid, is_test';
 
 export type SessionCardRow = {
   id: string;
@@ -55,7 +56,18 @@ export type SessionCardRow = {
   price_cents?: number | null;
   currency?: string | null;
   is_paid?: boolean | null;
+  /** T-JOIN1b: a test session (Sesión de prueba). */
+  is_test?: boolean | null;
 };
+
+/**
+ * T-JOIN1b: a session that shares as the site's home card, never its own:
+ * a test session (only its host and admins may know it exists) and a
+ * cancelled one (nothing left to book).
+ */
+export function sharesAsHomeCard(row: Pick<SessionCardRow, 'is_test' | 'status'>): boolean {
+  return !!row.is_test || row.status === 'cancelled';
+}
 
 export type LoadedSession = { row: SessionCardRow; partnerName: string | null; host: CoachRow | null };
 
@@ -192,6 +204,8 @@ export function sessionCardVersion(
     .update(
       JSON.stringify([
         'v2-host-photo',
+        row.status,
+        row.is_test ?? false,
         row.title,
         row.sport,
         row.date,
@@ -222,7 +236,7 @@ export async function sessionCardResponse(id: string): Promise<{ res: Response; 
     logError(error, { action: 'og.sessionCardResponse.load', sessionId: id });
     return null;
   });
-  if (!loaded) return { res: await siteCardImage('home', 'es'), fallback: true };
+  if (!loaded || sharesAsHomeCard(loaded.row)) return { res: await siteCardImage('home', 'es'), fallback: true };
   const photo = await sessionCardPhoto(loaded.host);
   try {
     return { res: await cardResponse(sessionCardProps(loaded.row, loaded.partnerName, photo)), fallback: false };

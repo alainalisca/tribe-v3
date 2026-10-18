@@ -288,3 +288,25 @@
   letter-spacing: 0.06em;
   cursor: pointer;
 }
+
+/* T-JOIN1b: a cancelled session's bar: the notice and the coach link, no button. */
+.cancelledBar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-height: 52px;
+  justify-content: center;
+  box-shadow: inset 0 0 0 1px var(--ink);
+  padding: 8px 12px;
+}
+.cancelledText {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.cancelledLink {
+  font-size: 13px;
+  color: var(--ink);
+  text-decoration: underline;
+}

@@ -5,7 +5,7 @@ vi.mock('@/lib/storage/privateMedia', () => ({ signRecapPhotoUrls: vi.fn() }));
 
 import { fetchUpcomingSessions } from './sessions';
 
-/** T-JOIN1 Part C: the feed never shows a session by an admin, test, banned or deleted account. */
+/** The feed never shows a test session (T-JOIN1b) or one by a test, banned or deleted account; admin hosts are ordinary. */
 const ADMIN = '11111111-1111-4111-8111-111111111111';
 
 function client() {
@@ -24,7 +24,8 @@ describe('fetchUpcomingSessions visibility', () => {
     const { c, calls, rpc } = client();
     const res = await fetchUpcomingSessions(c);
     expect(res.success).toBe(true);
-    expect(rpc).toHaveBeenCalledWith('get_admin_user_ids');
+    // T-JOIN1b: admins are ordinary, so no admin lookup.
+    expect(rpc).not.toHaveBeenCalled();
     expect(String(calls.find((x) => x[0] === 'select')?.[1])).toContain(
       'creator:users!sessions_creator_id_fkey!inner('
     );
@@ -33,8 +34,9 @@ describe('fetchUpcomingSessions visibility', () => {
         ['not', 'creator.is_test_account', 'is', true],
         ['not', 'creator.banned', 'is', true],
         ['is', 'creator.deleted_at', null],
-        ['not', 'creator_id', 'in', `(${ADMIN})`],
+        ['eq', 'is_test', false],
       ])
     );
+    expect(calls).not.toContainEqual(['not', 'creator_id', 'in', `(${ADMIN})`]);
   });
 });

@@ -258,7 +258,19 @@ export default function SignedOutSession({
   ];
 
   let action: React.ReactNode;
-  if (session.status === 'cancelled') action = <span className={s.inert}>{t('cancelled')}</span>;
+  // T-JOIN1b: a cancelled session says so, offers nothing to book, and points
+  // at the host's coach page instead.
+  if (session.status === 'cancelled')
+    action = (
+      <div className={s.cancelledBar} role="status">
+        <span className={s.cancelledText}>{t('cancelledNotice')}</span>
+        {creator && (
+          <Link className={s.cancelledLink} href={`/i/${creator.id}/`}>
+            {t('coachLink', { name: hostFirst })}
+          </Link>
+        )}
+      </div>
+    );
   else if (isPast) action = <span className={s.inert}>{t('ended')}</span>;
   else if (mine) action = <span className={s.done}>{t('requested')}</span>;
   else if (paid)

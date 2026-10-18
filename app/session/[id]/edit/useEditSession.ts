@@ -43,6 +43,8 @@ export interface EditSessionFormData {
   gender_preference: string;
   equipment: string;
   join_policy: string;
+  /** T-JOIN1b: Sesión de prueba. */
+  is_test: boolean;
 }
 
 /** Shape expected by RecurringSessionToggle — kept separate from formData so
@@ -68,6 +70,7 @@ const defaultFormData: EditSessionFormData = {
   gender_preference: 'all',
   equipment: '',
   join_policy: 'open',
+  is_test: false,
 };
 
 const defaultRecurring: EditRecurringValue = {
@@ -189,6 +192,7 @@ export function useEditSession(language: 'en' | 'es', txt: EditSessionTranslatio
         gender_preference: session.gender_preference || 'all',
         equipment: session.equipment || '',
         join_policy: session.join_policy || 'open',
+        is_test: !!(session as { is_test?: boolean | null }).is_test,
       });
 
       // Initialise recurrence state from the existing session values.

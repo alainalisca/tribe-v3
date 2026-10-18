@@ -164,4 +164,19 @@ describe('SignedOutSession', () => {
     render(<SignedOutSession session={base} creator={creator} gymName={null} language="es" isPast={false} isFull />);
     expect(screen.queryByRole('button', { name: 'Pedir mi cupo' })).not.toBeInTheDocument();
   });
+
+  it('a cancelled session (T-JOIN1b): the notice, a link to the coach page, nothing to book', () => {
+    renderPage({ status: 'cancelled' });
+    expect(screen.getByText('Esta sesión fue cancelada')).toBeInTheDocument();
+    // next/link drops the slash in tests; trailingSlash adds it back in the app.
+    expect(screen.getByRole('link', { name: 'Ver el perfil de Salomon' }).getAttribute('href')).toMatch(/^\/i\/c1\/?$/);
+    expect(screen.queryByRole('button', { name: 'Pedir mi cupo' })).not.toBeInTheDocument();
+    expect(screen.queryByText('Entrar para pedir cupo')).not.toBeInTheDocument();
+  });
+
+  it('a cancelled paid session offers no sign-in either', () => {
+    renderPage({ status: 'cancelled', is_paid: true, price_cents: 4000000 });
+    expect(screen.queryByText('Entrar para pedir cupo')).not.toBeInTheDocument();
+    expect(screen.getByText('Esta sesión fue cancelada')).toBeInTheDocument();
+  });
 });

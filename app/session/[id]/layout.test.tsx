@@ -33,6 +33,9 @@ vi.mock('@/lib/og/sessionCard', async (importOriginal) => ({
   sessionCardVersion: () => 'v123',
 }));
 
+const access = vi.hoisted(() => ({ canSee: false }));
+vi.mock('@/lib/session/testSessionAccess', () => ({ viewerCanSeeTestSession: async () => access.canSee }));
+
 import SessionLayout, { generateMetadata } from './layout';
 
 describe('/session/<id>/ metadata', () => {
@@ -86,5 +89,53 @@ describe('/session/<id>/ metadata', () => {
       await SessionLayout({ params: Promise.resolve({ id: '00000000-0000-4000-8000-000000000000' }), children: null })
     );
     expect(html).not.toContain('ld+json');
+  });
+});
+
+describe('T-JOIN1b: test and cancelled sessions', () => {
+  const params = { params: Promise.resolve({ id: row.id }) };
+  const withRow = async (over: Record<string, unknown>, fn: () => Promise<void>) => {
+    const saved = { ...row };
+    Object.assign(row, over);
+    try {
+      await fn();
+    } finally {
+      for (const k of Object.keys(over)) if (!(k in saved)) delete (row as Record<string, unknown>)[k];
+      Object.assign(row, saved);
+    }
+  };
+
+  it('a test session is a 404 for anyone but its host and the admins', async () => {
+    await withRow({ is_test: true }, async () => {
+      access.canSee = false;
+      await expect(SessionLayout({ ...params, children: null })).rejects.toThrow();
+    });
+  });
+
+  it('the host or an admin opens it, with no Event JSON-LD', async () => {
+    await withRow({ is_test: true }, async () => {
+      access.canSee = true;
+      const html = renderToStaticMarkup(await SessionLayout({ ...params, children: null }));
+      expect(html).not.toContain('ld+json');
+    });
+  });
+
+  it('a test session tells a scraper nothing and is noindex', async () => {
+    await withRow({ is_test: true }, async () => {
+      const m = await generateMetadata(params);
+      expect(m.title).toBe('Entrenamiento no disponible | Tribe');
+      expect(JSON.stringify(m)).not.toContain('Salomon');
+      expect(m.robots).toEqual({ index: false, follow: false });
+    });
+  });
+
+  it('a cancelled session stays up, is noindex, and has no Event JSON-LD', async () => {
+    await withRow({ status: 'cancelled' }, async () => {
+      const m = await generateMetadata(params);
+      expect(m.title).toBe('Boxeo con Salomon | Tribe');
+      expect(m.robots).toEqual({ index: false, follow: true });
+      const html = renderToStaticMarkup(await SessionLayout({ ...params, children: null }));
+      expect(html).not.toContain('ld+json');
+    });
   });
 });

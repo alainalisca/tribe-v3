@@ -2,7 +2,7 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { logError } from '@/lib/logger';
 import type { DalResult } from './types';
-import { hiddenAdminIds, visibleUsersFilter } from './visibleUsers';
+import { visibleUsersFilter } from './visibleUsers';
 
 export interface FeaturedPartner {
   id: string;
@@ -185,17 +185,13 @@ export async function fetchPartnerInstructors(
   try {
     // `users!inner` so a partner_instructor row whose user is not visible is
     // dropped rather than returned with a null `user`. T-JOIN1: the one rule,
-    // lib/dal/visibleUsers.ts (admins, test, banned and deleted accounts).
+    // lib/dal/visibleUsers.ts (test, banned and deleted accounts).
     const query = supabase
       .from('partner_instructors')
       .select('*, user:users!inner(id, name, avatar_url, specialties, is_test_account)')
       .eq('partner_id', partnerId)
       .eq('is_active', true);
-    const { data, error } = await visibleUsersFilter(query, {
-      prefix: 'user.',
-      idColumn: 'instructor_id',
-      adminIds: await hiddenAdminIds(supabase),
-    });
+    const { data, error } = await visibleUsersFilter(query, { prefix: 'user.' });
 
     if (error) return { success: false, error: error.message };
     return { success: true, data: data ?? [] };
@@ -227,8 +223,7 @@ export async function fetchPartnerSessions(supabase: SupabaseClient, partnerId: 
     // The partner's own user_id is not covered by fetchPartnerInstructors'
     // filter, so it is checked here too.
     const { data: liveUsers, error: liveErr } = await visibleUsersFilter(
-      supabase.from('users').select('id').in('id', candidateIds),
-      { idColumn: 'id', adminIds: await hiddenAdminIds(supabase) }
+      supabase.from('users').select('id').in('id', candidateIds)
     );
 
     if (liveErr) return { success: false, error: liveErr.message };

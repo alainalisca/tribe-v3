@@ -32,6 +32,7 @@ import { Label } from '@/components/ui/label';
 import TemplateSection from './TemplateSection';
 import PhotoUploadSection from './PhotoUploadSection';
 import RecurringSessionToggle from '@/components/RecurringSessionToggle';
+import TestSessionToggle from '@/components/session/TestSessionToggle';
 import { shareSession, getSessionShareUrl, copyToClipboard } from '@/lib/share';
 import { useTranslations } from '@/lib/i18n/useTranslations';
 
@@ -106,6 +107,8 @@ function CreateSessionPageInner() {
     currency: 'COP' as 'COP' | 'USD',
     payment_instructions: '',
     attached_promo_id: null as string | null,
+    // T-JOIN1b: Sesión de prueba, off by default.
+    is_test: false,
   });
 
   // Recurring session state (managed separately because RecurringSessionToggle uses its own shape)
@@ -800,6 +803,12 @@ function CreateSessionPageInner() {
             <div className="border border-theme rounded-lg p-4 bg-theme-card">
               <RecurringSessionToggle value={recurringValue} onChange={setRecurringValue} />
             </div>
+
+            {/* ─── Sesión de prueba (T-JOIN1b) ─── */}
+            <TestSessionToggle
+              value={formData.is_test}
+              onChange={(next) => setFormData((prev) => ({ ...prev, is_test: next }))}
+            />
 
             {/* Photos */}
             <div data-photo-section>

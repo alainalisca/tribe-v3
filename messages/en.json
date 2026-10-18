@@ -772,6 +772,14 @@
     "alreadyJoined": "That WhatsApp already asked for a spot in this session.",
     "rateLimited": "Too many tries. Try again in an hour.",
     "sessionFull": "The session is already full.",
-    "joinFailed": "Could not ask for the spot. Try again."
+    "joinFailed": "Could not ask for the spot. Try again.",
+    "cancelledNotice": "This session was cancelled",
+    "coachLink": "See {name}'s profile"
+  },
+  "sessionTest": {
+    "label": "Test session",
+    "hint": "Only you and the admins see it. It does not appear in the feed, search, the site or share cards.",
+    "noteHost": "Test session, only you can see it",
+    "noteAdmin": "Test session: only its host and the admins can see it"
   }
 }

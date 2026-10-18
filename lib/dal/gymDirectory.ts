@@ -10,7 +10,7 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { logError } from '@/lib/logger';
 import type { DalResult } from './types';
-import { hiddenAdminIds, visibleUsersFilter } from './visibleUsers';
+import { visibleUsersFilter } from './visibleUsers';
 import { GYM_IDENTITY_COLUMNS, ORGANIZATION_TYPES, type GymIdentity } from './gymVenue';
 
 /**
@@ -101,7 +101,7 @@ export async function fetchGymsAndStudios(supabase: SupabaseClient): Promise<Dal
           partners.map((p) => p.id)
         )
         .eq('is_active', true),
-      { prefix: 'user.', idColumn: 'instructor_id', adminIds: await hiddenAdminIds(supabase) }
+      { prefix: 'user.' }
     );
 
     if (rosterError) return { success: false, error: rosterError.message };
