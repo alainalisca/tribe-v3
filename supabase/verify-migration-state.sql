@@ -3034,4 +3034,29 @@ select '221_t_join1_guest_join_hardening',
          else 'applied'
        end
 
+union all
+
+-- T-JOIN1b. A session can be marked as a test: the column, the hosts' write
+-- grant and the view's appended column. By information_schema, so this reads
+-- MISSING before 222 runs.
+select '222_t_join1b_session_is_test',
+       case
+         when not exists (select 1 from information_schema.columns
+                           where table_schema = 'public' and table_name = 'sessions' and column_name = 'is_test'
+                             and data_type = 'boolean' and is_nullable = 'NO')
+           then 'MISSING -- sessions.is_test is absent or nullable'
+         when not coalesce(has_column_privilege('authenticated', to_regclass('public.sessions'),
+                   (select attnum from pg_attribute
+                     where attrelid = to_regclass('public.sessions') and attname = 'is_test' and not attisdropped),
+                   'UPDATE'), false)
+           then 'MISSING -- hosts cannot write sessions.is_test; the switch fails on save'
+         when not exists (select 1 from information_schema.columns
+                           where table_schema = 'public' and table_name = 'sessions_public' and column_name = 'is_test')
+           then 'MISSING -- sessions_public does not expose is_test; public pages cannot hide test sessions'
+         when not exists (select 1 from public.migrations_applied
+                           where migration = '222_t_join1b_session_is_test')
+           then 'MISSING -- 222 is not recorded in migrations_applied'
+         else 'applied'
+       end
+
 order by migration;
