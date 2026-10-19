@@ -2,6 +2,7 @@
 // Node. sharp is native, so a client bundle could not import this anyway.
 import sharp from 'sharp';
 import { MOMENT_VARIANTS } from './paths';
+import { exifCaptureDate } from './exifDate';
 
 /**
  * T-MOM1: one uploaded photo into what the bucket stores. The browser already
@@ -26,20 +27,9 @@ export type ProcessedMoment = {
   takenAt: Date | null;
 };
 
-function exifDate(exif: Buffer | undefined): Date | null {
-  if (!exif) return null;
-  // EXIF stores its dates as ASCII "YYYY:MM:DD HH:MM:SS": DateTime (last
-  // edit) and DateTimeOriginal (capture). The earliest is the capture time.
-  const stamps = [...exif.toString('latin1').matchAll(/(\d{4}):(\d{2}):(\d{2}) (\d{2}):(\d{2}):(\d{2})/g)]
-    .map((m) => new Date(`${m[1]}-${m[2]}-${m[3]}T${m[4]}:${m[5]}:${m[6]}`))
-    .filter((d) => !Number.isNaN(d.getTime()))
-    .sort((a, b) => a.getTime() - b.getTime());
-  return stamps[0] ?? null;
-}
-
 export async function processMoment(input: Buffer): Promise<ProcessedMoment> {
   const meta = await sharp(input).metadata();
-  const takenAt = exifDate(meta.exif);
+  const takenAt = meta.exif ? exifCaptureDate(meta.exif.toString('latin1')) : null;
   const fit = (max: number) => ({ width: max, height: max, fit: 'inside' as const, withoutEnlargement: true });
   // rotate() with no argument applies the EXIF orientation; sharp writes no
   // metadata unless asked (withMetadata), so every output is stripped.

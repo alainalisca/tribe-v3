@@ -19,6 +19,7 @@ import Link from 'next/link';
 import { useLanguage } from '@/lib/LanguageContext';
 import { sportTranslations } from '@/lib/translations';
 import { insertSession, fetchUserProfile } from '@/lib/dal';
+import PastSessionLink from '@/components/moments/PastSessionLink';
 import { ACTIVE_CITY, locationMatchesNeighborhood } from '@/lib/city-config';
 import { formatDisplayAmount } from '@/lib/formatCurrency';
 import type { Currency } from '@/lib/payments/config';
@@ -476,6 +477,8 @@ function CreateSessionPageInner() {
 
         <div className="max-w-2xl md:max-w-4xl mx-auto p-4 md:p-6">
           <form onSubmit={handleSubmit} className="space-y-4">
+            {/* T-MOM1: a session that already happened, for its photos (Moments on only). */}
+            <PastSessionLink />
             {/* Sport */}
             <div>
               <Label className="text-theme-primary mb-2">{t('sport')} *</Label>

@@ -51,6 +51,10 @@
     {
       "path": "/api/cron/newsletter-contacts/",
       "schedule": "41 6 * * *"
+    },
+    {
+      "path": "/api/cron/moments-cleanup/",
+      "schedule": "17 8 * * *"
     }
   ]
 }

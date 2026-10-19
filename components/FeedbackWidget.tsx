@@ -134,6 +134,9 @@ export default function FeedbackWidget({ appVersion, bottomOffset = 80 }: Feedba
   const pathname = usePathname();
   const onMarketing = useIsMarketingSurface();
   if (isPublicShareRoute(pathname) || onMarketing) return null;
+  // T-MOM1: the photo upload screen's bottom bar (tag, delete, deliver) owns
+  // the corner the bubble would cover.
+  if (/\/fotos\/subir\/?$/.test(pathname ?? '') || (pathname ?? '').startsWith('/dev/moments')) return null;
 
   if (!mounted) return null;
 

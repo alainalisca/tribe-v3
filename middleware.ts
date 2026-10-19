@@ -208,7 +208,7 @@ export function isPublicPath(pathname: string): boolean {
   // and this branch never runs, so the path stays behind the gate there too.
   // T-UI-FD1: /dev/feed likewise (development only; the page itself also 404s
   // on any Vercel deployment).
-  if (process.env.NODE_ENV !== 'production' && /^\/dev\/(bridge|feed)\/?$/.test(pathname)) {
+  if (process.env.NODE_ENV !== 'production' && /^\/dev\/(bridge|feed|moments)\/?$/.test(pathname)) {
     return true;
   }
 
