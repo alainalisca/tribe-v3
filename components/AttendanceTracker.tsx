@@ -28,7 +28,36 @@ interface AttendanceTrackerProps {
   sessionEndTime: string | null;
   /** sessions.duration, for the marking window when there is no end time. */
   sessionDurationMinutes?: number | null;
+  /**
+   * Where the card reads and writes. The real database calls by default;
+   * /dev/attendance hands it fixtures (and `threeState`) so the card can be
+   * reviewed without a database or a signed-in host.
+   */
+  source?: AttendanceSource;
 }
+
+export type AttendanceSource = {
+  participants: typeof fetchConfirmedParticipantsWithUsers;
+  marks: typeof fetchAttendanceMarks;
+  mark: typeof markAttendance;
+  /** The "you attended" email after an attended mark. */
+  notify: (sessionId: string, userId: string) => Promise<void>;
+  /** Forces the T-AV2 three-state card on or off instead of asking the athlete_value flag. */
+  threeState?: boolean;
+};
+
+const DATABASE_SOURCE: AttendanceSource = {
+  participants: fetchConfirmedParticipantsWithUsers,
+  marks: fetchAttendanceMarks,
+  mark: markAttendance,
+  notify: async (sessionId, userId) => {
+    await fetch('/api/send-attendance-notification', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sessionId, userId }),
+    });
+  },
+};
 
 /** The athlete_value feature name for T-AV2's host attendance card. */
 export const ATTENDANCE_FEATURE = 'attendance';
@@ -77,10 +106,12 @@ export default function AttendanceTracker({
   sessionStartTime,
   sessionEndTime,
   sessionDurationMinutes = null,
+  source = DATABASE_SOURCE,
 }: AttendanceTrackerProps) {
   const supabase = createClient();
   const { t, language } = useLanguage();
-  const threeState = useAthleteValueFeature(ATTENDANCE_FEATURE);
+  const flagThreeState = useAthleteValueFeature(ATTENDANCE_FEATURE);
+  const threeState = source.threeState ?? flagThreeState;
   const [participants, setParticipants] = useState<AttendanceRowPerson[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
@@ -109,7 +140,7 @@ export default function AttendanceTracker({
 
   async function loadParticipants() {
     try {
-      const participantsResult = await fetchConfirmedParticipantsWithUsers(supabase, sessionId);
+      const participantsResult = await source.participants(supabase, sessionId);
       if (!participantsResult.success || !participantsResult.data) {
         setParticipants([]);
         return;
@@ -125,10 +156,14 @@ export default function AttendanceTracker({
       // their own roster and pull a host attendance row into the totals.
       // The DAL already returns confirmed rows only, so this is the host filter
       // alone rather than athleteRoster.
-      const athletes = athleteParticipants(participantsData, creatorId);
+      // Accounts only. A "Quién llegó" door guest (a name with no account,
+      // user_id NULL) is already recorded as a confirmed participant;
+      // av_mark_attendance takes a user id, so a guest row here would be a
+      // blank name, a not_found on tap, and would stop "mark all" (T-AV2b).
+      const athletes = athleteParticipants(participantsData, creatorId).filter((p) => !!p.user_id);
 
       const userIds = athletes.map((p) => p.user_id).filter(Boolean);
-      const marksResult = await fetchAttendanceMarks(supabase, sessionId, userIds);
+      const marksResult = await source.marks(supabase, sessionId, userIds);
       const statusByUser = new Map(
         (marksResult.success ? (marksResult.data ?? []) : []).map((r) => [r.user_id, r.status])
       );
@@ -153,7 +188,7 @@ export default function AttendanceTracker({
 
   /** Marks one person; returns whether the server accepted it. */
   async function markOne(userId: string, status: AttendanceStatus | null): Promise<boolean> {
-    const result = await markAttendance(supabase, sessionId, userId, status);
+    const result = await source.mark(supabase, sessionId, userId, status);
     if (!result.success) {
       showError(
         refusalMessage(result.code, language) ?? getErrorMessage(new Error(result.error), 'admin_action', language)
@@ -162,11 +197,7 @@ export default function AttendanceTracker({
     }
     if (status === 'attended') {
       try {
-        await fetch('/api/send-attendance-notification', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ sessionId, userId }),
-        });
+        await source.notify(sessionId, userId);
       } catch (emailError) {
         logError(emailError, { action: 'sendAttendanceEmail', sessionId, userId });
         // Don't fail the whole operation if email fails

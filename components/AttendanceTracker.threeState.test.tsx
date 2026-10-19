@@ -170,3 +170,24 @@ describe('flag off: the card main shows', () => {
     await waitFor(() => expect(markAttendance).toHaveBeenCalledWith({}, 's1', 'a2', 'no_show'));
   });
 });
+
+describe('"Quién llegó" door guests (T-AV2b)', () => {
+  it('a guest with no account is not on the card, and "Todos asistieron" marks every account after them', async () => {
+    fetchConfirmedParticipantsWithUsers.mockResolvedValue({
+      success: true,
+      data: [
+        { user_id: 'a1', user: { id: 'a1', name: 'Ana', avatar_url: null } },
+        { user_id: null, is_guest: true, guest_name: 'Carolina', user: null },
+        { user_id: 'a3', user: { id: 'a3', name: 'Leo', avatar_url: null } },
+      ],
+    });
+    fetchAttendanceMarks.mockResolvedValue({ success: true, data: [] });
+    renderTracker();
+    await waitFor(() => expect(screen.getByText('Leo')).toBeInTheDocument());
+    expect(screen.getAllByRole('group')).toHaveLength(2);
+    expect(fetchAttendanceMarks).toHaveBeenCalledWith({}, 's1', ['a1', 'a3']);
+    fireEvent.click(screen.getByText('Todos asistieron'));
+    await waitFor(() => expect(markAttendance).toHaveBeenCalledTimes(2));
+    expect(markAttendance.mock.calls.map((c) => c[2])).toEqual(['a1', 'a3']);
+  });
+});
