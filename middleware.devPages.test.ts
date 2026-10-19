@@ -5,7 +5,7 @@ vi.mock('@supabase/ssr', () => ({
   createServerClient: () => ({ auth: { getUser: async () => ({ data: { user: null } }) } }),
 }));
 
-import { middleware } from './middleware';
+import { isPublicPath, middleware } from './middleware';
 
 /** T-UI-FD1: /dev pages are a real 404 in a production build, signed in or not; open in development. */
 afterEach(() => vi.unstubAllEnvs());
@@ -32,5 +32,20 @@ describe('/dev pages in middleware', () => {
     const res = await middleware(req('/dev/feed/'));
     expect(res.status).toBe(200);
     expect(res.headers.get('location')).toBeNull();
+  });
+});
+
+describe('session photo screens need an account (T-MOM1)', () => {
+  it('signed out, /session/<id>/fotos/subir/ is a redirect to sign-in, not a 200', async () => {
+    vi.stubEnv('NODE_ENV', 'production');
+    const res = await middleware(req('/session/cfcafad0-80ec-43ea-a018-eafcf99c8648/fotos/subir/'));
+    expect(res.status).toBe(307);
+    expect(res.headers.get('location')).toContain('/auth?returnTo=');
+  });
+
+  it('the session page itself stays public', async () => {
+    vi.stubEnv('NODE_ENV', 'production');
+    expect(isPublicPath('/session/cfcafad0-80ec-43ea-a018-eafcf99c8648/')).toBe(true);
+    expect(isPublicPath('/session/cfcafad0-80ec-43ea-a018-eafcf99c8648/fotos/subir/')).toBe(false);
   });
 });

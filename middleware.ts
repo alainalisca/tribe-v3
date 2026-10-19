@@ -182,6 +182,10 @@ const publicApiPaths = [
 // gate. Next.js only reserves `middleware` and `config` on this file; extra
 // named exports are fine (same reasoning as buildCsp below).
 export function isPublicPath(pathname: string): boolean {
+  // T-MOM1: a session's photo screens (/session/<id>/fotos/...) need an
+  // account. Under the public /session prefix otherwise, a signed-out visitor
+  // would get the page's own redirect, which streams a 200 first.
+  if (/^\/session\/[^/]+\/fotos(\/|$)/.test(pathname)) return false;
   if (
     publicPaths.some((path) => {
       if (path === '/') return pathname === '/';
