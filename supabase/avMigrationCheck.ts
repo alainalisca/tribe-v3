@@ -75,13 +75,14 @@ export const AV_BLOCK_MAX = 8999;
 
 /**
  * T-AV migrations renumbered into main's sequence at the merge gate (T-AV31):
- * 8200 to 8209 became 201 to 210. Listed one by one ON PURPOSE: a range would
+ * 8200 to 8209 became 201 to 210; T-AV2's 8000 became 224 (2026-10-19,
+ * cherry-picked onto main as feat/t-av2b-attendance). Listed one by one ON PURPOSE: a range would
  * also admit whatever main numbers next, and the point of the list is that a
  * T-AV header on a number nobody decided is still a failure. Every entry must
  * be a T-AV migration on disk; the test file asserts that, so an entry cannot
  * outlive the file it was added for.
  */
-export const AV_RENUMBERED: readonly number[] = [201, 202, 203, 204, 205, 206, 207, 208, 209, 210];
+export const AV_RENUMBERED: readonly number[] = [201, 202, 203, 204, 205, 206, 207, 208, 209, 210, 224];
 
 /** Is `n` a number a T-AV migration may carry: the reserved block or a renumbered one. */
 export function isAvNumber(n: number): boolean {

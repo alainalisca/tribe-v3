@@ -569,6 +569,7 @@ export default function SessionDetailPage({
             sessionDate={d.session.date}
             sessionStartTime={d.session.start_time}
             sessionEndTime={d.session.end_time ?? null}
+            sessionDurationMinutes={d.session.duration ?? null}
           />
         )}
       </div>

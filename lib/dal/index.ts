@@ -11,6 +11,7 @@ export * from './media';
 export * from './social';
 export * from './feedback';
 export * from './live';
+export * from './attendanceMarks';
 export * from './templates';
 export * from './admin';
 export * from './invites';

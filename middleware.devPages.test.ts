@@ -13,7 +13,7 @@ const req = (path: string, cookie?: string) =>
   new NextRequest(`https://tribelatam.com${path}`, cookie ? { headers: { cookie } } : undefined);
 
 describe('/dev pages in middleware', () => {
-  it.each(['/dev/feed/', '/dev/feed', '/dev/bridge/', '/dev/'])(
+  it.each(['/dev/feed/', '/dev/feed', '/dev/bridge/', '/dev/attendance/', '/dev/'])(
     '%s is a 404 in production, signed out or in',
     async (path) => {
       vi.stubEnv('NODE_ENV', 'production');

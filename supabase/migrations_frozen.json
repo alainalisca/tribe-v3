@@ -206,6 +206,7 @@
   "221_t_join1_guest_join_hardening.sql": "e04de7fb48401ee92ab378bcbbf033859aa4469ce7093a96455ab6da7d1b1076",
   "222_t_join1b_session_is_test.sql": "acc30a247883fc8eb94f68101afbd46459a676ef85eb3c85f94ecff4837d4364",
   "223_t_mom1_moments.sql": "c028e192c953fe02429ce9e0c07a97a7441617fc240e9cf8b8a81ca310e70acf",
+  "224_t_av2_canonical_attendance.sql": "fcb93369a646fed96bfadf854654463d568434cbf0118407d2c9e858c492b093",
   "add_admin_rls.sql": "e2e8367cd24af4b3a762e12898e8dbe81bd363acb2d22c22e1ac3538a41110a7",
   "add_community_events.sql": "3f7cb81caebc1f1a5e3461bc4e1faae9e55e680fea470f334c2b10848652ff50",
   "add_composite_indexes.sql": "a819cf7f037ccd7f5da322d77f076a03af77d9463830050364b7be762dda97a9",
