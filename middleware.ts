@@ -2,6 +2,7 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { athletesGateAllows, isAthletesGatedPath, GATED_NOT_FOUND_PATH } from '@/lib/features/athleteValueGate';
+import { isMomentsEnabled, isMomentsPagePath } from '@/lib/features/moments';
 import { canonicalLinkHeader } from '@/lib/seo/canonicalLink';
 import { hasAuthCookieName } from '@/lib/site/authCookie';
 import { LANGUAGE_COOKIE, languageFromCookie } from '@/lib/languageCookie';
@@ -424,6 +425,17 @@ export async function middleware(request: NextRequest) {
   // a production build (production and every Vercel preview): a real 404 for
   // everyone, signed in or not, before the auth gate could redirect.
   if (process.env.NODE_ENV === 'production' && /^\/dev(\/|$)/.test(pathname)) {
+    return applySecurityHeaders(
+      NextResponse.rewrite(new URL(GATED_NOT_FOUND_PATH, request.url), { status: 404 }),
+      pathname
+    );
+  }
+
+  // T-MOM1: while MOMENTS_ENABLED is off (Production until launch day), the
+  // Moments pages (Momentos, the claim link, a session's photo screens,
+  // "Registrar sesión pasada") do not exist: a real 404 for everyone, before
+  // the auth gate could redirect a signed-out visitor to sign-in.
+  if (isMomentsPagePath(pathname) && !isMomentsEnabled()) {
     return applySecurityHeaders(
       NextResponse.rewrite(new URL(GATED_NOT_FOUND_PATH, request.url), { status: 404 }),
       pathname

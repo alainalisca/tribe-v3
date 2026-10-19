@@ -62,6 +62,8 @@ describe('the story image (T-MOM1 Part D)', () => {
     expect(storyLine('Salomón', 'BullBox', 'es')).toBe('con Salomón · BullBox');
     expect(storyLine('Salomón', null, 'es')).toBe('con Salomón');
     expect(storyLine('Salomón', ' ', 'en')).toBe('with Salomón');
-    expect(storyLine('Salomón', 'A'.repeat(80), 'es').endsWith('…')).toBe(true);
+    // Too long for one line: the gym goes before anything is cut.
+    expect(storyLine('Salomón', 'Zona Fitness Medellín Centro', 'es')).toBe('con Salomón');
+    expect(storyLine('A'.repeat(80), null, 'es').endsWith('…')).toBe(true);
   });
 });

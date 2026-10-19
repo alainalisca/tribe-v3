@@ -4,19 +4,9 @@ import { useMemo } from 'react';
 import MomentsUploader from '@/components/moments/MomentsUploader';
 import type { MomentsApi } from '@/lib/moments/api';
 import type { MomentItem, SessionMomentsState, TaggablePerson } from '@/lib/moments/types';
+import { FIXTURES, type FixturePhotos } from './fixtureNames';
 
-/** /dev/moments' client half: fixture photos from /public/site and an in-memory API that writes nothing. */
-const PHOTOS = [
-  'hero_full',
-  'door_ath',
-  'door_coach',
-  'door_gym',
-  'door_os',
-  'essay_bb',
-  'essay_zona',
-  'essay_wil',
-  'essay_yoga',
-];
+/** /dev/moments' client half: fixture photos (dev/fixtures/moments, as data URLs) and an in-memory API that writes nothing. */
 const SESSION = '00000000-0000-4000-8000-000000000001';
 const people: TaggablePerson[] = [
   { kind: 'host', id: 'u-host', name: 'Salomon Tabares', avatarUrl: null },
@@ -34,9 +24,10 @@ const tag = (personId: string, name: string, kind: 'user' | 'invite' = 'user', d
   delivered,
   removed: false,
 });
-const media: MomentItem[] = PHOTOS.map((p, i) => ({
+const mediaFor = (photos: FixturePhotos): MomentItem[] =>
+  FIXTURES.map((p, i) => ({
   id: `m-${i}`,
-  gridUrl: `/site/${p}.jpg`,
+  gridUrl: photos[p],
   width: 1200,
   height: 900,
   uploaderId: 'u-al',
@@ -51,8 +42,14 @@ const media: MomentItem[] = PHOTOS.map((p, i) => ({
           : [],
 }));
 
-export default function DevMomentsView({ picker }: { picker: 'list' | 'invite' | null }) {
-  const initial: SessionMomentsState = { sessionId: SESSION, media, people };
+export default function DevMomentsView({
+  picker,
+  photos,
+}: {
+  picker: 'list' | 'invite' | null;
+  photos: FixturePhotos;
+}) {
+  const initial: SessionMomentsState = { sessionId: SESSION, media: mediaFor(photos), people };
   const api = useMemo<MomentsApi>(() => {
     let state = { ...initial, media: [...initial.media], people: [...initial.people] };
     const nameOf = (kind: string, id: string) =>

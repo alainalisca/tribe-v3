@@ -3,17 +3,17 @@ import { notFound } from 'next/navigation';
 import { devFeedAllowed } from '../feed/devFeedAllowed';
 import DevMomentsView from './DevMomentsView';
 import DevPartCView, { type PartCView } from './DevPartCView';
-import { readFile } from 'node:fs/promises';
-import { join } from 'node:path';
 import SiteLayout from '@/components/site/SiteLayout';
 import CoachProfile from '@/components/site/pages/CoachProfile';
 import { SITE_FONT_CLASS } from '@/lib/site/fonts';
 import { renderStory } from '@/lib/moments/story';
 import type { StripTile } from '@/lib/moments/coachStrip';
+import { fixtureFile, fixturePhotos, type Fixture, type FixturePhotos } from './fixtures';
 
 /**
  * /dev/moments (T-MOM1 Part B): the upload and tagging screen with fixture
- * photos and an in-memory API, for review. Nothing is read or written
+ * photos and an in-memory API, for review. The photos are read from
+ * dev/fixtures/moments/ (never public/, never shipped; see its README). Nothing is read or written
  * anywhere. Local development only (the same guard as /dev/feed; middleware
  * also answers /dev/* with a 404 in production builds).
  *
@@ -35,14 +35,15 @@ import type { StripTile } from '@/lib/moments/coachStrip';
  *   /dev/moments/?view=coach             a coach page with the Momentos strip
  */
 const PART_C: PartCView[] = ['momentos', 'viewer', 'viewer-sheet', 'viewer-toggle', 'claim', 'claim-expired'];
-const STORY_PHOTOS: Record<string, string> = { 'story-vertical': 'essay_yoga', 'story-horizontal': 'door_ath' };
-const STRIP: StripTile[] = [
+const STORY_PHOTOS: Record<string, Fixture> = { 'story-vertical': 'essay_yoga', 'story-horizontal': 'door_ath' };
+const stripFor = (photos: FixturePhotos): StripTile[] =>
+  ([
   ['essay_bb', 'Boxeo · 18 oct'],
   ['door_ath', 'Boxeo · 18 oct'],
   ['hero_full', 'Boxeo · 18 oct'],
   ['essay_zona', 'Funcional · 11 oct'],
   ['door_coach', 'Funcional · 11 oct'],
-].map(([p, caption]) => ({ mediaId: p, gridUrl: `/site/${p}.jpg`, viewerUrl: `/site/${p}.jpg`, caption }));
+] as Array<[Fixture, string]>).map(([p, caption]) => ({ mediaId: p, gridUrl: photos[p], viewerUrl: photos[p], caption }));
 export const metadata: Metadata = { title: 'Moments · Tribe dev', robots: { index: false, follow: false } };
 
 export default async function DevMomentsPage({
@@ -52,12 +53,10 @@ export default async function DevMomentsPage({
 }) {
   if (!devFeedAllowed()) notFound();
   const { picker, view } = await searchParams;
-  const partC = PART_C.find((v) => v === view);
-  if (partC) return <DevPartCView view={partC} />;
   const storyPhoto = view ? STORY_PHOTOS[view] : undefined;
   if (storyPhoto) {
     const story = await renderStory({
-      photo: await readFile(join(process.cwd(), 'public', 'site', `${storyPhoto}.jpg`)),
+      photo: await fixtureFile(storyPhoto),
       coach: 'Salomon',
       gym: 'BullBox',
       lang: 'es',
@@ -69,6 +68,9 @@ export default async function DevMomentsPage({
       </main>
     );
   }
+  const photos = await fixturePhotos();
+  const partC = PART_C.find((v) => v === view);
+  if (partC) return <DevPartCView view={partC} photos={photos} />;
   if (view === 'coach')
     return (
       <SiteLayout lang="es" fontClassName={SITE_FONT_CLASS}>
@@ -76,12 +78,12 @@ export default async function DevMomentsPage({
           lang="es"
           coach={{ name: 'Salomon Tabares', sports: ['Boxing'], bio: null, specialties: null }}
           gym="BullBox"
-          photo={{ url: '/site/door_coach.jpg', x: 50, y: 35 }}
+          photo={null}
           sessions={[]}
           weekEnd="2026-10-25"
-          momentos={STRIP}
+          momentos={stripFor(photos)}
         />
       </SiteLayout>
     );
-  return <DevMomentsView picker={picker === 'list' || picker === 'invite' ? picker : null} />;
+  return <DevMomentsView picker={picker === 'list' || picker === 'invite' ? picker : null} photos={photos} />;
 }

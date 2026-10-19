@@ -18,3 +18,15 @@ export function isMomentsEnabled(env: NodeJS.ProcessEnv = process.env): boolean 
   if (env.MOMENTS_ENABLED === 'false') return false;
   return env.VERCEL_ENV === 'preview' || (!env.VERCEL_ENV && env.NODE_ENV === 'development');
 }
+
+/**
+ * The Moments pages, for middleware: while the flag is off each is a real 404
+ * for everyone, signed in or not, rather than a sign-in redirect that would
+ * say the page exists. Pure and edge-safe.
+ */
+export function isMomentsPagePath(pathname: string): boolean {
+  return (
+    /^\/(?:profile\/momentos|m\/[^/]+|fotos\/registrar-sesion)(?:\/|$)/.test(pathname) ||
+    /^\/session\/[^/]+\/fotos(?:\/|$)/.test(pathname)
+  );
+}

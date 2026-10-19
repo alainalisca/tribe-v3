@@ -24,9 +24,10 @@ export const STORY_FIELD = '#121417';
 const MARGIN = 48;
 const WORDMARK_W = 120;
 const WORDMARK_H = Math.round((WORDMARK_W * 564) / 1709);
-const LINE_PX = 28;
+/** 56 px (Al, 2026-10-19: twice the first draft's 28, so it reads on an Instagram story). */
+const LINE_PX = 56;
 const LINE_GAP = 24;
-/** JetBrains Mono is 0.6 em wide: what fits beside the wordmark at 28 px. */
+/** JetBrains Mono is 0.6 em wide: what fits beside the wordmark at LINE_PX. */
 const LINE_MAX_CHARS = Math.floor((STORY_WIDTH - MARGIN * 2 - WORDMARK_W - LINE_GAP) / (LINE_PX * 0.6));
 
 export type StoryBox = { left: number; top: number; width: number; height: number };
@@ -39,10 +40,14 @@ export function storyPhotoBox(width: number, height: number): StoryBox {
   return { left: Math.round((STORY_WIDTH - w) / 2), top: Math.round((STORY_HEIGHT - h) / 2), width: w, height: h };
 }
 
-/** "con Salomón · BullBox" / "with Salomón · BullBox", cut to one line. Pure. */
+/**
+ * "con Salomón · BullBox" / "with Salomón · BullBox", in one line. Too long
+ * for one line, the gym goes first; only then is the coach's part cut. Pure.
+ */
 export function storyLine(coach: string, gym: string | null, lang: 'es' | 'en'): string {
-  const parts = [coach ? `${lang === 'en' ? 'with' : 'con'} ${coach}` : '', gym?.trim() ?? ''].filter(Boolean);
-  const line = parts.join(' · ');
+  const who = coach ? `${lang === 'en' ? 'with' : 'con'} ${coach}` : '';
+  const full = [who, gym?.trim() ?? ''].filter(Boolean).join(' · ');
+  const line = full.length <= LINE_MAX_CHARS ? full : who || full;
   return line.length > LINE_MAX_CHARS ? `${line.slice(0, LINE_MAX_CHARS - 1).trimEnd()}…` : line;
 }
 
