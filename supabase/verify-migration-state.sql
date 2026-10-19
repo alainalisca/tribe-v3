@@ -3061,4 +3061,42 @@ select '222_t_join1b_session_is_test',
          else 'applied'
        end
 
+union all
+
+-- T-MOM1 Part A. Moments: four tables with RLS on, no anon privilege, no
+-- client writes, invites unreadable by clients, and a private moments bucket
+-- with no storage policy. By information_schema and to_regclass, so this
+-- reads MISSING before 223 runs.
+select '223_t_mom1_moments',
+       case
+         when (select count(*) from information_schema.tables
+                where table_schema = 'public' and table_name in ('session_media', 'session_media_tags', 'media_invites', 'session_photographers')) <> 4
+           then 'MISSING -- the Moments tables are not all there'
+         when exists (select 1 from pg_class c
+                       where c.oid in (to_regclass('public.session_media'), to_regclass('public.session_media_tags'),
+                                       to_regclass('public.media_invites'), to_regclass('public.session_photographers'))
+                         and not c.relrowsecurity)
+           then 'MISSING -- RLS is off on a Moments table'
+         when exists (select 1 from information_schema.role_table_grants
+                       where table_schema = 'public' and table_name in ('session_media', 'session_media_tags', 'media_invites', 'session_photographers') and grantee = 'anon')
+           then 'MISSING -- anon holds a privilege on a Moments table'
+         when exists (select 1 from information_schema.role_table_grants
+                       where table_schema = 'public' and table_name in ('session_media', 'session_media_tags', 'media_invites', 'session_photographers') and grantee = 'authenticated'
+                         and privilege_type in ('INSERT', 'UPDATE', 'DELETE'))
+           then 'MISSING -- authenticated can write a Moments table; writes go through server routes'
+         when exists (select 1 from information_schema.role_table_grants
+                       where table_schema = 'public' and table_name = 'media_invites' and grantee = 'authenticated')
+           then 'MISSING -- authenticated can read media_invites; invite tokens are server-only'
+         when not exists (select 1 from storage.buckets where id = 'moments' and public = false)
+           then 'MISSING -- the private moments bucket does not exist'
+         when exists (select 1 from pg_policies
+                       where schemaname = 'storage' and tablename = 'objects'
+                         and (qual ilike '%moments%' or with_check ilike '%moments%'))
+           then 'MISSING -- a storage policy opens the moments bucket'
+         when not exists (select 1 from public.migrations_applied
+                           where migration = '223_t_mom1_moments')
+           then 'MISSING -- 223 is not recorded in migrations_applied'
+         else 'applied'
+       end
+
 order by migration;
