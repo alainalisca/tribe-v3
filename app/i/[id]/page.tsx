@@ -14,6 +14,9 @@ import { bogotaDateOffset } from '@/lib/time/bogotaDate';
 import ViewTracker from './ViewTracker';
 import { SITE_URL } from '@/lib/http/siteUrl';
 import { shareImageOrigin } from '@/lib/http/shareImageOrigin';
+import { isMomentsEnabled } from '@/lib/features/moments';
+import { loadCoachStrip } from '@/lib/moments/coachStrip';
+import { getServiceRoleClient } from '@/lib/supabase/admin';
 
 const BASE_URL = SITE_URL;
 
@@ -99,11 +102,13 @@ export default async function PublicInstructorPage({ params }: PageProps) {
   if (!coach || !isListedCoach(coach)) notFound();
 
   const lang = languageFromCookie((await cookies()).get(LANGUAGE_COOKIE)?.value);
-  const [gym, photo, sessions, board] = await Promise.all([
+  const [gym, photo, sessions, board, momentos] = await Promise.all([
     coachGym(coach.id),
     coachHeroPhoto(coach),
     fetchCoachSessions(coach.id),
     fetchWeekBoard(),
+    // T-MOM1 Part D: the athletes' opted-in photos; a failure only drops the strip.
+    isMomentsEnabled() ? loadCoachStrip(getServiceRoleClient(), coach.id, lang).catch(() => null) : null,
   ]);
 
   return (
@@ -121,6 +126,7 @@ export default async function PublicInstructorPage({ params }: PageProps) {
         photo={photo}
         sessions={sessions}
         weekEnd={bogotaDateOffset(6)}
+        momentos={momentos}
       />
     </SiteLayout>
   );

@@ -22,6 +22,7 @@ import AthletesEntryCard from '@/components/atletas/AthletesEntryCard';
 import BringAFriendCard from '@/components/referral/BringAFriendCard';
 import { useMyReferralCode } from '@/hooks/useMyReferralCode';
 import CoachLinkBlock from '@/components/instructor/CoachLinkBlock';
+import MomentosEntryCard from '@/components/moments/MomentosEntryCard';
 export default function ProfilePage() {
   const { language, t } = useLanguage();
   const {
@@ -248,6 +249,9 @@ export default function ProfilePage() {
               </span>
             </Link>
           )}
+
+          {/* T-MOM1: the person's own photos from sessions (private). */}
+          {profile?.id && <MomentosEntryCard />}
 
           {/* My Coach — gym-side view of the user's training as
               their coach records it. Auto-hides when the user isn't

@@ -44,8 +44,12 @@ const nextConfig: NextConfig = {
   // T-SHARE1: the site's share cards (lib/og/card.tsx) read their fonts, photos
   // and the wordmark from public/ when Vercel redraws one (revalidate). public/
   // is served by the CDN and is not in a function's files unless named here.
+  // T-MOM1: /dev/moments' fixture photos never ship (dev/fixtures/moments/README.md).
+  outputFileTracingExcludes: { '*': ['./dev/fixtures/**'] },
   outputFileTracingIncludes: {
     '/sitio/**': ['./public/fonts/*.ttf', './public/og/*.jpg', './public/tribe-wordmark.png'],
+    // T-MOM1 Part D: the story image (lib/moments/story.tsx).
+    '/api/moments/me/**': ['./public/fonts/JetBrainsMono-Medium.ttf', './public/tribe-wordmark.png'],
   },
   // Security headers (CSP, HSTS, X-Frame-Options, etc.) live in middleware.ts
   // so every response goes through one codepath. See middleware.ts docblock.

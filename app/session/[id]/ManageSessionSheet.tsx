@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
-import { ChevronRight, MessageCircle, Pencil, Trash2, UserPlus, X } from 'lucide-react';
+import { Camera, ChevronRight, ImagePlus, MessageCircle, Pencil, Trash2, UserPlus, X } from 'lucide-react';
 import CancelSeriesDialog from '@/components/session/CancelSeriesDialog';
 import { useTranslations } from '@/lib/i18n/useTranslations';
 
@@ -34,6 +34,7 @@ export default function ManageSessionSheet({
   onCancelOccurrence,
   onEndSeries,
   children,
+  uploadPhotosHref = null,
 }: {
   open: boolean;
   onClose: () => void;
@@ -50,8 +51,11 @@ export default function ManageSessionSheet({
   onCancelOccurrence: () => void;
   onEndSeries: () => void;
   children?: React.ReactNode;
+  /** T-MOM1: the photo upload screen, when Moments is on (also after the session: photos come afterwards). */
+  uploadPhotosHref?: string | null;
 }) {
   const t = useTranslations('sessionDetail');
+  const tm = useTranslations('moments');
   const [seriesDialog, setSeriesDialog] = useState(false);
   const row =
     'w-full flex items-center justify-between gap-3 px-1 py-3.5 text-[15px] font-semibold text-stone-900 dark:text-white border-b border-stone-200 dark:border-tribe-mid disabled:opacity-60';
@@ -87,6 +91,25 @@ export default function ManageSessionSheet({
             >
               {isTest ? t('testOn') : t('testOff')}
             </DialogPrimitive.Description>
+
+            {uploadPhotosHref && (
+              <Link href={uploadPhotosHref} className={`${row} mt-2`}>
+                <span className="flex items-center gap-3">
+                  <ImagePlus className="h-5 w-5 text-muted-foreground" />
+                  {tm('uploadPhotos')}
+                </span>
+                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+              </Link>
+            )}
+            {uploadPhotosHref && (
+              <Link href={`/session/${sessionId}/fotos/fotografos/`} className={row}>
+                <span className="flex items-center gap-3">
+                  <Camera className="h-5 w-5 text-muted-foreground" />
+                  {tm('photographersTitle')}
+                </span>
+                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+              </Link>
+            )}
 
             {!isPast && (
               <div className="mt-2">

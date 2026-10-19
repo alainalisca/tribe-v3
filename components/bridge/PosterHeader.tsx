@@ -14,6 +14,10 @@ import br from './bridge.module.css';
  *
  * Words come in as props, already in the page's language: the app's client
  * pages render this without any site copy.
+ *
+ * `plainImage` (T-MOM1 Momentos): a plain <img>, never next/image, for a
+ * private photo behind a short-lived signed URL that must not go through the
+ * image optimizer or be preloaded.
  */
 export default function PosterHeader({
   title,
@@ -23,6 +27,7 @@ export default function PosterHeader({
   tag,
   anchor = 'center top',
   headingLevel = 1,
+  plainImage = false,
 }: {
   title: string;
   sport: string | null;
@@ -31,13 +36,14 @@ export default function PosterHeader({
   tag?: string | null;
   anchor?: string;
   headingLevel?: 1 | 2;
+  plainImage?: boolean;
 }) {
   const Heading = headingLevel === 1 ? 'h1' : 'h2';
   return (
     <header className={`${br.bridge} ${SITE_FONT_CLASS} ${br.poster}`}>
       {photoUrl ? (
         <>
-          {isOptimizableImage(photoUrl) ? (
+          {!plainImage && isOptimizableImage(photoUrl) ? (
             // T-SSR1: the poster is never wider than the 560px session column
             // (signed out; signed in it shows only with no photo). Next 16's
             // `priority` no longer raises the fetch priority: preload plus

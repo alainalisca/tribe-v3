@@ -57,7 +57,10 @@ import { useTranslations } from '@/lib/i18n/useTranslations';
 import { firstName } from '@/lib/text/firstName';
 
 import TribeWordmark from '@/components/TribeWordmark';
-export default function SessionDetailPage({ hostHero = null }: { hostHero?: HeroPhoto | null } = {}) {
+export default function SessionDetailPage({
+  hostHero = null,
+  momentsEnabled = false,
+}: { hostHero?: HeroPhoto | null; momentsEnabled?: boolean } = {}) {
   const params = useParams();
   const router = useRouter();
   const { t, language } = useLanguage();
@@ -69,6 +72,21 @@ export default function SessionDetailPage({ hostHero = null }: { hostHero?: Hero
   // T-UI-SD1: the host's "Gestionar" sheet.
   const [showManage, setShowManage] = useState(false);
   const sd = useTranslations('sessionDetail');
+  const tm = useTranslations('moments');
+  // T-MOM1: with Moments on, may this user upload photos here (host, admin, named photographer)?
+  const [canUploadMoments, setCanUploadMoments] = useState(false);
+  const signedInId = d.user?.id ?? null;
+  useEffect(() => {
+    if (!momentsEnabled || !signedInId) return;
+    let cancelled = false;
+    fetch(`/api/moments/${params.id}/access/`)
+      .then((r) => (r.ok ? r.json() : { canUpload: false }))
+      .then((b: { canUpload?: boolean }) => !cancelled && setCanUploadMoments(!!b.canUpload))
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [momentsEnabled, signedInId, params.id]);
 
   async function shareSession() {
     if (!d.session) return;
@@ -346,6 +364,17 @@ export default function SessionDetailPage({ hostHero = null }: { hostHero?: Hero
             light AND dark mode. */}
         {/* T-UI-SD1: athletes share from here (the host shares from the bar). */}
         {!isCreator && <AthleteShareButton sessionId={d.session.id} title={displayTitle} />}
+        {/* T-MOM1: an admin or a named photographer uploads from here (the host from Gestionar). */}
+        {!isCreator && canUploadMoments && (
+          <div className="flex justify-end">
+            <Link
+              href={`/session/${d.session.id}/fotos/subir/`}
+              className="inline-flex items-center gap-2 rounded-lg border-[1.5px] border-stone-900 px-4 py-2 text-sm font-semibold text-stone-900 dark:border-white dark:text-white"
+            >
+              {tm('uploadPhotos')}
+            </Link>
+          </div>
+        )}
 
         <LiveStatusSection
           canGoLive={canGoLive}
@@ -437,19 +466,22 @@ export default function SessionDetailPage({ hostHero = null }: { hostHero?: Hero
           onAccepted={() => d.loadSession()}
         />
 
-        <RecapPhotos
-          session={d.session}
-          recapPhotos={d.recapPhotos}
-          user={d.user}
-          isPast={isPast}
-          canUploadRecap={canUploadRecap}
-          canModerate={canModerate}
-          shouldPromptUpload={shouldPromptUpload}
-          userPhotoCount={d.userPhotoCount}
-          language={language}
-          onOpenLightbox={d.openLightbox}
-          onPhotosChanged={d.loadRecapPhotos}
-        />
+        {/* T-MOM1: with Moments on, photos go through Moments; the recap upload is replaced (its 5 photos move over). */}
+        {!momentsEnabled && (
+          <RecapPhotos
+            session={d.session}
+            recapPhotos={d.recapPhotos}
+            user={d.user}
+            isPast={isPast}
+            canUploadRecap={canUploadRecap}
+            canModerate={canModerate}
+            shouldPromptUpload={shouldPromptUpload}
+            userPhotoCount={d.userPhotoCount}
+            language={language}
+            onOpenLightbox={d.openLightbox}
+            onPhotosChanged={d.loadRecapPhotos}
+          />
+        )}
 
         {/* Instructor reviews preview — builds trust before booking another session */}
         {!isCreator && d.creator?.id && (
@@ -575,6 +607,7 @@ export default function SessionDetailPage({ hostHero = null }: { hostHero?: Hero
 
       {isCreator && (
         <ManageSessionSheet
+          uploadPhotosHref={canUploadMoments ? `/session/${d.session.id}/fotos/subir/` : null}
           open={showManage}
           onClose={() => setShowManage(false)}
           sessionId={d.session.id}

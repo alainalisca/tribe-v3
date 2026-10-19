@@ -5,6 +5,8 @@ import { siteT, type SiteLanguage } from '@/lib/site/i18n';
 import type { WeekRow } from '@/lib/site/weekTypes';
 import { fixtureFromWeekRow, fixtureLabels } from '@/lib/site/fixture';
 import FixtureRow from '../FixtureRow';
+import CoachMomentsStrip from '../CoachMomentsStrip';
+import type { StripTile } from '@/lib/moments/coachStrip';
 import b from '../base.module.css';
 import w from '../week.module.css';
 import c from './coach.module.css';
@@ -16,7 +18,8 @@ import c from './coach.module.css';
  * initials block; the name with the round lime dot; sport and gym (or
  * Medellín) in mono. Then the coach's upcoming sessions as the board's rows,
  * each with one "Reserva" that opens the session page, or the ink block when
- * there are none. Then the bio and specialties.
+ * there are none. Then "Momentos" (T-MOM1 Part D) when the page has a strip,
+ * then the bio and specialties.
  *
  * No session count anywhere, no round avatar, never a logo as the hero (the
  * hero is only ever the card's photo, which skips anything in
@@ -48,6 +51,7 @@ export default function CoachProfile({
   photo,
   sessions,
   weekEnd,
+  momentos = null,
 }: {
   lang: SiteLanguage;
   coach: CoachProfileData;
@@ -56,6 +60,8 @@ export default function CoachProfile({
   sessions: WeekRow[];
   /** The last day of this week (Bogotá); later sessions show their date. */
   weekEnd: string;
+  /** T-MOM1 Part D: the athletes' opted-in photos; null when there are too few to show. */
+  momentos?: StripTile[] | null;
 }) {
   const t = siteT(lang);
   const name = (coach.name ?? '').trim() || 'Tribe';
@@ -118,6 +124,22 @@ export default function CoachProfile({
             <p className={c.empty}>{t('site.coachPage.none')}</p>
           )}
         </section>
+
+        {momentos && momentos.length > 0 && (
+          <section className={`${b.g} ${c.block}`} aria-labelledby="coach-momentos">
+            <h2 id="coach-momentos" className={`${b.mono} ${c.label}`}>
+              {t('site.coachPage.momentos')}
+            </h2>
+            <CoachMomentsStrip
+              tiles={momentos}
+              labels={{
+                close: t('site.coachPage.momentosClose'),
+                photoOf: t('site.coachPage.momentosPhotoOf'),
+                open: t('site.coachPage.momentosOpen'),
+              }}
+            />
+          </section>
+        )}
 
         {(coach.bio || specialties.length > 0) && (
           <section className={`${b.g} ${c.block}`} aria-labelledby="coach-about">

@@ -5,7 +5,7 @@ vi.mock('@supabase/ssr', () => ({
   createServerClient: () => ({ auth: { getUser: async () => ({ data: { user: null } }) } }),
 }));
 
-import { middleware } from './middleware';
+import { isPublicPath, middleware } from './middleware';
 
 /** T-UI-FD1: /dev pages are a real 404 in a production build, signed in or not; open in development. */
 afterEach(() => vi.unstubAllEnvs());
@@ -32,5 +32,59 @@ describe('/dev pages in middleware', () => {
     const res = await middleware(req('/dev/feed/'));
     expect(res.status).toBe(200);
     expect(res.headers.get('location')).toBeNull();
+  });
+});
+
+describe('session photo screens need an account (T-MOM1)', () => {
+  it('signed out, /session/<id>/fotos/subir/ is a redirect to sign-in, not a 200', async () => {
+    vi.stubEnv('NODE_ENV', 'production');
+    vi.stubEnv('MOMENTS_ENABLED', 'true');
+    const res = await middleware(req('/session/cfcafad0-80ec-43ea-a018-eafcf99c8648/fotos/subir/'));
+    expect(res.status).toBe(307);
+    expect(res.headers.get('location')).toContain('/auth?returnTo=');
+  });
+
+  it('the session page itself stays public', async () => {
+    vi.stubEnv('NODE_ENV', 'production');
+    expect(isPublicPath('/session/cfcafad0-80ec-43ea-a018-eafcf99c8648/')).toBe(true);
+    expect(isPublicPath('/session/cfcafad0-80ec-43ea-a018-eafcf99c8648/fotos/subir/')).toBe(false);
+    // T-MOM1 Part C: the claim link is public (the person has no account yet); its
+    // claim step and the photographer screen are not, and /messages is untouched.
+    expect(isPublicPath('/m/Ab3dEf6hIj9kLm2nOp5qRs8tUv1wXy4z/')).toBe(true);
+    expect(isPublicPath('/session/cfcafad0-80ec-43ea-a018-eafcf99c8648/fotos/fotografos/')).toBe(false);
+    expect(isPublicPath('/messages/')).toBe(false);
+    expect(isPublicPath('/profile/momentos/')).toBe(false);
+  });
+});
+
+describe('Moments pages while MOMENTS_ENABLED is off (T-MOM1, Production until launch)', () => {
+  const pages = [
+    '/profile/momentos/',
+    '/profile/momentos/?s=cfcafad0-80ec-43ea-a018-eafcf99c8648',
+    '/m/anything/',
+    '/m/Ab3dEf6hIj9kLm2nOp5qRs8tUv1wXy4z/claim/',
+    '/session/cfcafad0-80ec-43ea-a018-eafcf99c8648/fotos/subir/',
+    '/session/cfcafad0-80ec-43ea-a018-eafcf99c8648/fotos/fotografos/',
+    '/fotos/registrar-sesion/',
+  ];
+
+  it.each(pages)('%s is a 404, signed out or in', async (path) => {
+    vi.stubEnv('NODE_ENV', 'production');
+    vi.stubEnv('VERCEL_ENV', 'production');
+    expect((await middleware(req(path))).status).toBe(404);
+    expect((await middleware(req(path, 'sb-x-auth-token=1'))).status).toBe(404);
+  });
+
+  it('the session page itself, /messages and /profile are untouched', async () => {
+    vi.stubEnv('NODE_ENV', 'production');
+    vi.stubEnv('VERCEL_ENV', 'production');
+    for (const path of ['/messages/', '/profile/', '/profile/momentosx/', '/mx/'])
+      expect((await middleware(req(path))).status, path).not.toBe(404);
+  });
+
+  it('with the flag on, the claim link opens signed out', async () => {
+    vi.stubEnv('NODE_ENV', 'production');
+    vi.stubEnv('MOMENTS_ENABLED', 'true');
+    expect((await middleware(req('/m/anything/'))).status).toBe(200);
   });
 });

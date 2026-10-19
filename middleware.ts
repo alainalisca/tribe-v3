@@ -2,6 +2,7 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { athletesGateAllows, isAthletesGatedPath, GATED_NOT_FOUND_PATH } from '@/lib/features/athleteValueGate';
+import { isMomentsEnabled, isMomentsPagePath } from '@/lib/features/moments';
 import { canonicalLinkHeader } from '@/lib/seo/canonicalLink';
 import { hasAuthCookieName } from '@/lib/site/authCookie';
 import { LANGUAGE_COOKIE, languageFromCookie } from '@/lib/languageCookie';
@@ -71,6 +72,7 @@ const publicPaths = [
   '/s', // public session share pages (/s/[id]) — must be viewable + scrapable without auth
   '/i', // public instructor share pages (/i/[id]) — must be viewable + scrapable without auth
   '/g', // public gym share pages (/g/[slug]) — bio-link destination; must be viewable + scrapable without auth
+  '/m', // T-MOM1 claim links (/m/<token>/): the person has no account yet; the page shows only the invite's photos
   '/pase', // T-LEAD1 digital pass (/pase/[slug]) -- the QR on a printed voucher; the visitor has no account and may never make one
   // T-SITE1: the marketing site's pages. middleware() rewrites them to their
   // prerendered app/sitio/[lang] page before this list is consulted; they are
@@ -182,6 +184,10 @@ const publicApiPaths = [
 // gate. Next.js only reserves `middleware` and `config` on this file; extra
 // named exports are fine (same reasoning as buildCsp below).
 export function isPublicPath(pathname: string): boolean {
+  // T-MOM1: a session's photo screens (/session/<id>/fotos/...) need an
+  // account. Under the public /session prefix otherwise, a signed-out visitor
+  // would get the page's own redirect, which streams a 200 first.
+  if (/^\/session\/[^/]+\/fotos(\/|$)/.test(pathname)) return false;
   if (
     publicPaths.some((path) => {
       if (path === '/') return pathname === '/';
@@ -208,7 +214,7 @@ export function isPublicPath(pathname: string): boolean {
   // and this branch never runs, so the path stays behind the gate there too.
   // T-UI-FD1: /dev/feed likewise (development only; the page itself also 404s
   // on any Vercel deployment).
-  if (process.env.NODE_ENV !== 'production' && /^\/dev\/(bridge|feed)\/?$/.test(pathname)) {
+  if (process.env.NODE_ENV !== 'production' && /^\/dev\/(bridge|feed|moments)\/?$/.test(pathname)) {
     return true;
   }
 
@@ -419,6 +425,17 @@ export async function middleware(request: NextRequest) {
   // a production build (production and every Vercel preview): a real 404 for
   // everyone, signed in or not, before the auth gate could redirect.
   if (process.env.NODE_ENV === 'production' && /^\/dev(\/|$)/.test(pathname)) {
+    return applySecurityHeaders(
+      NextResponse.rewrite(new URL(GATED_NOT_FOUND_PATH, request.url), { status: 404 }),
+      pathname
+    );
+  }
+
+  // T-MOM1: while MOMENTS_ENABLED is off (Production until launch day), the
+  // Moments pages (Momentos, the claim link, a session's photo screens,
+  // "Registrar sesión pasada") do not exist: a real 404 for everyone, before
+  // the auth gate could redirect a signed-out visitor to sign-in.
+  if (isMomentsPagePath(pathname) && !isMomentsEnabled()) {
     return applySecurityHeaders(
       NextResponse.rewrite(new URL(GATED_NOT_FOUND_PATH, request.url), { status: 404 }),
       pathname
