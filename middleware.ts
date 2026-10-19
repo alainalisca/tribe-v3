@@ -206,7 +206,9 @@ export function isPublicPath(pathname: string): boolean {
   // T-JOIN1 Part A: /dev/bridge, the bridge components' review page, opens
   // signed out in development only. In production the page itself is a 404
   // and this branch never runs, so the path stays behind the gate there too.
-  if (process.env.NODE_ENV !== 'production' && (pathname === '/dev/bridge' || pathname === '/dev/bridge/')) {
+  // T-UI-FD1: /dev/feed likewise (development only; the page itself also 404s
+  // on any Vercel deployment).
+  if (process.env.NODE_ENV !== 'production' && /^\/dev\/(bridge|feed)\/?$/.test(pathname)) {
     return true;
   }
 

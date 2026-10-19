@@ -6,8 +6,9 @@ import type { ReactNode } from 'react';
  * T-JOIN1 Part D: NEXT_PUBLIC_FEED_LITE. Every child of the feed is a named
  * marker, so a render reads as the feed's composition in order.
  *
- *   flag off  exactly what main rendered before Part D (the snapshot was
- *             written against the unchanged app/page.tsx, then kept)
+ *   flag off  the feed's composition (snapshot). T-UI-FD1 re-recorded it: the
+ *             cards now sit under day headers, and the discovery modules
+ *             between day groups instead of between cards.
  *   flag on   none of the nine interstitials; ProfileCompletionBanner stays
  */
 
@@ -28,6 +29,9 @@ vi.mock('@/components/Skeleton', () => ({ SkeletonCard: () => <div data-c="Skele
 vi.mock('@/components/StoriesRow', () => stub('StoriesRow'));
 vi.mock('@/components/LazyMount', () => stub('LazyMount'));
 vi.mock('@/components/home/FilterBar', () => stub('FilterBar'));
+vi.mock('@/components/home/FeedHeader', () => stub('FeedHeader'));
+vi.mock('@/lib/LanguageContext', () => ({ useLanguage: () => ({ language: 'es', t: (k: string) => k }) }));
+vi.mock('@/hooks/useHostPhotos', () => ({ useHostPhotos: () => ({ ready: true, photoFor: () => null }) }));
 vi.mock('@/components/home/CityGreeting', () => stub('CityGreeting'));
 vi.mock('@/components/home/LiveNowSection', () => stub('LiveNowSection'));
 vi.mock('@/components/ConfirmDialog', () => stub('ConfirmDialog'));
@@ -84,7 +88,24 @@ function withoutLiteSections(order: string[]): string[] {
 
 function makeFeed(over: { sessions?: number; profileComplete?: boolean } = {}) {
   const n = over.sessions ?? 20;
-  const sessions = Array.from({ length: n }, (_, i) => ({ id: `s${i}`, creator_id: `c${i}`, partner_id: null }));
+  // Spread over the next seven days (T-UI-FD1 groups them by day), starting
+  // tomorrow so none has ended whatever time the test runs.
+  const ymd = (days: number) => {
+    const d = new Date();
+    d.setDate(d.getDate() + days);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  };
+  const sessions = Array.from({ length: n }, (_, i) => ({
+    id: `s${i}`,
+    creator_id: `c${i}`,
+    partner_id: null,
+    date: ymd(1 + (i % 7)),
+    start_time: `${String(6 + Math.floor(i / 7)).padStart(2, '0')}:00:00`,
+    duration: 60,
+    status: 'active',
+    is_test: false,
+    sport: 'Yoga',
+  }));
   return {
     userChecked: true,
     user: { id: 'u1' },
@@ -103,6 +124,7 @@ function makeFeed(over: { sessions?: number; profileComplete?: boolean } = {}) {
     locationKnown: true,
     loading: false,
     fetchError: false,
+    sessions,
     filteredSessions: sessions,
     visibleCount: n,
     PAGE_SIZE: 20,
@@ -144,15 +166,15 @@ describe('feed, flag off (the default)', () => {
     delete process.env.NEXT_PUBLIC_FEED_LITE;
   });
 
-  it('renders exactly what main renders: 20 sessions, incomplete profile', () => {
+  it('the feed composition: 20 sessions, incomplete profile', () => {
     expect(composition()).toMatchSnapshot();
   });
 
-  it('renders exactly what main renders: 20 sessions, complete profile', () => {
+  it('the feed composition: 20 sessions, complete profile', () => {
     expect(composition({ profileComplete: true })).toMatchSnapshot();
   });
 
-  it('renders exactly what main renders: an empty feed', () => {
+  it('the feed composition: an empty feed', () => {
     expect(composition({ sessions: 0 })).toMatchSnapshot();
   });
 

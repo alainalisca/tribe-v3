@@ -29,7 +29,11 @@ const SafetyWaiverModal = dynamic(() => import('@/components/SafetyWaiverModal')
 const TribeWelcomeGuide = dynamic(() => import('@/components/TribeWelcomeGuide'), { ssr: false });
 import StoriesRow from '@/components/StoriesRow';
 import LazyMount from '@/components/LazyMount';
-import FilterBar from '@/components/home/FilterBar';
+import { useMemo } from 'react';
+import FeedHeader from '@/components/home/FeedHeader';
+import FeedDayGroups from '@/components/home/FeedDayGroups';
+import { feedSports, groupFeed, limitGroups, seriesDaysLabel } from '@/lib/feed/feedGroups';
+import { useHostPhotos } from '@/hooks/useHostPhotos';
 import CityGreeting from '@/components/home/CityGreeting';
 import LiveNowSection from '@/components/home/LiveNowSection';
 import ConfirmDialog from '@/components/ConfirmDialog';
@@ -61,6 +65,12 @@ export default function HomePage() {
   const f = useHomeFeed();
   // T-JOIN1 Part D: NEXT_PUBLIC_FEED_LITE drops the nine interstitials (lib/features/feedLite.ts).
   const lite = isFeedLite();
+  // T-UI-FD1: the feed under day headers, each series once (its next
+  // occurrence), bookable sessions only; cards on the host's coach-card photo.
+  const feedGroups = useMemo(() => groupFeed(f.filteredSessions), [f.filteredSessions]);
+  const feedItemCount = useMemo(() => feedGroups.reduce((n, g) => n + g.items.length, 0), [feedGroups]);
+  const sportsOnFeed = useMemo(() => feedSports(f.sessions), [f.sessions]);
+  const hostPhotos = useHostPhotos(feedGroups.flatMap((g) => g.items.map((i) => i.session.creator_id ?? '')));
   const { pullDistance, isRefreshing, handlers } = usePullToRefresh({
     onRefresh: async () => {
       await f.loadSessions();
@@ -108,27 +118,16 @@ export default function HomePage() {
         <TribeWelcomeGuide enabled showInstructorStep={!!f.userProfile.is_instructor} />
       ) : null}
 
-      <FilterBar
-        searchQuery={f.searchQuery}
-        setSearchQuery={f.setSearchQuery}
+      <FeedHeader
+        sports={sportsOnFeed}
         selectedSport={f.selectedSport}
-        setSelectedSport={f.setSelectedSport}
-        dateFilter={f.dateFilter}
-        setDateFilter={f.setDateFilter}
-        genderFilter={f.genderFilter}
-        setGenderFilter={f.setGenderFilter}
-        pricingFilter={f.pricingFilter}
-        setPricingFilter={f.setPricingFilter}
-        maxDistance={f.maxDistance}
-        setMaxDistance={f.setMaxDistance}
-        userLocation={f.userLocation}
-        loading={f.loading}
-        filteredCount={f.filteredSessions.length}
+        onSportChange={f.setSelectedSport}
+        freeOnly={f.pricingFilter === 'free'}
+        onFreeOnlyChange={(free) => f.setPricingFilter(free ? 'free' : 'all')}
+        searchQuery={f.searchQuery}
+        onSearchChange={f.setSearchQuery}
         language={f.language}
-        t={f.t}
         onFixedHeightChange={f.setFixedHeight}
-        selectedNeighborhood={f.selectedNeighborhood}
-        onNeighborhoodChange={f.setSelectedNeighborhood}
       />
 
       <div
@@ -204,7 +203,7 @@ export default function HomePage() {
                 </Button>
               </CardContent>
             </Card>
-          ) : f.filteredSessions.length === 0 ? (
+          ) : feedItemCount === 0 ? (
             <div className="space-y-4">
               <Card className="dark:bg-tribe-card border-stone-200 dark:border-tribe-mid shadow-none">
                 <CardContent className="p-8 text-center">
@@ -280,8 +279,6 @@ export default function HomePage() {
           ) : (
             <div className="space-y-4">
               {(() => {
-                const visibleSessions = f.filteredSessions.slice(0, f.visibleCount);
-
                 // Discovery & banner slots keyed by position (after Nth session card)
                 // Discovery slots — anything below position 2 stays eager
                 // (it's likely above the fold). Everything from position 4
@@ -370,54 +367,55 @@ export default function HomePage() {
                     ) : null,
                 };
 
-                const items: React.ReactNode[] = [];
-
-                visibleSessions.forEach((session, index) => {
-                  items.push(
-                    <AnimatedCard key={session.id} index={index}>
-                      <SessionCard
-                        session={session}
-                        onJoin={f.handleJoinSession}
-                        userLocation={f.userLocation}
-                        currentUserId={f.user?.id}
-                        onEdit={(id: string) => f.router.push(`/session/${id}/edit`)}
-                        onDelete={f.handleDeleteSession}
-                        onShare={f.handleShareSession}
-                        distance={f.getDistanceText(session)}
-                        liveData={f.liveStatusMap[session.id]}
-                        priority={index < 2}
-                        recapPhotos={f.recapPhotosByCreator[session.creator_id ?? ''] ?? []}
-                        sessionPartner={session.partner_id ? (f.partnersById.get(session.partner_id) ?? null) : null}
-                        creatorPartner={f.partnersByCreator.get(session.creator_id ?? '') ?? null}
-                      />
-                    </AnimatedCard>
-                  );
-
-                  const position = index + 1;
-
-                  // Insert discovery/banner slots at their designated positions
-                  if (discoverySlots[position]) {
-                    items.push(discoverySlots[position]);
-                  }
-                });
-
-                // Append any remaining discovery slots beyond visible sessions
-                Object.entries(discoverySlots).forEach(([pos, node]) => {
-                  if (Number(pos) > visibleSessions.length && node) {
-                    items.push(node);
-                  }
-                });
-
-                return items;
+                // T-UI-FD1: the discovery modules sit between day groups, in
+                // their old order, never between two cards. A module the flag
+                // or the profile leaves out keeps its gap, so FEED_LITE only
+                // removes, never moves, what is left.
+                const between = Object.keys(discoverySlots)
+                  .map(Number)
+                  .sort((a, b) => a - b)
+                  .map((k) => discoverySlots[k]);
+                return (
+                  <FeedDayGroups
+                    groups={limitGroups(feedGroups, f.visibleCount)}
+                    language={f.language}
+                    between={between}
+                    renderCard={(item, index) => {
+                      const session = item.session;
+                      return (
+                        <AnimatedCard index={index}>
+                          <SessionCard
+                            session={session}
+                            onJoin={f.handleJoinSession}
+                            userLocation={f.userLocation}
+                            currentUserId={f.user?.id}
+                            onEdit={(id: string) => f.router.push(`/session/${id}/edit`)}
+                            onDelete={f.handleDeleteSession}
+                            onShare={f.handleShareSession}
+                            distance={f.getDistanceText(session)}
+                            liveData={f.liveStatusMap[session.id]}
+                            priority={index < 2}
+                            hostPhoto={hostPhotos.photoFor(session.creator_id)}
+                            seriesDays={item.seriesDays ? seriesDaysLabel(item.seriesDays, f.language) : null}
+                            sessionPartner={
+                              session.partner_id ? (f.partnersById.get(session.partner_id) ?? null) : null
+                            }
+                            creatorPartner={f.partnersByCreator.get(session.creator_id ?? '') ?? null}
+                          />
+                        </AnimatedCard>
+                      );
+                    }}
+                  />
+                );
               })()}
-              {f.visibleCount < f.filteredSessions.length && (
+              {f.visibleCount < feedItemCount && (
                 <button
                   onClick={() => f.setVisibleCount((prev) => prev + f.PAGE_SIZE)}
                   className="w-full py-3 bg-white dark:bg-tribe-card text-stone-700 dark:text-white font-medium rounded-xl border border-stone-200 dark:border-tribe-mid hover:bg-stone-100 dark:hover:bg-tribe-card transition"
                 >
                   {f.language === 'es'
-                    ? `Mostrar más (${f.filteredSessions.length - f.visibleCount} restantes)`
-                    : `Show more (${f.filteredSessions.length - f.visibleCount} remaining)`}
+                    ? `Mostrar más (${feedItemCount - f.visibleCount} restantes)`
+                    : `Show more (${feedItemCount - f.visibleCount} remaining)`}
                 </button>
               )}
             </div>

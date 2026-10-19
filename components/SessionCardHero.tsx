@@ -4,7 +4,9 @@ import { useState } from 'react';
 import { Maximize2 } from 'lucide-react';
 import { getSportGradient } from '@/lib/sport-images';
 import { useTranslations } from '@/lib/i18n/useTranslations';
+import Image from 'next/image';
 import SmartPhoto from '@/components/session/SmartPhoto';
+import { isOptimizableImage } from '@/lib/site/imageHosts';
 import HeroCarousel from '@/components/session/HeroCarousel';
 import type { CarouselControls } from '@/components/session/HeroCarousel';
 import type { CardPhoto } from '@/lib/sessionPhotos';
@@ -38,6 +40,12 @@ export interface SessionCardHeroProps {
   onTap?: () => void;
   onIndexChange?: (index: number, method: 'swipe' | 'arrow' | 'key') => void;
   controlsRef?: React.MutableRefObject<CarouselControls | null>;
+  /**
+   * T-UI-FD1: the host's coach-card photo, cropped to fill the box and
+   * anchored here (an object-position, from the card's box), resized through
+   * next/image. Set, the hero never letterboxes and never shows a carousel.
+   */
+  heroPosition?: string;
 }
 
 /**
@@ -67,6 +75,7 @@ export default function SessionCardHero({
   onTap,
   onIndexChange,
   controlsRef,
+  heroPosition,
 }: SessionCardHeroProps) {
   const t = useTranslations('sessionCard');
   const [imageError, setImageError] = useState(false);
@@ -179,7 +188,20 @@ export default function SessionCardHero({
         </HeroCarousel>
       ) : (
         <>
-          {hasImage ? (
+          {hasImage && heroPosition && isOptimizableImage(heroImage) ? (
+            <Image
+              src={heroImage}
+              alt={imageAlt}
+              fill
+              sizes="(min-width: 768px) 672px, 100vw"
+              preload={eager}
+              fetchPriority={eager ? 'high' : 'auto'}
+              loading={eager ? undefined : 'lazy'}
+              onError={() => setImageError(true)}
+              style={{ objectFit: 'cover', objectPosition: heroPosition }}
+              className="transition-transform duration-300 ease-out motion-safe:group-hover:scale-[1.03]"
+            />
+          ) : hasImage ? (
             <SmartPhoto
               src={heroImage}
               alt={imageAlt}
