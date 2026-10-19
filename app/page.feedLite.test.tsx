@@ -131,7 +131,6 @@ function makeFeed(over: { sessions?: number; profileComplete?: boolean } = {}) {
     liveNowSessions: [],
     liveUserIdSet: new Set(),
     liveStatusMap: {},
-    recapPhotosByCreator: {},
     partnersById: new Map(),
     partnersByCreator: new Map(),
     fixedHeight: 0,

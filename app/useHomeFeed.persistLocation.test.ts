@@ -10,7 +10,6 @@ vi.mock('@/lib/dal', () => ({
   fetchUpcomingSessions: vi.fn(),
   fetchUserProfileMaybe: vi.fn(),
   fetchMyLocation: vi.fn(),
-  fetchRecapPhotosByCreators: vi.fn(),
 }));
 vi.mock('@/lib/logger', () => ({ logError, log: vi.fn() }));
 
