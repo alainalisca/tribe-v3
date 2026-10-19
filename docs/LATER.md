@@ -251,3 +251,24 @@ rows are landing without `gym_id`. The leak test
 (`scripts/rls-leak-test.js`) is the canary — if it ever WARNs about
 a row missing `gym_id` for a premium tenant, the cleanup migration
 gets delayed until that's fixed.
+
+## 2026-10-19 — guest/route.ts exports a constant a Route may not export
+
+**Source:** claude (T-AV2b, while running `next build --webpack` locally), logged at Al's ask.
+
+**Description:** `app/api/sessions/[id]/guest/route.ts` (T-JOIN1) has
+`export const GUEST_JOINS_PER_IP_PER_HOUR = 5`. Next's route type check
+accepts only route exports (GET, POST, runtime, ...), so the webpack build
+stops with: `Route "app/api/sessions/[id]/guest/route.ts" does not match the
+required types of a Next.js Route. "GUEST_JOINS_PER_IP_PER_HOUR" is not a
+valid Route export field.` The stale `.next/types` check reports the same.
+The Turbopack build that CI and Vercel run accepts it today, so nothing is
+broken in production. Same file on main as on every branch since T-JOIN1.
+The fix is the one Moments used: move the constant to a lib module (e.g.
+lib/join/guestRateLimit.ts) and import it in the route and its test.
+
+**Why deferred:** not part of T-AV2; Al said to log it, not fix it in that branch.
+
+**Trigger to revisit:** any switch to webpack builds, a Next upgrade that
+type-checks route exports under Turbopack too, or the next change to the
+guest join route.
