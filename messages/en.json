@@ -894,7 +894,6 @@
     "thanks": "Thank you",
     "thanked": "Thanks sent",
     "share": "Share",
-    "soon": "Soon",
     "more": "More options",
     "removeMe": "Remove me from this photo",
     "removeTitle": "Remove yourself from this photo?",
@@ -930,6 +929,14 @@
     "photographersPick": "Pick from the session",
     "photographersRosterEmpty": "No one has joined this session yet.",
     "photographersAdd": "Add",
-    "photographersRemove": "Remove"
+    "photographersRemove": "Remove",
+    "photographersByHandle": "By their Tribe handle",
+    "photographersHandlePlaceholder": "@handle",
+    "photographersHandleNotFound": "We couldn't find that handle.",
+    "photographersHandleIsHost": "That's the host: they can already upload photos.",
+    "coachPageToggle": "Show on {coach}'s page",
+    "coachPageToggleNoName": "Show on the coach's page",
+    "coachPageHint": "Only you decide. You can take it off any time.",
+    "shareDownloaded": "Done, the image downloaded."
   }
 }

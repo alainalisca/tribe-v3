@@ -77,6 +77,14 @@ export default function MyMomentos({
         .filter((b) => b.photos.length > 0)
     );
   }, []);
+  const onCoachPage = useCallback((mediaId: string, show: boolean) => {
+    setBatches((list) =>
+      list.map((b) => ({
+        ...b,
+        photos: b.photos.map((p) => (p.mediaId === mediaId ? { ...p, onCoachPage: show } : p)),
+      }))
+    );
+  }, []);
   const closeViewer = useCallback(() => setViewer(null), []);
 
   const open = viewer ? batches.find((b) => b.sessionId === viewer.sessionId) : null;
@@ -171,6 +179,8 @@ export default function MyMomentos({
           onClose={closeViewer}
           onThanked={onThanked}
           onRemoved={onRemoved}
+          onCoachPage={onCoachPage}
+          coachName={hostFirstName(open.coachName, open.sport)}
           initialSheet={!!viewer.sheet}
         />
       )}

@@ -43,7 +43,9 @@ export async function POST(_req: Request, { params }: { params: Promise<{ sessio
     const coach = hostFirstName(creatorName, sport);
     const invites = result.invites.map((i) => ({
       ...i,
-      whatsappUrl: i.phone ? whatsappHref(i.phone, whatsappText(lang, name, coach, i.link)) : null,
+      whatsappUrl: i.phone
+        ? whatsappHref(i.phone, whatsappText(lang, { name: i.name, session: name, coach, link: i.link }))
+        : null,
     }));
     return NextResponse.json({ ...result, invites }, { headers: PRIVATE });
   } catch (error) {

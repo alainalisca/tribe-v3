@@ -105,7 +105,7 @@ export default function DevMomentsView({ picker }: { picker: 'list' | 'invite' |
             count: 1,
             link: 'https://tribelatam.com/m/dev/',
             whatsappUrl: `https://wa.me/573001234567?text=${encodeURIComponent(
-              'Te tomamos fotos en Boxeo con Salomon. Están aquí: https://tribelatam.com/m/dev/'
+              'Hola Mateo, te tomamos fotos en Boxeo con Salomon. Míralas aquí: https://tribelatam.com/m/dev/'
             )}`,
           },
         ],

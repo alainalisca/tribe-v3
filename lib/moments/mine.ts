@@ -9,7 +9,7 @@ import type { MyMomentsBatch } from './types';
  * session, in the order the photos were taken. Never anybody else's view: the
  * caller passes the signed-in user's id, and nothing here takes another.
  */
-export type MyTagRow = { media_id: string; thanked_at: string | null };
+export type MyTagRow = { media_id: string; thanked_at: string | null; show_on_coach_page?: boolean | null };
 export type MyMediaRow = {
   id: string;
   session_id: string;
@@ -37,6 +37,7 @@ export function groupMyMoments(
   viewer: Record<string, string | null>
 ): MyMomentsBatch[] {
   const thanked = new Map(tags.map((t) => [t.media_id, !!t.thanked_at]));
+  const onCoachPage = new Set(tags.filter((t) => t.show_on_coach_page).map((t) => t.media_id));
   const bySession = new Map<string, MyMediaRow[]>();
   for (const m of media) {
     if (!thanked.has(m.id)) continue; // not this person's photo
@@ -64,6 +65,7 @@ export function groupMyMoments(
           width: m.width,
           height: m.height,
           thanked: thanked.get(m.id) ?? false,
+          onCoachPage: onCoachPage.has(m.id),
         })),
     }));
 }
@@ -71,7 +73,7 @@ export function groupMyMoments(
 export async function loadMyMoments(service: SupabaseClient, userId: string): Promise<MyMomentsBatch[]> {
   const { data: tagData, error } = await service
     .from('session_media_tags')
-    .select('media_id, thanked_at')
+    .select('media_id, thanked_at, show_on_coach_page')
     .eq('user_id', userId)
     .not('delivered_at', 'is', null)
     .is('removed_at', null);

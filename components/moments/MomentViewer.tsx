@@ -2,7 +2,7 @@
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
-import { Check, ChevronLeft, ChevronRight, Download, Heart, Share2, UserMinus, X } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, Download, Heart, Loader2, Share2, UserMinus, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useTranslations } from '@/lib/i18n/useTranslations';
 import type { MyMomentsApi } from '@/lib/moments/myApi';
@@ -15,11 +15,13 @@ import type { MyMoment } from '@/lib/moments/types';
  *
  *   Descargar   the original, through a 1-hour signed URL
  *   Gracias     one tap; the uploader hears once per batch
- *   Compartir   Part D (shown, not active yet)
+ *   Compartir   the 1080 x 1920 story image: the phone's share sheet
+ *               (navigator.share with the file), a download elsewhere
  *   Quitarme    a sheet: "Quitarme de esta foto" (nobody is told) or
  *               "Pedir que la borren" (removed too, the uploader is asked)
  *
- * "Mostrar en la página de <coach>" arrives with Part D.
+ * Above them, "Mostrar en la página de <coach>": the person's own switch for
+ * this photo on the coach's page (Part D). Off until they turn it on.
  */
 export default function MomentViewer({
   photos,
@@ -28,6 +30,8 @@ export default function MomentViewer({
   onClose,
   onThanked,
   onRemoved,
+  onCoachPage,
+  coachName,
   initialSheet = false,
 }: {
   photos: MyMoment[];
@@ -36,6 +40,9 @@ export default function MomentViewer({
   onClose: () => void;
   onThanked: (mediaId: string) => void;
   onRemoved: (mediaId: string) => void;
+  onCoachPage: (mediaId: string, show: boolean) => void;
+  /** The host's first name, for "Mostrar en la página de <coach>". */
+  coachName: string;
   /** /dev/moments only: open the "Quitarme" sheet, for review. */
   initialSheet?: boolean;
 }) {
@@ -45,6 +52,7 @@ export default function MomentViewer({
   const [zoomed, setZoomed] = useState(false);
   const [sheet, setSheet] = useState(initialSheet);
   const [busy, setBusy] = useState(false);
+  const [sharing, setSharing] = useState(false);
   const photo = photos[index];
 
   useLayoutEffect(() => {
@@ -87,6 +95,45 @@ export default function MomentViewer({
     try {
       await api.thanks(photo.mediaId);
     } catch {
+      toast.error(t('errorGeneric'));
+    }
+  }
+
+  async function share() {
+    if (!photo || sharing) return;
+    setSharing(true);
+    try {
+      const blob = await api.story(photo.mediaId);
+      const file = new File([blob], 'tribe-momento.jpg', { type: 'image/jpeg' });
+      if (typeof navigator.canShare === 'function' && navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file] }).catch((e: unknown) => {
+          // Closing the share sheet is not an error.
+          if ((e as { name?: string })?.name !== 'AbortError') throw e;
+        });
+      } else {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = file.name;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 10_000);
+        toast.success(t('shareDownloaded'));
+      }
+    } catch {
+      toast.error(t('errorGeneric'));
+    } finally {
+      setSharing(false);
+    }
+  }
+
+  async function toggleCoachPage() {
+    if (!photo) return;
+    const show = !photo.onCoachPage;
+    onCoachPage(photo.mediaId, show);
+    try {
+      await api.setCoachPage(photo.mediaId, show);
+    } catch {
+      onCoachPage(photo.mediaId, !show);
       toast.error(t('errorGeneric'));
     }
   }
@@ -171,6 +218,36 @@ export default function MomentViewer({
             )}
           </div>
 
+          <div className="mx-auto w-full max-w-md px-4 pt-3">
+            <button
+              type="button"
+              role="switch"
+              aria-checked={!!photo?.onCoachPage}
+              onClick={toggleCoachPage}
+              data-testid="coach-page-toggle"
+              className="flex w-full items-center gap-3 rounded-xl bg-white/[0.08] px-3 py-2.5 text-left"
+            >
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-semibold text-white">
+                  {coachName ? t('coachPageToggle', { coach: coachName }) : t('coachPageToggleNoName')}
+                </span>
+                <span className="block text-xs text-white/60">{t('coachPageHint')}</span>
+              </span>
+              <span
+                aria-hidden="true"
+                className={`relative h-7 w-12 shrink-0 rounded-full transition-colors ${
+                  photo?.onCoachPage ? 'bg-[#A8DA36]' : 'bg-white/25'
+                }`}
+              >
+                <span
+                  className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-transform ${
+                    photo?.onCoachPage ? 'translate-x-[22px]' : 'translate-x-0.5'
+                  }`}
+                />
+              </span>
+            </button>
+          </div>
+
           <div className="mx-auto flex w-full max-w-md gap-1 px-3 py-3">
             <button type="button" className={action} onClick={download}>
               <Download className="h-6 w-6" />
@@ -185,14 +262,9 @@ export default function MomentViewer({
               {photo?.thanked ? <Check className="h-6 w-6" /> : <Heart className="h-6 w-6" />}
               {photo?.thanked ? t('thanked') : t('thanks')}
             </button>
-            <button type="button" className={action} disabled aria-describedby="share-soon">
-              <Share2 className="h-6 w-6" />
-              <span className="flex flex-col leading-tight">
-                {t('share')}
-                <span id="share-soon" className="text-[10px] font-normal uppercase tracking-wide text-white/60">
-                  {t('soon')}
-                </span>
-              </span>
+            <button type="button" className={action} onClick={share} disabled={sharing} aria-busy={sharing}>
+              {sharing ? <Loader2 className="h-6 w-6 animate-spin" /> : <Share2 className="h-6 w-6" />}
+              {t('share')}
             </button>
             <button type="button" className={action} onClick={() => setSheet(true)}>
               <UserMinus className="h-6 w-6" />

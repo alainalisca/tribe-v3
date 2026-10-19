@@ -1,6 +1,8 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { checkRateLimit } from '@/lib/rate-limit';
+import { hostFirstName } from '@/lib/share/sessionPublic';
 import { notifyUploader } from './notify';
+import { MOMENTS_BUCKET, momentVariantPath } from './paths';
 import { signMoments } from './storage';
 
 /**
@@ -15,6 +17,8 @@ import { signMoments } from './storage';
  *   Quitarme de esta foto  removed_at; the uploader is NOT told
  *   Pedir que la borren  removed_at as well, and the uploader is asked to
  *                        delete it (once per photo per person)
+ *   Compartir            the story image (Part D)
+ *   Mostrar en la página de <coach>   show_on_coach_page (Part D)
  */
 export type MyTag = {
   tagId: string;
@@ -136,4 +140,53 @@ export async function removeMeFromPhoto(
       session,
     });
   return { removed: true, requested: true };
+}
+
+/**
+ * T-MOM1 Part D: what the story image needs for one of the person's photos:
+ * the w1200 file, the host's first name, the session's gym when approved and
+ * active, and the person's language. Only ever reached through their own tag.
+ */
+export async function storyInputs(
+  service: SupabaseClient,
+  userId: string,
+  tag: MyTag
+): Promise<{ photo: Buffer; coach: string; gym: string | null; lang: 'es' | 'en' } | null> {
+  const [{ data: file }, { data: s }, { data: me }] = await Promise.all([
+    service.storage.from(MOMENTS_BUCKET).download(momentVariantPath(tag.media.storage_path, 'viewer')),
+    service
+      .from('sessions')
+      .select('sport, creator_id, partner_id, partner_status')
+      .eq('id', tag.media.session_id)
+      .maybeSingle(),
+    service.from('users').select('preferred_language').eq('id', userId).maybeSingle(),
+  ]);
+  if (!file) return null;
+  const session = s as {
+    sport: string | null;
+    creator_id: string | null;
+    partner_id: string | null;
+    partner_status: string | null;
+  } | null;
+  const [{ data: host }, { data: partner }] = await Promise.all([
+    session?.creator_id
+      ? service.from('users').select('name').eq('id', session.creator_id).maybeSingle()
+      : Promise.resolve({ data: null }),
+    session?.partner_id && session.partner_status === 'approved'
+      ? service.from('featured_partners').select('business_name, status').eq('id', session.partner_id).maybeSingle()
+      : Promise.resolve({ data: null }),
+  ]);
+  const p = partner as { business_name: string | null; status: string | null } | null;
+  return {
+    photo: Buffer.from(await file.arrayBuffer()),
+    coach: hostFirstName((host as { name: string | null } | null)?.name ?? null, session?.sport ?? null),
+    gym: p?.status === 'active' ? (p.business_name?.trim() ?? null) : null,
+    lang: (me as { preferred_language?: string | null } | null)?.preferred_language === 'en' ? 'en' : 'es',
+  };
+}
+
+/** "Mostrar en la página de <coach>": the person's own choice, on their own tag. */
+export async function setShowOnCoachPage(service: SupabaseClient, tag: MyTag, show: boolean): Promise<void> {
+  const { error } = await service.from('session_media_tags').update({ show_on_coach_page: show }).eq('id', tag.tagId);
+  if (error) throw error;
 }

@@ -11,7 +11,7 @@ import type { MyMomentsBatch } from '@/lib/moments/types';
  * in-memory API that writes nothing: Momentos, the viewer (and its "Quitarme"
  * sheet), and the claim link as a signed-out visitor sees it.
  */
-export type PartCView = 'momentos' | 'viewer' | 'viewer-sheet' | 'claim' | 'claim-expired';
+export type PartCView = 'momentos' | 'viewer' | 'viewer-sheet' | 'viewer-toggle' | 'claim' | 'claim-expired';
 
 const S1 = '00000000-0000-4000-8000-000000000001';
 const S2 = '00000000-0000-4000-8000-000000000002';
@@ -22,6 +22,7 @@ const photo = (name: string, i: number) => ({
   width: 1200,
   height: 900,
   thanked: false,
+  onCoachPage: false,
 });
 const batches: MyMomentsBatch[] = [
   {
@@ -51,6 +52,8 @@ export default function DevPartCView({ view }: { view: PartCView }) {
       download: async () => '/site/essay_bb.jpg',
       thanks: async () => undefined,
       remove: async () => ({ requested: true }),
+      story: async () => (await fetch('/site/essay_bb.jpg')).blob(),
+      setCoachPage: async () => undefined,
     }),
     []
   );
@@ -76,7 +79,11 @@ export default function DevPartCView({ view }: { view: PartCView }) {
     <MyMomentos
       initial={batches}
       api={api}
-      initialViewer={view === 'momentos' ? null : { sessionId: S1, index: 0, sheet: view === 'viewer-sheet' }}
+      initialViewer={
+        view === 'momentos'
+          ? null
+          : { sessionId: view === 'viewer-toggle' ? S2 : S1, index: 0, sheet: view === 'viewer-sheet' }
+      }
     />
   );
 }

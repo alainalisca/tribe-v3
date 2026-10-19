@@ -9,25 +9,57 @@ import type { PhotographerPerson, PhotographersState } from '@/lib/moments/photo
 
 /**
  * T-MOM1 Part C: "Fotógrafo de esta sesión". Who may upload and tag this
- * session's photos besides the host, and the people in the session who could.
+ * session's photos besides the host; add someone by their exact Tribe handle,
+ * or pick from the people in the session.
  */
 export default function PhotographersScreen({ sessionId, initial }: { sessionId: string; initial: PhotographersState }) {
   const t = useTranslations('moments');
   const [state, setState] = useState(initial);
   const [busy, setBusy] = useState<string | null>(null);
+  const [handle, setHandle] = useState('');
+  const [handleError, setHandleError] = useState<string | null>(null);
+
+  async function send(method: 'POST' | 'DELETE', body: { userId: string } | { handle: string }) {
+    const res = await fetch(`/api/moments/${sessionId}/photographers/`, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (res.ok) setState(await res.json());
+    return res;
+  }
 
   async function change(userId: string, method: 'POST' | 'DELETE') {
     setBusy(userId);
     try {
-      const res = await fetch(`/api/moments/${sessionId}/photographers/`, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId }),
-      });
-      if (!res.ok) throw new Error(String(res.status));
-      setState(await res.json());
+      if (!(await send(method, { userId })).ok) throw new Error('failed');
     } catch {
       toast.error(t('errorGeneric'));
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function addByHandle(e: React.FormEvent) {
+    e.preventDefault();
+    if (!handle.trim()) return;
+    setBusy('handle');
+    setHandleError(null);
+    try {
+      const res = await send('POST', { handle });
+      if (res.ok) setHandle('');
+      else {
+        const code = ((await res.json().catch(() => ({}))) as { error?: string }).error;
+        setHandleError(
+          code === 'is_host'
+            ? t('photographersHandleIsHost')
+            : code === 'handle_not_found' || code === 'bad_request'
+              ? t('photographersHandleNotFound')
+              : t('errorGeneric')
+        );
+      }
+    } catch {
+      setHandleError(t('errorGeneric'));
     } finally {
       setBusy(null);
     }
@@ -90,6 +122,34 @@ export default function PhotographersScreen({ sessionId, initial }: { sessionId:
                 )
               )}
             </ul>
+          )}
+        </section>
+        <section aria-label={t('photographersByHandle')}>
+          <h2 className="text-xs font-bold uppercase tracking-[0.08em] text-stone-500">{t('photographersByHandle')}</h2>
+          <form onSubmit={addByHandle} className="mt-2 flex gap-2">
+            <input
+              value={handle}
+              onChange={(e) => setHandle(e.target.value)}
+              placeholder={t('photographersHandlePlaceholder')}
+              aria-label={t('photographersByHandle')}
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              maxLength={40}
+              className="min-w-0 flex-1 rounded-xl border-[1.5px] border-stone-300 bg-white px-3 py-2 text-[15px] text-stone-900"
+            />
+            <button
+              type="submit"
+              disabled={busy === 'handle' || !handle.trim()}
+              className="rounded-xl bg-stone-900 px-4 py-2 text-sm font-bold text-white disabled:opacity-50"
+            >
+              {t('photographersAdd')}
+            </button>
+          </form>
+          {handleError && (
+            <p role="alert" className="mt-1.5 text-sm font-semibold text-red-600">
+              {handleError}
+            </p>
           )}
         </section>
         <section aria-label={t('photographersPick')}>

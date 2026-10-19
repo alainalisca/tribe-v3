@@ -25,6 +25,7 @@ const photo = (id: string) => ({
   width: 10,
   height: 10,
   thanked: false,
+  onCoachPage: false,
 });
 const batches: MyMomentsBatch[] = [
   { sessionId: S2, title: 'Yoga al parque', sport: 'Yoga', date: '2026-10-14', coachName: 'Valentina', photos: [photo('y1')] },
@@ -44,6 +45,8 @@ function api(): MyMomentsApi {
     download: vi.fn(async () => 'https://s/original'),
     thanks: vi.fn(async () => undefined),
     remove: vi.fn(async () => ({ requested: true })),
+    story: vi.fn(async () => new Blob(['x'], { type: 'image/jpeg' })),
+    setCoachPage: vi.fn(async () => undefined),
   };
 }
 
@@ -91,5 +94,31 @@ describe('Momentos (T-MOM1 Part C)', () => {
   it('empty: says where photos will come from', () => {
     render(<MyMomentos initial={[]} api={api()} />);
     expect(screen.getByText(/Cuando un coach te etiquete/)).toBeTruthy();
+  });
+
+  it('Part D: the coach-page switch is the person\'s own choice, saved on their tag', async () => {
+    const a = api();
+    render(<MyMomentos initial={batches} api={a} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Foto 1 de 1' }));
+    const toggle = within(await screen.findByTestId('moment-viewer')).getByRole('switch', {
+      name: /Mostrar en la página de Valentina/,
+    });
+    expect(toggle.getAttribute('aria-checked')).toBe('false');
+    fireEvent.click(toggle);
+    await waitFor(() => expect(a.setCoachPage).toHaveBeenCalledWith('y1', true));
+    expect(toggle.getAttribute('aria-checked')).toBe('true');
+  });
+
+  it('Part D: Compartir makes the story and downloads it where the phone share sheet is missing', async () => {
+    const a = api();
+    URL.createObjectURL = vi.fn(() => 'blob:x');
+    URL.revokeObjectURL = vi.fn();
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
+    render(<MyMomentos initial={batches} api={a} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Foto 1 de 1' }));
+    fireEvent.click(within(await screen.findByTestId('moment-viewer')).getByRole('button', { name: 'Compartir' }));
+    await waitFor(() => expect(a.story).toHaveBeenCalledWith('y1'));
+    await waitFor(() => expect(click).toHaveBeenCalled());
+    click.mockRestore();
   });
 });

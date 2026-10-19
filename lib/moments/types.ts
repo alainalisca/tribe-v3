@@ -46,6 +46,8 @@ export type MyMoment = {
   width: number | null;
   height: number | null;
   thanked: boolean;
+  /** "Mostrar en la página de <coach>" (Part D): this person's own choice for this photo. */
+  onCoachPage: boolean;
 };
 
 /** One session's photos of this person, as their Momentos shows them. */

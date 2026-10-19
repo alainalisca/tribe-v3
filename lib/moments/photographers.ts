@@ -1,11 +1,14 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { HANDLE_PATTERN, normalizeHandle } from '@/lib/coachLink';
+import { isVisibleUser, VISIBLE_USER_FLAGS } from '@/lib/dal/visibleUsers';
 import { loadTaggablePeople } from './people';
 
 /**
  * T-MOM1 Part C: "Fotógrafo de esta sesión". The host (or an admin) names
- * people who may upload and tag this session's photos. They are picked from
- * the people in the session (its participants on Tribe), never by searching
- * every account. The host is never in the list: they can already.
+ * people who may upload and tag this session's photos: someone in the
+ * session (its participants on Tribe), or anyone by their exact Tribe handle
+ * (Al, 2026-10-19), never a search and never a test, banned or deleted
+ * account. The host is never in the list: they can already.
  */
 export type PhotographerPerson = { id: string; name: string; avatarUrl: string | null };
 export type PhotographersState = { photographers: PhotographerPerson[]; candidates: PhotographerPerson[] };
@@ -68,4 +71,39 @@ export async function revokePhotographer(service: SupabaseClient, sessionId: str
     .eq('session_id', sessionId)
     .eq('user_id', userId);
   if (error) throw error;
+}
+
+/** "@Salomon " -> "salomon": the handle as users.handle stores it. Null when nothing is left. */
+export function handleFromInput(raw: string): string | null {
+  const h = normalizeHandle(raw.replace(/^\s*@/, ''));
+  return HANDLE_PATTERN.test(h) ? h : null;
+}
+
+/**
+ * Name a photographer by their Tribe handle. 'not_found' covers every account
+ * that may not be named (no such handle, test, banned, deleted), so the answer
+ * says nothing about which; 'host' is the session's own host.
+ */
+export async function grantPhotographerByHandle(
+  service: SupabaseClient,
+  sessionId: string,
+  rawHandle: string,
+  grantedBy: string,
+  hostId: string | null
+): Promise<{ ok: true } | { ok: false; error: 'not_found' | 'host' }> {
+  const handle = handleFromInput(rawHandle);
+  if (!handle) return { ok: false, error: 'not_found' };
+  const { data } = await service
+    .from('users')
+    .select(`id, ${VISIBLE_USER_FLAGS}`)
+    .eq('handle', handle)
+    .maybeSingle();
+  const user = data as ({ id: string } & Parameters<typeof isVisibleUser>[0]) | null;
+  if (!isVisibleUser(user)) return { ok: false, error: 'not_found' };
+  if (user.id === hostId) return { ok: false, error: 'host' };
+  const { error } = await service
+    .from('session_photographers')
+    .upsert({ session_id: sessionId, user_id: user.id, granted_by: grantedBy }, { onConflict: 'session_id,user_id' });
+  if (error) throw error;
+  return { ok: true };
 }

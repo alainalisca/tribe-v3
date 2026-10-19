@@ -615,6 +615,10 @@
     "specialties": "Especialidades",
     "coach": "Entrenador",
     "city": "Medellín",
-    "photoAlt": "{name} entrenando"
+    "photoAlt": "{name} entrenando",
+    "momentos": "Momentos",
+    "momentosClose": "Cerrar",
+    "momentosPhotoOf": "Foto {n} de {total}",
+    "momentosOpen": "Ver la foto: {caption}"
   }
 }

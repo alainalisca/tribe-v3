@@ -10,6 +10,10 @@ export interface MyMomentsApi {
   download(mediaId: string): Promise<string>;
   thanks(mediaId: string): Promise<void>;
   remove(mediaId: string, requestDelete: boolean): Promise<{ requested: boolean }>;
+  /** Part D: the 1080 x 1920 story image. */
+  story(mediaId: string): Promise<Blob>;
+  /** Part D: "Mostrar en la página de <coach>". */
+  setCoachPage(mediaId: string, show: boolean): Promise<void>;
 }
 
 async function json<T>(res: Response): Promise<T> {
@@ -33,5 +37,13 @@ export function httpMyMomentsApi(): MyMomentsApi {
     },
     remove: async (id, requestDelete) =>
       json<{ requested: boolean }>(await post(`${id}/remove`, requestDelete ? { requestDelete: true } : {})),
+    story: async (id) => {
+      const res = await fetch(`/api/moments/me/${id}/story/`);
+      if (!res.ok) throw new MomentsApiError(res.status, 'story_failed');
+      return res.blob();
+    },
+    setCoachPage: async (id, show) => {
+      await json(await post(`${id}/coach-page`, { show }));
+    },
   };
 }

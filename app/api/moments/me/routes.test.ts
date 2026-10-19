@@ -10,6 +10,7 @@ const h = vi.hoisted(() => ({
   user: null as { id: string } | null,
   loadedFor: [] as string[],
   tagFor: [] as string[],
+  rendered: 0,
 }));
 vi.mock('@/lib/features/moments', () => ({ isMomentsEnabled: () => h.enabled }));
 vi.mock('@/lib/supabase/admin', () => ({ getServiceRoleClient: () => ({}) }));
@@ -24,12 +25,17 @@ vi.mock('@/lib/moments/myActions', () => ({
   downloadUrl: async () => 'x',
   thankForPhoto: async () => ({}),
   removeMeFromPhoto: async () => ({}),
+  storyInputs: async () => (h.rendered++, null),
+  setShowOnCoachPage: async () => (h.rendered++, undefined),
 }));
+vi.mock('@/lib/moments/story', () => ({ renderStory: async () => (h.rendered++, Buffer.from('x')) }));
 
 import * as list from './route';
 import * as download from './[mediaId]/download/route';
 import * as thanks from './[mediaId]/thanks/route';
 import * as remove from './[mediaId]/remove/route';
+import * as story from './[mediaId]/story/route';
+import * as coachPage from './[mediaId]/coach-page/route';
 
 const MEDIA = 'cfcafad0-80ec-43ea-a018-eafcf99c8648';
 const params = { params: Promise.resolve({ mediaId: MEDIA }) };
@@ -40,6 +46,7 @@ beforeEach(() => {
   h.user = null;
   h.loadedFor = [];
   h.tagFor = [];
+  h.rendered = 0;
 });
 
 describe('Momentos routes (T-MOM1 Part C)', () => {
@@ -73,5 +80,19 @@ describe('Momentos routes (T-MOM1 Part C)', () => {
     const bad = { params: Promise.resolve({ mediaId: '../x' }) };
     expect((await thanks.POST(post(), bad)).status).toBe(404);
     expect(h.tagFor).toEqual([]);
+  });
+
+  it('Part D: the story and the coach-page switch only work on a photo the requester is tagged in', async () => {
+    h.user = { id: 'ana' };
+    expect((await story.GET(post(), params)).status).toBe(404);
+    const body = () => new Request('https://x/', { method: 'POST', body: JSON.stringify({ show: true }) });
+    expect((await coachPage.POST(body(), params)).status).toBe(404);
+    expect(h.tagFor).toEqual(['ana', 'ana']);
+    expect(h.rendered).toBe(0);
+  });
+
+  it('Part D: signed out, no story', async () => {
+    expect((await story.GET(post(), params)).status).toBe(401);
+    expect(h.rendered).toBe(0);
   });
 });

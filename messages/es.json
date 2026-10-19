@@ -894,7 +894,6 @@
     "thanks": "Gracias",
     "thanked": "Gracias enviadas",
     "share": "Compartir",
-    "soon": "Pronto",
     "more": "Más opciones",
     "removeMe": "Quitarme de esta foto",
     "removeTitle": "¿Quitarte de esta foto?",
@@ -930,6 +929,14 @@
     "photographersPick": "Elegir de la sesión",
     "photographersRosterEmpty": "Nadie se ha unido a esta sesión todavía.",
     "photographersAdd": "Agregar",
-    "photographersRemove": "Quitar"
+    "photographersRemove": "Quitar",
+    "photographersByHandle": "Por su usuario de Tribe",
+    "photographersHandlePlaceholder": "@usuario",
+    "photographersHandleNotFound": "No encontramos ese usuario.",
+    "photographersHandleIsHost": "Ese es el anfitrión: ya puede subir fotos.",
+    "coachPageToggle": "Mostrar en la página de {coach}",
+    "coachPageToggleNoName": "Mostrar en la página del coach",
+    "coachPageHint": "Solo tú decides. Puedes quitarla cuando quieras.",
+    "shareDownloaded": "Listo, la imagen se descargó."
   }
 }

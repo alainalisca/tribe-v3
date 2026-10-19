@@ -46,6 +46,8 @@ const nextConfig: NextConfig = {
   // is served by the CDN and is not in a function's files unless named here.
   outputFileTracingIncludes: {
     '/sitio/**': ['./public/fonts/*.ttf', './public/og/*.jpg', './public/tribe-wordmark.png'],
+    // T-MOM1 Part D: the story image (lib/moments/story.tsx).
+    '/api/moments/me/**': ['./public/fonts/JetBrainsMono-Medium.ttf', './public/tribe-wordmark.png'],
   },
   // Security headers (CSP, HSTS, X-Frame-Options, etc.) live in middleware.ts
   // so every response goes through one codepath. See middleware.ts docblock.

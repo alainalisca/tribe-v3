@@ -27,7 +27,7 @@ function world() {
     created_at: taken,
     deleted_at: deleted,
   });
-  const tag = (media_id: string, user_id: string, o: Partial<Record<string, string | null>> = {}) => ({
+  const tag = (media_id: string, user_id: string, o: Record<string, unknown> = {}) => ({
     id: `t-${media_id}-${user_id}`,
     media_id,
     user_id,
@@ -60,7 +60,7 @@ function world() {
       tag('m4', ANA, { delivered_at: null }),
       tag('m5', ANA, { removed_at: '2026-10-12T00:00:00Z' }),
       tag('m6', ANA),
-      tag('m7', ANA),
+      tag('m7', ANA, { show_on_coach_page: true }),
     ],
   });
 }
@@ -73,6 +73,8 @@ describe('Momentos: owner-only, only the photos they are in (T-MOM1 Part C)', ()
     expect(batches[1].photos.map((p) => p.mediaId)).toEqual(['m2', 'm1']);
     expect(batches[1].photos.map((p) => p.thanked)).toEqual([true, false]);
     expect(batches[0].photos.map((p) => p.mediaId)).toEqual(['m7']);
+    expect(batches[0].photos[0].onCoachPage).toBe(true);
+    expect(batches[1].photos[0].onCoachPage).toBe(false);
     expect(batches[1].coachName).toBe('Salomon Tabares');
   });
 
