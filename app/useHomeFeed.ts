@@ -17,13 +17,7 @@ import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/lib/LanguageContext';
 import { getUserLocation } from '@/lib/location';
 import { scheduleSessionReminders } from '@/lib/reminders';
-import {
-  fetchUpcomingSessions,
-  fetchUserProfileMaybe,
-  fetchMyLocation,
-  fetchRecapPhotosByCreators,
-  updateUser,
-} from '@/lib/dal';
+import { fetchUpcomingSessions, fetchUserProfileMaybe, fetchMyLocation, updateUser } from '@/lib/dal';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { consumePendingReturnTo } from '@/lib/pendingReturnTo';
 import { logError } from '@/lib/logger';
@@ -142,7 +136,6 @@ export function useHomeFeed() {
   // --- Composed hooks ---
   // Instructor recap photos for the card carousel, keyed by creator id.
   // Fetched once for the whole visible page rather than per card.
-  const [recapPhotosByCreator, setRecapPhotosByCreator] = useState<Record<string, string[]>>({});
 
   // T-GYM1. Two questions, both answered once for the whole visible page:
   // which gym is each session held at (the venue, which needed the gym's
@@ -175,21 +168,16 @@ export function useHomeFeed() {
       // past its end time; history surfaces show those instead.
       const upcoming = (result.data || []).filter((s) => !isPastFeedGrace(s));
       setSessions(upcoming);
-      // Defer live status and recap photos so the session list renders
-      // immediately. Recap photos are ONE request for the whole page, keyed by
-      // the distinct creators on screen — never one per card.
+      // Defer live status and the gym lookups so the session list renders
+      // immediately. (T-UI-FD1: the cards show the host's coach-card photo,
+      // fetched by the page, so recap photos are no longer read here.)
       requestAnimationFrame(() => {
         liveStatus.loadLiveStatuses(upcoming.map((s) => s.id));
         const creatorIds = [...new Set(upcoming.map((s) => s.creator_id).filter(Boolean))] as string[];
         if (creatorIds.length > 0) {
-          void fetchRecapPhotosByCreators(supabase, creatorIds).then((recap) => {
-            // A failure costs the carousel a few slides and nothing else, so the
-            // feed keeps its sessions rather than surfacing an error.
-            if (recap.success && recap.data) setRecapPhotosByCreator(recap.data);
-          });
-          // Same rule as recap photos: one request each, never per card. A
-          // failure costs the gym chip and nothing else, so the feed keeps its
-          // sessions rather than surfacing an error.
+          // One request for the whole page, never per card. A failure costs the
+          // gym chip and nothing else, so the feed keeps its sessions rather
+          // than surfacing an error.
           void fetchPartnersForInstructors(supabase, creatorIds).then((res) => {
             if (res.success && res.data) setPartnersByCreator(res.data);
           });
@@ -427,7 +415,6 @@ export function useHomeFeed() {
     setShowSafetyWaiver: actions.setShowSafetyWaiver,
     setPendingSessionId: actions.setPendingSessionId,
     liveStatusMap: liveStatus.liveStatusMap,
-    recapPhotosByCreator,
     partnersById,
     partnersByCreator,
     liveUserIdSet: liveStatus.liveUserIdSet,

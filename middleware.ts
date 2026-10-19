@@ -206,7 +206,9 @@ export function isPublicPath(pathname: string): boolean {
   // T-JOIN1 Part A: /dev/bridge, the bridge components' review page, opens
   // signed out in development only. In production the page itself is a 404
   // and this branch never runs, so the path stays behind the gate there too.
-  if (process.env.NODE_ENV !== 'production' && (pathname === '/dev/bridge' || pathname === '/dev/bridge/')) {
+  // T-UI-FD1: /dev/feed likewise (development only; the page itself also 404s
+  // on any Vercel deployment).
+  if (process.env.NODE_ENV !== 'production' && /^\/dev\/(bridge|feed)\/?$/.test(pathname)) {
     return true;
   }
 
@@ -413,6 +415,16 @@ export async function middleware(request: NextRequest) {
   // is a real 404, decided here because the root loading boundary has already
   // streamed a 200 by the time the page could say so. One indexed read, on the
   // page paths only; Server-Timing reports what it cost.
+  // T-UI-FD1: the /dev review pages (/dev/bridge, /dev/feed) do not exist in
+  // a production build (production and every Vercel preview): a real 404 for
+  // everyone, signed in or not, before the auth gate could redirect.
+  if (process.env.NODE_ENV === 'production' && /^\/dev(\/|$)/.test(pathname)) {
+    return applySecurityHeaders(
+      NextResponse.rewrite(new URL(GATED_NOT_FOUND_PATH, request.url), { status: 404 }),
+      pathname
+    );
+  }
+
   const gateTarget = gateTargetFor(pathname);
   if (gateTarget) {
     const started = Date.now();

@@ -38,6 +38,16 @@ export interface SessionCardProps {
    * other call sites may omit it and the carousel simply has fewer slides.
    */
   recapPhotos?: string[];
+  /**
+   * T-UI-FD1: the host's coach-card photo, the card's only photo when given
+   * (never the session's flyers, venue or recap photos). null: the host has
+   * none, the card shows its sport colours. 'loading': the feed is still
+   * fetching it, same neutral colours meanwhile. Left out, the card keeps
+   * its old photo carousel.
+   */
+  hostPhoto?: { url: string; x: number; y: number } | null | 'loading';
+  /** T-UI-FD1: the card stands for a recurring series; its weekdays, e.g. "lun · mié · vie". */
+  seriesDays?: string | null;
 }
 
 export function getSkillLevelDisplay(level: string, t: (key: TranslationKey) => string) {

@@ -54,6 +54,8 @@ export default function SessionCard({
   featuredPartnerUserIds,
   priority = false,
   recapPhotos,
+  hostPhoto,
+  seriesDays = null,
 }: SessionCardProps) {
   const { language } = useLanguage();
   const tCard = useTranslations('sessionCard');
@@ -97,7 +99,14 @@ export default function SessionCard({
   const isFree = !session.price_cents;
   const fillingFast = athleteCount >= session.max_participants * 0.7 && !isPast && !isFull;
 
-  const heroImage = getSessionHeroImage(session.sport, session.photos, session.creator?.cover_image_url);
+  // T-UI-FD1: with hostPhoto given, the host's coach-card photo is the only
+  // photo; no photo means the sport colours, never a flyer or venue photo.
+  const usesHostPhoto = hostPhoto !== undefined;
+  const hostUrl = hostPhoto && hostPhoto !== 'loading' ? hostPhoto.url : null;
+  const heroImage = usesHostPhoto
+    ? (hostUrl ?? '')
+    : getSessionHeroImage(session.sport, session.photos, session.creator?.cover_image_url);
+  const heroPosition = hostPhoto && hostPhoto !== 'loading' ? `${hostPhoto.x}% ${hostPhoto.y}%` : undefined;
 
   const instructorName = session.creator?.name ?? '';
   // One derivation, shared with /g/[slug] and /i/[id] -- both of which rendered
@@ -133,9 +142,9 @@ export default function SessionCard({
   // recent recap photos, then the banner only if nothing else exists.
   const photos = useCardPhotos({
     sessionId: session.id,
-    sessionPhotos: session.photos,
-    recapPhotos,
-    bannerUrl: session.creator?.cover_image_url ?? null,
+    sessionPhotos: usesHostPhoto ? (hostUrl ? [hostUrl] : []) : session.photos,
+    recapPhotos: usesHostPhoto ? [] : recapPhotos,
+    bannerUrl: usesHostPhoto ? null : (session.creator?.cover_image_url ?? null),
     fallbackSrc: heroImage,
   });
   const canExpand = heroImage.startsWith('/images/') || heroImage.startsWith('http');
@@ -182,6 +191,7 @@ export default function SessionCard({
           onTap={() => router.push(`/session/${session.id}`)}
           onIndexChange={photos.onIndexChange}
           controlsRef={photos.controlsRef}
+          heroPosition={heroPosition}
           liveCount={liveData?.count ?? 0}
           liveLabel={tCard('live')}
           eager={priority}
@@ -223,6 +233,11 @@ export default function SessionCard({
             <Calendar className="w-3.5 h-3.5 mr-1.5 text-tribe-green flex-shrink-0" />
             <span>{dateLine}</span>
           </div>
+          {seriesDays && (
+            <span className="inline-flex items-center rounded-full bg-tribe-green/15 px-2.5 py-0.5 text-xs font-semibold text-theme-primary">
+              {tCard('series')} · {seriesDays}
+            </span>
+          )}
 
           <SessionCardLocation
             venueName={venueName}

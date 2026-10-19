@@ -263,7 +263,8 @@
     "photoOfTotal": "Foto {index} de {total}",
     "previousPhoto": "Foto anterior",
     "nextPhoto": "Siguiente foto",
-    "photos": "Fotos"
+    "photos": "Fotos",
+    "series": "Serie"
   },
   "lightbox": {
     "label": "Visor de fotos",
@@ -817,5 +818,14 @@
     "whatsapp": "WhatsApp",
     "linkCopied": "¡Enlace copiado!",
     "shareText": "{title} — Únete en Tribe"
+  },
+  "feed": {
+    "all": "Todos",
+    "free": "Gratis",
+    "search": "Buscar",
+    "searchPlaceholder": "Busca deporte, lugar o clase",
+    "closeSearch": "Cerrar búsqueda",
+    "sessionsCount": "{count} sesiones",
+    "sessionsCountOne": "1 sesión"
   }
 }
