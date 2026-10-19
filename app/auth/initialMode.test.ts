@@ -19,4 +19,9 @@ describe('opensOnSignIn', () => {
   it('lets an explicit mode win over ref (a reset-password link stays one)', () => {
     expect(opensOnSignIn(p('mode=reset-password&ref=TRIBE-HCHP7'))).toBe(true);
   });
+
+  it('opens a Moments claim link (?signup=1) on sign-up, keeping its returnTo (T-MOM1)', () => {
+    expect(opensOnSignIn(p('signup=1&returnTo=%2Fm%2FAb3dEf6hIj9kLm2nOp5qRs8tUv1wXy4z%2Fclaim%2F'))).toBe(false);
+    expect(opensOnSignIn(p('mode=reset-password&signup=1'))).toBe(true);
+  });
 });

@@ -255,7 +255,7 @@ export function getPrivacyContent(language: 'en' | 'es'): PrivacyContent {
   if (language === 'es') {
     return {
       title: 'Política de Privacidad',
-      lastUpdated: 'Última actualización: 11 de octubre de 2026',
+      lastUpdated: 'Última actualización: 19 de octubre de 2026',
       businessName: 'Razón social: A Plus Fitness LLC',
       sections: [
         {
@@ -285,6 +285,7 @@ export function getPrivacyContent(language: 'en' | 'es'): PrivacyContent {
           list: [
             '<strong>Otros usuarios:</strong> La información del perfil (nombre, foto, biografía, deportes, ubicación) es visible para otros usuarios',
             '<strong>Proveedores de servicios:</strong> Hosting (Vercel), base de datos (Supabase), analíticas (PostHog)',
+            '<strong>Fotos y videos:</strong> los coaches, su equipo, Tribe y los miembros pueden publicar fotos y videos cortos de las sesiones. Las fotos en las que apareces te llegan en privado y puedes quitarte de cualquier foto en cualquier momento. Una foto o video tuyo aparece en la página de un coach, en una publicación pública o fuera de Tribe solo si tú lo decides. Las publicaciones solo las ven los miembros con sesión iniciada, y cualquiera puede reportar una publicación.',
             '<strong>Requisitos legales:</strong> Cuando lo exija la ley o para proteger derechos y seguridad',
           ],
           highlight: 'NO vendemos su información personal a terceros.',
@@ -343,7 +344,7 @@ export function getPrivacyContent(language: 'en' | 'es'): PrivacyContent {
 
   return {
     title: 'Privacy Policy',
-    lastUpdated: 'Last Updated: October 11, 2026',
+    lastUpdated: 'Last Updated: October 19, 2026',
     businessName: 'Business Name: A Plus Fitness LLC',
     sections: [
       {
@@ -373,6 +374,7 @@ export function getPrivacyContent(language: 'en' | 'es'): PrivacyContent {
         list: [
           '<strong>Other users:</strong> Profile information (name, photo, bio, sports, location) is visible to other users',
           '<strong>Service providers:</strong> Hosting (Vercel), database (Supabase), analytics (PostHog)',
+          "<strong>Photos and videos:</strong> coaches, their crew, Tribe and members may post photos and short videos from sessions. Photos of you are delivered to you privately, and you can remove yourself from any photo at any time. A photo or video of you appears on a coach's page, in a public post or outside Tribe only if you choose. Posts are visible only to signed-in members, and anyone can report a post.",
           '<strong>Legal requirements:</strong> When required by law or to protect rights and safety',
         ],
         highlight: 'We DO NOT sell your personal information to third parties.',

@@ -47,5 +47,11 @@ describe('session photo screens need an account (T-MOM1)', () => {
     vi.stubEnv('NODE_ENV', 'production');
     expect(isPublicPath('/session/cfcafad0-80ec-43ea-a018-eafcf99c8648/')).toBe(true);
     expect(isPublicPath('/session/cfcafad0-80ec-43ea-a018-eafcf99c8648/fotos/subir/')).toBe(false);
+    // T-MOM1 Part C: the claim link is public (the person has no account yet); its
+    // claim step and the photographer screen are not, and /messages is untouched.
+    expect(isPublicPath('/m/Ab3dEf6hIj9kLm2nOp5qRs8tUv1wXy4z/')).toBe(true);
+    expect(isPublicPath('/session/cfcafad0-80ec-43ea-a018-eafcf99c8648/fotos/fotografos/')).toBe(false);
+    expect(isPublicPath('/messages/')).toBe(false);
+    expect(isPublicPath('/profile/momentos/')).toBe(false);
   });
 });

@@ -12,7 +12,9 @@ export type MomentsApi = {
   upload(file: Blob, takenAt: string | null, onProgress: (fraction: number) => void): Promise<MomentItem>;
   tag(mediaIds: string[], targets: TagTarget[], mode: 'add' | 'remove'): Promise<SessionMomentsState>;
   createInvite(name: string, phone: string | null): Promise<TaggablePerson>;
-  deliver(): Promise<DeliveryResult>;
+  deliver(): Promise<
+    Omit<DeliveryResult, 'invites'> & { invites: Array<DeliveryResult['invites'][number] & { whatsappUrl: string | null }> }
+  >;
   remove(mediaId: string): Promise<void>;
 };
 

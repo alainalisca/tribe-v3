@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
-import { ChevronRight, ImagePlus, MessageCircle, Pencil, Trash2, UserPlus, X } from 'lucide-react';
+import { Camera, ChevronRight, ImagePlus, MessageCircle, Pencil, Trash2, UserPlus, X } from 'lucide-react';
 import CancelSeriesDialog from '@/components/session/CancelSeriesDialog';
 import { useTranslations } from '@/lib/i18n/useTranslations';
 
@@ -97,6 +97,15 @@ export default function ManageSessionSheet({
                 <span className="flex items-center gap-3">
                   <ImagePlus className="h-5 w-5 text-muted-foreground" />
                   {tm('uploadPhotos')}
+                </span>
+                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+              </Link>
+            )}
+            {uploadPhotosHref && (
+              <Link href={`/session/${sessionId}/fotos/fotografos/`} className={row}>
+                <span className="flex items-center gap-3">
+                  <Camera className="h-5 w-5 text-muted-foreground" />
+                  {tm('photographersTitle')}
                 </span>
                 <ChevronRight className="h-4 w-4 text-muted-foreground" />
               </Link>

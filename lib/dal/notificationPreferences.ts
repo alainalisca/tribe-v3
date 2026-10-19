@@ -82,6 +82,9 @@ export const TYPE_META: Record<string, NotificationTypeMeta> = {
   waitlist_expired: { category: 'session_updates', push: 'default_on', email: 'default_on' },
   // T-MOM1: one per delivered batch of photos ("Tienes 6 fotos nuevas de ...").
   moments_delivered: { category: 'session_updates', push: 'default_on', email: 'default_on' },
+  // T-MOM1 Part C: to the uploader, "Gracias" (once per batch) and "Pedir que la borren".
+  moments_thanks: { category: 'session_updates', push: 'default_on', email: 'default_on' },
+  moments_delete_request: { category: 'session_updates', push: 'default_on', email: 'default_on' },
   // Social activity directed at the user.
   follow: { category: 'social_activity', push: 'default_on', email: 'default_on' },
   like: { category: 'social_activity', push: 'default_on', email: 'default_on' },

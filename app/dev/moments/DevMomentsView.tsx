@@ -94,7 +94,22 @@ export default function DevMomentsView({ picker }: { picker: 'list' | 'invite' |
         state = { ...state, people: [...state.people, p] };
         return p;
       },
-      deliver: async () => ({ photos: 2, people: 3, invites: [] }),
+      deliver: async () => ({
+        photos: 2,
+        people: 3,
+        invites: [
+          {
+            id: 'i-mateo',
+            name: 'Mateo',
+            phone: '+573001234567',
+            count: 1,
+            link: 'https://tribelatam.com/m/dev/',
+            whatsappUrl: `https://wa.me/573001234567?text=${encodeURIComponent(
+              'Te tomamos fotos en Boxeo con Salomon. Están aquí: https://tribelatam.com/m/dev/'
+            )}`,
+          },
+        ],
+      }),
       remove: async (id) => {
         state.media = state.media.filter((m) => m.id !== id);
       },

@@ -1,7 +1,9 @@
 /**
  * Policy v1.1 (approved by Al in chat, 2026-10-09; T-GROW spec progress log),
  * and v1.2 (approved by Al in chat, 2026-10-11): the contact channel is
- * info@tribelatam.com, the address Tribe's email is sent from.
+ * info@tribelatam.com, the address Tribe's email is sent from. v1.3 (approved
+ * by Al in chat, 2026-10-19, T-MOM1): the "Fotos y videos" paragraph in
+ * section 5.
  *
  * content.ts says hand-editing the policy breaks the guarantee that nothing was
  * dropped, because nothing in the repository catches a dropped sentence. v1.1
@@ -35,15 +37,17 @@ const APPROVED = {
     s3: 'cómo llegaste a Tribe (el enlace, la campaña o el código de referido que usaste) y, si alguien te invitó, quién te invitó.',
     s4: 'Para operar nuestro programa de referidos: cuando te unes a través del enlace de invitación de otra persona, registramos esa conexión para darle el crédito a quien te invitó.',
     s5: 'analítica de producto (PostHog, Inc., Estados Unidos)',
+    s5photos: 'Fotos y videos: los coaches, su equipo, Tribe y los miembros pueden publicar fotos y videos cortos de las sesiones. Las fotos en las que apareces te llegan en privado y puedes quitarte de cualquier foto en cualquier momento. Una foto o video tuyo aparece en la página de un coach, en una publicación pública o fuera de Tribe solo si tú lo decides. Las publicaciones solo las ven los miembros con sesión iniciada, y cualquiera puede reportar una publicación.',
   },
   en: {
     s3: 'how you arrived at Tribe (the link, campaign or referral code you used) and, if someone invited you, who invited you.',
     s4: "To run our referral program: when you join through someone's invitation link, we record that connection so we can credit the person who invited you.",
     s5: 'product analytics (PostHog, Inc., United States)',
+    s5photos: "Photos and videos: coaches, their crew, Tribe and members may post photos and short videos from sessions. Photos of you are delivered to you privately, and you can remove yourself from any photo at any time. A photo or video of you appears on a coach's page, in a public post or outside Tribe only if you choose. Posts are visible only to signed-in members, and anyone can report a post.",
   },
 } as const;
 
-describe.each(['es', 'en'] as const)('data policy v1.2 (%s)', (lang) => {
+describe.each(['es', 'en'] as const)('data policy v1.3 (%s)', (lang) => {
   const policy = DATA_POLICY[lang];
 
   it('section 3: the account-data bullet ends with the approved clause, joined by ";"', () => {
@@ -68,9 +72,16 @@ describe.each(['es', 'en'] as const)('data policy v1.2 (%s)', (lang) => {
     expect(allText(policy)).not.toContain('tribe-v3.vercel.app');
   });
 
-  it('the version line says 1.2, and nothing says 1.0 or 1.1', () => {
-    expect(policy.intro.some((l) => /^Versi[oó]n 1\.2 · /.test(l))).toBe(true);
-    expect(allText(policy)).not.toMatch(/Versi[oó]n 1\.[01]\b/);
+  it('the version line says 1.3, and nothing says 1.0, 1.1 or 1.2', () => {
+    expect(policy.intro.some((l) => /^Versi[oó]n 1\.3 · /.test(l))).toBe(true);
+    expect(allText(policy)).not.toMatch(/Versi[oó]n 1\.[012]\b/);
+  });
+
+  it('v1.3: section 5 carries the photos and videos paragraph verbatim, before Authorities', () => {
+    const s5 = sectionText(policy, 5);
+    const at = s5.indexOf(APPROVED[lang].s5photos);
+    expect(at).toBeGreaterThanOrEqual(0);
+    expect(s5[at + 1].startsWith(lang === 'es' ? 'Autoridades.' : 'Authorities.')).toBe(true);
   });
 
   it('v1.2: the contact channel is info@tribelatam.com in sections 1, 8 and 14, and the old address appears nowhere', () => {

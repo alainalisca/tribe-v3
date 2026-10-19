@@ -1,6 +1,7 @@
 /**
- * Política de Tratamiento de Datos Personales, version 1.2 (v1.0 was effective
- * 2026-09-18, v1.1 2026-10-09). The approved legal text, in its own module.
+ * Política de Tratamiento de Datos Personales, version 1.3 (v1.0 was effective
+ * 2026-09-18, v1.1 2026-10-09, v1.2 2026-10-11). The approved legal text, in
+ * its own module.
  *
  * GENERATED FROM THE APPROVED SOURCE, NOT TYPED. T-LEGAL1 shipped the text as
  * T-LEGAL1_policy.json and this file was produced from it by a one-off script
@@ -45,12 +46,20 @@
  * the text changed; A Plus Fitness LLC remains the controller. Hand-applied as
  * an exact replacement asserted to match six times. The effective date is
  * v1.2's merge date, on the same rule as v1.1.
+ *
+ * ── v1.3, approved by Al in chat on 2026-10-19 (T-MOM1 Part C) ──
+ * One change: section 5 gains the "Fotos y videos" paragraph (Moments), Al's
+ * text verbatim, placed before "Autoridades" in both languages. Hand-applied
+ * as an exact insertion asserted to match once per language;
+ * content.v1_1.test.ts pins it. THE EFFECTIVE DATE IS THE MERGE DATE: set to
+ * the day the branch was built, 2026-10-19; change it to the merge day if the
+ * merge lands on another day.
  */
 
-/** v1.2's merge date (v1.1 was 2026-10-09, PR #199). A test fails if either says PENDIENTE. */
+/** v1.3's merge date (v1.2 was 2026-10-11, v1.1 2026-10-09). A test fails if either says PENDIENTE. */
 export const EFFECTIVE_DATE = {
-  es: '11 de octubre de 2026',
-  en: 'October 11, 2026',
+  es: '19 de octubre de 2026',
+  en: 'October 19, 2026',
 } as const;
 
 /** A paragraph, or a bullet list. The source interleaves them inside a section. */
@@ -76,7 +85,7 @@ export const DATA_POLICY: Record<'en' | 'es', PolicyContent> = {
     intro: [
       'Tribe · Nunca Entrenes Solo',
       'Ley 1581 de 2012, Decreto 1377 de 2013 (compilado en el Decreto 1074 de 2015) y demás normas que las modifiquen o complementen.',
-      'Versión 1.2 · Vigente desde el ' + EFFECTIVE_DATE.es,
+      'Versión 1.3 · Vigente desde el ' + EFFECTIVE_DATE.es,
     ],
     sections: [
       {
@@ -144,6 +153,10 @@ export const DATA_POLICY: Record<'en' | 'es', PolicyContent> = {
           {
             kind: 'p',
             text: 'Encargados del tratamiento. Usamos proveedores que tratan datos por cuenta nuestra y bajo nuestras instrucciones: alojamiento y base de datos (Supabase, Inc., Estados Unidos), alojamiento de la aplicación web (Vercel, Inc., Estados Unidos), envío de correo transaccional (Resend, Inc., Estados Unidos), analítica de producto (PostHog, Inc., Estados Unidos), tiendas de aplicaciones (Apple y Google) y, cuando el titular usa un botón de WhatsApp, WhatsApp LLC (Meta). Estos proveedores no pueden usar los datos para fines propios.',
+          },
+          {
+            kind: 'p',
+            text: 'Fotos y videos: los coaches, su equipo, Tribe y los miembros pueden publicar fotos y videos cortos de las sesiones. Las fotos en las que apareces te llegan en privado y puedes quitarte de cualquier foto en cualquier momento. Una foto o video tuyo aparece en la página de un coach, en una publicación pública o fuera de Tribe solo si tú lo decides. Las publicaciones solo las ven los miembros con sesión iniciada, y cualquiera puede reportar una publicación.',
           },
           {
             kind: 'p',
@@ -264,7 +277,7 @@ export const DATA_POLICY: Record<'en' | 'es', PolicyContent> = {
     intro: [
       'Tribe · Never Train Alone',
       'Colombian Law 1581 of 2012, Decree 1377 of 2013 (compiled in Decree 1074 of 2015) and any rules that amend or supplement them. This English version is provided for convenience; the Spanish version governs.',
-      'Version 1.2 · Effective ' + EFFECTIVE_DATE.en,
+      'Version 1.3 · Effective ' + EFFECTIVE_DATE.en,
     ],
     sections: [
       {
@@ -332,6 +345,10 @@ export const DATA_POLICY: Record<'en' | 'es', PolicyContent> = {
           {
             kind: 'p',
             text: 'Processors. We use providers that process data on our behalf and under our instructions: hosting and database (Supabase, Inc., United States), web application hosting (Vercel, Inc., United States), transactional email (Resend, Inc., United States), product analytics (PostHog, Inc., United States), app stores (Apple and Google) and, when the data subject uses a WhatsApp button, WhatsApp LLC (Meta). These providers may not use the data for their own purposes.',
+          },
+          {
+            kind: 'p',
+            text: "Photos and videos: coaches, their crew, Tribe and members may post photos and short videos from sessions. Photos of you are delivered to you privately, and you can remove yourself from any photo at any time. A photo or video of you appears on a coach's page, in a public post or outside Tribe only if you choose. Posts are visible only to signed-in members, and anyone can report a post.",
           },
           {
             kind: 'p',

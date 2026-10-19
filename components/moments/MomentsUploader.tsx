@@ -2,7 +2,7 @@
 
 import { useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Check, ImagePlus, Loader2, Trash2 } from 'lucide-react';
+import { ArrowLeft, Check, ImagePlus, Loader2, MessageCircle, Trash2 } from 'lucide-react';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import TagPicker from '@/components/moments/TagPicker';
 import { useTranslations } from '@/lib/i18n/useTranslations';
@@ -16,7 +16,12 @@ import type { MomentItem, SessionMomentsState, TaggablePerson, TagTarget } from 
  * see the batch, select several and "Etiquetar a" once, then "Entregar".
  * Untagged photos wait under "Sin etiquetar", visible only to the uploader and
  * the host. Nothing reaches the tagged people before "Entregar".
+ *
+ * Part C: after "Entregar", each invite with a WhatsApp number gets "Enviar
+ * por WhatsApp", which opens WhatsApp with the message and their claim link
+ * (/m/<token>/). The uploader sends it from their own phone.
  */
+type SendItem = { id: string; name: string; count: number; href: string };
 type QueueItem = { key: string; name: string; progress: number; status: 'working' | 'failed' };
 
 const CONCURRENCY = 3;
@@ -47,6 +52,8 @@ export default function MomentsUploader({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [delivering, setDelivering] = useState(false);
+  const [toSend, setToSend] = useState<SendItem[]>([]);
+  const [sent, setSent] = useState<Set<string>>(new Set());
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
 
@@ -132,6 +139,9 @@ export default function MomentsUploader({
         list.map((m) => ({ ...m, tags: m.tags.map((x) => (x.removed ? x : { ...x, delivered: true })) }))
       );
       setNotice(t('delivered', { photos: r.photos, people: r.people }));
+      const send: SendItem[] = [];
+      for (const i of r.invites) if (i.whatsappUrl) send.push({ id: i.id, name: i.name, count: i.count, href: i.whatsappUrl });
+      setToSend(send);
     } catch {
       setNotice(t('deliverFailed'));
     } finally {
@@ -276,6 +286,37 @@ export default function MomentsUploader({
           <p role="status" className="rounded-xl bg-[#F6FBE8] px-3 py-2 text-sm font-semibold text-stone-900">
             {notice}
           </p>
+        )}
+
+        {toSend.length > 0 && (
+          <section aria-label={t('whatsappTitle')} data-testid="whatsapp-send">
+            <h2 className="text-[15px] font-extrabold text-stone-900 dark:text-white">{t('whatsappTitle')}</h2>
+            <p className="mb-2 text-xs text-stone-500">{t('whatsappHint')}</p>
+            <ul className="divide-y divide-stone-200 dark:divide-tribe-mid">
+              {toSend.map((i) => (
+                <li key={i.id} className="flex items-center gap-3 py-2.5">
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[15px] font-semibold text-stone-900 dark:text-white">
+                      {i.name}
+                    </span>
+                    <span className="block text-xs text-stone-500">{i.count === 1 ? t('photosOne') : t('photosCount', { count: i.count })}</span>
+                  </span>
+                  <a
+                    href={i.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => setSent((s) => new Set(s).add(i.id))}
+                    className={`inline-flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-bold ${
+                      sent.has(i.id) ? 'border-[1.5px] border-stone-300 text-stone-600' : 'bg-[#25D366] text-white'
+                    }`}
+                  >
+                    {sent.has(i.id) ? <Check className="h-4 w-4" /> : <MessageCircle className="h-4 w-4" />}
+                    {sent.has(i.id) ? t('whatsappSent') : t('whatsappSend')}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </section>
         )}
 
         {items.length === 0 && queue.length === 0 ? (

@@ -71,6 +71,7 @@ const publicPaths = [
   '/s', // public session share pages (/s/[id]) — must be viewable + scrapable without auth
   '/i', // public instructor share pages (/i/[id]) — must be viewable + scrapable without auth
   '/g', // public gym share pages (/g/[slug]) — bio-link destination; must be viewable + scrapable without auth
+  '/m', // T-MOM1 claim links (/m/<token>/): the person has no account yet; the page shows only the invite's photos
   '/pase', // T-LEAD1 digital pass (/pase/[slug]) -- the QR on a printed voucher; the visitor has no account and may never make one
   // T-SITE1: the marketing site's pages. middleware() rewrites them to their
   // prerendered app/sitio/[lang] page before this list is consulted; they are

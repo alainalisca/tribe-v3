@@ -37,3 +37,23 @@ export type SessionMomentsState = {
 export function personKey(p: { kind: string; id: string }): string {
   return `${p.kind === 'host' ? 'user' : p.kind}:${p.id}`;
 }
+
+/** T-MOM1 Part C: one photo in a person's own Momentos. */
+export type MyMoment = {
+  mediaId: string;
+  gridUrl: string | null;
+  viewerUrl: string | null;
+  width: number | null;
+  height: number | null;
+  thanked: boolean;
+};
+
+/** One session's photos of this person, as their Momentos shows them. */
+export type MyMomentsBatch = {
+  sessionId: string;
+  title: string | null;
+  sport: string | null;
+  date: string;
+  coachName: string | null;
+  photos: MyMoment[];
+};
