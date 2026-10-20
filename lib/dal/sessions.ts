@@ -514,7 +514,9 @@ export async function fetchConfirmedCount(supabase: SupabaseClient, sessionId: s
 // --- Write operations ---
 
 /**
- * Cancels a session: marks payments for refund, cancels participants, notifies everyone.
+ * Cancels a session: cancels the session row, then refunds, then the
+ * participant rows, then notifies the athletes. The session goes first so a
+ * failure can never leave athletes dropped (or refunded) from a live session.
  */
 export async function cancelSession(
   supabase: SupabaseClient,
@@ -541,14 +543,26 @@ export async function cancelSession(
       return { success: false, error: 'Cannot cancel a completed session' };
     }
 
-    // 2. Fetch all confirmed participants
+    // 2. Fetch all confirmed participants (row ids: step 6 names them to the
+    //    notify route, since after step 5 every row reads 'cancelled')
     const { data: participants } = await supabase
       .from('session_participants')
-      .select('user_id')
+      .select('id, user_id')
       .eq('session_id', sessionId)
       .eq('status', 'confirmed');
 
-    // 3. If paid session, mark approved payments for refund
+    // 3. Cancel the session row FIRST. If this fails, nothing else has been
+    //    touched: no refund issued, no participant row cancelled.
+    const { error: updateErr } = await supabase
+      .from('sessions')
+      .update({ status: 'cancelled', updated_at: new Date().toISOString() })
+      .eq('id', sessionId);
+
+    if (updateErr) {
+      return { success: false, error: updateErr.message };
+    }
+
+    // 4. If paid session, mark approved payments for refund
     if (session.is_paid) {
       const { data: payments } = await supabase
         .from('payments')
@@ -595,38 +609,29 @@ export async function cancelSession(
       }
     }
 
-    // 4. Update all participants to cancelled
-    await supabase.from('session_participants').update({ status: 'cancelled' }).eq('session_id', sessionId);
-
-    // 5. Update session status
-    const { error: updateErr } = await supabase
-      .from('sessions')
-      .update({ status: 'cancelled', updated_at: new Date().toISOString() })
-      .eq('id', sessionId);
-
-    if (updateErr) {
-      return { success: false, error: updateErr.message };
+    // 5. Cancel the participant rows. The session is already cancelled, so a
+    //    failure here is logged and the cancel still stands.
+    const { error: participantsErr } = await supabase
+      .from('session_participants')
+      .update({ status: 'cancelled' })
+      .eq('session_id', sessionId);
+    if (participantsErr) {
+      logError(participantsErr, { action: 'cancelSession_participants', sessionId });
     }
 
-    // 6. Notify all participants
-    for (const p of participants || []) {
+    // 6. Notify the athletes. The server route checks the caller, composes each
+    //    push in the athlete's language and holds the push secret. Not awaited,
+    //    and a failure is only logged: the cancel above has already happened.
+    const participantIds = (participants || []).map((p: { id: string }) => p.id);
+    if (participantIds.length > 0) {
       try {
-        const refundNote = session.is_paid ? ' Your payment will be refunded.' : '';
-        await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/notifications/send/`, {
+        fetch('/api/sessions/notify-cancel/', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${process.env.CRON_SECRET}`,
-          },
-          body: JSON.stringify({
-            userId: p.user_id,
-            title: 'Session Cancelled',
-            body: `"${session.title}" was cancelled.${refundNote}`,
-            data: { session_id: sessionId },
-          }),
-        });
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ session_id: sessionId, participant_ids: participantIds }),
+        }).catch((e) => logError(e, { action: 'cancelSession_notify', sessionId }));
       } catch (e) {
-        logError(e, { action: 'cancelSession_notify', userId: p.user_id, sessionId });
+        logError(e, { action: 'cancelSession_notify', sessionId });
       }
     }
 
