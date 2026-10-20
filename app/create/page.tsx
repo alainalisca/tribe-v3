@@ -36,6 +36,7 @@ import RecurringSessionToggle from '@/components/RecurringSessionToggle';
 import TestSessionToggle from '@/components/session/TestSessionToggle';
 import { shareSession, getSessionShareUrl, copyToClipboard } from '@/lib/share';
 import { useTranslations } from '@/lib/i18n/useTranslations';
+import { DateTimeInput } from '@/components/ui/date-time-input';
 
 type SessionTemplateRow = Database['public']['Tables']['session_templates']['Row'];
 type FormErrors = Partial<
@@ -547,7 +548,7 @@ function CreateSessionPageInner() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label className="text-theme-primary mb-2">{t('date')} *</Label>
-                <Input
+                <DateTimeInput
                   type="date"
                   name="date"
                   value={formData.date}
@@ -559,7 +560,7 @@ function CreateSessionPageInner() {
               </div>
               <div>
                 <Label className="text-theme-primary mb-2">{t('startTime')} *</Label>
-                <Input
+                <DateTimeInput
                   type="time"
                   name="start_time"
                   value={formData.start_time}

@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import PasswordInput from './PasswordInput';
 import type { AuthTranslations } from './translations';
+import { DateTimeInput } from '@/components/ui/date-time-input';
 
 interface EmailAuthFormProps {
   t: AuthTranslations;
@@ -74,7 +75,7 @@ export default function EmailAuthForm({
 
           <div>
             <Label className="text-stone-700 dark:text-gray-300 mb-1.5">{t.birthDate}</Label>
-            <Input
+            <DateTimeInput
               type="date"
               value={birthDate}
               onChange={(e) => onBirthDateChange(e.target.value)}

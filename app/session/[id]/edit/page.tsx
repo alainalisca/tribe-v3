@@ -18,6 +18,7 @@ import PhotoUploadSection from '@/app/create/PhotoUploadSection';
 import RecurringSessionToggle from '@/components/RecurringSessionToggle';
 import TestSessionToggle from '@/components/session/TestSessionToggle';
 import PriceSection from './PriceSection';
+import { DateTimeInput } from '@/components/ui/date-time-input';
 
 export default function EditSessionPage() {
   const { language } = useLanguage();
@@ -172,7 +173,7 @@ export default function EditSessionPage() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label className="mb-2 text-theme-primary">{txt.date}</Label>
-              <Input
+              <DateTimeInput
                 type="date"
                 value={formData.date}
                 onChange={(e) => setFormData({ ...formData, date: e.target.value })}
@@ -183,7 +184,7 @@ export default function EditSessionPage() {
 
             <div>
               <Label className="mb-2 text-theme-primary">{txt.time}</Label>
-              <Input
+              <DateTimeInput
                 type="time"
                 value={formData.start_time}
                 onChange={(e) => setFormData({ ...formData, start_time: e.target.value })}

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useLanguage } from '@/lib/LanguageContext';
 import { Card } from '@/components/ui/card';
+import { DateTimeInput } from '@/components/ui/date-time-input';
 
 interface RecurringValue {
   is_recurring: boolean;
@@ -163,7 +164,7 @@ export default function RecurringSessionToggle({ value, onChange }: RecurringSes
                   }`}
                 >
                   {language === 'es'
-                    ? { weekly: 'Semanal', biweekly: 'Biweekly', monthly: 'Mensual' }[freq]
+                    ? { weekly: 'Semanal', biweekly: 'Quincenal', monthly: 'Mensual' }[freq]
                     : { weekly: 'Weekly', biweekly: 'Biweekly', monthly: 'Monthly' }[freq]}
                 </button>
               ))}
@@ -204,7 +205,7 @@ export default function RecurringSessionToggle({ value, onChange }: RecurringSes
             <label className="block text-xs font-semibold text-stone-700 dark:text-gray-300 mb-2">
               {language === 'es' ? 'Fecha de Término (Opcional)' : 'End Date (Optional)'}
             </label>
-            <input
+            <DateTimeInput
               type="date"
               value={value.recurrence_end_date}
               onChange={(e) => handleEndDateChange(e.target.value)}

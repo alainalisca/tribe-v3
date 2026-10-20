@@ -88,7 +88,7 @@ export default function SessionCard({
                 {!isPast && (
                   <div className="flex items-center text-stone-700 dark:text-gray-300 text-sm">
                     <Users className="w-4 h-4 mr-2 text-stone-400" />
-                    {session.current_participants || 1}/{session.max_participants} {txt.spots}
+                    {session.current_participants ?? 0}/{session.max_participants} {txt.spots}
                   </div>
                 )}
               </div>
