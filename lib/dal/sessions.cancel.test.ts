@@ -25,6 +25,7 @@ vi.mock('@/lib/payments/wompi', () => ({
 }));
 
 import { cancelSession } from './sessions';
+import { logError } from '@/lib/logger';
 import { createStripeRefund } from '@/lib/payments/stripe';
 import { createWompiRefund } from '@/lib/payments/wompi';
 
@@ -32,10 +33,10 @@ import { createWompiRefund } from '@/lib/payments/wompi';
 // cancelSession performs this sequence of queries:
 //   1. sessions.select(fields).eq('id', id).single()  → session row
 //   2. session_participants.select('id, user_id').eq('session_id',id).eq('status','confirmed')
-//   3. (paid only) payments.select(...).eq('session_id',id).eq('status','approved')
-//   4. (paid only, per payment) payments.update(...).eq('id', paymentId)
-//   5. session_participants.update({status:'cancelled'}).eq('session_id',id)
-//   6. sessions.update({status:'cancelled',...}).eq('id',id)  → { error }
+//   3. sessions.update({status:'cancelled',...}).eq('id',id)  → { error }
+//   4. (paid only) payments.select(...).eq('session_id',id).eq('status','approved')
+//   5. (paid only, per payment) payments.update(...).eq('id', paymentId)
+//   6. session_participants.update({status:'cancelled'}).eq('session_id',id)
 
 interface PaymentRow {
   id: string;
@@ -51,6 +52,7 @@ function makeSupabase(opts: {
   participants?: Array<{ id?: string; user_id: string }>;
   payments?: PaymentRow[];
   updateSessionError?: { message: string } | null;
+  updateParticipantsError?: { message: string } | null;
 }) {
   const sessionSingle = vi.fn().mockResolvedValue({
     data: opts.session ?? null,
@@ -65,7 +67,7 @@ function makeSupabase(opts: {
     error: null,
   });
   const paymentsUpdate = vi.fn().mockResolvedValue({ error: null });
-  const participantsUpdate = vi.fn().mockResolvedValue({ error: null });
+  const participantsUpdate = vi.fn().mockResolvedValue({ error: opts.updateParticipantsError ?? null });
   const sessionsUpdate = vi.fn().mockResolvedValue({ error: opts.updateSessionError ?? null });
 
   const from = vi.fn((table: string) => {
@@ -184,6 +186,49 @@ describe('cancelSession', () => {
     const res = await cancelSession(s as never, 'sess-p');
     expect(res.success).toBe(true);
     expect(s.__paymentsUpdate).toHaveBeenCalled();
+  });
+
+  // ── order: the session row first ─────────────────────────────────
+
+  it('cancels the session row before the participant rows', async () => {
+    const s = makeSupabase({
+      session: { id: 'sess-1', title: 'Run', creator_id: 'c', is_paid: false, status: 'active' },
+      participants: [{ id: 'p-1', user_id: 'u-1' }],
+    });
+    await cancelSession(s as never, 'sess-1');
+    expect(s.__sessionsUpdate.mock.invocationCallOrder[0]).toBeLessThan(
+      s.__participantsUpdate.mock.invocationCallOrder[0]
+    );
+  });
+
+  it('a failed session update leaves the participant rows and payments untouched', async () => {
+    vi.mocked(createStripeRefund).mockResolvedValue({ success: true } as never);
+    const s = makeSupabase({
+      session: { id: 'sess-p', title: 'Paid', creator_id: 'c', is_paid: true, status: 'active' },
+      participants: [{ id: 'p-1', user_id: 'u-1' }],
+      payments: [{ id: 'pay-1', gateway: 'stripe', stripe_payment_intent_id: 'pi_1', amount_cents: 1000 }],
+      updateSessionError: { message: 'total_participants_served can only be changed by an admin' },
+    });
+    const res = await cancelSession(s as never, 'sess-p');
+    expect(res).toEqual({ success: false, error: 'total_participants_served can only be changed by an admin' });
+    expect(s.__participantsUpdate).not.toHaveBeenCalled();
+    expect(createStripeRefund).not.toHaveBeenCalled();
+    expect(s.__paymentsUpdate).not.toHaveBeenCalled();
+  });
+
+  it('a failed participant update after the session is cancelled is logged; the cancel stands', async () => {
+    const s = makeSupabase({
+      session: { id: 'sess-1', title: 'Run', creator_id: 'c', is_paid: false, status: 'active' },
+      participants: [{ id: 'p-1', user_id: 'u-1' }],
+      updateParticipantsError: { message: 'rls' },
+    });
+    const res = await cancelSession(s as never, 'sess-1');
+    expect(res).toEqual({ success: true });
+    expect(logError).toHaveBeenCalledWith(
+      { message: 'rls' },
+      expect.objectContaining({ action: 'cancelSession_participants', sessionId: 'sess-1' })
+    );
+    expect(global.fetch).toHaveBeenCalledTimes(1);
   });
 
   // ── the cancel push (server route since fix/cancel-push-server) ──
