@@ -9,6 +9,7 @@ import { useLanguage } from '@/lib/LanguageContext';
 import { translateSport } from '@/lib/translations';
 import { SPORTS_LIST } from '@/lib/sports';
 import { bogotaToday } from '@/lib/time/bogotaDate';
+import { DateTimeInput } from '@/components/ui/date-time-input';
 
 /** T-MOM1: the "Registrar sesión pasada" form. On success it goes straight to the photo upload. */
 export default function PastSessionForm({
@@ -101,7 +102,7 @@ export default function PastSessionForm({
         <div className="grid grid-cols-2 gap-3">
           <label className={label}>
             {t('pastDate')}
-            <input
+            <DateTimeInput
               type="date"
               required
               max={today}
@@ -112,7 +113,7 @@ export default function PastSessionForm({
           </label>
           <label className={label}>
             {t('pastTime')}
-            <input
+            <DateTimeInput
               type="time"
               required
               value={form.startTime}

@@ -5,7 +5,7 @@ export function getSessionsTranslations(language: 'en' | 'es') {
         upcoming: 'Pr\u00f3ximas',
         past: 'Historial',
         hosting: 'Organizando',
-        joined: 'Unido',
+        joined: 'Me uní',
         noUpcoming: 'No tienes sesiones pr\u00f3ximas',
         noPast: 'No tienes sesiones pasadas',
         browseHome: 'Explora sesiones para unirte',

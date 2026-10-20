@@ -41,6 +41,10 @@ export const extEn = {
   dontWorryDataSafe: "Don't worry, your data is safe.",
   tryAgain: 'Try Again',
 
+  // DateTimeInput: shown in an empty date or time field
+  chooseDate: 'Choose date',
+  chooseTime: 'Choose time',
+
   // AttendanceTracker
   loadingAttendance: 'Loading attendance...',
   markAttendance: 'Mark Attendance',
@@ -329,10 +333,14 @@ export const extEs: Record<keyof typeof extEn, string> = {
   dontWorryDataSafe: 'No te preocupes, tus datos están a salvo.',
   tryAgain: 'Intentar de Nuevo',
 
+  // DateTimeInput: shown in an empty date or time field
+  chooseDate: 'Elige fecha',
+  chooseTime: 'Elige hora',
+
   // AttendanceTracker
   loadingAttendance: 'Cargando asistencia...',
   markAttendance: 'Marcar Asistencia',
-  markAttendanceDesc: 'Marca quienes asistieron para que puedan subir fotos',
+  markAttendanceDesc: 'Marca quiénes asistieron para que puedan subir fotos',
 
   // Session detail
   sessionNotFound: 'Sesión no encontrada',
@@ -467,7 +475,7 @@ export const extEs: Record<keyof typeof extEn, string> = {
   sessionCreationFailed: 'Error al crear la sesión',
   locationPlaceholder: 'ej. Parque Central',
   openJoinPolicy: 'Abierta - Cualquiera puede unirse',
-  curatedJoinPolicy: 'Curada - Tu revisas solicitudes',
+  curatedJoinPolicy: 'Curada - Tú revisas solicitudes',
   inviteOnlyJoinPolicy: 'Solo Invitación - Privada',
   describeSession: 'Describe tu sesión...',
   joinPolicy: 'Política de Ingreso',

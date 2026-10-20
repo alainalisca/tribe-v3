@@ -168,6 +168,24 @@ body {
 }
 
 @layer components {
+  /* DateTimeInput (components/ui/date-time-input.tsx). iPhone Safari draws a
+   * native date or time value centred and collapses an empty field; keep the
+   * native picker, left-align the value and keep its line height. */
+  .tribe-date-input::-webkit-date-and-time-value {
+    text-align: left;
+    min-height: 1.5em;
+    margin: 0;
+  }
+  /* iOS Safari only (-webkit-touch-callout exists nowhere else): drop its own
+   * field chrome. Not in Chrome, where appearance: none unpins the picker icon
+   * from the right edge and lands it on the "Elige hora" hint. */
+  @supports (-webkit-touch-callout: none) {
+    .tribe-date-input {
+      -webkit-appearance: none;
+      appearance: none;
+    }
+  }
+
   /* ─── Semantic theme tokens ───────────────────────────────────────────
    * Light is the default. Dark-mode values were retuned (May 2026) to the
    * WCAG targets in the theme spec: backgrounds get a wider brightness

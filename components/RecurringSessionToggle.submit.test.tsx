@@ -16,7 +16,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import RecurringSessionToggle from './RecurringSessionToggle';
 
-vi.mock('@/lib/LanguageContext', () => ({ useLanguage: () => ({ language: 'en' }) }));
+vi.mock('@/lib/LanguageContext', () => ({ useLanguage: () => ({ language: 'en', t: (key: string) => key }) }));
 
 function renderInForm(onSubmit: () => void) {
   const value = { is_recurring: true, recurrence_pattern: 'weekly', recurrence_end_date: '' };

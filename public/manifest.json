@@ -1,7 +1,7 @@
 {
-  "name": "Tribe — Never Train Alone in Medellín",
+  "name": "Tribe · Nunca entrenes solo en Medellín",
   "short_name": "Tribe",
-  "description": "Find training partners instantly. Connect with athletes nearby and never work out alone again.",
+  "description": "Encuentra con quién entrenar. Conecta con atletas cerca de ti y no vuelvas a entrenar solo.",
   "start_url": "/",
   "id": "/",
   "scope": "/",
@@ -10,7 +10,7 @@
   "background_color": "#ffffff",
   "theme_color": "#C0E863",
   "categories": ["fitness", "sports", "social"],
-  "lang": "en",
+  "lang": "es",
   "dir": "ltr",
   "prefer_related_applications": false,
   "icons": [
@@ -45,29 +45,29 @@
       "sizes": "1080x1920",
       "type": "image/png",
       "form_factor": "narrow",
-      "label": "Home screen showing available training sessions"
+      "label": "Inicio con las sesiones de entrenamiento disponibles"
     },
     {
       "src": "/screenshots/create.png",
       "sizes": "1080x1920",
       "type": "image/png",
       "form_factor": "narrow",
-      "label": "Create a new training session"
+      "label": "Crear una sesión de entrenamiento"
     }
   ],
   "shortcuts": [
     {
-      "name": "Create Session",
-      "short_name": "Create",
-      "description": "Create a new training session",
+      "name": "Crear sesión",
+      "short_name": "Crear",
+      "description": "Crea una sesión de entrenamiento",
       "url": "/create",
       "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
     },
     {
-      "name": "My Sessions",
-      "short_name": "Sessions",
-      "description": "View your training sessions",
-      "url": "/my-sessions",
+      "name": "Mis sesiones",
+      "short_name": "Sesiones",
+      "description": "Tus sesiones de entrenamiento",
+      "url": "/sessions/",
       "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
     }
   ]

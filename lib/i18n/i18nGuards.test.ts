@@ -517,6 +517,7 @@ const HOMOGRAPHS: Record<string, string> = {
   cual: 'cuál', // "el cual" vs "¿cuál?"
   donde: 'dónde', // "donde entrenas" vs "¿dónde?"
   quien: 'quién', // "quien reserve" vs "¿quién?"
+  quienes: 'quiénes', // "agrega a quienes llegaron" vs "marca quiénes asistieron"
 
   // Different words, not different registers.
   esta: 'está', // "esta sesión" (this) vs "está llena" (it is)
