@@ -39,7 +39,9 @@ type TemplateKey =
   | 'request_declined'
   | 'payment_confirmed'
   | 'session_invite'
-  | 'profile_incomplete';
+  | 'profile_incomplete'
+  | 'session_cancelled'
+  | 'session_cancelled_paid';
 
 const TEMPLATES: Record<TemplateKey, Template> = {
   join: {
@@ -166,6 +168,28 @@ const TEMPLATES: Record<TemplateKey, Template> = {
     es: {
       title: '💌 Tienes una invitación',
       body: '{{name}} te invitó a {{sport}} el {{date}}',
+    },
+  },
+  // Recipient = athlete (the host or an admin cancelled a session they were in).
+  // {{date}} tells the occurrences of a series apart when the whole series ends.
+  session_cancelled: {
+    en: {
+      title: '🚫 Session cancelled',
+      body: '"{{session}}" on {{date}} was cancelled.',
+    },
+    es: {
+      title: '🚫 Sesión cancelada',
+      body: 'La sesión "{{session}}" del {{date}} fue cancelada.',
+    },
+  },
+  session_cancelled_paid: {
+    en: {
+      title: '🚫 Session cancelled',
+      body: '"{{session}}" on {{date}} was cancelled. Your payment will be refunded.',
+    },
+    es: {
+      title: '🚫 Sesión cancelada',
+      body: 'La sesión "{{session}}" del {{date}} fue cancelada. Te devolveremos el pago.',
     },
   },
   // T-PROF1: recipient = the instructor. Nudge to finish their profile so they

@@ -541,10 +541,11 @@ export async function cancelSession(
       return { success: false, error: 'Cannot cancel a completed session' };
     }
 
-    // 2. Fetch all confirmed participants
+    // 2. Fetch all confirmed participants (row ids: step 6 names them to the
+    //    notify route, since after step 4 every row reads 'cancelled')
     const { data: participants } = await supabase
       .from('session_participants')
-      .select('user_id')
+      .select('id, user_id')
       .eq('session_id', sessionId)
       .eq('status', 'confirmed');
 
@@ -608,25 +609,19 @@ export async function cancelSession(
       return { success: false, error: updateErr.message };
     }
 
-    // 6. Notify all participants
-    for (const p of participants || []) {
+    // 6. Notify the athletes. The server route checks the caller, composes each
+    //    push in the athlete's language and holds the push secret. Not awaited,
+    //    and a failure is only logged: the cancel above has already happened.
+    const participantIds = (participants || []).map((p: { id: string }) => p.id);
+    if (participantIds.length > 0) {
       try {
-        const refundNote = session.is_paid ? ' Your payment will be refunded.' : '';
-        await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/notifications/send/`, {
+        fetch('/api/sessions/notify-cancel/', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${process.env.CRON_SECRET}`,
-          },
-          body: JSON.stringify({
-            userId: p.user_id,
-            title: 'Session Cancelled',
-            body: `"${session.title}" was cancelled.${refundNote}`,
-            data: { session_id: sessionId },
-          }),
-        });
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ session_id: sessionId, participant_ids: participantIds }),
+        }).catch((e) => logError(e, { action: 'cancelSession_notify', sessionId }));
       } catch (e) {
-        logError(e, { action: 'cancelSession_notify', userId: p.user_id, sessionId });
+        logError(e, { action: 'cancelSession_notify', sessionId });
       }
     }
 

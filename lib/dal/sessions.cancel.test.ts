@@ -31,7 +31,7 @@ import { createWompiRefund } from '@/lib/payments/wompi';
 // ── Mock builder ───────────────────────────────────────────────────
 // cancelSession performs this sequence of queries:
 //   1. sessions.select(fields).eq('id', id).single()  → session row
-//   2. session_participants.select('user_id').eq('session_id',id).eq('status','confirmed')
+//   2. session_participants.select('id, user_id').eq('session_id',id).eq('status','confirmed')
 //   3. (paid only) payments.select(...).eq('session_id',id).eq('status','approved')
 //   4. (paid only, per payment) payments.update(...).eq('id', paymentId)
 //   5. session_participants.update({status:'cancelled'}).eq('session_id',id)
@@ -48,7 +48,7 @@ interface PaymentRow {
 function makeSupabase(opts: {
   session?: Record<string, unknown> | null;
   sessionError?: { message: string } | null;
-  participants?: Array<{ user_id: string }>;
+  participants?: Array<{ id?: string; user_id: string }>;
   payments?: PaymentRow[];
   updateSessionError?: { message: string } | null;
 }) {
@@ -110,8 +110,8 @@ function makeSupabase(opts: {
 describe('cancelSession', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // fetch is used for per-participant notifications — stub so calls don't
-    // actually reach out. Tests don't assert on it.
+    // fetch carries the notify call to /api/sessions/notify-cancel; stubbed so
+    // nothing reaches out. The notify tests below assert on it.
     global.fetch = vi.fn().mockResolvedValue({ ok: true }) as never;
     process.env.NEXT_PUBLIC_SITE_URL = 'http://localhost:3000';
     process.env.CRON_SECRET = 'test-secret';
@@ -184,6 +184,68 @@ describe('cancelSession', () => {
     const res = await cancelSession(s as never, 'sess-p');
     expect(res.success).toBe(true);
     expect(s.__paymentsUpdate).toHaveBeenCalled();
+  });
+
+  // ── the cancel push (server route since fix/cancel-push-server) ──
+
+  it('asks the notify route with the participant row ids, never the push route or a secret', async () => {
+    const s = makeSupabase({
+      session: { id: 'sess-1', title: 'Run', creator_id: 'c', is_paid: false, status: 'active' },
+      participants: [
+        { id: 'p-1', user_id: 'u-1' },
+        { id: 'p-2', user_id: 'u-2' },
+      ],
+    });
+    await cancelSession(s as never, 'sess-1');
+    const fetchMock = vi.mocked(global.fetch);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url, init] = fetchMock.mock.calls[0] as [string, { body: string; headers: Record<string, string> }];
+    expect(url).toBe('/api/sessions/notify-cancel/');
+    expect(JSON.parse(init.body)).toEqual({ session_id: 'sess-1', participant_ids: ['p-1', 'p-2'] });
+    expect(init.headers.Authorization).toBeUndefined();
+    expect(init.body).not.toContain('test-secret');
+  });
+
+  it('no confirmed participants: no notify call', async () => {
+    const s = makeSupabase({
+      session: { id: 'sess-1', title: 'Run', creator_id: 'c', is_paid: false, status: 'active' },
+      participants: [],
+    });
+    await cancelSession(s as never, 'sess-1');
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  it('the notify call rejecting never undoes or fails the cancel', async () => {
+    global.fetch = vi.fn().mockRejectedValue(new Error('offline')) as never;
+    const s = makeSupabase({
+      session: { id: 'sess-1', title: 'Run', creator_id: 'c', is_paid: false, status: 'active' },
+      participants: [{ id: 'p-1', user_id: 'u-1' }],
+    });
+    const res = await cancelSession(s as never, 'sess-1');
+    expect(res).toEqual({ success: true });
+    expect(s.__sessionsUpdate).toHaveBeenCalled();
+  });
+
+  it('the notify call throwing synchronously never fails the cancel', async () => {
+    global.fetch = vi.fn(() => {
+      throw new Error('fetch unavailable');
+    }) as never;
+    const s = makeSupabase({
+      session: { id: 'sess-1', title: 'Run', creator_id: 'c', is_paid: false, status: 'active' },
+      participants: [{ id: 'p-1', user_id: 'u-1' }],
+    });
+    const res = await cancelSession(s as never, 'sess-1');
+    expect(res).toEqual({ success: true });
+  });
+
+  it('a failed session update sends no notify call', async () => {
+    const s = makeSupabase({
+      session: { id: 'sess-e', title: 't', creator_id: 'c', is_paid: false, status: 'active' },
+      participants: [{ id: 'p-1', user_id: 'u-1' }],
+      updateSessionError: { message: 'update failed' },
+    });
+    await cancelSession(s as never, 'sess-e');
+    expect(global.fetch).not.toHaveBeenCalled();
   });
 
   it('propagates DB update errors from the session row', async () => {
