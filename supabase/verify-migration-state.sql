@@ -3142,4 +3142,28 @@ select '224_t_av2_canonical_attendance',
          else 'applied'
        end
 
+
+union all
+
+-- T-CANCEL1 (225). Hosts can cancel their own sessions: the live-only stats
+-- trigger whose write tripped the users guard is gone, and the guard itself is
+-- still there. By to_regprocedure and pg_trigger, so this reads MISSING before
+-- 225 runs and never errors on a database without the function.
+select '225_t_cancel1_drop_instructor_stats_trigger',
+       case
+         when to_regprocedure('public.update_instructor_stats()') is not null
+           then 'MISSING -- update_instructor_stats() still exists; a non-admin host cannot cancel a session with participants'
+         when exists (select 1 from pg_trigger
+                       where tgrelid = to_regclass('public.sessions') and tgname = 'on_session_status_change' and not tgisinternal)
+           then 'MISSING -- on_session_status_change is still on sessions'
+         when not exists (select 1 from pg_trigger
+                           where tgrelid = to_regclass('public.users') and tgname = 'protect_verified_instructor_trigger'
+                             and tgfoid = to_regprocedure('public.protect_verified_instructor()') and tgenabled <> 'D')
+           then 'MISSING -- the users guard is gone or disabled; 225 drops the stats trigger, never the guard'
+         when not exists (select 1 from public.migrations_applied
+                           where migration = '225_t_cancel1_drop_instructor_stats_trigger')
+           then 'MISSING -- 225 is not recorded in migrations_applied'
+         else 'applied'
+       end
+
 order by migration;
