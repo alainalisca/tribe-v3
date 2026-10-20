@@ -34,8 +34,9 @@ import { getServiceRoleClient } from '@/lib/supabase/admin';
 import { z } from 'zod';
 import { log, logError } from '@/lib/logger';
 import { checkRateLimit } from '@/lib/rate-limit';
-import { notificationCopy, toLang } from '@/lib/notification-i18n';
+import { notificationCopy } from '@/lib/notification-i18n';
 import { publicSessionTitle } from '@/lib/share/sessionPublic';
+import { recipientLanguage, type LanguagePreference } from '@/lib/i18n/recipientLanguage';
 
 const schema = z.object({
   session_id: z.string().uuid(),
@@ -121,10 +122,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // Compose in the ATHLETE's language (not the host's UI locale).
     const { data: recipientRaw } = await service
       .from('users')
-      .select('preferred_language')
+      .select('preferred_language, preferred_language_set_at')
       .eq('id', recipientId)
       .maybeSingle();
-    const recipientLang = toLang((recipientRaw as { preferred_language?: string | null } | null)?.preferred_language);
+    const recipientLang = recipientLanguage(recipientRaw as LanguagePreference | null);
 
     // "<Deporte> con <Nombre>" when the session has no title (T-JOIN1 decision 5).
     let hostName: string | null = null;

@@ -1,6 +1,7 @@
 /** DAL: athlete training statistics — aggregates for the My Training dashboard. */
 import { SupabaseClient } from '@supabase/supabase-js';
 import { logError } from '@/lib/logger';
+import { bogotaToday } from '@/lib/time/bogotaDate';
 import type { DalResult } from './types';
 
 export interface AthleteStats {
@@ -39,34 +40,80 @@ type AttendanceRow = {
 };
 
 /**
- * Treat a participation as "attended" when the participant row is confirmed
- * and the session's date is today or earlier.
+ * THE "TRAINED" RULE, and the one place it lives. A session counts as trained
+ * when the person's participant row is confirmed and the session's date is
+ * today or earlier in Medellín (America/Bogota; sessions.date is the host's
+ * local date). Three surfaces read it and must agree:
+ *   - My Training (fetchAttendedSessions below: totals, streaks, history)
+ *   - the own profile, "Entrenadas" (app/profile/useProfile.ts)
+ *   - the public profile, "Sesiones entrenadas" (app/profile/[userId]/ProfileStatsServer.tsx)
+ * Before T-POLISH1 the profiles counted every confirmed sign-up, future ones
+ * included, which is how a profile read "10 Unidas" next to "1 asistida".
+ *
+ * LATER, NOT YET: attendance is on in Production (ATHLETE_VALUE_FEATURES =
+ * athletes,attendance) and session_attendance is canonical since migration 224
+ * (status 'attended', written only by av_mark_attendance). Once hosts mark
+ * attendance reliably, the rule becomes "a session_attendance row with status
+ * 'attended'". Change it HERE, in trainedParticipations, and all three follow.
+ *
+ * `select` must embed the session as `sessions:session_id!inner(date, ...)`:
+ * the inner join is what lets the date filter drop rows rather than null out
+ * the embed.
  */
+export function trainedParticipations(
+  supabase: SupabaseClient,
+  userId: string,
+  select: string,
+  options?: { count: 'exact'; head: true },
+  now: Date = new Date()
+) {
+  return supabase
+    .from('session_participants')
+    .select(select, options)
+    .eq('user_id', userId)
+    .eq('status', 'confirmed')
+    .lte('sessions.date', bogotaToday(now));
+}
+
+/** How many sessions this person has trained (the rule above), for the profile counts. */
+export async function fetchTrainedSessionCount(supabase: SupabaseClient, userId: string): Promise<DalResult<number>> {
+  try {
+    // BUG-008 guard, as in fetchParticipantCountForUser: a falsy id must never
+    // reach the filter.
+    if (!userId || userId === 'undefined' || userId === 'null') {
+      return { success: true, data: 0 };
+    }
+    const { count, error } = await trainedParticipations(supabase, userId, 'id, sessions:session_id!inner(date)', {
+      count: 'exact',
+      head: true,
+    });
+    if (error) return { success: false, error: error.message };
+    return { success: true, data: count ?? 0 };
+  } catch (error) {
+    logError(error, { action: 'fetchTrainedSessionCount' });
+    return { success: false, error: 'Failed' };
+  }
+}
+
+/** My Training's rows: the trained rule, with the session and its host embedded. */
 async function fetchAttendedSessions(
   supabase: SupabaseClient,
   userId: string,
   selectExtra = ''
 ): Promise<DalResult<AttendanceRow[]>> {
-  const todayIso = new Date().toISOString().slice(0, 10);
   const selection = `
     session_id,
-    sessions:session_id(
+    sessions:session_id!inner(
       id, title, sport, date, start_time, location, creator_id,
       creator:creator_id(id, name, avatar_url)${selectExtra}
     )
   `;
 
-  const { data, error } = await supabase
-    .from('session_participants')
-    .select(selection)
-    .eq('user_id', userId)
-    .eq('status', 'confirmed');
+  const { data, error } = await trainedParticipations(supabase, userId, selection);
 
   if (error) return { success: false, error: error.message };
 
-  const rows = ((data || []) as unknown as AttendanceRow[]).filter(
-    (row) => row.sessions && row.sessions.date && row.sessions.date <= todayIso
-  );
+  const rows = ((data || []) as unknown as AttendanceRow[]).filter((row) => row.sessions && row.sessions.date);
   return { success: true, data: rows };
 }
 

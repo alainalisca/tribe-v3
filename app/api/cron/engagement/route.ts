@@ -11,6 +11,7 @@ import {
   fetchSessionsByCreator,
   fetchActiveSessionCount,
 } from '@/lib/dal';
+import { recipientLanguage } from '@/lib/i18n/recipientLanguage';
 
 // Colombia timezone offset (UTC-5)
 const COLOMBIA_TZ_OFFSET = -5;
@@ -74,12 +75,13 @@ export async function GET(request: Request) {
       // Get users with push subscriptions who haven't received weekly recap today
       const usersResult = await fetchUsersWithPush(
         supabase,
-        'id, preferred_language, push_subscription, last_weekly_recap_sent',
+        'id, preferred_language, preferred_language_set_at, push_subscription, last_weekly_recap_sent',
         { lastWeeklyRecapBefore: today }
       );
       const users = (usersResult.data || []) as Array<{
         id: string;
         preferred_language: string | null;
+        preferred_language_set_at: string | null;
         push_subscription: unknown;
         last_weekly_recap_sent: string | null;
       }>;
@@ -131,7 +133,7 @@ export async function GET(request: Request) {
             peopleHelped += (s.current_participants || 1) - 1; // Exclude host
           });
 
-          const lang = (user.preferred_language || 'en') as 'en' | 'es';
+          const lang = recipientLanguage(user);
           const { message } = getRandomMessage('weekly_recap');
           let content = getMessageContent(message, lang);
 
@@ -185,7 +187,7 @@ export async function GET(request: Request) {
 
     const inactiveUsersResult = await fetchUsersWithPush(
       supabase,
-      'id, preferred_language, push_subscription, updated_at, last_reengagement_sent',
+      'id, preferred_language, preferred_language_set_at, push_subscription, updated_at, last_reengagement_sent',
       {
         updatedBefore: threeDaysAgo.toISOString(),
         updatedAfter: sixtyDaysAgo.toISOString(),
@@ -195,6 +197,7 @@ export async function GET(request: Request) {
     const inactiveUsers = (inactiveUsersResult.data || []) as Array<{
       id: string;
       preferred_language: string | null;
+      preferred_language_set_at: string | null;
       push_subscription: unknown;
       updated_at: string;
       last_reengagement_sent: string | null;
@@ -212,7 +215,7 @@ export async function GET(request: Request) {
         const lastActive = new Date(user.updated_at);
         const daysSinceActive = Math.floor((now.getTime() - lastActive.getTime()) / (24 * 60 * 60 * 1000));
 
-        const lang = (user.preferred_language || 'en') as 'en' | 'es';
+        const lang = recipientLanguage(user);
         const { message } = getRandomMessage('re_engagement');
         let content = getMessageContent(message, lang);
 

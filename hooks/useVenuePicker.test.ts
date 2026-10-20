@@ -14,20 +14,18 @@ const setSessionPartner = vi.fn();
 const trackEvent = vi.fn();
 const logError = vi.fn();
 const createNotification = vi.fn();
+const fetchUserLanguage = vi.fn();
 
 vi.mock('@/lib/supabase/client', () => ({
   createClient: () => ({ auth: { getUser: async () => ({ data: { user: { id: 'leo' } } }) } }),
 }));
 vi.mock('@/lib/dal/users', () => ({
   fetchUserProfileMaybe: async () => ({ success: true, data: { name: 'Leo Garcia' } }),
+  fetchUserLanguage: (...a: unknown[]) => fetchUserLanguage(...a),
 }));
 vi.mock('@/lib/dal/gymVenue', () => ({ setSessionPartner: (...a: unknown[]) => setSessionPartner(...a) }));
 vi.mock('@/lib/analytics', () => ({ trackEvent: (...a: unknown[]) => trackEvent(...a) }));
 vi.mock('@/lib/logger', () => ({ logError: (...a: unknown[]) => logError(...a), log: vi.fn() }));
-vi.mock('@/lib/i18n/useTranslations', () => ({
-  useTranslations: () => (key: string, v?: Record<string, string | number>) =>
-    v ? `${key}: ${Object.values(v).join(' / ')}` : key,
-}));
 vi.mock('@/lib/dal/notifications', () => ({ createNotification: (...a: unknown[]) => createNotification(...a) }));
 
 import { useVenuePicker } from './useVenuePicker';
@@ -42,6 +40,7 @@ const BULLBOX = {
 };
 
 beforeEach(() => {
+  fetchUserLanguage.mockResolvedValue('es');
   vi.clearAllMocks();
   createNotification.mockResolvedValue({ success: true });
 });
@@ -155,6 +154,31 @@ describe('useVenuePicker', () => {
     expect(call.message).toContain('Leo Garcia');
     expect(call.message).toContain('CrossFit BullBox');
     expect(call.message).not.toBe('CrossFit BullBox');
+  });
+
+  it("writes the gym's bell in the GYM's language, not the instructor's (T-LANG1)", async () => {
+    setSessionPartner.mockResolvedValue({ success: true, data: 'pending' });
+    fetchUserLanguage.mockResolvedValue('en');
+    const { result } = renderHook(() => useVenuePicker());
+    act(() => result.current.select(BULLBOX));
+    await act(async () => {
+      await result.current.commit('s1');
+    });
+    expect(fetchUserLanguage).toHaveBeenCalledWith(expect.anything(), BULLBOX.user_id);
+    const call = createNotification.mock.calls[0][1] as { message: string };
+    expect(call.message).toMatch(/^New venue request: Leo Garcia wants to publish /);
+  });
+
+  it('a gym that never chose a language gets Spanish', async () => {
+    setSessionPartner.mockResolvedValue({ success: true, data: 'pending' });
+    fetchUserLanguage.mockResolvedValue('es');
+    const { result } = renderHook(() => useVenuePicker());
+    act(() => result.current.select(BULLBOX));
+    await act(async () => {
+      await result.current.commit('s1');
+    });
+    const call = createNotification.mock.calls[0][1] as { message: string };
+    expect(call.message).toMatch(/^Nueva solicitud de sede: Leo Garcia quiere publicar /);
   });
 
   it('does NOT notify when the link was auto-approved', async () => {

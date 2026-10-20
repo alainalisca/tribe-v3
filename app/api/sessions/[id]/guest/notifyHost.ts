@@ -1,7 +1,8 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { createNotification } from '@/lib/dal';
 import { log, logError } from '@/lib/logger';
-import { notificationCopy, toLang } from '@/lib/notification-i18n';
+import { notificationCopy } from '@/lib/notification-i18n';
+import { recipientLanguage, type LanguagePreference } from '@/lib/i18n/recipientLanguage';
 
 /**
  * T-JOIN1 Part B: tell the host a guest asked for a spot, from the guest route
@@ -23,10 +24,10 @@ export async function notifyHostOfGuest(service: SupabaseClient, sessionId: stri
 
     const { data: host } = await service
       .from('users')
-      .select('preferred_language')
+      .select('preferred_language, preferred_language_set_at')
       .eq('id', session.creator_id)
       .maybeSingle();
-    const hostLang = toLang((host as { preferred_language?: string | null } | null)?.preferred_language);
+    const hostLang = recipientLanguage(host as LanguagePreference | null);
     const { title, body } = notificationCopy('join_guest', hostLang, { name: guestName, sport: session.sport });
 
     const inApp = await createNotification(service, {

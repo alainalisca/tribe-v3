@@ -4,7 +4,8 @@ import { isValidCronAuth } from '@/lib/auth/cron';
 import { log, logError } from '@/lib/logger';
 import { expireStaleOffers, offerSpotToNextInLine } from '@/lib/dal/waitlist';
 import { createNotification } from '@/lib/dal/notifications';
-import { notificationCopy, toLang } from '@/lib/notification-i18n';
+import { notificationCopy } from '@/lib/notification-i18n';
+import { recipientLanguage, type LanguagePreference } from '@/lib/i18n/recipientLanguage';
 
 /**
  * Hourly cron: expire stale 24-hour offers and auto-offer to the next
@@ -49,9 +50,12 @@ export async function GET(request: Request) {
     const allAffectedIds = [...expiringUsers.map((e) => e.user_id)];
     const langMap = new Map<string, 'en' | 'es'>();
     if (allAffectedIds.length > 0) {
-      const { data: langRows } = await supabase.from('users').select('id, preferred_language').in('id', allAffectedIds);
-      for (const row of (langRows as Array<{ id: string; preferred_language: string | null }> | null) ?? []) {
-        langMap.set(row.id, toLang(row.preferred_language));
+      const { data: langRows } = await supabase
+        .from('users')
+        .select('id, preferred_language, preferred_language_set_at')
+        .in('id', allAffectedIds);
+      for (const row of (langRows as Array<{ id: string } & LanguagePreference> | null) ?? []) {
+        langMap.set(row.id, recipientLanguage(row));
       }
     }
 
@@ -68,10 +72,10 @@ export async function GET(request: Request) {
         if (!recipientLang) {
           const { data: lr } = await supabase
             .from('users')
-            .select('preferred_language')
+            .select('preferred_language, preferred_language_set_at')
             .eq('id', offeredToId)
             .maybeSingle();
-          recipientLang = toLang((lr as { preferred_language?: string | null } | null)?.preferred_language);
+          recipientLang = recipientLanguage(lr as LanguagePreference | null);
         }
         const copy = notificationCopy('waitlist_offered', recipientLang);
         await createNotification(supabase, {

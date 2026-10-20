@@ -14,6 +14,7 @@ import { bogotaDateOffset } from '@/lib/time/bogotaDate';
 import { isValidCronAuth } from '@/lib/auth/cron';
 import { SITE_URL } from '@/lib/http/siteUrl';
 import { TRIBE_FROM } from '@/lib/email/sender';
+import { recipientLanguage } from '@/lib/i18n/recipientLanguage';
 
 /**
  * @description Sends re-engagement emails to users who have been inactive for 14+ days, encouraging them to return and browse sessions.
@@ -118,7 +119,7 @@ export async function POST(request: Request) {
         }
         const unsubUrl = unsub.data;
 
-        const lang = user.preferred_language || 'en';
+        const lang = recipientLanguage(user);
         const isSpanish = lang === 'es';
 
         const subject = isSpanish ? `👋 Te extrañamos en Tribe` : `👋 We miss you on Tribe`;

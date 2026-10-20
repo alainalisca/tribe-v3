@@ -41,7 +41,9 @@ type TemplateKey =
   | 'session_invite'
   | 'profile_incomplete'
   | 'session_cancelled'
-  | 'session_cancelled_paid';
+  | 'session_cancelled_paid'
+  | 'session_reminder_local'
+  | 'chat_message';
 
 const TEMPLATES: Record<TemplateKey, Template> = {
   join: {
@@ -190,6 +192,30 @@ const TEMPLATES: Record<TemplateKey, Template> = {
     es: {
       title: '🚫 Sesión cancelada',
       body: 'La sesión "{{session}}" del {{date}} fue cancelada. Te devolveremos el pago.',
+    },
+  },
+  // Recipient = the person on this device: lib/reminders.ts, one hour before
+  // a session they joined. A local browser notification, not a push.
+  session_reminder_local: {
+    en: {
+      title: '⏰ Session reminder',
+      body: 'Your {{sport}} session at {{location}} starts in 1 hour.',
+    },
+    es: {
+      title: '⏰ Recordatorio de sesión',
+      body: 'Tu sesión de {{sport}} en {{location}} empieza en 1 hora.',
+    },
+  },
+  // Recipient = a participant or the host of a session chat
+  // (app/api/webhook/chat-message). The body is the sender's own words.
+  chat_message: {
+    en: {
+      title: '{{name}} in {{sport}}',
+      body: '{{message}}',
+    },
+    es: {
+      title: '{{name}} en {{sport}}',
+      body: '{{message}}',
     },
   },
   // T-PROF1: recipient = the instructor. Nudge to finish their profile so they

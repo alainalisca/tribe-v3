@@ -33,6 +33,7 @@ function mapRosterRowToPending(r: unknown): PendingParticipantWithUser {
           name: row.user_name as string,
           avatar_url: (row.user_avatar_url as string | null) ?? null,
           preferred_language: (row.user_preferred_language as string | null) ?? null,
+          preferred_language_set_at: (row.user_preferred_language_set_at as string | null) ?? null,
         }
       : null,
   };
@@ -203,7 +204,7 @@ export async function fetchParticipantsWithUserDetails(
   userFields?: string
 ): Promise<DalResult<ParticipantWithUserDetails[]>> {
   try {
-    const fields = userFields || 'id, preferred_language, session_reminders_enabled';
+    const fields = userFields || 'id, preferred_language, preferred_language_set_at, session_reminders_enabled';
     const { data, error } = await supabase
       .from('session_participants')
       .select(`user_id, user:users!session_participants_user_id_fkey(${fields})`)
@@ -340,7 +341,7 @@ export async function fetchPendingParticipantsForSessions(
     const { data, error } = await supabase
       .from('session_participants_roster')
       .select(
-        'id, user_id, session_id, joined_at, status, user_profile_id, user_name, user_avatar_url, user_preferred_language'
+        'id, user_id, session_id, joined_at, status, user_profile_id, user_name, user_avatar_url, user_preferred_language, user_preferred_language_set_at'
       )
       .in('session_id', sessionIds)
       .eq('status', 'pending');
@@ -364,7 +365,7 @@ export async function fetchPendingParticipantsForSession(
     const { data, error } = await supabase
       .from('session_participants_roster')
       .select(
-        'id, user_id, session_id, joined_at, status, user_profile_id, user_name, user_avatar_url, user_preferred_language'
+        'id, user_id, session_id, joined_at, status, user_profile_id, user_name, user_avatar_url, user_preferred_language, user_preferred_language_set_at'
       )
       .eq('session_id', sessionId)
       .eq('status', 'pending')

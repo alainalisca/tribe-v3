@@ -24,7 +24,8 @@ import { reviewVenueRequest, setAutoApproveRoster, type VenueRequest } from '@/l
 import { createNotification } from '@/lib/dal/notifications';
 import { trackEvent } from '@/lib/analytics';
 import { logError } from '@/lib/logger';
-import { useTranslations } from '@/lib/i18n/useTranslations';
+import { translate } from '@/lib/i18n/translate';
+import { fetchUserLanguage } from '@/lib/dal/users';
 
 export type VenueDecision = 'approved' | 'declined';
 
@@ -52,7 +53,6 @@ export function useVenueRequests({
   gymUserId,
   initialAutoApprove,
 }: UseVenueRequestsArgs): UseVenueRequestsResult {
-  const tNotif = useTranslations('notif');
   const [requests, setRequests] = useState<VenueRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [deciding, setDeciding] = useState<string | null>(null);
@@ -102,6 +102,8 @@ export function useVenueRequests({
         setRequests((prev) => prev.filter((r) => r.sessionId !== request.sessionId));
 
         if (request.instructor) {
+          // In the INSTRUCTOR's language, not the gym's (T-LANG1).
+          const lang = await fetchUserLanguage(supabase, request.instructor.id);
           const notified = await createNotification(supabase, {
             recipient_id: request.instructor.id,
             actor_id: gymUserId,
@@ -110,8 +112,14 @@ export function useVenueRequests({
             entity_id: request.sessionId,
             message:
               decision === 'approved'
-                ? tNotif('venueRequestApproved', { gym: gymName, title: request.title ?? request.sport })
-                : tNotif('venueRequestDeclined', { gym: gymName, title: request.title ?? request.sport }),
+                ? translate(lang, 'notif', 'venueRequestApproved', {
+                    gym: gymName,
+                    title: request.title ?? request.sport,
+                  })
+                : translate(lang, 'notif', 'venueRequestDeclined', {
+                    gym: gymName,
+                    title: request.title ?? request.sport,
+                  }),
           });
           if (!notified.success) {
             // The verdict is already recorded; a missing bell must not undo it
@@ -140,7 +148,7 @@ export function useVenueRequests({
         setDeciding(null);
       }
     },
-    [partnerId, gymName, gymUserId, tNotif]
+    [partnerId, gymName, gymUserId]
   );
 
   const toggleAutoApprove = useCallback(

@@ -40,7 +40,7 @@ import { createClient } from '@supabase/supabase-js';
  * rows for the body fields.
  */
 function mockSupabase(opts: {
-  userMatch?: { id: string; preferred_language: string | null } | null;
+  userMatch?: { id: string; preferred_language: string | null; preferred_language_set_at?: string | null } | null;
   gymName?: string;
   coachName?: string;
   coachLang?: string | null;
@@ -55,7 +55,14 @@ function mockSupabase(opts: {
     error: null,
   });
   const coachMaybeSingle = vi.fn().mockResolvedValue({
-    data: opts.coachName ? { name: opts.coachName, preferred_language: opts.coachLang ?? null } : null,
+    // A given language is a choice (T-LANG1); null never chose.
+    data: opts.coachName
+      ? {
+          name: opts.coachName,
+          preferred_language: opts.coachLang ?? null,
+          preferred_language_set_at: opts.coachLang ? '2026-10-20T12:00:00Z' : null,
+        }
+      : null,
     error: null,
   });
 
@@ -121,7 +128,7 @@ describe('notifyClientAdded', () => {
     // Welcome path must use the RECIPIENT's language so the email
     // lands in their preferred locale.
     const supabase = mockSupabase({
-      userMatch: { id: 'user-anna', preferred_language: 'es' },
+      userMatch: { id: 'user-anna', preferred_language: 'es', preferred_language_set_at: '2026-10-20T12:00:00Z' },
       gymName: 'CrossFit Medellín',
       coachName: 'Coach Alex',
       coachLang: 'en',
@@ -182,7 +189,7 @@ describe('notifyClientAdded', () => {
     expect(sendCoachAddedYouWelcome).not.toHaveBeenCalled();
   });
 
-  it('defaults language to en when neither side has a preference', async () => {
+  it('defaults language to es when neither side chose one (T-LANG1)', async () => {
     const supabase = mockSupabase({
       userMatch: null,
       gymName: 'Gym',
@@ -198,7 +205,7 @@ describe('notifyClientAdded', () => {
     });
 
     expect(result.sent).toBe(true);
-    expect(sendSignUpInvite).toHaveBeenCalledWith(expect.objectContaining({ language: 'en' }), expect.any(String));
+    expect(sendSignUpInvite).toHaveBeenCalledWith(expect.objectContaining({ language: 'es' }), expect.any(String));
   });
 
   it('handles a Resend send failure gracefully (returns send_failed, does not throw)', async () => {
@@ -207,7 +214,7 @@ describe('notifyClientAdded', () => {
     // email is the side-effect. Return send_failed so observability
     // catches it.
     const supabase = mockSupabase({
-      userMatch: { id: 'user-1', preferred_language: 'en' },
+      userMatch: { id: 'user-1', preferred_language: 'en', preferred_language_set_at: '2026-10-20T12:00:00Z' },
       gymName: 'Gym',
       coachName: 'Coach',
     });

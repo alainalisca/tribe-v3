@@ -1,15 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { cancelDate, cancelLang } from './copy';
-
-describe('cancelLang', () => {
-  it('English only when the person chose it; everything else is Spanish', () => {
-    expect(cancelLang('en')).toBe('en');
-    expect(cancelLang('es')).toBe('es');
-    expect(cancelLang(null)).toBe('es');
-    expect(cancelLang(undefined)).toBe('es');
-    expect(cancelLang('pt')).toBe('es');
-  });
-});
+import { cancelDate } from './copy';
 
 describe('cancelDate', () => {
   it('Spanish: "martes 20 de octubre"; English: "Tuesday, October 20"', () => {

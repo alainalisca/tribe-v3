@@ -30,8 +30,9 @@ import { getServiceRoleClient } from '@/lib/supabase/admin';
 import { z } from 'zod';
 import { log, logError } from '@/lib/logger';
 import { checkRateLimit } from '@/lib/rate-limit';
-import { notificationCopy, toLang } from '@/lib/notification-i18n';
+import { notificationCopy } from '@/lib/notification-i18n';
 import { createNotification } from '@/lib/dal';
+import { recipientLanguage, type LanguagePreference } from '@/lib/i18n/recipientLanguage';
 
 const schema = z.object({
   session_id: z.string().uuid(),
@@ -121,10 +122,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // their language, not the joiner's client-side locale.
     const { data: hostRow } = await service
       .from('users')
-      .select('preferred_language')
+      .select('preferred_language, preferred_language_set_at')
       .eq('id', session.creator_id)
       .maybeSingle();
-    const hostLang = toLang((hostRow as { preferred_language?: string | null } | null)?.preferred_language);
+    const hostLang = recipientLanguage(hostRow as LanguagePreference | null);
 
     const safeName = sanitizeName(joiner_name);
     const templateKey =

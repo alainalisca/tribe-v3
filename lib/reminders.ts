@@ -1,7 +1,25 @@
 import { createClient } from '@/lib/supabase/client';
 import { fetchParticipationsWithSession } from '@/lib/dal';
+import { notificationCopy, type NotificationLang } from '@/lib/notification-i18n';
+import { translateSport } from '@/lib/sportTranslationData';
 
-export async function scheduleSessionReminders() {
+/** The reminder's text, in the language of the person on this device. */
+export function sessionReminderCopy(
+  session: { sport: string | null; location: string | null },
+  language: NotificationLang
+): { title: string; body: string } {
+  return notificationCopy('session_reminder_local', language, {
+    sport: translateSport(session.sport, language),
+    location: session.location ?? '',
+  });
+}
+
+/**
+ * Local browser reminders, one hour before each session joined today or
+ * tomorrow. `language` is the app's current language: the reader is the
+ * person holding this device.
+ */
+export async function scheduleSessionReminders(language: NotificationLang = 'es') {
   const supabase = createClient();
   const {
     data: { user },
@@ -53,8 +71,9 @@ export async function scheduleSessionReminders() {
 
       setTimeout(() => {
         if ('Notification' in window && Notification.permission === 'granted') {
-          new Notification('Tribe Session Reminder', {
-            body: `Your ${session.sport} session at ${session.location} starts in 1 hour!`,
+          const { title, body } = sessionReminderCopy(session, language);
+          new Notification(title, {
+            body,
             icon: '/icon-192.png',
             badge: '/icon-192.png',
           });

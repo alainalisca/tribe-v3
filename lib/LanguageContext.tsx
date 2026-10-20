@@ -4,6 +4,7 @@ import { createContext, useContext, useState, useEffect, useRef, ReactNode } fro
 import { translations, Language, TranslationKey } from './translations';
 import { readLanguageCookie, writeLanguageCookie } from '@/lib/languageCookie';
 import { cookieNames, hasAuthCookieName } from '@/lib/site/authCookie';
+import { LANGUAGE_FIELDS, chosenLanguage, type LanguagePreference } from '@/lib/i18n/recipientLanguage';
 
 /*
  * T-SITE1 Part F. supabase-js, the data layer and analytics are imported where
@@ -112,13 +113,11 @@ async function fetchStoredPreference(): Promise<Language | null> {
     const supabase = createClient();
     const { data } = await supabase.auth.getUser();
     if (!data.user) return null;
-    const { data: row } = await supabase
-      .from('users')
-      .select('preferred_language')
-      .eq('id', data.user.id)
-      .maybeSingle();
-    const stored = (row as { preferred_language?: string | null } | null)?.preferred_language;
-    return isLanguage(stored) ? stored : null;
+    // T-LANG1: the stored value counts only when the person chose it
+    // (preferred_language_set_at). The column used to default to 'en' for
+    // everyone, so an unstamped 'en' is not a choice; the browser decides.
+    const { data: row } = await supabase.from('users').select(LANGUAGE_FIELDS).eq('id', data.user.id).maybeSingle();
+    return chosenLanguage(row as LanguagePreference | null);
   } catch {
     return null;
   }
@@ -188,7 +187,12 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
           .then(async ([{ createClient }, { updateUser }]) => {
             const supabase = createClient();
             const { data } = await supabase.auth.getUser();
-            if (data.user) await updateUser(supabase, data.user.id, { preferred_language: lang });
+            // set_at marks this as a choice (T-LANG1). setLanguage is its only writer.
+            if (data.user)
+              await updateUser(supabase, data.user.id, {
+                preferred_language: lang,
+                preferred_language_set_at: new Date().toISOString(),
+              });
           })
           .catch(() => {
             // Intentionally silent — the localStorage value still works client-side.

@@ -78,7 +78,11 @@ function mockService(opts: {
   });
   // Language lookup for the host: .select().eq().maybeSingle()
   const userMaybe = vi.fn().mockResolvedValue({
-    data: { preferred_language: opts.hostLanguage ?? null },
+    // A given language is a choice (T-LANG1: set_at present); null never chose.
+    data: {
+      preferred_language: opts.hostLanguage ?? null,
+      preferred_language_set_at: opts.hostLanguage ? '2026-10-20T12:00:00Z' : null,
+    },
     error: null,
   });
   vi.mocked(getServiceRoleClient).mockReturnValue({
@@ -148,10 +152,9 @@ describe('POST /api/sessions/notify-join', () => {
     expect(res.status).toBe(404);
   });
 
-  it('dispatches to the host with server-derived recipient + EN copy (null host language)', async () => {
+  it('dispatches to the host with server-derived recipient + EN copy (host chose English)', async () => {
     mockAuth({ id: JOINER_ID });
-    // hostLanguage null → falls back to 'en'
-    mockService({ session: ACTIVE_SESSION, isParticipant: true, hostLanguage: null });
+    mockService({ session: ACTIVE_SESSION, isParticipant: true, hostLanguage: 'en' });
 
     const res = await POST(req({ session_id: SESSION_ID, joiner_name: 'Alex', kind: 'join' }));
     expect(res.status).toBe(200);
@@ -184,9 +187,20 @@ describe('POST /api/sessions/notify-join', () => {
     expect(sent.body).toContain('Ana');
   });
 
+  it('a host who never chose a language gets Spanish (T-LANG1)', async () => {
+    mockAuth({ id: JOINER_ID });
+    mockService({ session: ACTIVE_SESSION, isParticipant: true, hostLanguage: null });
+
+    const res = await POST(req({ session_id: SESSION_ID, joiner_name: 'Ana', kind: 'join' }));
+    expect(res.status).toBe(200);
+    const sent = JSON.parse(fetchSpy.mock.calls[0][1].body as string);
+    expect(sent.title).toBe('🎉 ¡Nuevo compañero de entrenamiento!');
+    expect(sent.body).toBe('Ana se unió a tu sesión de Running');
+  });
+
   it('allows the guest path without auth and sends a guest-templated body', async () => {
     mockAuth(null);
-    mockService({ session: ACTIVE_SESSION, hostLanguage: null });
+    mockService({ session: ACTIVE_SESSION, hostLanguage: 'en' });
     const res = await POST(req({ session_id: SESSION_ID, joiner_name: 'Sam', kind: 'guest' }));
     expect(res.status).toBe(200);
     const sent = JSON.parse(fetchSpy.mock.calls[0][1].body as string);
@@ -229,7 +243,7 @@ describe('POST /api/sessions/notify-join', () => {
     mockAuth({ id: JOINER_ID });
     // isParticipant: false — the leaver's row is deleted before this fires. A
     // 'join' would 403 here; 'leave' must skip that check and still notify.
-    mockService({ session: ACTIVE_SESSION, isParticipant: false, hostLanguage: null });
+    mockService({ session: ACTIVE_SESSION, isParticipant: false, hostLanguage: 'en' });
 
     const res = await POST(req({ session_id: SESSION_ID, joiner_name: 'Alex', kind: 'leave' }));
     expect(res.status).toBe(200);

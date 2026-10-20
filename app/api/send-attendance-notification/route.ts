@@ -10,6 +10,7 @@ import { shouldSendNotification } from '@/lib/dal/notificationPreferences';
 import { isEmailSuppressed, unsubUrlFor, unsubHeaders } from '@/lib/dal/emailUnsubscribe';
 import { SITE_URL } from '@/lib/http/siteUrl';
 import { TRIBE_FROM } from '@/lib/email/sender';
+import { recipientLanguage, type LanguagePreference } from '@/lib/i18n/recipientLanguage';
 
 /**
  * @description Sends a post-session attendance notification email prompting the user to upload photos from their training session.
@@ -82,8 +83,12 @@ export async function POST(request: Request) {
     }
 
     // Recipient details (service-role — email survives the revoke).
-    const userResult = await fetchUserProfileMaybe(service, userId, 'name, email, preferred_language');
-    const user = userResult.data as { name: string; email: string; preferred_language: string | null } | null;
+    const userResult = await fetchUserProfileMaybe(
+      service,
+      userId,
+      'name, email, preferred_language, preferred_language_set_at'
+    );
+    const user = userResult.data as ({ name: string; email: string } & LanguagePreference) | null;
 
     if (!user?.email) {
       return NextResponse.json({ error: 'Invalid data' }, { status: 400 });
@@ -123,7 +128,7 @@ export async function POST(request: Request) {
     }
     const unsubUrl = unsub.data;
 
-    const lang = user.preferred_language || 'en';
+    const lang = recipientLanguage(user);
     const isSpanish = lang === 'es';
 
     // Bilingual content

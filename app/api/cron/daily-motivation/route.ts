@@ -5,6 +5,7 @@ import { bogotaToday } from '@/lib/time/bogotaDate';
 import { getRandomMessage, getMessageContent } from '@/lib/motivational-messages';
 import { log, logError } from '@/lib/logger';
 import { updateUser, fetchUsersWithPush } from '@/lib/dal';
+import { recipientLanguage } from '@/lib/i18n/recipientLanguage';
 
 /**
  * @description Sends daily motivational push notifications to users who have push subscriptions and haven't received one today.
@@ -36,14 +37,19 @@ export async function GET(request: Request) {
     // "once per day" dedup tracks the user's actual calendar day, not UTC).
     const today = bogotaToday();
 
-    const usersResult = await fetchUsersWithPush(supabase, 'id, preferred_language, push_subscription', {
-      lastMotivationBefore: today,
-    });
+    const usersResult = await fetchUsersWithPush(
+      supabase,
+      'id, preferred_language, preferred_language_set_at, push_subscription',
+      {
+        lastMotivationBefore: today,
+      }
+    );
 
     if (!usersResult.success) throw new Error(usersResult.error);
     const users = (usersResult.data || []) as Array<{
       id: string;
       preferred_language: string | null;
+      preferred_language_set_at: string | null;
       push_subscription: unknown;
     }>;
 
@@ -58,7 +64,7 @@ export async function GET(request: Request) {
     // Send motivation to each user
     for (const user of users) {
       const { message } = getRandomMessage('morning_motivation');
-      const language = (user.preferred_language || 'en') as 'en' | 'es';
+      const language = recipientLanguage(user);
       const content = getMessageContent(message, language);
 
       try {

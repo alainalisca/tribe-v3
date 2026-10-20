@@ -22,6 +22,7 @@ export interface ParticipantWithUserDetails {
   user: {
     id: string;
     preferred_language: string | null;
+    preferred_language_set_at?: string | null;
     session_reminders_enabled: boolean | null;
   } | null;
 }
@@ -50,6 +51,7 @@ export interface SessionWithCreator {
     // email intentionally omitted: no caller reads creator.email, and selecting
     // it broke the anon cron callers under the T-SEC5 email revoke (Batch 4).
     preferred_language: string | null;
+    preferred_language_set_at?: string | null;
   } | null;
 }
 
@@ -67,7 +69,13 @@ export interface PendingParticipantWithUser {
   session_id: string;
   joined_at: string | null;
   status: string;
-  user: { id: string; name: string; avatar_url: string | null; preferred_language: string | null } | null;
+  user: {
+    id: string;
+    name: string;
+    avatar_url: string | null;
+    preferred_language: string | null;
+    preferred_language_set_at?: string | null;
+  } | null;
 }
 
 /** Story with user and session join */
@@ -110,6 +118,7 @@ export interface UserForNotification {
   id: string;
   push_subscription: string | null;
   preferred_language: string | null;
+  preferred_language_set_at?: string | null;
   fcm_token: string | null;
   fcm_platform: string | null;
 }

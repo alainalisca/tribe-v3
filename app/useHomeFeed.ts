@@ -269,7 +269,7 @@ export function useHomeFeed() {
     }
     loadSessions();
     const deferredId = setTimeout(() => {
-      scheduleSessionReminders();
+      scheduleSessionReminders(language);
       if (user) tryRegisterPushNotifications(user.id);
     }, 4000);
     return () => clearTimeout(deferredId);

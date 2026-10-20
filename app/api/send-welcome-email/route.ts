@@ -4,6 +4,7 @@ import { isValidCronAuth } from '@/lib/auth/cron';
 import { logError } from '@/lib/logger';
 import { fetchUsersNeedingWelcomeEmail, markWelcomeEmailSent } from '@/lib/dal/users';
 import { sendWelcomeEmail } from '@/lib/welcome-email';
+import { recipientLanguage } from '@/lib/i18n/recipientLanguage';
 
 /**
  * @description Cron sweep that sends the one-time welcome onboarding email to users who have not received it yet. A user is only marked as sent when the email actually succeeds, so failures are retried on the next sweep.
@@ -31,7 +32,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       const result = await sendWelcomeEmail({
         email: user.email,
         name: user.name,
-        language: user.preferred_language ?? 'en',
+        language: recipientLanguage(user),
       });
 
       if (result.success) {

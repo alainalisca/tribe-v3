@@ -10,6 +10,7 @@ import { translateSport } from '@/lib/sportTranslationData';
 import { firstName } from '@/lib/text/firstName';
 import { log, logError } from '@/lib/logger';
 import { MOMENTS_BUCKET, momentVariantPath } from './paths';
+import { recipientLanguage, type LanguagePreference } from '@/lib/i18n/recipientLanguage';
 
 /**
  * T-MOM1: what Moments tells people.
@@ -70,9 +71,13 @@ export function momentosHref(sessionId: string): string {
 type Recipient = { lang: Lang; email: string | null };
 
 async function recipient(service: SupabaseClient, userId: string): Promise<Recipient> {
-  const { data } = await service.from('users').select('preferred_language, email').eq('id', userId).maybeSingle();
-  const u = data as { preferred_language?: string | null; email?: string | null } | null;
-  return { lang: u?.preferred_language === 'en' ? 'en' : 'es', email: u?.email ?? null };
+  const { data } = await service
+    .from('users')
+    .select('preferred_language, preferred_language_set_at, email')
+    .eq('id', userId)
+    .maybeSingle();
+  const u = data as (LanguagePreference & { email?: string | null }) | null;
+  return { lang: recipientLanguage(u), email: u?.email ?? null };
 }
 
 /** In-app, then push. 'no_token' is the push route's 404: the person has no device to push to. */

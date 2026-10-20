@@ -46,7 +46,7 @@ export default function ProfileStatsClient({ stats }: { stats: ProfileStats }) {
       <div className="grid grid-cols-2 gap-3 mt-6">
         {[
           { value: stats.sessionsCreated, label: t.sessionsCreated },
-          { value: stats.sessionsJoined, label: t.sessionsJoined },
+          { value: stats.sessionsTrained, label: t.sessionsTrained },
           { value: stats.totalSessions, label: t.totalSessions },
         ].map((stat) => (
           <div

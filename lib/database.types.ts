@@ -1491,6 +1491,7 @@ export type Database = {
           photos: string[] | null
           payout_method: string | null
           preferred_language: string | null
+          preferred_language_set_at: string | null
           preferred_sports: string[] | null
           push_subscription: Json | null
           rating: number | null
@@ -1576,6 +1577,7 @@ export type Database = {
           photos?: string[] | null
           payout_method?: string | null
           preferred_language?: string | null
+          preferred_language_set_at?: string | null
           preferred_sports?: string[] | null
           push_subscription?: Json | null
           rating?: number | null
@@ -1661,6 +1663,7 @@ export type Database = {
           photos?: string[] | null
           payout_method?: string | null
           preferred_language?: string | null
+          preferred_language_set_at?: string | null
           preferred_sports?: string[] | null
           push_subscription?: Json | null
           rating?: number | null

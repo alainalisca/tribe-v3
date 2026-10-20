@@ -23,8 +23,9 @@ import {
   fetchPendingParticipantsForSessions,
   createNotification,
 } from '@/lib/dal';
-import { notificationCopy, toLang } from '@/lib/notification-i18n';
+import { notificationCopy } from '@/lib/notification-i18n';
 import type { User as AuthUser } from '@supabase/supabase-js';
+import { recipientLanguage } from '@/lib/i18n/recipientLanguage';
 
 interface JoinRequest {
   id: string;
@@ -36,6 +37,7 @@ interface JoinRequest {
     avatar_url: string | null;
     sports: string[] | null;
     preferred_language: string | null;
+    preferred_language_set_at?: string | null;
   } | null;
   session:
     | {
@@ -111,6 +113,7 @@ export default function RequestsPage() {
                 // Carried through so the approval bell is composed in the
                 // ATHLETE's language, not the host's UI locale.
                 preferred_language: req.user.preferred_language ?? null,
+                preferred_language_set_at: req.user.preferred_language_set_at ?? null,
               }
             : null,
           session: mySessions.find((s) => s.id === req.session_id),
@@ -137,7 +140,7 @@ export default function RequestsPage() {
       // Guest rows have no user_id and no account to notify.
       if (request.user_id) {
         const sessionLabel = request.session?.title || request.session?.sport || '';
-        const { body } = notificationCopy('request_approved', toLang(request.users?.preferred_language), {
+        const { body } = notificationCopy('request_approved', recipientLanguage(request.users), {
           session: sessionLabel,
         });
         // createNotification resolves {success:false} instead of throwing, so a

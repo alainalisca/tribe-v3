@@ -1,7 +1,7 @@
 export function getProfileTranslations(language: 'en' | 'es') {
   return {
     created: language === 'es' ? 'Creadas' : 'Created',
-    joined: language === 'es' ? 'Unidas' : 'Joined',
+    trained: language === 'es' ? 'Entrenadas' : 'Trained',
     total: 'Total',
     noBio:
       language === 'es'

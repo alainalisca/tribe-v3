@@ -107,11 +107,15 @@ describe('session-reminders cron: session_reminders category is authoritative', 
 
     // The creator and participants are fetched WITHOUT the legacy column in the
     // select list, proving the column plays no part in delivery.
-    expect(fetchUserProfileMaybe).toHaveBeenCalledWith(expect.anything(), 'creator-1', 'id, preferred_language');
+    expect(fetchUserProfileMaybe).toHaveBeenCalledWith(
+      expect.anything(),
+      'creator-1',
+      'id, preferred_language, preferred_language_set_at'
+    );
     expect(fetchParticipantsWithUserDetails).toHaveBeenCalledWith(
       expect.anything(),
       'sess-1',
-      'id, preferred_language'
+      'id, preferred_language, preferred_language_set_at'
     );
   });
 });

@@ -46,7 +46,7 @@ type UserProfile = Database['public']['Tables']['users']['Row'];
 
 export interface ProfileStats {
   sessionsCreated: number;
-  sessionsJoined: number;
+  sessionsTrained: number;
   totalSessions: number;
   attendanceRate: number;
   totalAttendance: number;

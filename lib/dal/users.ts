@@ -3,6 +3,8 @@ import { SupabaseClient } from '@supabase/supabase-js';
 import { logError } from '@/lib/logger';
 import type { DalResult, UserForNotification } from './types';
 import type { User as UserRow, UserUpdate } from '@/lib/database.types';
+import { LANGUAGE_FIELDS, recipientLanguage, type LanguagePreference } from '@/lib/i18n/recipientLanguage';
+import type { Language } from '@/lib/i18n/translate';
 
 export async function fetchUserProfile(supabase: SupabaseClient, userId: string): Promise<DalResult<UserRow>> {
   try {
@@ -34,7 +36,7 @@ export async function fetchUserProfile(supabase: SupabaseClient, userId: string)
     const { data, error } = await supabase
       .from('users')
       .select(
-        'id, name, avatar_url, bio, location, sports, preferred_sports, specialties, certifications, years_experience, instructor_bio, is_instructor, is_verified_instructor, banned, photos, username, website_url, instagram_username, facebook_url, storefront_tagline, cover_image_url, storefront_video_url, storefront_tier, storefront_pro_since, storefront_pro_expires, preferred_language, session_reminders_enabled, terms_accepted, terms_accepted_at, safety_waiver_accepted, safety_waiver_accepted_at, average_rating, total_reviews, rating, show_rate, sessions_completed, total_sessions_hosted, total_participants_served, earnings_currency, follower_count, following_count, verified_credentials, last_login_at, last_motivation_sent, last_motivation_message_id, last_reengagement_sent, last_weekly_recap_sent, welcome_email_sent_at, created_at, updated_at'
+        'id, name, avatar_url, bio, location, sports, preferred_sports, specialties, certifications, years_experience, instructor_bio, is_instructor, is_verified_instructor, banned, photos, username, website_url, instagram_username, facebook_url, storefront_tagline, cover_image_url, storefront_video_url, storefront_tier, storefront_pro_since, storefront_pro_expires, preferred_language, preferred_language_set_at, session_reminders_enabled, terms_accepted, terms_accepted_at, safety_waiver_accepted, safety_waiver_accepted_at, average_rating, total_reviews, rating, show_rate, sessions_completed, total_sessions_hosted, total_participants_served, earnings_currency, follower_count, following_count, verified_credentials, last_login_at, last_motivation_sent, last_motivation_message_id, last_reengagement_sent, last_weekly_recap_sent, welcome_email_sent_at, created_at, updated_at'
       )
       .eq('id', userId)
       .maybeSingle();
@@ -334,9 +336,12 @@ export async function softDeleteUser(supabase: SupabaseClient, userId: string): 
 }
 
 /** The only user fields the batch email jobs consume. */
-export type EmailJobUser = Pick<UserRow, 'id' | 'email' | 'name' | 'preferred_language' | 'created_at'>;
+export type EmailJobUser = Pick<
+  UserRow,
+  'id' | 'email' | 'name' | 'preferred_language' | 'preferred_language_set_at' | 'created_at'
+>;
 
-const EMAIL_JOB_USER_FIELDS = 'id, email, name, preferred_language, created_at';
+const EMAIL_JOB_USER_FIELDS = 'id, email, name, preferred_language, preferred_language_set_at, created_at';
 const EMAIL_JOB_PAGE_SIZE = 500;
 
 /**
@@ -506,11 +511,11 @@ export async function fetchBlockedStatus(
 export async function fetchUsersNeedingWelcomeEmail(
   supabase: SupabaseClient,
   limit = 50
-): Promise<DalResult<Pick<UserRow, 'id' | 'email' | 'name' | 'preferred_language'>[]>> {
+): Promise<DalResult<Pick<UserRow, 'id' | 'email' | 'name' | 'preferred_language' | 'preferred_language_set_at'>[]>> {
   try {
     const { data, error } = await supabase
       .from('users')
-      .select('id, email, name, preferred_language')
+      .select('id, email, name, preferred_language, preferred_language_set_at')
       .is('welcome_email_sent_at', null)
       .order('created_at', { ascending: true })
       .limit(limit);
@@ -551,7 +556,7 @@ export async function fetchUserForNotification(
   try {
     const { data, error } = await supabase
       .from('users')
-      .select('id, push_subscription, preferred_language, fcm_token, fcm_platform')
+      .select('id, push_subscription, preferred_language, preferred_language_set_at, fcm_token, fcm_platform')
       .eq('id', userId)
       .single();
     if (error) return { success: false, error: error.message };
@@ -559,5 +564,22 @@ export async function fetchUserForNotification(
   } catch (error) {
     logError(error, { action: 'fetchUserForNotification' });
     return { success: false, error: 'Failed' };
+  }
+}
+
+/**
+ * The language a notification to this person is written in (T-LANG1,
+ * lib/i18n/recipientLanguage.ts). For a sender that writes to SOMEONE ELSE
+ * from the browser (a gym's bell from the instructor's device, and back), so
+ * the copy follows the reader, not the writer. A failed read is Spanish.
+ */
+export async function fetchUserLanguage(supabase: SupabaseClient, userId: string): Promise<Language> {
+  try {
+    const { data, error } = await supabase.from('users').select(LANGUAGE_FIELDS).eq('id', userId).maybeSingle();
+    if (error) return 'es';
+    return recipientLanguage(data as LanguagePreference | null);
+  } catch (error) {
+    logError(error, { action: 'fetchUserLanguage' });
+    return 'es';
   }
 }

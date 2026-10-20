@@ -32,6 +32,7 @@ import { log, logError } from '@/lib/logger';
 import { evaluateGymAuditThresholds, type TriggeredAlert } from '@/lib/dal/auditWatchdog';
 import { sendAuditAlertEmail, type AuditAlertItem } from '@/lib/email/auditAlertEmail';
 import { SITE_URL } from '@/lib/http/siteUrl';
+import { recipientLanguage, type LanguagePreference } from '@/lib/i18n/recipientLanguage';
 
 const MAX_GYMS_PER_RUN = 100;
 
@@ -44,6 +45,7 @@ interface ActorRow {
   name: string | null;
   email: string | null;
   preferred_language: string | null;
+  preferred_language_set_at?: string | null;
 }
 
 export async function GET(request: Request): Promise<NextResponse> {
@@ -133,7 +135,7 @@ export async function GET(request: Request): Promise<NextResponse> {
           }
           const { data: ownerRow, error: ownerErr } = await service
             .from('users')
-            .select('email, name, preferred_language')
+            .select('email, name, preferred_language, preferred_language_set_at')
             .eq('id', ownerId)
             .maybeSingle();
           if (ownerErr || !ownerRow?.email) {
@@ -192,7 +194,7 @@ export async function GET(request: Request): Promise<NextResponse> {
                 {
                   ownerEmail: ownerRow.email,
                   ownerName: (ownerRow.name as string | null) ?? null,
-                  language: ((ownerRow.preferred_language as string) === 'es' ? 'es' : 'en') as 'en' | 'es',
+                  language: recipientLanguage(ownerRow as LanguagePreference),
                   gymName,
                   alerts: alertItems,
                 },

@@ -2,7 +2,8 @@ import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 import { isValidCronAuth } from '@/lib/auth/cron';
 import { log, logError } from '@/lib/logger';
-import { notificationCopy, toLang } from '@/lib/notification-i18n';
+import { notificationCopy } from '@/lib/notification-i18n';
+import { recipientLanguage, type LanguagePreference } from '@/lib/i18n/recipientLanguage';
 
 /** Haversine distance between two lat/lng points in km */
 function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
@@ -116,7 +117,7 @@ export async function GET(request: Request) {
     // which would silently empty the candidate pool while looking stricter.
     const { data: usersData, error: usersError } = await supabase
       .from('users')
-      .select('id, name, location_lat, location_lng, sports, gender, preferred_language')
+      .select('id, name, location_lat, location_lng, sports, gender, preferred_language, preferred_language_set_at')
       .in('id', userIds)
       .eq('banned', false)
       .not('is_instructor', 'is', true);
@@ -280,11 +281,9 @@ export async function GET(request: Request) {
         const matchedName = matchedUser?.name || 'Someone';
         const topSport = match.shared_sports[0] || 'fitness';
 
-        // usersMap values include preferred_language (fetched above).
+        // usersMap values include preferred_language and its set_at (fetched above).
         const recipientRow = usersMap.get(user.id);
-        const recipientLang = toLang(
-          (recipientRow as { preferred_language?: string | null } | undefined)?.preferred_language
-        );
+        const recipientLang = recipientLanguage(recipientRow as LanguagePreference | undefined);
         const matchCopy = notificationCopy('smart_match', recipientLang, {
           name: matchedName,
           sport: topSport,
