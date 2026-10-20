@@ -8,6 +8,8 @@ import {
   isFcmTokenInvalid,
 } from '../../notifications/send/notificationHelpers';
 import { filterPushRecipients } from '@/lib/dal/notificationPreferences';
+import { LANGUAGE_FIELDS } from '@/lib/i18n/recipientLanguage';
+import { chatPushTitle } from '@/lib/chat/chatPushTitle';
 
 interface WebhookPayload {
   type: 'INSERT';
@@ -33,6 +35,8 @@ interface UserNotificationRow {
   push_subscription: string | null;
   fcm_token: string | null;
   fcm_platform: string | null;
+  preferred_language: string | null;
+  preferred_language_set_at: string | null;
 }
 
 /**
@@ -121,8 +125,8 @@ export async function POST(request: NextRequest) {
         .neq('user_id', senderId),
     ]);
 
-    const senderName = senderResult.data?.name || 'Someone';
-    const sessionSport = sessionResult.data?.sport || 'Training';
+    const senderName = senderResult.data?.name || null;
+    const sessionSport = sessionResult.data?.sport || null;
     const creatorId = sessionResult.data?.creator_id;
 
     const participants = (participantsResult.data as ParticipantRow[] | null) ?? [];
@@ -140,7 +144,7 @@ export async function POST(request: NextRequest) {
     // Get notification credentials for all recipients (single IN query).
     const { data: users, error: usersError } = await supabase
       .from('users')
-      .select('id, push_subscription, fcm_token, fcm_platform')
+      .select(`id, push_subscription, fcm_token, fcm_platform, ${LANGUAGE_FIELDS}`)
       .in('id', userIds);
 
     if (usersError || !users || users.length === 0) {
@@ -157,8 +161,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true, notified: 0 });
     }
 
-    const title = `${senderName} in ${sessionSport}`;
+    // The title is the only text we write: "<name> en <deporte>", in each
+    // recipient's language (T-LANG1). The body is the sender's own words.
     const truncatedBody = message.length > 100 ? message.slice(0, 100) + '...' : message;
+    const titleFor = (user: UserNotificationRow): string => chatPushTitle(user, senderName, sessionSport);
     const notificationData: Record<string, string> = {
       type: 'chat_message',
       sessionId: session_id,
@@ -179,7 +185,7 @@ export async function POST(request: NextRequest) {
 
       // Try FCM first.
       if (user.fcm_token) {
-        const r = await sendFcmNotification(user.fcm_token, title, truncatedBody, notificationData);
+        const r = await sendFcmNotification(user.fcm_token, titleFor(user), truncatedBody, notificationData);
         if (r.success) sent = true;
         else if (isFcmTokenInvalid(r.error)) invalidFcm = user.id;
       }
@@ -188,7 +194,12 @@ export async function POST(request: NextRequest) {
       if (!sent && user.push_subscription) {
         const subscription =
           typeof user.push_subscription === 'string' ? JSON.parse(user.push_subscription) : user.push_subscription;
-        const r = await sendWebPushNotification(subscription, title, truncatedBody, `/session/${session_id}/chat`);
+        const r = await sendWebPushNotification(
+          subscription,
+          titleFor(user),
+          truncatedBody,
+          `/session/${session_id}/chat`
+        );
         if (r.success) sent = true;
         else invalidWebPush = user.id;
       }

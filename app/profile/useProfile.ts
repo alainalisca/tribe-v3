@@ -8,7 +8,7 @@ import { logError } from '@/lib/logger';
 import { showError } from '@/lib/toast';
 import { getProfileTranslations } from './translations';
 import { compressImage } from '@/components/stories/storyUploadHelpers';
-import { fetchUserProfile, updateUser, fetchSessionsByCreatorCount, fetchParticipantCountForUser } from '@/lib/dal';
+import { fetchUserProfile, updateUser, fetchSessionsByCreatorCount, fetchTrainedSessionCount } from '@/lib/dal';
 import type { User } from '@supabase/supabase-js';
 import type { Database } from '@/lib/database.types';
 
@@ -27,7 +27,7 @@ export function useProfile(language: 'en' | 'es') {
   const [profileError, setProfileError] = useState<'not_found' | 'load_failed' | null>(null);
   const [stats, setStats] = useState({
     sessionsCreated: 0,
-    sessionsJoined: 0,
+    sessionsTrained: 0,
     totalSessions: 0,
   });
   const [loading, setLoading] = useState(true);
@@ -99,13 +99,15 @@ export function useProfile(language: 'en' | 'es') {
       const createdResult = await fetchSessionsByCreatorCount(supabase, authUser.id);
       const created = createdResult.success ? (createdResult.data ?? 0) : 0;
 
-      const joinedResult = await fetchParticipantCountForUser(supabase, authUser.id);
-      const joined = joinedResult.success ? (joinedResult.data ?? 0) : 0;
+      // "Entrenadas": the trained rule (lib/dal/athleteStats.ts), the same one
+      // My Training and the public profile use.
+      const trainedResult = await fetchTrainedSessionCount(supabase, authUser.id);
+      const trained = trainedResult.success ? (trainedResult.data ?? 0) : 0;
 
       setStats({
         sessionsCreated: created,
-        sessionsJoined: joined,
-        totalSessions: created + joined,
+        sessionsTrained: trained,
+        totalSessions: created + trained,
       });
     } catch (error) {
       logError(error, { action: 'loadProfile' });

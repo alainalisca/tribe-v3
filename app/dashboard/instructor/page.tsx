@@ -31,11 +31,12 @@ import { fetchUserProfile } from '@/lib/dal/users';
 import { endRecurringSeries, cancelFutureChildren } from '@/lib/dal';
 import { createNotification, hasUnreadNotificationOfType } from '@/lib/dal/notifications';
 import { getMissingInstructorFields } from '@/lib/instructorProfile';
-import { notificationCopy, toLang } from '@/lib/notification-i18n';
+import { notificationCopy } from '@/lib/notification-i18n';
 import { useConfirm } from '@/components/ConfirmProvider';
 import { showSuccess, showError } from '@/lib/toast';
 import { logError } from '@/lib/logger';
 import type { User } from '@/lib/database.types';
+import { recipientLanguage, type LanguagePreference } from '@/lib/i18n/recipientLanguage';
 
 type Tab = 'storefront' | 'sessions' | 'analytics' | 'packages' | 'leads';
 
@@ -153,7 +154,7 @@ export default function InstructorDashboardPage() {
           if (existing.success && !existing.data) {
             const { body } = notificationCopy(
               'profile_incomplete',
-              toLang((profileResult.data as { preferred_language?: string | null }).preferred_language)
+              recipientLanguage(profileResult.data as LanguagePreference)
             );
             await createNotification(supabase, {
               recipient_id: authUser.id,

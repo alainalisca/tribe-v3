@@ -27,7 +27,7 @@
  * The worst a caller can do is re-send the fixed cancel notice for their own
  * cancelled session; the rate limit bounds that.
  *
- * Language: each recipient's preferred_language, Spanish unless it is 'en'.
+ * Language: lib/i18n/recipientLanguage.ts (the stored choice, else Spanish).
  * Delivery: /api/notifications/send with type 'session_cancelled', so the
  * recipient's session-updates push preference decides.
  */
@@ -40,7 +40,8 @@ import { log, logError } from '@/lib/logger';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { notificationCopy } from '@/lib/notification-i18n';
 import { publicSessionTitle } from '@/lib/share/sessionPublic';
-import { cancelDate, cancelLang } from './copy';
+import { cancelDate } from './copy';
+import { recipientLanguage, type LanguagePreference } from '@/lib/i18n/recipientLanguage';
 
 const ROUTE = '/api/sessions/notify-cancel';
 const TYPE = 'session_cancelled';
@@ -142,12 +143,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ success: true, skipped: true });
     }
 
-    const { data: langRows } = await service.from('users').select('id, preferred_language').in('id', recipients);
+    const { data: langRows } = await service
+      .from('users')
+      .select('id, preferred_language, preferred_language_set_at')
+      .in('id', recipients);
     const langOf = new Map(
-      ((langRows ?? []) as Array<{ id: string; preferred_language: string | null }>).map((u) => [
-        u.id,
-        cancelLang(u.preferred_language),
-      ])
+      ((langRows ?? []) as Array<{ id: string } & LanguagePreference>).map((u) => [u.id, recipientLanguage(u)])
     );
 
     // "<Deporte> con <Nombre>" when the session has no title.

@@ -21,6 +21,7 @@
 import { createClient as createServiceClient, type SupabaseClient } from '@supabase/supabase-js';
 import { log, logError } from '@/lib/logger';
 import { sendWeeklySummary, type WeeklySummaryParams } from './weeklySummary';
+import { recipientLanguage, type LanguagePreference } from '@/lib/i18n/recipientLanguage';
 
 export interface WeeklySummarySendResult {
   attempted: boolean;
@@ -180,7 +181,7 @@ export async function maybeSendWeeklySummary(gymId: string, siteUrl: string): Pr
   // 2. Owner email + language.
   const { data: ownerRow, error: ownerErr } = await service
     .from('users')
-    .select('name, email, preferred_language')
+    .select('name, email, preferred_language, preferred_language_set_at')
     .eq('id', gymRow.owner_user_id)
     .maybeSingle();
   if (ownerErr || !ownerRow || !ownerRow.email) {
@@ -223,7 +224,7 @@ export async function maybeSendWeeklySummary(gymId: string, siteUrl: string): Pr
       {
         ownerName: (ownerRow.name as string) ?? 'there',
         ownerEmail: ownerRow.email as string,
-        language: (ownerRow.preferred_language as string) === 'es' ? 'es' : 'en',
+        language: recipientLanguage(ownerRow as LanguagePreference),
         gymName: (gymRow.name as string) ?? 'your gym',
         stats,
       },

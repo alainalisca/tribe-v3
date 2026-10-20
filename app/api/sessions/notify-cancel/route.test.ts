@@ -51,7 +51,7 @@ function mockCaller(user: { id: string } | null, isAdmin = false) {
 function mockService(opts: {
   session?: Record<string, unknown> | null;
   rows?: Array<{ id: string; user_id: string | null }>;
-  langs?: Array<{ id: string; preferred_language: string | null }>;
+  langs?: Array<{ id: string; preferred_language: string | null; preferred_language_set_at?: string | null }>;
   hostName?: string | null;
 }) {
   const participantsEq = vi.fn();
@@ -175,7 +175,7 @@ describe('POST /api/sessions/notify-cancel', () => {
     mockService({
       session: CANCELLED,
       rows: [{ id: P1, user_id: ES_USER }],
-      langs: [{ id: ES_USER, preferred_language: 'es' }],
+      langs: [{ id: ES_USER, preferred_language: 'es', preferred_language_set_at: '2026-10-20T12:00:00Z' }],
     });
     const res = await POST(req({ session_id: SESSION_ID, participant_ids: [P1] }));
     expect(res.status).toBe(200);
@@ -208,7 +208,7 @@ describe('POST /api/sessions/notify-cancel', () => {
         { id: P2, user_id: null },
         { id: P3, user_id: HOST },
       ],
-      langs: [{ id: ES_USER, preferred_language: 'es' }],
+      langs: [{ id: ES_USER, preferred_language: 'es', preferred_language_set_at: '2026-10-20T12:00:00Z' }],
     });
     const res = await POST(req({ session_id: SESSION_ID, participant_ids: [P1, P2, P3] }));
     expect(participantsEq).toHaveBeenCalledWith('session_id', SESSION_ID);
@@ -227,7 +227,7 @@ describe('POST /api/sessions/notify-cancel', () => {
 
   // ── language ────────────────────────────────────────────────────
 
-  it('Spanish, English, and no preference (Spanish), each in their own language', async () => {
+  it('Spanish, English, and never chose (Spanish), each in their own language', async () => {
     mockCaller({ id: HOST });
     mockService({
       session: CANCELLED,
@@ -237,8 +237,8 @@ describe('POST /api/sessions/notify-cancel', () => {
         { id: P3, user_id: NULL_USER },
       ],
       langs: [
-        { id: ES_USER, preferred_language: 'es' },
-        { id: EN_USER, preferred_language: 'en' },
+        { id: ES_USER, preferred_language: 'es', preferred_language_set_at: '2026-10-20T12:00:00Z' },
+        { id: EN_USER, preferred_language: 'en', preferred_language_set_at: '2026-10-20T12:00:00Z' },
         { id: NULL_USER, preferred_language: null },
       ],
     });
@@ -283,8 +283,8 @@ describe('POST /api/sessions/notify-cancel', () => {
         { id: P2, user_id: EN_USER },
       ],
       langs: [
-        { id: ES_USER, preferred_language: 'es' },
-        { id: EN_USER, preferred_language: 'en' },
+        { id: ES_USER, preferred_language: 'es', preferred_language_set_at: '2026-10-20T12:00:00Z' },
+        { id: EN_USER, preferred_language: 'en', preferred_language_set_at: '2026-10-20T12:00:00Z' },
       ],
     });
     await POST(req({ session_id: SESSION_ID, participant_ids: [P1, P2] }));
@@ -298,7 +298,7 @@ describe('POST /api/sessions/notify-cancel', () => {
     mockService({
       session: { ...CANCELLED, title: null },
       rows: [{ id: P1, user_id: ES_USER }],
-      langs: [{ id: ES_USER, preferred_language: 'es' }],
+      langs: [{ id: ES_USER, preferred_language: 'es', preferred_language_set_at: '2026-10-20T12:00:00Z' }],
       hostName: 'Salomón Taborda',
     });
     await POST(req({ session_id: SESSION_ID, participant_ids: [P1] }));

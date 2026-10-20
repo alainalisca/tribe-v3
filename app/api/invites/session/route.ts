@@ -9,7 +9,8 @@ import { insertInviteToken } from '@/lib/dal/invites';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { getServiceRoleClient } from '@/lib/supabase/admin';
 import { log, logError } from '@/lib/logger';
-import { notificationCopy, toLang } from '@/lib/notification-i18n';
+import { notificationCopy } from '@/lib/notification-i18n';
+import { recipientLanguage } from '@/lib/i18n/recipientLanguage';
 
 const inviteSchema = z.object({
   session_id: z.string().uuid(),
@@ -142,10 +143,10 @@ export async function POST(request: Request) {
     // T-INV1: compose the message in the RECIPIENT's language.
     const { data: recipientProfile } = await serviceSupabase
       .from('users')
-      .select('preferred_language')
+      .select('preferred_language, preferred_language_set_at')
       .eq('id', recipient_user_id)
       .maybeSingle();
-    const { title, body: message } = notificationCopy('session_invite', toLang(recipientProfile?.preferred_language), {
+    const { title, body: message } = notificationCopy('session_invite', recipientLanguage(recipientProfile), {
       name: senderName,
       sport: session.sport,
       date: session.date,

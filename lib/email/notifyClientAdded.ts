@@ -34,6 +34,7 @@ import { escapeLikePattern } from '@/lib/emailMatch';
 import { sendCoachAddedYouWelcome } from './coachAddedYouWelcome';
 import { sendSignUpInvite } from './signUpInvite';
 import { SITE_URL } from '@/lib/http/siteUrl';
+import { recipientLanguage, type LanguagePreference } from '@/lib/i18n/recipientLanguage';
 
 export interface NotifyParams {
   /** The newly-created client row. */
@@ -102,7 +103,7 @@ async function buildPayload(params: NotifyParams): Promise<EmailDispatch | null>
   // if the coach is on the other locale.
   const { data: userRow, error: userErr } = await service
     .from('users')
-    .select('id, preferred_language')
+    .select('id, preferred_language, preferred_language_set_at')
     // Escaped: unescaped, a coach-typed `a_b@x.com` would also match the user
     // `axb@x.com` and send that person the welcome email instead. ilike is kept
     // because coaches type these addresses by hand, in any case.
@@ -120,7 +121,11 @@ async function buildPayload(params: NotifyParams): Promise<EmailDispatch | null>
   // recipient in offline).
   const [{ data: gymRow }, { data: coachRow }] = await Promise.all([
     service.from('gyms').select('name').eq('id', params.gymId).maybeSingle(),
-    service.from('users').select('name, preferred_language').eq('id', params.actorUserId).maybeSingle(),
+    service
+      .from('users')
+      .select('name, preferred_language, preferred_language_set_at')
+      .eq('id', params.actorUserId)
+      .maybeSingle(),
   ]);
 
   const gymName = (gymRow?.name as string) ?? 'your gym';
@@ -132,7 +137,7 @@ async function buildPayload(params: NotifyParams): Promise<EmailDispatch | null>
       memberName: params.client.name,
       memberEmail: normalized,
       // For the welcome path, prefer the RECIPIENT's locale.
-      language: ((userRow.preferred_language as string) === 'es' ? 'es' : 'en') as 'en' | 'es',
+      language: recipientLanguage(userRow as LanguagePreference),
       gymName,
       coachName,
     };
@@ -143,7 +148,7 @@ async function buildPayload(params: NotifyParams): Promise<EmailDispatch | null>
     memberName: params.client.name,
     memberEmail: normalized,
     // For the invite path, fall back to the COACH's locale.
-    language: ((coachRow?.preferred_language as string) === 'es' ? 'es' : 'en') as 'en' | 'es',
+    language: recipientLanguage(coachRow as LanguagePreference | null),
     gymName,
     coachName,
   };

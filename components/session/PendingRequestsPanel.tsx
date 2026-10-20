@@ -22,7 +22,8 @@ import { showSuccess, showError } from '@/lib/toast';
 import { logError } from '@/lib/logger';
 import type { PendingParticipantWithUser } from '@/lib/dal/types';
 import type { TranslationKey } from '@/lib/translations';
-import { notificationCopy, toLang } from '@/lib/notification-i18n';
+import { notificationCopy } from '@/lib/notification-i18n';
+import { recipientLanguage } from '@/lib/i18n/recipientLanguage';
 
 interface PendingRequestsPanelProps {
   sessionId: string;
@@ -98,7 +99,7 @@ export default function PendingRequestsPanel({
       if (req.user_id) {
         const { body } = notificationCopy(
           isPaid ? 'payment_confirmed' : 'request_approved',
-          toLang(req.user?.preferred_language),
+          recipientLanguage(req.user),
           { session: sessionTitle }
         );
         // createNotification resolves {success:false} instead of throwing, so a
@@ -149,7 +150,7 @@ export default function PendingRequestsPanel({
       showSuccess(t('declineSuccess'));
       // T-NOTIF1: notify the athlete their request was declined, in their language.
       if (req.user_id) {
-        const { body } = notificationCopy('request_declined', toLang(req.user?.preferred_language), {
+        const { body } = notificationCopy('request_declined', recipientLanguage(req.user), {
           session: sessionTitle,
         });
         const bell = await createNotification(supabase, {

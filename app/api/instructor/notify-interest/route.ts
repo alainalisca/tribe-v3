@@ -12,9 +12,11 @@
  * The worst a caller can do is trigger a fixed-format interest ping to a real
  * instructor — not arbitrary content to an arbitrary user.
  *
- * The in-app notification (the bell) is created separately client-side via
- * createNotification; this route adds the device push so the instructor is
- * actually pinged. The push is localized to the INSTRUCTOR's language.
+ * It writes both the in-app bell and the device push, in the INSTRUCTOR's
+ * language (T-LANG1: recipientLanguage). The bell used to be written by the
+ * athlete's browser, in the athlete's language. Both go out only when the
+ * athlete's training_interest row for this instructor exists, so the route
+ * cannot be used to ping an instructor nobody expressed interest in.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -23,6 +25,8 @@ import { getServiceRoleClient } from '@/lib/supabase/admin';
 import { z } from 'zod';
 import { logError } from '@/lib/logger';
 import { checkRateLimit } from '@/lib/rate-limit';
+import { createNotification } from '@/lib/dal';
+import { LANGUAGE_FIELDS, recipientLanguage } from '@/lib/i18n/recipientLanguage';
 
 const schema = z.object({ instructor_id: z.string().uuid() });
 
@@ -68,7 +72,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     // Recipient + sender derived server-side — no client-supplied content.
     const [{ data: instructor }, { data: athlete }] = await Promise.all([
-      service.from('users').select('id, is_instructor, preferred_language').eq('id', instructor_id).maybeSingle(),
+      service.from('users').select(`id, is_instructor, ${LANGUAGE_FIELDS}`).eq('id', instructor_id).maybeSingle(),
       service.from('users').select('name').eq('id', user.id).maybeSingle(),
     ]);
 
@@ -77,12 +81,41 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ success: true, skipped: true });
     }
 
-    const isEs = (instructor.preferred_language ?? 'en') === 'es';
+    // The interest itself must exist: no bell or push for an interest that
+    // was never expressed.
+    const { data: interest } = await service
+      .from('training_interest')
+      .select('id')
+      .eq('athlete_id', user.id)
+      .eq('instructor_id', instructor_id)
+      .maybeSingle();
+    if (!interest) {
+      return NextResponse.json({ success: true, skipped: true });
+    }
+
+    const isEs = recipientLanguage(instructor) === 'es';
     const athleteName = sanitizeName(athlete?.name || '') || (isEs ? 'Un atleta' : 'An athlete');
     const title = isEs ? '👋 Nuevo interés de entrenamiento' : '👋 New training interest';
     const body = isEs
       ? `${athleteName} está interesado en entrenar contigo`
       : `${athleteName} is interested in training with you`;
+
+    // The bell, in the instructor's language.
+    const bell = await createNotification(service, {
+      recipient_id: instructor_id,
+      actor_id: user.id,
+      type: 'training_interest',
+      entity_type: 'user',
+      entity_id: user.id,
+      message: isEs ? 'Un atleta está interesado en entrenar contigo' : 'An athlete is interested in training with you',
+    });
+    if (!bell.success) {
+      logError(new Error(bell.error ?? 'createNotification failed'), {
+        route: '/api/instructor/notify-interest',
+        action: 'bell',
+        instructor_id,
+      });
+    }
 
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
     const cronSecret = process.env.CRON_SECRET;

@@ -1081,7 +1081,7 @@ export async function fetchSessionsWithCreator(
       .from('sessions')
       // creator email intentionally not selected: no caller uses it, and the
       // embed broke the anon cron callers under the T-SEC5 email revoke (Batch 4).
-      .select('*, creator:users!sessions_creator_id_fkey(id, name, preferred_language)');
+      .select('*, creator:users!sessions_creator_id_fkey(id, name, preferred_language, preferred_language_set_at)');
     if (filters.status) query = query.eq('status', filters.status);
     if (filters.reminder_sent !== undefined) query = query.eq('reminder_sent', filters.reminder_sent);
     if (filters.followup_sent !== undefined) query = query.eq('followup_sent', filters.followup_sent);

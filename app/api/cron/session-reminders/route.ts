@@ -11,6 +11,7 @@ import {
 } from '@/lib/dal';
 import { shouldSendNotification } from '@/lib/dal/notificationPreferences';
 import { formatSessionLocation } from '@/lib/sessionLocation';
+import { recipientLanguage, type LanguagePreference } from '@/lib/i18n/recipientLanguage';
 
 // Reminder messages in both languages
 const reminderMessages = {
@@ -101,16 +102,17 @@ export async function GET(request: Request) {
         // shouldSendNotification below) is now the sole authority, so it is not
         // selected here either.
         const [creatorResult, participantsResult] = await Promise.all([
-          fetchUserProfileMaybe(supabase, session.creator_id, 'id, preferred_language'),
-          fetchParticipantsWithUserDetails(supabase, session.id, 'id, preferred_language'),
+          fetchUserProfileMaybe(supabase, session.creator_id, 'id, preferred_language, preferred_language_set_at'),
+          fetchParticipantsWithUserDetails(supabase, session.id, 'id, preferred_language, preferred_language_set_at'),
         ]);
         const creator = creatorResult.data as {
           id: string;
           preferred_language: string | null;
+          preferred_language_set_at: string | null;
         } | null;
         const participants = (participantsResult.data || []) as Array<{
           user_id: string;
-          user: { id: string; preferred_language: string | null } | null;
+          user: ({ id: string } & LanguagePreference) | null;
         }>;
 
         // Collect all users to notify (creator + participants). Gating is done
@@ -120,7 +122,7 @@ export async function GET(request: Request) {
         if (creator) {
           usersToNotify.push({
             id: creator.id,
-            lang: creator.preferred_language || 'en',
+            lang: recipientLanguage(creator),
           });
         }
 
@@ -129,7 +131,7 @@ export async function GET(request: Request) {
           if (userData) {
             usersToNotify.push({
               id: participant.user_id,
-              lang: userData.preferred_language || 'en',
+              lang: recipientLanguage(userData),
             });
           }
         }

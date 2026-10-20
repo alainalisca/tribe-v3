@@ -5,6 +5,7 @@ import { log, logError } from '@/lib/logger';
 import { generateNudgesForUser } from '@/lib/nudges/behavioral-engine';
 import { shouldSendNotification } from '@/lib/dal/notificationPreferences';
 import { createNotification } from '@/lib/dal/notifications';
+import { recipientLanguage, type LanguagePreference } from '@/lib/i18n/recipientLanguage';
 
 /**
  * Runs the behavioral nudge engine over active users and sends the single
@@ -55,7 +56,7 @@ export async function GET(request: Request) {
     const since = new Date(Date.now() - 30 * 86400000).toISOString();
     const { data: activeUsers, error: usersErr } = await supabase
       .from('users')
-      .select('id, last_active_at, preferred_language')
+      .select('id, last_active_at, preferred_language, preferred_language_set_at')
       .gte('last_active_at', since)
       .limit(500);
     if (usersErr) {
@@ -66,9 +67,9 @@ export async function GET(request: Request) {
     let skipped = 0;
     const cutoff = new Date(Date.now() - ANTI_SPAM_WINDOW_HOURS * 3600 * 1000).toISOString();
 
-    for (const userRow of (activeUsers as Array<{ id: string; preferred_language: string | null }> | null) || []) {
+    for (const userRow of (activeUsers as Array<{ id: string } & LanguagePreference> | null) || []) {
       const userId = userRow.id;
-      const userLang = userRow.preferred_language === 'es' ? 'es' : 'en';
+      const userLang = recipientLanguage(userRow);
 
       // Anti-spam: max 1 behavioral nudge per 48 hours.
       const { count: recent } = await supabase

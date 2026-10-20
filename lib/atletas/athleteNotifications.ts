@@ -14,7 +14,8 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { createNotification } from '@/lib/dal/notifications';
 import type { ClaimedNotification } from '@/lib/dal/athleteNotify';
 import { log, logError } from '@/lib/logger';
-import { toLanguage, translate } from '@/lib/i18n/translate';
+import { translate } from '@/lib/i18n/translate';
+import { recipientLanguage } from '@/lib/i18n/recipientLanguage';
 
 export interface RenderedNotification {
   recipientId: string;
@@ -28,7 +29,8 @@ export interface RenderedNotification {
 
 /** The athlete's events open their home; the owner's open the gym dashboard. */
 export function renderNotification(n: ClaimedNotification): RenderedNotification {
-  const lang = toLanguage(n.language);
+  // T-LANG1: 226 adds language_set_at beside language in both 210 payloads.
+  const lang = recipientLanguage({ preferred_language: n.language, preferred_language_set_at: n.languageSetAt });
   const guest = n.guestFirstName ?? '';
   const body =
     n.event === 'arrived'

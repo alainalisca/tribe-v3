@@ -7,8 +7,7 @@ import { useEscapeKey } from '@/hooks/useEscapeKey';
 import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
 import { showSuccess, showError } from '@/lib/toast';
 import { haptic } from '@/lib/haptics';
-import { logError } from '@/lib/logger';
-import { expressInterest, withdrawInterest, hasExpressedInterest, createNotification } from '@/lib/dal';
+import { expressInterest, withdrawInterest, hasExpressedInterest } from '@/lib/dal';
 import { sportTranslations } from '@/lib/translations';
 
 interface InterestButtonProps {
@@ -104,29 +103,9 @@ export default function InterestButton({
       return;
     }
 
-    // Fire-and-forget notification; don't block UX on failure
-    const notifMessage =
-      language === 'es'
-        ? 'Un atleta está interesado en entrenar contigo'
-        : 'An athlete is interested in training with you';
-    const bell = await createNotification(supabase, {
-      recipient_id: instructorId,
-      actor_id: athleteId,
-      type: 'training_interest',
-      entity_type: 'user',
-      entity_id: athleteId,
-      message: notifMessage,
-    });
-    if (!bell.success) {
-      logError(new Error(bell.error ?? 'createNotification failed'), {
-        action: 'InterestButton.notify_interest',
-        instructorId,
-      });
-    }
-
-    // Device push (the createNotification above is the in-app bell; this is the
-    // ping). The server route templates the message and verifies the recipient
-    // — we only send the instructor id. Fire-and-forget.
+    // The bell and the push both come from the server route, in the
+    // INSTRUCTOR's language (T-LANG1). We only send the instructor id; the
+    // route checks the interest row exists. Fire-and-forget.
     fetch('/api/instructor/notify-interest', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

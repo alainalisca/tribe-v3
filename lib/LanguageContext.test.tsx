@@ -99,12 +99,28 @@ function renderProvider() {
 
 const lang = () => screen.getByTestId('lang').textContent;
 
+/** A stored value counts only when the person chose it (T-LANG1, preferred_language_set_at). */
+const CHOSE = '2026-10-20T12:00:00Z';
+
 describe('priority 2: the stored account preference', () => {
+  it("T-LANG1: a stored 'en' nobody chose is ignored; the browser decides", async () => {
+    // The column defaulted to 'en' for every account. Without a set_at it is
+    // not a choice, so a Spanish browser stays Spanish.
+    setBrowserLanguages(['es-CO']);
+    mockMaybeSingle.mockResolvedValue({ data: { preferred_language: 'en', preferred_language_set_at: null } });
+
+    renderProvider();
+
+    await waitFor(() => expect(mockMaybeSingle).toHaveBeenCalled());
+    expect(lang()).toBe('es');
+    expect(localStorage.getItem('language')).not.toBe('en');
+  });
+
   it('THE GUARD: a profile with preferred_language es resolves to es, not en', async () => {
     // English browser, empty localStorage, account says Spanish. Before this
     // fix the column was never read and this resolved to 'en'.
     setBrowserLanguages(['en-US']);
-    mockMaybeSingle.mockResolvedValue({ data: { preferred_language: 'es' } });
+    mockMaybeSingle.mockResolvedValue({ data: { preferred_language: 'es', preferred_language_set_at: CHOSE } });
 
     renderProvider();
 
@@ -112,7 +128,7 @@ describe('priority 2: the stored account preference', () => {
   });
 
   it('caches the resolved preference so the next load needs no query', async () => {
-    mockMaybeSingle.mockResolvedValue({ data: { preferred_language: 'es' } });
+    mockMaybeSingle.mockResolvedValue({ data: { preferred_language: 'es', preferred_language_set_at: CHOSE } });
 
     renderProvider();
 
@@ -121,7 +137,7 @@ describe('priority 2: the stored account preference', () => {
 
   it('ignores an unrecognised stored value and keeps the browser answer', async () => {
     setBrowserLanguages(['en-US']);
-    mockMaybeSingle.mockResolvedValue({ data: { preferred_language: 'pt' } });
+    mockMaybeSingle.mockResolvedValue({ data: { preferred_language: 'pt', preferred_language_set_at: CHOSE } });
 
     renderProvider();
 
@@ -173,7 +189,7 @@ describe('priority 1: an explicit choice outranks the account', () => {
   it('the tribe_lang cookie (the site toggle) wins over localStorage and skips the query', async () => {
     document.cookie = 'tribe_lang=es; Path=/';
     localStorage.setItem('language', 'en');
-    mockMaybeSingle.mockResolvedValue({ data: { preferred_language: 'en' } });
+    mockMaybeSingle.mockResolvedValue({ data: { preferred_language: 'en', preferred_language_set_at: CHOSE } });
 
     renderProvider();
 
@@ -213,7 +229,7 @@ describe('priority 1: an explicit choice outranks the account', () => {
 
   it('a saved localStorage choice wins and skips the query entirely', async () => {
     localStorage.setItem('language', 'en');
-    mockMaybeSingle.mockResolvedValue({ data: { preferred_language: 'es' } });
+    mockMaybeSingle.mockResolvedValue({ data: { preferred_language: 'es', preferred_language_set_at: CHOSE } });
 
     renderProvider();
 
@@ -225,7 +241,9 @@ describe('priority 1: an explicit choice outranks the account', () => {
 
   it('a toggle made while the profile read is in flight is not overwritten', async () => {
     setBrowserLanguages(['es-CO']);
-    let resolvePreference: (v: { data: { preferred_language: string } }) => void = () => {};
+    let resolvePreference: (v: {
+      data: { preferred_language: string; preferred_language_set_at: string };
+    }) => void = () => {};
     mockMaybeSingle.mockReturnValue(
       new Promise((resolve) => {
         resolvePreference = resolve;
@@ -240,7 +258,7 @@ describe('priority 1: an explicit choice outranks the account', () => {
     expect(lang()).toBe('en');
 
     await act(async () => {
-      resolvePreference({ data: { preferred_language: 'es' } });
+      resolvePreference({ data: { preferred_language: 'es', preferred_language_set_at: CHOSE } });
     });
 
     expect(lang()).toBe('en');
@@ -283,14 +301,17 @@ describe('the toggle still persists to the column', () => {
     fireEvent.click(screen.getByText('to-en'));
 
     await waitFor(() =>
-      expect(mockUpdateUser).toHaveBeenCalledWith(expect.anything(), 'u1', { preferred_language: 'en' })
+      expect(mockUpdateUser).toHaveBeenCalledWith(expect.anything(), 'u1', {
+        preferred_language: 'en',
+        preferred_language_set_at: expect.any(String),
+      })
     );
   });
 });
 
 describe('document language', () => {
   it('sets the html lang attribute to match the resolved language', async () => {
-    mockMaybeSingle.mockResolvedValue({ data: { preferred_language: 'es' } });
+    mockMaybeSingle.mockResolvedValue({ data: { preferred_language: 'es', preferred_language_set_at: CHOSE } });
 
     renderProvider();
 
@@ -299,12 +320,12 @@ describe('document language', () => {
 });
 
 describe('the profile read itself', () => {
-  it('asks public.users for preferred_language by name', async () => {
+  it('asks public.users for preferred_language and its set_at by name', async () => {
     // Without this, the column name is unpinned: the mock answers any select,
     // so swapping preferred_language for another column passes every other test
     // in this file while the feature silently stops working in production.
     mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } });
-    mockMaybeSingle.mockResolvedValue({ data: { preferred_language: 'es' } });
+    mockMaybeSingle.mockResolvedValue({ data: { preferred_language: 'es', preferred_language_set_at: CHOSE } });
 
     render(
       <LanguageProvider>
@@ -314,6 +335,6 @@ describe('the profile read itself', () => {
 
     await waitFor(() => expect(mockSelect).toHaveBeenCalled());
     expect(mockFrom).toHaveBeenCalledWith('users');
-    expect(mockSelect).toHaveBeenCalledWith('preferred_language');
+    expect(mockSelect).toHaveBeenCalledWith('preferred_language, preferred_language_set_at');
   });
 });

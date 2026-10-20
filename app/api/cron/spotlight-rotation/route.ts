@@ -4,7 +4,8 @@ import { isValidCronAuth } from '@/lib/auth/cron';
 import { log, logError } from '@/lib/logger';
 import { getCurrentSpotlight, selectNextSpotlight, createSpotlight, endSpotlight } from '@/lib/dal/spotlight';
 import { createNotification } from '@/lib/dal/notifications';
-import { notificationCopy, toLang } from '@/lib/notification-i18n';
+import { notificationCopy } from '@/lib/notification-i18n';
+import { recipientLanguage, type LanguagePreference } from '@/lib/i18n/recipientLanguage';
 
 /**
  * Weekly rotation: expire the current spotlight if it's past, and pick a new
@@ -95,10 +96,10 @@ export async function GET(request: Request) {
     // 4. Notify the selected instructor in their preferred language.
     const { data: instructorRow } = await supabase
       .from('users')
-      .select('preferred_language')
+      .select('preferred_language, preferred_language_set_at')
       .eq('id', nextRes.data.instructor_id)
       .maybeSingle();
-    const instructorLang = toLang((instructorRow as { preferred_language?: string | null } | null)?.preferred_language);
+    const instructorLang = recipientLanguage(instructorRow as LanguagePreference | null);
     const spotlightCopy = notificationCopy('spotlight_selected', instructorLang);
     await createNotification(supabase, {
       recipient_id: nextRes.data.instructor_id,

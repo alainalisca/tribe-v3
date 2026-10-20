@@ -11,7 +11,6 @@ import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/lib/LanguageContext';
 import { sportTranslations } from '@/lib/translations';
 import { useProfile } from './useProfile';
-import AchievementBadges from '@/components/AchievementBadges';
 import TribeOSEntryCard from '@/components/tribe-os/TribeOSEntryCard';
 import MyCoachEntryCard from '@/components/tribe-os/MyCoachEntryCard';
 
@@ -204,21 +203,14 @@ export default function ProfilePage() {
               <p className="text-xs text-muted-foreground mt-1">{txt.created}</p>
             </div>
             <div className="bg-white dark:bg-tribe-surface rounded-2xl p-4 text-center border border-stone-200 dark:border-tribe-mid">
-              <p className="text-3xl font-bold text-theme-primary">{stats.sessionsJoined}</p>
-              <p className="text-xs text-muted-foreground mt-1">{txt.joined}</p>
+              <p className="text-3xl font-bold text-theme-primary">{stats.sessionsTrained}</p>
+              <p className="text-xs text-muted-foreground mt-1">{txt.trained}</p>
             </div>
             <div className="bg-white dark:bg-tribe-surface rounded-2xl p-4 text-center border border-stone-200 dark:border-tribe-mid">
               <p className="text-3xl font-bold text-theme-primary">{stats.totalSessions}</p>
               <p className="text-xs text-muted-foreground mt-1">{txt.total}</p>
             </div>
           </div>
-
-          {/* Achievement Badges */}
-          {profile?.id && (
-            <div className="mt-6">
-              <AchievementBadges userId={profile.id} isOwnProfile={true} />
-            </div>
-          )}
 
           {/* T-GROW2 share moment 3: the persistent entry point. */}
           {profile?.id && myRefCode && (

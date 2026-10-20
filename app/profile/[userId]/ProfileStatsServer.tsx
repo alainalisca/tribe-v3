@@ -3,7 +3,7 @@
  *
  * Wrapped in Suspense by page.tsx so the profile header (name, bio,
  * sports, avatar) renders as soon as the profile row resolves, while
- * this component's three-way parallel fetch (created + joined counts
+ * this component's three-way parallel fetch (created + trained counts
  * plus the attendance RPC) streams in separately.
  *
  * The attendance RPC (`get_user_attendance_stats`) is the slowest of
@@ -18,7 +18,8 @@
  */
 
 import { createClient } from '@/lib/supabase/server';
-import { fetchSessionsByCreatorCount, fetchParticipantCountForUser } from '@/lib/dal';
+import { getServiceRoleClient } from '@/lib/supabase/admin';
+import { fetchSessionsByCreatorCount, fetchTrainedSessionCount } from '@/lib/dal';
 import { logError } from '@/lib/logger';
 import type { ProfileStats } from './ProfilePageClient';
 import ProfileStatsClient from './ProfileStatsClient';
@@ -26,7 +27,7 @@ import ProfileStatsClient from './ProfileStatsClient';
 export default async function ProfileStatsServer({ userId }: { userId: string }) {
   let stats: ProfileStats = {
     sessionsCreated: 0,
-    sessionsJoined: 0,
+    sessionsTrained: 0,
     totalSessions: 0,
     attendanceRate: 0,
     totalAttendance: 0,
@@ -34,14 +35,19 @@ export default async function ProfileStatsServer({ userId }: { userId: string })
 
   try {
     const supabase = await createClient();
-    const [createdResult, joinedResult, attendanceRpc] = await Promise.all([
+    const [createdResult, trainedResult, attendanceRpc] = await Promise.all([
       fetchSessionsByCreatorCount(supabase, userId),
-      fetchParticipantCountForUser(supabase, userId),
+      // "Sesiones entrenadas": the trained rule (lib/dal/athleteStats.ts),
+      // counted with the service role. The viewer's own client sees only
+      // participant rows of sessions the VIEWER is in (RLS), so it read 0 for
+      // almost every visitor while the owner saw the real number. Only the
+      // count leaves the server, never a row.
+      fetchTrainedSessionCount(getServiceRoleClient(), userId),
       supabase.rpc('get_user_attendance_stats', { user_uuid: userId }),
     ]);
 
     const created = createdResult.success ? (createdResult.data ?? 0) : 0;
-    const joined = joinedResult.success ? (joinedResult.data ?? 0) : 0;
+    const trained = trainedResult.success ? (trainedResult.data ?? 0) : 0;
     const attendanceRow = (
       attendanceRpc.data as Array<{
         total_sessions: number;
@@ -52,8 +58,8 @@ export default async function ProfileStatsServer({ userId }: { userId: string })
 
     stats = {
       sessionsCreated: created,
-      sessionsJoined: joined,
-      totalSessions: created + joined,
+      sessionsTrained: trained,
+      totalSessions: created + trained,
       attendanceRate: Number(attendanceRow.attendance_rate) || 0,
       totalAttendance: Number(attendanceRow.total_sessions) || 0,
     };

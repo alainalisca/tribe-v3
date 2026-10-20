@@ -3,6 +3,7 @@ import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/server';
 import { log, logError } from '@/lib/logger';
 import { fetchUserName, fetchUsersWithPush, fetchSessionFields } from '@/lib/dal';
+import { recipientLanguage } from '@/lib/i18n/recipientLanguage';
 
 function getDistanceInKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371;
@@ -90,7 +91,7 @@ export async function POST(request: Request) {
     // Get users with push subscriptions
     const usersResult = await fetchUsersWithPush(
       supabase,
-      'id, name, push_subscription, fcm_token, sports, latitude, longitude, preferred_language'
+      'id, name, push_subscription, fcm_token, sports, latitude, longitude, preferred_language, preferred_language_set_at'
     );
 
     if (!usersResult.success) {
@@ -109,6 +110,7 @@ export async function POST(request: Request) {
       latitude: number | null;
       longitude: number | null;
       preferred_language: string | null;
+      preferred_language_set_at: string | null;
     }>;
 
     // Filter: must have at least one notification channel, match sport, and be nearby
@@ -137,7 +139,7 @@ export async function POST(request: Request) {
     // Batch users by language to minimize request payloads
     const byLang: Record<string, string[]> = { es: [], en: [] };
     for (const user of nearbyUsers) {
-      const lang = user.preferred_language === 'es' ? 'es' : 'en';
+      const lang = recipientLanguage(user);
       byLang[lang].push(user.id);
     }
 

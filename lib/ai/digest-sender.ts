@@ -22,6 +22,7 @@
 import { createClient as createServiceClient, type SupabaseClient } from '@supabase/supabase-js';
 import { logError, log } from '@/lib/logger';
 import { sendIntelligenceDigest, type DigestInsight } from '@/lib/email/intelligenceDigest';
+import { recipientLanguage, type LanguagePreference } from '@/lib/i18n/recipientLanguage';
 
 function buildServiceClient(): SupabaseClient | null {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -76,7 +77,7 @@ export async function maybeSendDigestForGym(
   // 2. Owner's email + language.
   const { data: ownerRow, error: ownerErr } = await service
     .from('users')
-    .select('id, name, email, preferred_language')
+    .select('id, name, email, preferred_language, preferred_language_set_at')
     .eq('id', gymRow.owner_user_id)
     .maybeSingle();
   if (ownerErr || !ownerRow || !ownerRow.email) {
@@ -156,7 +157,7 @@ export async function maybeSendDigestForGym(
       {
         ownerName: (ownerRow.name as string) ?? 'there',
         ownerEmail: ownerRow.email as string,
-        language: (ownerRow.preferred_language as string) === 'es' ? 'es' : 'en',
+        language: recipientLanguage(ownerRow as LanguagePreference),
         gymName: (gymRow.name as string) ?? 'your gym',
         insights,
       },

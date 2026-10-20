@@ -6,6 +6,7 @@ import { hostFirstName } from '@/lib/share/sessionPublic';
 import { translateSport } from '@/lib/sportTranslationData';
 import { whatsappHref, whatsappText } from '@/lib/moments/whatsapp';
 import { logError } from '@/lib/logger';
+import { recipientLanguage, type LanguagePreference } from '@/lib/i18n/recipientLanguage';
 
 /**
  * POST /api/moments/<session>/deliver/ (T-MOM1): "Entregar". One notification
@@ -34,8 +35,12 @@ export async function POST(_req: Request, { params }: { params: Promise<{ sessio
       session: { title: session?.title ?? null, sport: session?.sport ?? null, creatorName },
     });
     const result = await deliverSessionMoments(g.service, sessionId, notify);
-    const { data: me } = await g.service.from('users').select('preferred_language').eq('id', g.user.id).maybeSingle();
-    const lang = (me as { preferred_language?: string | null } | null)?.preferred_language === 'en' ? 'en' : 'es';
+    const { data: me } = await g.service
+      .from('users')
+      .select('preferred_language, preferred_language_set_at')
+      .eq('id', g.user.id)
+      .maybeSingle();
+    const lang = recipientLanguage(me as LanguagePreference | null);
     const sport = session?.sport ?? null;
     const name =
       session?.title?.trim() ||

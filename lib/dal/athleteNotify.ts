@@ -23,6 +23,8 @@ export interface ClaimedNotification {
   event: AthleteNotifyEvent;
   recipientId: string;
   language: string | null;
+  /** T-LANG1 (226): when the recipient chose `language`; null means never chose. */
+  languageSetAt: string | null;
   push: boolean;
   guestFirstName: string | null;
   athleteFirstName: string | null;
@@ -41,6 +43,7 @@ function toNotifications(raw: unknown): ClaimedNotification[] {
         event,
         recipientId: n.recipient_id,
         language: typeof n.language === 'string' ? n.language : null,
+        languageSetAt: typeof n.language_set_at === 'string' ? n.language_set_at : null,
         push: n.push === true,
         guestFirstName: typeof n.guest_first_name === 'string' ? n.guest_first_name : null,
         athleteFirstName: typeof n.athlete_first_name === 'string' ? n.athlete_first_name : null,

@@ -12,6 +12,7 @@ import { createNotification } from '@/lib/dal/notifications';
 import { shouldSendNotification } from '@/lib/dal/notificationPreferences';
 import { getServiceRoleClient } from '@/lib/supabase/admin';
 import { computeRecurrenceDates } from '@/lib/recurrence';
+import { recipientLanguage, type LanguagePreference } from '@/lib/i18n/recipientLanguage';
 
 /** Number of days ahead to generate child sessions */
 const LOOKAHEAD_DAYS = 7;
@@ -181,10 +182,10 @@ export async function GET(request: Request) {
       const creatorIds = Array.from(perCreator.keys());
       const { data: creators } = await serviceClient
         .from('users')
-        .select('id, preferred_language')
+        .select('id, preferred_language, preferred_language_set_at')
         .in('id', creatorIds);
       const langById = new Map<string, 'en' | 'es'>(
-        (creators ?? []).map((c) => [c.id as string, (c.preferred_language as string) === 'es' ? 'es' : 'en'])
+        (creators ?? []).map((c) => [c.id as string, recipientLanguage(c as LanguagePreference)])
       );
 
       const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL;

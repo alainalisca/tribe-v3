@@ -11,6 +11,7 @@ import { bogotaDateOffset } from '@/lib/time/bogotaDate';
 import { dateLocale } from '@/lib/dateLocale';
 import { SITE_URL } from '@/lib/http/siteUrl';
 import { TRIBE_FROM } from '@/lib/email/sender';
+import { recipientLanguage } from '@/lib/i18n/recipientLanguage';
 
 /**
  * @description Sends weekly recap emails to all users who participated in or hosted sessions during the past week, summarizing their activity.
@@ -131,7 +132,7 @@ export async function POST(request: Request) {
         }
         const unsubUrl = unsub.data;
 
-        const lang = user.preferred_language || 'en';
+        const lang = recipientLanguage(user);
         const isSpanish = lang === 'es';
 
         const subject = isSpanish ? `📊 Tu resumen semanal de Tribe` : `📊 Your Tribe weekly recap`;

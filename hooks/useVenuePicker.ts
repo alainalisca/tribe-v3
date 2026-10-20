@@ -27,8 +27,8 @@ import { createClient } from '@/lib/supabase/client';
 import { setSessionPartner, type GymIdentity } from '@/lib/dal/gymVenue';
 import { trackEvent } from '@/lib/analytics';
 import { createNotification } from '@/lib/dal/notifications';
-import { fetchUserProfileMaybe } from '@/lib/dal/users';
-import { useTranslations } from '@/lib/i18n/useTranslations';
+import { fetchUserLanguage, fetchUserProfileMaybe } from '@/lib/dal/users';
+import { translate } from '@/lib/i18n/translate';
 import { logError } from '@/lib/logger';
 
 /** What the database decided, once a venue has been attached. */
@@ -62,7 +62,6 @@ export interface UseVenuePickerResult {
 }
 
 export function useVenuePicker(initial: GymIdentity | null = null): UseVenuePickerResult {
-  const tNotif = useTranslations('notif');
   const [selected, setSelected] = useState<GymIdentity | null>(initial);
   const [linking, setLinking] = useState(false);
   const [status, setStatus] = useState<VenueStatus>(null);
@@ -129,15 +128,17 @@ export function useVenuePicker(initial: GymIdentity | null = null): UseVenuePick
             const rawName = lookup?.success ? (lookup.data as { name?: unknown } | null)?.name : undefined;
             const instructorName = typeof rawName === 'string' && rawName.trim() ? rawName : null;
 
+            // In the GYM's language, not this instructor's (T-LANG1).
+            const lang = await fetchUserLanguage(supabase, selected.user_id);
             const notified = await createNotification(supabase, {
               recipient_id: selected.user_id,
               actor_id: user?.id ?? null,
               type: 'venue_request_new',
               entity_type: 'session',
               entity_id: sessionId,
-              message: tNotif('venueRequestNew', {
-                instructor: instructorName ?? tNotif('anInstructor'),
-                title: sessionTitle || tNotif('aSession'),
+              message: translate(lang, 'notif', 'venueRequestNew', {
+                instructor: instructorName ?? translate(lang, 'notif', 'anInstructor'),
+                title: sessionTitle || translate(lang, 'notif', 'aSession'),
                 gym: selected.business_name,
               }),
             });
@@ -165,7 +166,7 @@ export function useVenuePicker(initial: GymIdentity | null = null): UseVenuePick
         setLinking(false);
       }
     },
-    [selected, tNotif]
+    [selected]
   );
 
   return { selected, select, linking, status, failed, commit, reset };

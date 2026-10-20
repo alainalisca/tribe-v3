@@ -24,6 +24,8 @@ vi.mock('@/lib/dal/gymVenue', () => ({
   reviewVenueRequest: (...a: unknown[]) => reviewVenueRequest(...a),
   setAutoApproveRoster: (...a: unknown[]) => setAutoApproveRoster(...a),
 }));
+const fetchUserLanguage = vi.fn();
+vi.mock('@/lib/dal/users', () => ({ fetchUserLanguage: (...a: unknown[]) => fetchUserLanguage(...a) }));
 vi.mock('@/lib/i18n/useTranslations', () => ({
   useTranslations: () => (key: string, v?: Record<string, string | number>) =>
     v ? `${key}: ${Object.values(v).join(' / ')}` : key,
@@ -58,6 +60,7 @@ beforeEach(() => {
   reviewVenueRequest.mockResolvedValue({ success: true });
   setAutoApproveRoster.mockResolvedValue({ success: true });
   createNotification.mockResolvedValue({ success: true });
+  fetchUserLanguage.mockResolvedValue('es');
 });
 
 async function mounted() {
@@ -108,9 +111,29 @@ describe('useVenueRequests', () => {
     );
     // A sentence naming the gym and the session, not "gym|title".
     const call = createNotification.mock.calls[0][1] as { message: string };
-    expect(call.message).toContain('venueRequestDeclined:');
     expect(call.message).toContain('CrossFit BullBox');
     expect(call.message).not.toContain('|');
+  });
+
+  it("writes the instructor's bell in the INSTRUCTOR's language, not the gym's (T-LANG1)", async () => {
+    fetchUserLanguage.mockResolvedValue('en');
+    const { result } = await mounted();
+    await act(async () => {
+      await result.current.decide(REQUEST, 'approved');
+    });
+    expect(fetchUserLanguage).toHaveBeenCalledWith({}, 'leo');
+    const call = createNotification.mock.calls[0][1] as { message: string };
+    expect(call.message).toMatch(/^CrossFit BullBox approved /);
+  });
+
+  it('an instructor who never chose gets Spanish', async () => {
+    fetchUserLanguage.mockResolvedValue('es');
+    const { result } = await mounted();
+    await act(async () => {
+      await result.current.decide(REQUEST, 'declined');
+    });
+    const call = createNotification.mock.calls[0][1] as { message: string };
+    expect(call.message).toMatch(/^CrossFit BullBox rechazó /);
   });
 
   it('keeps the verdict when the bell fails', async () => {

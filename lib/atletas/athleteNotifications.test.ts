@@ -18,6 +18,7 @@ const BASE: ClaimedNotification = {
   event: 'arrived',
   recipientId: 'caro',
   language: 'es',
+  languageSetAt: '2026-10-20T12:00:00Z',
   push: true,
   guestFirstName: 'Marta',
   athleteFirstName: null,
@@ -59,6 +60,18 @@ describe('renderNotification: the approved copy, in the recipient language', () 
     expect(r.url).toBe(url);
     expect(r.title).toBe(TITLE[language]);
     expect(r.type).toBe(`av_${over.event}`);
+  });
+});
+
+describe('renderNotification: T-LANG1, a stored language counts only when chosen', () => {
+  it("a stored 'en' nobody chose reads Spanish", () => {
+    const r = renderNotification({ ...BASE, language: 'en', languageSetAt: null });
+    expect(r.title).toBe(TITLE.es);
+    expect(r.body).toBe('Marta llegó a su clase');
+  });
+  it("a chosen 'en' reads English", () => {
+    const r = renderNotification({ ...BASE, language: 'en', languageSetAt: '2026-10-20T12:00:00Z' });
+    expect(r.title).toBe(TITLE.en);
   });
 });
 

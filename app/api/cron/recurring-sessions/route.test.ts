@@ -34,8 +34,8 @@ const PARENTS = [
   { id: 'pc', creator_id: 'inst-2', sport: 'Running' },
 ];
 const USERS = [
-  { id: 'inst-1', preferred_language: 'en' },
-  { id: 'inst-2', preferred_language: 'es' },
+  { id: 'inst-1', preferred_language: 'en', preferred_language_set_at: '2026-10-20T12:00:00Z' },
+  { id: 'inst-2', preferred_language: 'es', preferred_language_set_at: '2026-10-20T12:00:00Z' },
 ];
 
 /** Thenable chain: every builder method returns itself; awaiting resolves to `result`. */
@@ -116,10 +116,10 @@ describe('recurring-sessions cron — Gate 4 generation notice', () => {
       { id: 'pes2', creator_id: 'inst-es-2', sport: 'Cycling' },
     ];
     const users = [
-      { id: 'inst-en-1', preferred_language: 'en' },
-      { id: 'inst-en-2', preferred_language: 'en' },
-      { id: 'inst-es-1', preferred_language: 'es' },
-      { id: 'inst-es-2', preferred_language: 'es' },
+      { id: 'inst-en-1', preferred_language: 'en', preferred_language_set_at: '2026-10-20T12:00:00Z' },
+      { id: 'inst-en-2', preferred_language: 'en', preferred_language_set_at: '2026-10-20T12:00:00Z' },
+      { id: 'inst-es-1', preferred_language: 'es', preferred_language_set_at: '2026-10-20T12:00:00Z' },
+      { id: 'inst-es-2', preferred_language: 'es', preferred_language_set_at: '2026-10-20T12:00:00Z' },
     ];
     (getServiceRoleClient as ReturnType<typeof vi.fn>).mockReturnValue({
       from: (table: string) =>

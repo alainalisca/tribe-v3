@@ -4,6 +4,7 @@ import { hostFirstName } from '@/lib/share/sessionPublic';
 import { notifyUploader } from './notify';
 import { MOMENTS_BUCKET, momentVariantPath } from './paths';
 import { signMoments } from './storage';
+import { recipientLanguage, type LanguagePreference } from '@/lib/i18n/recipientLanguage';
 
 /**
  * T-MOM1 Part C: what a tagged person can do with a photo of them, from the
@@ -33,7 +34,12 @@ export async function loadMyTag(service: SupabaseClient, userId: string, mediaId
     .eq('media_id', mediaId)
     .eq('user_id', userId)
     .maybeSingle();
-  const t = tag as { id: string; thanked_at: string | null; delivered_at: string | null; removed_at: string | null } | null;
+  const t = tag as {
+    id: string;
+    thanked_at: string | null;
+    delivered_at: string | null;
+    removed_at: string | null;
+  } | null;
   if (!t || !t.delivered_at || t.removed_at) return null;
   const { data: media } = await service
     .from('session_media')
@@ -159,7 +165,7 @@ export async function storyInputs(
       .select('sport, creator_id, partner_id, partner_status')
       .eq('id', tag.media.session_id)
       .maybeSingle(),
-    service.from('users').select('preferred_language').eq('id', userId).maybeSingle(),
+    service.from('users').select('preferred_language, preferred_language_set_at').eq('id', userId).maybeSingle(),
   ]);
   if (!file) return null;
   const session = s as {
@@ -181,7 +187,7 @@ export async function storyInputs(
     photo: Buffer.from(await file.arrayBuffer()),
     coach: hostFirstName((host as { name: string | null } | null)?.name ?? null, session?.sport ?? null),
     gym: p?.status === 'active' ? (p.business_name?.trim() ?? null) : null,
-    lang: (me as { preferred_language?: string | null } | null)?.preferred_language === 'en' ? 'en' : 'es',
+    lang: recipientLanguage(me as LanguagePreference | null),
   };
 }
 

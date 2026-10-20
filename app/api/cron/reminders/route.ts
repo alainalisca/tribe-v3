@@ -13,6 +13,7 @@ import {
 } from '@/lib/dal';
 import type { SessionWithCreator } from '@/lib/dal/types';
 import { formatSessionLocation } from '@/lib/sessionLocation';
+import { recipientLanguage, type LanguagePreference } from '@/lib/i18n/recipientLanguage';
 
 // Colombia timezone offset (UTC-5)
 const COLOMBIA_TZ_OFFSET = -5;
@@ -92,7 +93,7 @@ export async function GET(request: Request) {
         const participantsResult = await fetchParticipantsWithUserDetails(
           supabase,
           session.id,
-          'id, name, email, preferred_language'
+          'id, name, email, preferred_language, preferred_language_set_at'
         );
         // Don't silently skip a session on a failed read — log it and move on so
         // the failure is visible without aborting the whole batch.
@@ -102,7 +103,7 @@ export async function GET(request: Request) {
         }
         const participants = (participantsResult.data || []) as Array<{
           user_id: string;
-          user: { id: string; name: string; email: string; preferred_language: string | null } | null;
+          user: ({ id: string; name: string; email: string } & LanguagePreference) | null;
         }>;
 
         // T2-4: track whether any send failed so we don't mark the reminder
@@ -110,7 +111,7 @@ export async function GET(request: Request) {
         let anySendFailed = false;
 
         if (session.creator) {
-          const hostLang = session.creator.preferred_language || 'en';
+          const hostLang = recipientLanguage(session.creator);
           const safeLocation = formatSessionLocation(
             session.location,
             (session as { latitude?: number | null; location_lat?: number | null }).latitude ??
@@ -145,7 +146,7 @@ export async function GET(request: Request) {
         }
 
         for (const participant of participants) {
-          const pLang = participant.user?.preferred_language || 'en';
+          const pLang = recipientLanguage(participant.user);
           const pTitle = pLang === 'es' ? '¡Tu sesión comienza pronto!' : 'Session starting soon!';
           const pBody =
             pLang === 'es'
@@ -192,12 +193,13 @@ export async function GET(request: Request) {
       // - Have been active in the last 30 days
       const usersResult = await fetchUsersWithPush(
         supabase,
-        'id, preferred_language, push_subscription, last_motivation_sent, last_motivation_message_id, updated_at',
+        'id, preferred_language, preferred_language_set_at, push_subscription, last_motivation_sent, last_motivation_message_id, updated_at',
         { lastMotivationBefore: today, updatedAfter: thirtyDaysAgo }
       );
       const users = (usersResult.data || []) as Array<{
         id: string;
         preferred_language: string | null;
+        preferred_language_set_at: string | null;
         push_subscription: unknown;
         last_motivation_sent: string | null;
         last_motivation_message_id: string | null;
@@ -222,7 +224,7 @@ export async function GET(request: Request) {
 
           // Get a random morning motivation message, avoiding recently sent ones
           const { message, index } = getRandomMessage('morning_motivation', usedMessageIds);
-          const lang = (user.preferred_language || 'en') as 'en' | 'es';
+          const lang = recipientLanguage(user);
           const content = getMessageContent(message, lang);
 
           try {
