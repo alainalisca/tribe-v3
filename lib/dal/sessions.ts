@@ -987,10 +987,13 @@ export async function fetchSessionsByCreatorCount(
     if (!creatorId || creatorId === 'undefined' || creatorId === 'null') {
       return { success: true, data: 0 };
     }
+    // T-POLISH1: "Creadas" counts real sessions only, never a "Sesión de
+    // prueba" (sessions.is_test, migration 222).
     const { count, error } = await supabase
       .from('sessions')
       .select('id', { count: 'exact', head: true })
-      .eq('creator_id', creatorId);
+      .eq('creator_id', creatorId)
+      .eq('is_test', false);
     if (error) return { success: false, error: error.message };
     return { success: true, data: count ?? 0 };
   } catch (error) {

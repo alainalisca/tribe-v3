@@ -353,6 +353,31 @@ export async function fetchPendingParticipantsForSessions(
   }
 }
 
+/**
+ * How many join requests wait on this host: the rule /requests lists them by
+ * (pending rows in session_participants_roster, across every session the host
+ * created). A head count, so no rows leave the database. T-POLISH1, for the
+ * "Solicitudes (N)" row in Mis sesiones.
+ */
+export async function fetchPendingRequestCount(
+  supabase: SupabaseClient,
+  sessionIds: string[]
+): Promise<DalResult<number>> {
+  try {
+    if (sessionIds.length === 0) return { success: true, data: 0 };
+    const { count, error } = await supabase
+      .from('session_participants_roster')
+      .select('id', { count: 'exact', head: true })
+      .in('session_id', sessionIds)
+      .eq('status', 'pending');
+    if (error) return { success: false, error: error.message };
+    return { success: true, data: count ?? 0 };
+  } catch (error) {
+    logError(error, { action: 'fetchPendingRequestCount' });
+    return { success: false, error: 'Failed' };
+  }
+}
+
 /** Fetch pending join requests for a single session (for host approval panel). */
 export async function fetchPendingParticipantsForSession(
   supabase: SupabaseClient,

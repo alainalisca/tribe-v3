@@ -45,6 +45,8 @@ import TribeWordmark from '@/components/TribeWordmark';
 type UserProfile = Database['public']['Tables']['users']['Row'];
 
 export interface ProfileStats {
+  /** A coach with no trained sessions does not show the 0 (T-POLISH1). */
+  isInstructor: boolean;
   sessionsCreated: number;
   sessionsTrained: number;
   totalSessions: number;

@@ -13,6 +13,13 @@ export function getSessionsTranslations(language: 'en' | 'es') {
         browseSessions: 'Ver Sesiones',
         spots: 'cupos',
         ended: 'Terminada',
+        cancelled: 'Cancelada',
+        youHosted: 'Organizaste',
+        youJoined: 'Te uniste',
+        createCta: 'Crear sesión',
+        requests: 'Solicitudes',
+        requestsHint: 'Atletas esperando tu respuesta',
+        viewMyTraining: 'Ver mi entrenamiento',
       }
     : {
         mySessions: 'My Sessions',
@@ -27,6 +34,13 @@ export function getSessionsTranslations(language: 'en' | 'es') {
         browseSessions: 'Browse Sessions',
         spots: 'spots',
         ended: 'Ended',
+        cancelled: 'Cancelled',
+        youHosted: 'You hosted',
+        youJoined: 'You joined',
+        createCta: 'Create session',
+        requests: 'Requests',
+        requestsHint: 'Athletes waiting for your answer',
+        viewMyTraining: 'View my training',
       };
 }
 

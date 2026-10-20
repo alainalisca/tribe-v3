@@ -10,10 +10,15 @@ import type { Currency } from '@/lib/payments/config';
 import { formatSessionLocation } from '@/lib/sessionLocation';
 import { useUserCurrency } from '@/lib/useUserCurrency';
 import { formatPriceForUser } from '@/lib/userCurrency';
+import { publicSessionTitle } from '@/lib/share/sessionPublic';
 
 interface SessionCardProps {
   session: {
     id: string;
+    title?: string | null;
+    status?: string | null;
+    creator_id?: string | null;
+    creator?: { name: string | null } | null;
     sport: string;
     date: string;
     start_time: string;
@@ -27,7 +32,8 @@ interface SessionCardProps {
   getSportName: (sport: string) => string;
   txt: SessionsTranslations;
   language: 'en' | 'es';
-  isHost?: boolean;
+  /** The viewer. Their own sessions read "Organizaste", the rest "Te uniste". */
+  userId: string | null;
   isPast?: boolean;
 }
 
@@ -36,10 +42,17 @@ export default function SessionCard({
   getSportName,
   txt,
   language,
-  isHost = false,
+  userId,
   isPast = false,
 }: SessionCardProps) {
   const { currency: userCurrency } = useUserCurrency();
+  const isMine = !!userId && session.creator_id === userId;
+  const isCancelled = session.status === 'cancelled';
+  // Every card names its session: the title, or "<Deporte> con <host>".
+  const title = publicSessionTitle(
+    { title: session.title, sport: session.sport, creatorName: isMine ? null : (session.creator?.name ?? null) },
+    language
+  );
   return (
     <Link href={`/session/${session.id}`}>
       <Card
@@ -63,13 +76,23 @@ export default function SessionCard({
                     {formatPriceForUser(session.price_cents, (session.currency || 'COP') as Currency, userCurrency)}
                   </Badge>
                 )}
-                {isHost && (
+                {isMine ? (
                   <Badge className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded-full border-transparent">
-                    {txt.hosting}
+                    {txt.youHosted}
+                  </Badge>
+                ) : (
+                  <Badge className="px-2 py-1 bg-stone-100 dark:bg-tribe-mid text-stone-700 dark:text-gray-300 rounded-full border-transparent">
+                    {txt.youJoined}
                   </Badge>
                 )}
-                {isPast && <span className="text-xs text-stone-500 dark:text-gray-400">{txt.ended}</span>}
+                {isCancelled ? (
+                  <span className="text-xs font-semibold text-red-600 dark:text-red-400">{txt.cancelled}</span>
+                ) : (
+                  isPast && <span className="text-xs text-stone-500 dark:text-gray-400">{txt.ended}</span>
+                )}
               </div>
+
+              <h3 className="font-semibold text-stone-900 dark:text-white leading-snug mb-1">{title}</h3>
 
               <div className="space-y-1">
                 <div className="flex items-center text-stone-700 dark:text-gray-300 text-sm">

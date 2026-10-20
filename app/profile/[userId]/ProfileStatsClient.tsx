@@ -46,7 +46,11 @@ export default function ProfileStatsClient({ stats }: { stats: ProfileStats }) {
       <div className="grid grid-cols-2 gap-3 mt-6">
         {[
           { value: stats.sessionsCreated, label: t.sessionsCreated },
-          { value: stats.sessionsTrained, label: t.sessionsTrained },
+          // A coach who has not trained in anyone else's session yet does not
+          // show "0 Sesiones entrenadas" on their page (T-POLISH1).
+          ...(stats.isInstructor && stats.sessionsTrained === 0
+            ? []
+            : [{ value: stats.sessionsTrained, label: t.sessionsTrained }]),
           { value: stats.totalSessions, label: t.totalSessions },
         ].map((stat) => (
           <div

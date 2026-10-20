@@ -4,7 +4,7 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import { logError } from '@/lib/logger';
-import { fetchSessionsByCreator, fetchParticipationsWithSession } from '@/lib/dal';
+import { fetchSessionsByCreator, fetchParticipationsWithSession, fetchPendingRequestCount } from '@/lib/dal';
 import type { User } from '@supabase/supabase-js';
 import type { Session } from '@/lib/database.types';
 
@@ -37,7 +37,8 @@ function isSessionPast(session: { date: string; start_time?: string; duration?: 
 }
 
 export function useSessionsData() {
-  const [, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [pendingRequests, setPendingRequests] = useState(0);
   const [hostingSessions, setHostingSessions] = useState<HostingSession[]>([]);
   const [joinedSessions, setJoinedSessions] = useState<JoinedSession[]>([]);
   const [pastSessions, setPastSessions] = useState<PastSession[]>([]);
@@ -165,6 +166,15 @@ export function useSessionsData() {
       setHostingSessions(upcomingHosting);
       setJoinedSessions(upcomingJoined);
       setPastSessions(uniquePast.slice(0, 20));
+
+      // "Solicitudes (N)": the /requests rule, every session this host created.
+      // A failed count hides the row; it never fails the page.
+      const allHostedResult = await fetchSessionsByCreator(supabase, userId, { fields: 'id' });
+      const hostedIds = ((allHostedResult.success ? allHostedResult.data : []) as Array<{ id: string }>).map(
+        (s) => s.id
+      );
+      const pendingResult = await fetchPendingRequestCount(supabase, hostedIds);
+      setPendingRequests(pendingResult.success ? (pendingResult.data ?? 0) : 0);
     } catch (err) {
       logError(err, { action: 'loadSessions' });
       setError('load_failed');
@@ -179,6 +189,8 @@ export function useSessionsData() {
     pastSessions,
     loading,
     error,
+    userId: user?.id ?? null,
+    pendingRequests,
     activeTab,
     setActiveTab,
     fixedAreaRef,
