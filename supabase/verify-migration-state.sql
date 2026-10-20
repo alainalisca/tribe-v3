@@ -3168,4 +3168,40 @@ select '225_t_cancel1_drop_instructor_stats_trigger',
          else 'applied'
        end
 
+
+union all
+
+-- T-LANG1 (226). "Chose a language" is recorded: the stamp column exists and
+-- the app can read it, the column no longer defaults to 'en', the roster view
+-- and both 210 athletes-notification functions carry the stamp. By
+-- information_schema and to_regprocedure, so this reads MISSING before 226.
+select '226_t_lang1_preferred_language_set_at',
+       case
+         when not exists (select 1 from information_schema.columns
+                           where table_schema = 'public' and table_name = 'users'
+                             and column_name = 'preferred_language_set_at' and data_type = 'timestamp with time zone')
+           then 'MISSING -- users.preferred_language_set_at is absent; every sender reads Spanish for everyone'
+         when (select column_default from information_schema.columns
+                where table_schema = 'public' and table_name = 'users' and column_name = 'preferred_language') is not null
+           then 'MISSING -- users.preferred_language still has a default; new accounts get a false choice'
+         when not coalesce(has_column_privilege('authenticated', to_regclass('public.users'),
+                   (select attnum from pg_attribute
+                     where attrelid = to_regclass('public.users') and attname = 'preferred_language_set_at' and not attisdropped),
+                   'SELECT'), false)
+           then 'MISSING -- authenticated cannot read preferred_language_set_at; the app cannot see its own choice'
+         when not exists (select 1 from information_schema.columns
+                           where table_schema = 'public' and table_name = 'session_participants_roster'
+                             and column_name = 'user_preferred_language_set_at')
+           then 'MISSING -- session_participants_roster does not expose user_preferred_language_set_at'
+         when (select count(*) from pg_proc
+                where oid in (to_regprocedure('public.av_athletes_claim_notification(text,text)'),
+                              to_regprocedure('public.av_athletes_claim_lead_notification(uuid)'))
+                  and prosrc like '%''language_set_at''%') <> 2
+           then 'MISSING -- an athletes-notification function does not return language_set_at'
+         when not exists (select 1 from public.migrations_applied
+                           where migration = '226_t_lang1_preferred_language_set_at')
+           then 'MISSING -- 226 is not recorded in migrations_applied'
+         else 'applied'
+       end
+
 order by migration;
