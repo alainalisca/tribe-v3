@@ -209,6 +209,7 @@
   "224_t_av2_canonical_attendance.sql": "fcb93369a646fed96bfadf854654463d568434cbf0118407d2c9e858c492b093",
   "225_t_cancel1_drop_instructor_stats_trigger.sql": "3297d17c6677ecd5c5c9f08564effd620ccd09d35fe6d87ca9086f9ca8511805",
   "226_t_lang1_preferred_language_set_at.sql": "20db1ba6da887aed136e0fe9e9ae38ede9be3582958ccae38c5cd3980f07b80b",
+  "227_t_polish1_session_capacity_and_start.sql": "308ea01961260df695a7fe064f3410d836b87444e6daaeaa4147ac22ba6bdb1e",
   "add_admin_rls.sql": "e2e8367cd24af4b3a762e12898e8dbe81bd363acb2d22c22e1ac3538a41110a7",
   "add_community_events.sql": "3f7cb81caebc1f1a5e3461bc4e1faae9e55e680fea470f334c2b10848652ff50",
   "add_composite_indexes.sql": "a819cf7f037ccd7f5da322d77f076a03af77d9463830050364b7be762dda97a9",
