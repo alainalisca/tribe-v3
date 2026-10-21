@@ -23,6 +23,7 @@ export default function SessionsPage() {
     loading,
     error,
     userId,
+    ownName,
     pendingRequests,
     activeTab,
     setActiveTab,
@@ -166,6 +167,7 @@ export default function SessionsPage() {
                             txt={txt}
                             language={language}
                             userId={userId}
+                            ownName={ownName}
                           />
                         ))}
                       </div>
@@ -187,6 +189,7 @@ export default function SessionsPage() {
                             txt={txt}
                             language={language}
                             userId={userId}
+                            ownName={ownName}
                           />
                         ))}
                       </div>
@@ -214,6 +217,7 @@ export default function SessionsPage() {
                       txt={txt}
                       language={language}
                       userId={userId}
+                      ownName={ownName}
                       isPast
                     />
                   ))}

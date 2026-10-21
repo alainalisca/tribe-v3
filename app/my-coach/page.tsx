@@ -55,6 +55,7 @@ import { trackEvent } from '@/lib/analytics';
 import { showError } from '@/lib/toast';
 import StreakMilestoneChip from '@/components/tribe-os/StreakMilestoneChip';
 import PwaInstallPrompt from '@/components/tribe-os/PwaInstallPrompt';
+import BottomNav from '@/components/BottomNav';
 
 interface Membership {
   client_id: string;
@@ -270,7 +271,7 @@ const copy = {
   },
 } as const;
 
-export default function MyCoachPage() {
+function MyCoachContent() {
   const { language } = useLanguage();
   const s = copy[language];
   const router = useRouter();
@@ -645,6 +646,16 @@ export default function MyCoachPage() {
   );
 }
 
+/** T-POLISH1: /my-coach carries the shared nav in every state, like the rest of the app. */
+export default function MyCoachPage() {
+  return (
+    <>
+      <MyCoachContent />
+      <BottomNav />
+    </>
+  );
+}
+
 function ReadyView({
   state,
   copy: s,
@@ -670,7 +681,7 @@ function ReadyView({
   );
 
   return (
-    <main className="px-4 py-6 sm:py-10 min-h-screen pb-24">
+    <main className="px-4 py-6 sm:py-10 min-h-screen pb-nav">
       <div className="max-w-3xl mx-auto space-y-5">
         <Link href="/" className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700">
           <ArrowLeft className="w-3.5 h-3.5" />

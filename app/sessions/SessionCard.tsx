@@ -10,7 +10,7 @@ import type { Currency } from '@/lib/payments/config';
 import { formatSessionLocation } from '@/lib/sessionLocation';
 import { useUserCurrency } from '@/lib/useUserCurrency';
 import { formatPriceForUser } from '@/lib/userCurrency';
-import { publicSessionTitle } from '@/lib/share/sessionPublic';
+import { isSportOnlyTitle, publicSessionTitle } from '@/lib/share/sessionPublic';
 
 interface SessionCardProps {
   session: {
@@ -34,6 +34,8 @@ interface SessionCardProps {
   language: 'en' | 'es';
   /** The viewer. Their own sessions read "Organizaste", the rest "Te uniste". */
   userId: string | null;
+  /** The viewer's name, for the "<Deporte> con <Nombre>" title of their own sessions. */
+  ownName?: string | null;
   isPast?: boolean;
 }
 
@@ -43,14 +45,20 @@ export default function SessionCard({
   txt,
   language,
   userId,
+  ownName = null,
   isPast = false,
 }: SessionCardProps) {
   const { currency: userCurrency } = useUserCurrency();
   const isMine = !!userId && session.creator_id === userId;
   const isCancelled = session.status === 'cancelled';
-  // Every card names its session: the title, or "<Deporte> con <host>".
+  // Every card names its session: the title, or "<Deporte> con <host>" when
+  // there is none or it only repeats the sport (the chip already says it).
   const title = publicSessionTitle(
-    { title: session.title, sport: session.sport, creatorName: isMine ? null : (session.creator?.name ?? null) },
+    {
+      title: isSportOnlyTitle(session.title, session.sport) ? null : session.title,
+      sport: session.sport,
+      creatorName: isMine ? ownName : (session.creator?.name ?? null),
+    },
     language
   );
   return (
@@ -76,11 +84,14 @@ export default function SessionCard({
                     {formatPriceForUser(session.price_cents, (session.currency || 'COP') as Currency, userCurrency)}
                   </Badge>
                 )}
-                {isMine ? (
+                {/* Past tense, so Historial only: in Próximas the section header
+                    (ORGANIZANDO / ME UNÍ) already says it. */}
+                {isPast && isMine && (
                   <Badge className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded-full border-transparent">
                     {txt.youHosted}
                   </Badge>
-                ) : (
+                )}
+                {isPast && !isMine && (
                   <Badge className="px-2 py-1 bg-stone-100 dark:bg-tribe-mid text-stone-700 dark:text-gray-300 rounded-full border-transparent">
                     {txt.youJoined}
                   </Badge>
