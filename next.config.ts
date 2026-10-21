@@ -60,6 +60,11 @@ const nextConfig: NextConfig = {
         destination: '/sessions',
         permanent: true,
       },
+      // T-POLISH1: the old instructor-posts feed is gone; Explorar (/) is the
+      // feed. Its own share links (/feed/<id>/) already 404'd; they land on /
+      // too.
+      { source: '/feed', destination: '/', permanent: true },
+      { source: '/feed/:path*', destination: '/', permanent: true },
       // T-SITE1: the old marketing pages, replaced by the Jornada site. 301 (not
       // Next's default 308) because that is what the spec and old crawlers
       // expect. `{/}?` matches with and without the trailing slash.

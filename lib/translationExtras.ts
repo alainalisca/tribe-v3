@@ -41,6 +41,10 @@ export const extEn = {
   dontWorryDataSafe: "Don't worry, your data is safe.",
   tryAgain: 'Try Again',
 
+  // BottomNav (T-POLISH1: Explorar / Mis sesiones / Mensajes / Perfil)
+  navExplore: 'Explore',
+  navMySessions: 'My sessions',
+
   // DateTimeInput: shown in an empty date or time field
   chooseDate: 'Choose date',
   chooseTime: 'Choose time',
@@ -332,6 +336,10 @@ export const extEs: Record<keyof typeof extEn, string> = {
   somethingWentWrong: 'Algo salió mal',
   dontWorryDataSafe: 'No te preocupes, tus datos están a salvo.',
   tryAgain: 'Intentar de Nuevo',
+
+  // BottomNav (T-POLISH1: Explorar / Mis sesiones / Mensajes / Perfil)
+  navExplore: 'Explorar',
+  navMySessions: 'Mis sesiones',
 
   // DateTimeInput: shown in an empty date or time field
   chooseDate: 'Elige fecha',

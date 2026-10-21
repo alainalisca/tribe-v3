@@ -26,6 +26,7 @@ import ProfileStatsClient from './ProfileStatsClient';
 
 export default async function ProfileStatsServer({ userId }: { userId: string }) {
   let stats: ProfileStats = {
+    isInstructor: false,
     sessionsCreated: 0,
     sessionsTrained: 0,
     totalSessions: 0,
@@ -35,7 +36,7 @@ export default async function ProfileStatsServer({ userId }: { userId: string })
 
   try {
     const supabase = await createClient();
-    const [createdResult, trainedResult, attendanceRpc] = await Promise.all([
+    const [createdResult, trainedResult, attendanceRpc, roleRow] = await Promise.all([
       fetchSessionsByCreatorCount(supabase, userId),
       // "Sesiones entrenadas": the trained rule (lib/dal/athleteStats.ts),
       // counted with the service role. The viewer's own client sees only
@@ -44,6 +45,7 @@ export default async function ProfileStatsServer({ userId }: { userId: string })
       // count leaves the server, never a row.
       fetchTrainedSessionCount(getServiceRoleClient(), userId),
       supabase.rpc('get_user_attendance_stats', { user_uuid: userId }),
+      supabase.from('users').select('is_instructor').eq('id', userId).maybeSingle(),
     ]);
 
     const created = createdResult.success ? (createdResult.data ?? 0) : 0;
@@ -57,6 +59,7 @@ export default async function ProfileStatsServer({ userId }: { userId: string })
     )?.[0] ?? { total_sessions: 0, attended_sessions: 0, attendance_rate: 0 };
 
     stats = {
+      isInstructor: (roleRow.data as { is_instructor?: boolean | null } | null)?.is_instructor === true,
       sessionsCreated: created,
       sessionsTrained: trained,
       totalSessions: created + trained,

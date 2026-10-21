@@ -34,6 +34,19 @@ const fold = (w: string) =>
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase();
 
+/**
+ * True when a title only repeats the session's sport ("HYROX" for HYROX,
+ * "boxeo" for Boxing), folded the same way as hostFirstName: case and accents
+ * ignored, the sport's key, Spanish and English names all count. A card then
+ * shows "<Deporte> con <Nombre>" instead of saying the sport twice.
+ */
+export function isSportOnlyTitle(title: string | null | undefined, sport: string | null | undefined): boolean {
+  const given = title?.trim();
+  if (!given || !sport || sport === 'Other') return false;
+  const t = fold(given);
+  return t === fold(sport) || t === fold(translateSport(sport, 'es')) || t === fold(translateSport(sport, 'en'));
+}
+
 /** The host's first name as stored, after dropping trailing words that are the sport (in English or Spanish). */
 export function hostFirstName(name: string | null | undefined, sport?: string | null): string {
   const words = (name ?? '').trim().split(/\s+/).filter(Boolean);

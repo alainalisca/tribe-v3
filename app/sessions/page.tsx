@@ -1,7 +1,7 @@
 /** Page: /sessions — My sessions: hosting, joined, and past sessions */
 'use client';
 
-import { Calendar, Clock } from 'lucide-react';
+import { Calendar, Clock, Plus, Inbox, ChevronRight, Activity } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import Link from 'next/link';
@@ -22,6 +22,9 @@ export default function SessionsPage() {
     pastSessions,
     loading,
     error,
+    userId,
+    ownName,
+    pendingRequests,
     activeTab,
     setActiveTab,
     fixedAreaRef,
@@ -60,8 +63,15 @@ export default function SessionsPage() {
         ref={fixedAreaRef}
         className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-stone-200 dark:bg-tribe-dark border-b border-stone-300 dark:border-black"
       >
-        <div className="max-w-2xl md:max-w-4xl mx-auto h-14 flex items-center px-4">
+        <div className="max-w-2xl md:max-w-4xl mx-auto h-14 flex items-center justify-between gap-3 px-4">
           <h1 className="text-2xl font-bold text-stone-900 dark:text-white">{txt.mySessions}</h1>
+          {/* T-POLISH1: Crear left the tab bar; this is where a session starts. */}
+          <Link href="/create">
+            <Button className="font-bold gap-1.5 h-9 px-3">
+              <Plus className="w-4 h-4" aria-hidden="true" />
+              {txt.createCta}
+            </Button>
+          </Link>
         </div>
 
         {/* Tabs */}
@@ -93,8 +103,35 @@ export default function SessionsPage() {
 
       <div style={{ paddingTop: fixedHeight || undefined }} className={fixedHeight ? '' : 'pt-[200px]'}>
         <div className="max-w-2xl md:max-w-4xl mx-auto p-4 md:p-6">
+          <div className="flex justify-end mb-3">
+            <Link
+              href="/my-training"
+              className="inline-flex items-center gap-1.5 text-sm font-semibold text-tribe-green-dark dark:text-tribe-green"
+            >
+              <Activity className="w-4 h-4" aria-hidden="true" />
+              {txt.viewMyTraining}
+              <ChevronRight className="w-4 h-4" aria-hidden="true" />
+            </Link>
+          </div>
           {activeTab === 'upcoming' ? (
             <>
+              {/* Hosts: the join requests waiting on them, counted the way /requests lists them. */}
+              {pendingRequests > 0 && (
+                <Link href="/requests" className="block mb-4">
+                  <Card className="border-tribe-green bg-tribe-green/10 dark:bg-tribe-green/10 shadow-none">
+                    <CardContent className="p-4 flex items-center gap-3">
+                      <Inbox className="w-5 h-5 text-stone-900 dark:text-white" aria-hidden="true" />
+                      <div className="flex-1">
+                        <p className="font-bold text-stone-900 dark:text-white">
+                          {txt.requests} ({pendingRequests})
+                        </p>
+                        <p className="text-sm text-stone-600 dark:text-gray-300">{txt.requestsHint}</p>
+                      </div>
+                      <ChevronRight className="w-5 h-5 text-stone-500" aria-hidden="true" />
+                    </CardContent>
+                  </Card>
+                </Link>
+              )}
               {hostingSessions.length === 0 && joinedSessions.length === 0 ? (
                 <Card className="dark:bg-tribe-card border-stone-200 dark:border-tribe-mid">
                   <CardContent className="p-8 text-center">
@@ -129,7 +166,8 @@ export default function SessionsPage() {
                             getSportName={getSportName}
                             txt={txt}
                             language={language}
-                            isHost
+                            userId={userId}
+                            ownName={ownName}
                           />
                         ))}
                       </div>
@@ -150,6 +188,8 @@ export default function SessionsPage() {
                             getSportName={getSportName}
                             txt={txt}
                             language={language}
+                            userId={userId}
+                            ownName={ownName}
                           />
                         ))}
                       </div>
@@ -176,6 +216,8 @@ export default function SessionsPage() {
                       getSportName={getSportName}
                       txt={txt}
                       language={language}
+                      userId={userId}
+                      ownName={ownName}
                       isPast
                     />
                   ))}

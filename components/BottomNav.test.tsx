@@ -21,8 +21,16 @@ vi.mock('next/navigation', () => ({
 }));
 
 vi.mock('next/link', () => ({
-  default: ({ children, href }: { children: React.ReactNode; href: string }) => (
-    <a href={href} data-testid={`link-${href}`}>
+  default: ({
+    children,
+    href,
+    'aria-current': ariaCurrent,
+  }: {
+    children: React.ReactNode;
+    href: string;
+    'aria-current'?: 'page';
+  }) => (
+    <a href={href} data-testid={`link-${href}`} aria-current={ariaCurrent}>
       {children}
     </a>
   ),
@@ -32,8 +40,8 @@ vi.mock('@/lib/LanguageContext', () => ({
   useLanguage: () => ({
     t: (key: string) => {
       const map: Record<string, string> = {
-        home: 'Home',
-        create: 'Create',
+        navExplore: 'Explore',
+        navMySessions: 'My sessions',
         profile: 'Profile',
       };
       return map[key] || key;
@@ -43,24 +51,25 @@ vi.mock('@/lib/LanguageContext', () => ({
 }));
 
 describe('BottomNav', () => {
-  it('renders all 5 nav items', () => {
+  it('renders the 4 tabs: Explorar, Mis sesiones, Mensajes, Perfil (T-POLISH1)', () => {
     render(<BottomNav />);
 
-    expect(screen.getByText('Home')).toBeInTheDocument();
+    expect(screen.getByText('Explore')).toBeInTheDocument();
+    expect(screen.getByText('My sessions')).toBeInTheDocument();
     expect(screen.getByText('Messages')).toBeInTheDocument();
-    expect(screen.getByText('Create')).toBeInTheDocument();
-    expect(screen.getByText('Community')).toBeInTheDocument();
     expect(screen.getByText('Profile')).toBeInTheDocument();
+    expect(screen.getAllByRole('link')).toHaveLength(4);
   });
 
-  it('renders links to correct routes', () => {
+  it('renders links to correct routes, and no Crear or Comunidad tab', () => {
     render(<BottomNav />);
 
     expect(screen.getByTestId('link-/')).toBeInTheDocument();
+    expect(screen.getByTestId('link-/sessions')).toBeInTheDocument();
     expect(screen.getByTestId('link-/messages')).toBeInTheDocument();
-    expect(screen.getByTestId('link-/create')).toBeInTheDocument();
-    expect(screen.getByTestId('link-/communities')).toBeInTheDocument();
     expect(screen.getByTestId('link-/profile')).toBeInTheDocument();
+    expect(screen.queryByTestId('link-/create')).toBeNull();
+    expect(screen.queryByTestId('link-/communities')).toBeNull();
   });
 
   it('highlights active route with green color', () => {
@@ -72,12 +81,15 @@ describe('BottomNav', () => {
     expect(homeLink.querySelector('.text-\\[\\#9EE551\\]') || homeLink.className).toBeDefined();
   });
 
-  it('shows create button with special styling', () => {
-    render(<BottomNav />);
-
-    const createLink = screen.getByTestId('link-/create');
-    // The create button has the elevated -mt-8 style
-    expect(createLink.innerHTML).toContain('bg-tribe-green');
+  it('keeps Mis sesiones lit on /create, /requests and /my-training', () => {
+    for (const path of ['/sessions', '/create', '/requests', '/my-training']) {
+      mockPathname = path;
+      const { unmount } = render(<BottomNav />);
+      expect(screen.getByTestId('link-/sessions').getAttribute('aria-current')).toBe('page');
+      expect(screen.getByTestId('link-/').getAttribute('aria-current')).toBeNull();
+      unmount();
+    }
+    mockPathname = '/';
   });
 
   it('renders nav element with fixed positioning', () => {

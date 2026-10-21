@@ -94,11 +94,11 @@ export default function FeedPostPreview() {
     });
   }
 
-  // Error fallback: keep the /feed link alive so the only navigation path to the
-  // feed survives even when the preview content fails to load.
+  // Error fallback. T-POLISH1: /feed redirects to / now, so the link points
+  // at the feed itself (Explorar).
   if (error) {
     return (
-      <Link href="/feed" className="block">
+      <Link href="/" className="block">
         <div className="bg-white dark:bg-tribe-card rounded-xl border border-stone-200 dark:border-gray-600/30 px-4 py-3 flex items-center justify-between hover:shadow-sm transition-shadow">
           <span className="text-sm text-theme-secondary">{t('viewInFeed')}</span>
           <span className="text-tribe-green text-sm">→</span>
@@ -112,7 +112,7 @@ export default function FeedPostPreview() {
   const timeAgo = formatRelative(post.created_at, language);
 
   return (
-    <Link href="/feed" className="block">
+    <Link href="/" className="block">
       <div className="bg-white dark:bg-tribe-card rounded-xl border border-stone-200 dark:border-gray-600/30 overflow-hidden hover:shadow-sm transition-shadow">
         <div className="flex items-center gap-2.5 px-4 pt-3 pb-2">
           <Avatar className="w-8 h-8">
