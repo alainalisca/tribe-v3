@@ -46,6 +46,7 @@
     "223_t_mom1_moments",
     "224_t_av2_canonical_attendance",
     "225_t_cancel1_drop_instructor_stats_trigger",
-    "226_t_lang1_preferred_language_set_at"
+    "226_t_lang1_preferred_language_set_at",
+    "227_t_polish1_session_capacity_and_start"
   ]
 }
