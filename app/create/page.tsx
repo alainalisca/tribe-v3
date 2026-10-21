@@ -11,10 +11,8 @@ import { useState, useEffect, Suspense } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter, useSearchParams } from 'next/navigation';
 import BottomNav from '@/components/BottomNav';
-import LocationPicker from '@/components/LocationPicker';
-import VenuePicker from '@/components/VenuePicker';
 import { useVenuePicker } from '@/hooks/useVenuePicker';
-import { ArrowLeft, Zap, ChevronDown, ChevronUp, Share2, Copy, Check } from 'lucide-react';
+import { ArrowLeft, Share2, Copy } from 'lucide-react';
 import Link from 'next/link';
 import { useLanguage } from '@/lib/LanguageContext';
 import { sportTranslations } from '@/lib/translations';
@@ -36,20 +34,24 @@ import RecurringSessionToggle from '@/components/RecurringSessionToggle';
 import TestSessionToggle from '@/components/session/TestSessionToggle';
 import { shareSession, getSessionShareUrl, copyToClipboard } from '@/lib/share';
 import { useTranslations } from '@/lib/i18n/useTranslations';
-import { DateTimeInput } from '@/components/ui/date-time-input';
+import {
+  bogotaDateOf,
+  firstErrorField,
+  serverFieldError,
+  validateSessionForm,
+  type SessionFormField,
+} from '@/lib/sessions/sessionFormRules';
+import SportSelect from '@/components/session-form/SportSelect';
+import { SkillLevelChips, WhoCanJoinChips, DurationChips } from '@/components/session-form/ChoiceChips';
+import DateTimeFields from '@/components/session-form/DateTimeFields';
+import LocationFields from '@/components/session-form/LocationFields';
+import CapacityInput from '@/components/session-form/CapacityInput';
+import { JoinPolicySelect, DescriptionField, EquipmentField } from '@/components/session-form/TextFields';
+import PhotoHint from '@/components/session-form/PhotoHint';
+import { useFieldErrorText } from '@/components/session-form/useFieldErrorText';
 
 type SessionTemplateRow = Database['public']['Tables']['session_templates']['Row'];
-type FormErrors = Partial<
-  Record<'sport' | 'date' | 'start_time' | 'location' | 'price_cents' | 'payment_instructions', string>
->;
-
-type PromoCode = {
-  id: string;
-  code: string;
-  discount_type: string;
-  discount_value: number;
-  currency: string | null;
-};
+type FormErrors = Partial<Record<SessionFormField | 'price_cents' | 'payment_instructions', string>>;
 
 /**
  * A sport name from a query string, resolved to the exact canonical key.
@@ -79,6 +81,8 @@ function CreateSessionPageInner() {
   const supabase = createClient();
   const { t, language } = useLanguage();
   const tCreate = useTranslations('create');
+  const tForm = useTranslations('sessionForm');
+  const errorText = useFieldErrorText();
   const confirm = useConfirm();
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isInstructor, setIsInstructor] = useState(false);
@@ -86,10 +90,7 @@ function CreateSessionPageInner() {
   const venue = useVenuePicker();
   const [errors, setErrors] = useState<FormErrors>({});
   const [photos, setPhotos] = useState<string[]>([]);
-  const [promoCodes, setPromoCodes] = useState<PromoCode[]>([]);
-  const [showBoostPrompt, setShowBoostPrompt] = useState(false);
   const [createdSessionId, setCreatedSessionId] = useState<string | null>(null);
-  const [expandPromoSection, setExpandPromoSection] = useState(false);
   const [formData, setFormData] = useState({
     sport: '',
     date: '',
@@ -99,7 +100,7 @@ function CreateSessionPageInner() {
     latitude: null as number | null,
     longitude: null as number | null,
     description: '',
-    max_participants: 10,
+    max_participants: 10 as number | '',
     join_policy: 'open',
     skill_level: 'all_levels',
     gender_preference: 'all',
@@ -108,7 +109,6 @@ function CreateSessionPageInner() {
     price_display: '', // human-readable price (e.g. "15000") — converted to price_cents on submit
     currency: 'COP' as 'COP' | 'USD',
     payment_instructions: '',
-    attached_promo_id: null as string | null,
     // T-JOIN1b: Sesión de prueba, off by default.
     is_test: false,
   });
@@ -119,8 +119,6 @@ function CreateSessionPageInner() {
     recurrence_pattern: '',
     recurrence_end_date: '',
   });
-
-  const sports = Object.keys(sportTranslations).filter((s) => s !== 'All');
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
@@ -169,6 +167,17 @@ function CreateSessionPageInner() {
     if (errors[name as keyof FormErrors]) setErrors((prev) => ({ ...prev, [name]: '' }));
   }
 
+  /** One field from a shared session-form component; clears that field's error. */
+  function setField<K extends keyof typeof formData>(name: K, value: (typeof formData)[K]) {
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    if (errors[name as keyof FormErrors]) setErrors((prev) => ({ ...prev, [name]: '' }));
+  }
+
+  function scrollToField(field: string) {
+    const el = document.querySelector<HTMLElement>(`[name="${field}"], [data-field="${field}"]`);
+    el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
   function handleLoadTemplate(template: SessionTemplateRow) {
     setFormData((prev) => ({
       ...prev,
@@ -184,10 +193,13 @@ function CreateSessionPageInner() {
 
   function validate() {
     const newErrors: FormErrors = {};
-    if (!formData.sport) newErrors.sport = t('sportRequired');
-    if (!formData.date) newErrors.date = t('dateRequired');
-    if (!formData.start_time) newErrors.start_time = t('startTimeRequired');
-    if (!formData.location) newErrors.location = t('locationRequired');
+    // The shared rules (lib/sessions/sessionFormRules), the same ones the edit
+    // page runs: required fields, a start still ahead in Bogotá, 2 to 500
+    // athletes, the recurrence days.
+    const fieldErrors = validateSessionForm(formData, recurringValue, new Date());
+    for (const [field, code] of Object.entries(fieldErrors)) {
+      newErrors[field as SessionFormField] = errorText(code);
+    }
     if (formData.is_paid) {
       const price = parseFloat(formData.price_display);
       if (!formData.price_display || isNaN(price) || price <= 0) {
@@ -224,9 +236,7 @@ function CreateSessionPageInner() {
     setErrors(newErrors);
     const errorFields = Object.keys(newErrors);
     if (errorFields.length > 0) {
-      const firstField = errorFields[0];
-      const el = document.querySelector<HTMLElement>(`[name="${firstField}"], [data-field="${firstField}"]`);
-      el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      scrollToField(firstErrorField(fieldErrors) ?? errorFields[0]);
       return false;
     }
     return true;
@@ -237,13 +247,11 @@ function CreateSessionPageInner() {
     if (!validate()) return;
 
     // Photo nudge: warn the instructor once if they're about to create a session with no photos.
-    // Sessions with photos book significantly better — this gets them to pause and reconsider.
+    // A photo is how an athlete recognises the place, so this asks them to pause and reconsider.
     // Uses sessionStorage so we only nudge once per session creation attempt (re-submit bypasses).
     if (photos.length === 0 && !sessionStorage.getItem('tribe_photo_nudge_dismissed')) {
-      const msg =
-        language === 'es'
-          ? 'Las sesiones con fotos reciben más reservas. ¿Continuar sin agregar una foto?'
-          : 'Sessions with photos get more bookings. Continue without adding one?';
+      // Al, 2026-10-21: say what a photo does for the athlete, no booking claim.
+      const msg = tForm('noPhotoConfirm');
       const proceed = await confirm({
         title: language === 'es' ? 'Sin foto' : 'No photo',
         message: msg,
@@ -261,7 +269,7 @@ function CreateSessionPageInner() {
     setLoading(true);
     try {
       // Build the session payload — strip UI-only fields and add paid fields
-      const { price_display, is_paid, currency, payment_instructions, attached_promo_id, ...rest } = formData;
+      const { price_display, is_paid, currency, payment_instructions, ...rest } = formData;
 
       // If the user typed a location but never picked a place from the
       // Google autocomplete (so coords are null), fall back to the matching
@@ -306,6 +314,8 @@ function CreateSessionPageInner() {
         ...rest,
         ...paidFields,
         ...recurringFields,
+        // validate() has already held this to a whole number from 2 to 500.
+        max_participants: Number(rest.max_participants),
         creator_id: user!.id,
         current_participants: 0,
         status: 'active',
@@ -332,7 +342,7 @@ function CreateSessionPageInner() {
         currency: formData.currency,
         sport: formData.sport,
         is_recurring: recurringValue.is_recurring,
-        max_participants: formData.max_participants,
+        max_participants: Number(formData.max_participants),
       });
       showSuccess(t('sessionCreated'));
       celebrateSessionCreated();
@@ -351,6 +361,16 @@ function CreateSessionPageInner() {
         hint: String(err?.hint ?? ''),
       });
       const errorMsg = (err?.message ?? err?.code ?? err?.details ?? JSON.stringify(error)) as string;
+      // Migration 227 refused it (a start that passed while the form was open,
+      // or a capacity the browser check never saw): put it on the field.
+      const refused = serverFieldError(errorMsg);
+      if (refused) {
+        const message = errorText(refused.error);
+        setErrors((prev) => ({ ...prev, [refused.field]: message }));
+        scrollToField(refused.field);
+        showError(message ?? errorMsg);
+        return;
+      }
       showError(`${t('sessionCreationFailed')}: ${errorMsg}`);
     } finally {
       setLoading(false);
@@ -452,7 +472,8 @@ function CreateSessionPageInner() {
     );
   }
 
-  const today = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`;
+  // Today in Bogotá, not on the device's clock, so the picker and the rules agree.
+  const today = bogotaDateOf(new Date());
 
   return (
     <div className="min-h-screen bg-theme-page pb-nav">
@@ -472,205 +493,63 @@ function CreateSessionPageInner() {
           supabase={supabase}
           userId={user.id}
           language={language}
-          formData={formData}
+          formData={{
+            ...formData,
+            max_participants: formData.max_participants === '' ? 10 : formData.max_participants,
+          }}
           onLoadTemplate={handleLoadTemplate}
         />
 
         <div className="max-w-2xl md:max-w-4xl mx-auto p-4 md:p-6">
-          <form onSubmit={handleSubmit} className="space-y-4">
+          {/* noValidate: the shared rules decide, in the host's language, not the browser's bubble. */}
+          <form onSubmit={handleSubmit} noValidate className="space-y-4">
             {/* T-MOM1: a session that already happened, for its photos (Moments on only). */}
             <PastSessionLink />
-            {/* Sport */}
-            <div>
-              <Label className="text-theme-primary mb-2">{t('sport')} *</Label>
-              <select
-                name="sport"
-                value={formData.sport}
-                onChange={handleChange}
-                className={`w-full p-3 border rounded-lg bg-theme-card text-theme-primary ${errors.sport ? 'border-red-500' : 'border-theme'}`}
-              >
-                <option value="">{t('selectSport')}</option>
-                {sports.map((sport) => (
-                  <option key={sport} value={sport}>
-                    {language === 'es' ? sportTranslations[sport]?.es || sport : sport}
-                  </option>
-                ))}
-              </select>
-              {errors.sport && <p className="text-red-500 text-sm mt-1">{errors.sport}</p>}
-            </div>
+            <SportSelect value={formData.sport} onChange={(v) => setField('sport', v)} error={errors.sport} />
 
-            {/* Skill Level */}
-            <div>
-              <Label className="text-theme-primary mb-2">{t('skillLevel')}</Label>
-              <div className="grid grid-cols-4 gap-2">
-                {[
-                  { value: 'all_levels', label: t('allLevels'), emoji: '🌟' },
-                  { value: 'beginner', label: t('beginner'), emoji: '🌱' },
-                  { value: 'intermediate', label: t('intermediate'), emoji: '💪' },
-                  { value: 'advanced', label: t('advanced'), emoji: '🔥' },
-                ].map((level) => (
-                  <button
-                    key={level.value}
-                    type="button"
-                    onClick={() => setFormData({ ...formData, skill_level: level.value })}
-                    className={`p-3 rounded-lg font-medium transition-all flex flex-col items-center justify-center ${formData.skill_level === level.value ? 'bg-tribe-green text-slate-900 ring-2 ring-tribe-green' : 'bg-theme-card border border-theme text-theme-primary hover:border-tribe-green'}`}
-                  >
-                    <div className="text-lg mb-1">{level.emoji}</div>
-                    <div className="text-xs text-center leading-tight">{level.label}</div>
-                  </button>
-                ))}
-              </div>
-            </div>
+            <SkillLevelChips value={formData.skill_level} onChange={(v) => setField('skill_level', v)} />
 
-            {/* Gender Preference */}
-            <div>
-              <Label className="text-theme-primary mb-2">{t('genderPreference')}</Label>
-              <div className="grid grid-cols-3 gap-2">
-                {[
-                  { value: 'all', label: t('allWelcome'), emoji: '👥' },
-                  { value: 'women_only', label: t('womenOnly'), emoji: '👩' },
-                  { value: 'men_only', label: t('menOnly'), emoji: '👨' },
-                ].map((option) => (
-                  <button
-                    key={option.value}
-                    type="button"
-                    onClick={() => setFormData({ ...formData, gender_preference: option.value })}
-                    className={`p-3 rounded-lg font-medium transition-all text-center ${formData.gender_preference === option.value ? 'bg-tribe-green text-slate-900 ring-2 ring-tribe-green' : 'bg-theme-card border border-theme text-theme-primary hover:border-tribe-green'}`}
-                  >
-                    <div className="text-lg mb-1">{option.emoji}</div>
-                    <div className="text-xs">{option.label}</div>
-                  </button>
-                ))}
-              </div>
-            </div>
+            <WhoCanJoinChips value={formData.gender_preference} onChange={(v) => setField('gender_preference', v)} />
 
-            {/* Date & Time */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label className="text-theme-primary mb-2">{t('date')} *</Label>
-                <DateTimeInput
-                  type="date"
-                  name="date"
-                  value={formData.date}
-                  onChange={handleChange}
-                  min={today}
-                  className={`h-auto py-3 bg-theme-card text-theme-primary ${errors.date ? 'border-red-500' : 'border-theme'}`}
-                />
-                {errors.date && <p className="text-red-500 text-sm mt-1">{errors.date}</p>}
-              </div>
-              <div>
-                <Label className="text-theme-primary mb-2">{t('startTime')} *</Label>
-                <DateTimeInput
-                  type="time"
-                  name="start_time"
-                  value={formData.start_time}
-                  onChange={handleChange}
-                  className={`h-auto py-3 bg-theme-card text-theme-primary ${errors.start_time ? 'border-red-500' : 'border-theme'}`}
-                />
-                {errors.start_time && <p className="text-red-500 text-sm mt-1">{errors.start_time}</p>}
-              </div>
-            </div>
+            <DateTimeFields
+              date={formData.date}
+              startTime={formData.start_time}
+              onDateChange={(v) => setField('date', v)}
+              onStartTimeChange={(v) => setField('start_time', v)}
+              minDate={today}
+              dateError={errors.date}
+              startTimeError={errors.start_time}
+            />
 
-            {/* Location */}
-            <div data-field="location">
-              <Label className="text-theme-primary mb-2">{t('location')} *</Label>
-              <VenuePicker
-                selected={venue.selected}
-                onSelect={venue.select}
-                status={venue.status}
-                failed={venue.failed}
-                disabled={loading}
-              />
+            <LocationFields
+              venue={venue}
+              disabled={loading}
+              value={formData.location}
+              onChange={(location, coords) => {
+                setErrors((prev) => ({ ...prev, location: '' }));
+                setFormData((prev) => ({
+                  ...prev,
+                  location,
+                  latitude: coords?.lat ?? null,
+                  longitude: coords?.lng ?? null,
+                }));
+              }}
+              error={errors.location}
+            />
 
-              <LocationPicker
-                value={formData.location}
-                onChange={(location, coords) => {
-                  setErrors((prev) => ({ ...prev, location: '' }));
-                  setFormData((prev) => ({
-                    ...prev,
-                    location,
-                    latitude: coords?.lat ?? null,
-                    longitude: coords?.lng ?? null,
-                  }));
-                }}
-                placeholder={t('locationPlaceholder')}
-                error={errors.location}
-              />
-            </div>
+            <DurationChips value={formData.duration} onChange={(v) => setField('duration', v)} />
 
-            {/* Duration */}
-            <div>
-              <Label className="text-theme-primary mb-2">
-                {t('duration')} ({t('minutes')})
-              </Label>
-              <div className="grid grid-cols-4 gap-2">
-                {[15, 30, 45, 60, 90, 120, 150, 180].map((mins) => (
-                  <button
-                    key={mins}
-                    type="button"
-                    onClick={() => setFormData({ ...formData, duration: mins })}
-                    className={`p-3 rounded-lg font-medium transition-all ${formData.duration === mins ? 'bg-tribe-green text-slate-900 ring-2 ring-tribe-green' : 'bg-theme-card border border-theme text-theme-primary hover:border-tribe-green'}`}
-                  >
-                    {mins < 60 ? `${mins}m` : `${Math.floor(mins / 60)}h${mins % 60 ? ` ${mins % 60}m` : ''}`}
-                  </button>
-                ))}
-              </div>
-            </div>
+            <CapacityInput
+              value={formData.max_participants}
+              onChange={(v) => setField('max_participants', v)}
+              error={errors.max_participants}
+            />
 
-            {/* Max Participants */}
-            <div>
-              <Label className="text-theme-primary mb-2">{t('maxParticipants')}</Label>
-              <Input
-                type="number"
-                name="max_participants"
-                value={formData.max_participants}
-                onChange={handleChange}
-                min="2"
-                max="100000"
-                className="h-auto py-3 border-theme bg-theme-card text-theme-primary"
-              />
-            </div>
+            <JoinPolicySelect value={formData.join_policy} onChange={(v) => setField('join_policy', v)} />
 
-            {/* Join Policy */}
-            <div>
-              <Label className="text-theme-primary mb-2">{t('joinPolicy')}</Label>
-              <select
-                name="join_policy"
-                value={formData.join_policy}
-                onChange={handleChange}
-                className="w-full p-3 border border-theme rounded-lg bg-theme-card text-theme-primary"
-              >
-                <option value="open">{t('openJoinPolicy')}</option>
-                <option value="curated">{t('curatedJoinPolicy')}</option>
-                <option value="invite_only">{t('inviteOnlyJoinPolicy')}</option>
-              </select>
-            </div>
+            <DescriptionField value={formData.description} onChange={(v) => setField('description', v)} />
 
-            {/* Description */}
-            <div>
-              <Label className="text-theme-primary mb-2">{t('description')}</Label>
-              <Textarea
-                name="description"
-                value={formData.description}
-                onChange={handleChange}
-                rows={4}
-                placeholder={t('describeSession')}
-                className="py-3 border-theme bg-theme-card text-theme-primary resize-none"
-              />
-            </div>
-
-            {/* Equipment */}
-            <div>
-              <Label className="text-theme-primary mb-2">🎒 {t('equipment')}</Label>
-              <Input
-                type="text"
-                name="equipment"
-                value={formData.equipment}
-                onChange={handleChange}
-                placeholder={t('equipmentPlaceholder')}
-                className="h-auto py-3 border-theme bg-theme-card text-theme-primary"
-              />
-            </div>
+            <EquipmentField value={formData.equipment} onChange={(v) => setField('equipment', v)} />
 
             {/* ─── Paid Session Toggle (instructors only) ─── */}
             {isInstructor && (
@@ -804,8 +683,15 @@ function CreateSessionPageInner() {
             )}
 
             {/* ─── Recurring Session Toggle ─── */}
-            <div className="border border-theme rounded-lg p-4 bg-theme-card">
-              <RecurringSessionToggle value={recurringValue} onChange={setRecurringValue} />
+            <div data-field="recurrence" className="border border-theme rounded-lg p-4 bg-theme-card">
+              <RecurringSessionToggle
+                value={recurringValue}
+                onChange={(next) => {
+                  setRecurringValue(next);
+                  if (errors.recurrence) setErrors((prev) => ({ ...prev, recurrence: '' }));
+                }}
+              />
+              {errors.recurrence && <p className="text-red-500 text-sm mt-1">{errors.recurrence}</p>}
             </div>
 
             {/* ─── Sesión de prueba (T-JOIN1b) ─── */}
@@ -823,16 +709,7 @@ function CreateSessionPageInner() {
                 photos={photos}
                 onPhotosChange={setPhotos}
               />
-              {photos.length === 0 && (
-                <p className="text-xs text-tribe-amber mt-2 flex items-center gap-1.5">
-                  <span>💡</span>
-                  <span>
-                    {language === 'es'
-                      ? 'Las sesiones con fotos reciben muchas más reservas'
-                      : 'Sessions with photos get significantly more bookings'}
-                  </span>
-                </p>
-              )}
+              {photos.length === 0 && <PhotoHint />}
             </div>
 
             <Button type="submit" disabled={loading} className="w-full py-3 font-bold">
