@@ -783,6 +783,28 @@
     "noteHost": "Sesión de prueba, solo tú la ves",
     "noteAdmin": "Sesión de prueba: solo su anfitrión y los admins la ven"
   },
+  "createSteps": {
+    "stepOf": "Paso {n} de 3",
+    "step1": "Qué",
+    "step2": "Cuándo y dónde",
+    "step3": "Cupos y publicar",
+    "next": "Siguiente",
+    "back": "Atrás",
+    "publish": "Publicar sesión",
+    "publishing": "Publicando…",
+    "draftSaved": "Borrador guardado",
+    "draftTitle": "Tienes un borrador sin publicar",
+    "draftSavedAt": "Guardado el {when}",
+    "draftContinue": "Continuar",
+    "draftStartOver": "Empezar de nuevo",
+    "summary": "Resumen",
+    "spots": "{n} cupos",
+    "free": "Gratis",
+    "advanced": "Opciones avanzadas",
+    "checkStep": "Revisa el paso {n}: {name}.",
+    "noDateYet": "Sin fecha",
+    "noPlaceYet": "Sin lugar"
+  },
   "sessionForm": {
     "sportRequired": "El deporte es obligatorio",
     "dateRequired": "La fecha es obligatoria",

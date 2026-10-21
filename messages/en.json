@@ -783,6 +783,28 @@
     "noteHost": "Test session, only you can see it",
     "noteAdmin": "Test session: only its host and the admins can see it"
   },
+  "createSteps": {
+    "stepOf": "Step {n} of 3",
+    "step1": "What",
+    "step2": "When and where",
+    "step3": "Spots and publish",
+    "next": "Next",
+    "back": "Back",
+    "publish": "Publish session",
+    "publishing": "Publishing…",
+    "draftSaved": "Draft saved",
+    "draftTitle": "You have an unpublished draft",
+    "draftSavedAt": "Saved {when}",
+    "draftContinue": "Continue",
+    "draftStartOver": "Start over",
+    "summary": "Summary",
+    "spots": "{n} spots",
+    "free": "Free",
+    "advanced": "Advanced options",
+    "checkStep": "Check step {n}: {name}.",
+    "noDateYet": "No date yet",
+    "noPlaceYet": "No place yet"
+  },
   "sessionForm": {
     "sportRequired": "Sport is required",
     "dateRequired": "Date is required",
