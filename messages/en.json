@@ -783,6 +783,22 @@
     "noteHost": "Test session, only you can see it",
     "noteAdmin": "Test session: only its host and the admins can see it"
   },
+  "sessionForm": {
+    "sportRequired": "Sport is required",
+    "dateRequired": "Date is required",
+    "datePast": "Pick today or a later date.",
+    "startTimeRequired": "Start time is required",
+    "startTimePast": "Pick a time that hasn't passed yet.",
+    "locationRequired": "Location is required",
+    "maxParticipantsRange": "Choose between {min} and {max} athletes.",
+    "skillLevelInvalid": "Choose a level.",
+    "genderInvalid": "Choose who can join.",
+    "joinPolicyInvalid": "Choose a join policy.",
+    "recurrenceDaysRequired": "Pick at least one day for the series.",
+    "recurrenceEndBeforeStart": "The series can't end before its first date.",
+    "photoHint": "A photo helps people recognize the place.",
+    "noPhotoConfirm": "A photo helps people recognize the place. Continue without adding one?"
+  },
   "sessionDetail": {
     "book": "Book",
     "joining": "Booking…",

@@ -51,12 +51,16 @@ export function needsPriceChangeConfirmation(
   return wasFree && nextIsPaid && confirmedCount > 0;
 }
 
-export interface PriceFormInput {
-  is_paid: boolean;
-  price_display: string;
-  currency: 'COP' | 'USD';
-  payment_instructions: string;
-}
+// The price rules moved to the shared session-form rules (T-POLISH1 PR 4) so
+// /create and this page read one copy; re-exported for the existing callers.
+import type { PriceFormInput } from '@/lib/sessions/sessionFormRules';
+export {
+  validatePriceInput,
+  MIN_PRICE_USD,
+  MIN_PRICE_COP,
+  type PriceFormInput,
+  type PriceValidationError,
+} from '@/lib/sessions/sessionFormRules';
 
 export type PriceFields =
   | { is_paid: true; price_cents: number; currency: 'COP' | 'USD'; payment_instructions: string }
@@ -75,20 +79,4 @@ export function buildPriceFields(input: PriceFormInput): PriceFields {
     currency: input.currency,
     payment_instructions: input.payment_instructions,
   };
-}
-
-export type PriceValidationError = 'price_required' | 'min_usd' | 'min_cop' | 'instructions_required';
-
-// Same floors as the create page: USD $5 / COP 20,000 (~$5).
-export const MIN_PRICE_USD = 5;
-export const MIN_PRICE_COP = 20000;
-
-export function validatePriceInput(input: PriceFormInput): PriceValidationError | null {
-  if (!input.is_paid) return null;
-  const price = parseFloat(input.price_display);
-  if (!input.price_display || isNaN(price) || price <= 0) return 'price_required';
-  if (input.currency === 'USD' && price < MIN_PRICE_USD) return 'min_usd';
-  if (input.currency === 'COP' && price < MIN_PRICE_COP) return 'min_cop';
-  if (!input.payment_instructions.trim()) return 'instructions_required';
-  return null;
 }

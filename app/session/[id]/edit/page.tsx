@@ -5,11 +5,7 @@ import { useLanguage } from '@/lib/LanguageContext';
 import { formatPattern } from '@/lib/recurrence';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import LocationPicker from '@/components/LocationPicker';
-import VenuePicker from '@/components/VenuePicker';
 import { ArrowLeft, Repeat } from 'lucide-react';
 import Link from 'next/link';
 import { getEditSessionTranslations } from './translations';
@@ -18,11 +14,20 @@ import PhotoUploadSection from '@/app/create/PhotoUploadSection';
 import RecurringSessionToggle from '@/components/RecurringSessionToggle';
 import TestSessionToggle from '@/components/session/TestSessionToggle';
 import PriceSection from './PriceSection';
-import { DateTimeInput } from '@/components/ui/date-time-input';
+import SportSelect from '@/components/session-form/SportSelect';
+import { SkillLevelChips, WhoCanJoinChips, DurationChips } from '@/components/session-form/ChoiceChips';
+import DateTimeFields from '@/components/session-form/DateTimeFields';
+import LocationFields from '@/components/session-form/LocationFields';
+import CapacityInput from '@/components/session-form/CapacityInput';
+import { JoinPolicySelect, DescriptionField, EquipmentField } from '@/components/session-form/TextFields';
+import PhotoHint from '@/components/session-form/PhotoHint';
+import { useFieldErrorText } from '@/components/session-form/useFieldErrorText';
+import type { EditSessionFormData } from './useEditSession';
 
 export default function EditSessionPage() {
   const { language } = useLanguage();
   const txt = getEditSessionTranslations(language);
+  const errorText = useFieldErrorText();
   const {
     loading,
     saving,
@@ -36,6 +41,8 @@ export default function EditSessionPage() {
     priceValue,
     setPriceValue,
     priceError,
+    fieldErrors,
+    clearFieldError,
     isInstructor,
     isSeriesChild,
     isSeriesParent,
@@ -46,6 +53,12 @@ export default function EditSessionPage() {
     supabase,
     userId,
   } = useEditSession(language, txt);
+
+  /** One field from a shared session-form component; clears that field's error. */
+  function setField<K extends keyof EditSessionFormData>(name: K, value: EditSessionFormData[K]) {
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    if (name in fieldErrors) clearFieldError(name as keyof typeof fieldErrors);
+  }
 
   if (loading) {
     return (
@@ -69,7 +82,8 @@ export default function EditSessionPage() {
       </div>
 
       <div className="pt-header max-w-2xl mx-auto p-4">
-        <form onSubmit={handleSubmit} className="space-y-4">
+        {/* noValidate: the shared rules decide, in the host's language. */}
+        <form onSubmit={handleSubmit} noValidate className="space-y-4">
           {/* Gate 6 (display-only): tell the host this session belongs to a
               series and what an edit here actually affects. Cadence is rendered
               from the PARENT's pattern (seriesPattern), never the child's date. */}
@@ -84,182 +98,55 @@ export default function EditSessionPage() {
             </div>
           )}
 
-          <div>
-            <Label className="mb-2 text-theme-primary">{txt.sport}</Label>
-            <Input
-              type="text"
-              value={formData.sport}
-              onChange={(e) => setFormData({ ...formData, sport: e.target.value })}
-              className="h-auto py-3 border-theme bg-theme-card text-theme-primary"
-              required
-            />
-          </div>
+          {/* T-POLISH1 PR 4: the same field components /create uses. */}
+          <SportSelect
+            value={formData.sport}
+            onChange={(v) => setField('sport', v)}
+            error={errorText(fieldErrors.sport)}
+          />
 
-          <div>
-            <Label className="mb-2 text-theme-primary">{txt.skillLevel}</Label>
-            <div className="grid grid-cols-4 gap-2">
-              {[
-                { value: 'all_levels', label: txt.allLevels, emoji: '🌟' },
-                { value: 'beginner', label: txt.beginner, emoji: '🌱' },
-                { value: 'intermediate', label: txt.intermediate, emoji: '💪' },
-                { value: 'advanced', label: txt.advanced, emoji: '🔥' },
-              ].map((level) => (
-                <button
-                  key={level.value}
-                  type="button"
-                  onClick={() => setFormData({ ...formData, skill_level: level.value })}
-                  className={`p-3 rounded-lg font-medium transition-all text-center ${
-                    formData.skill_level === level.value
-                      ? 'bg-tribe-green text-slate-900 ring-2 ring-tribe-green'
-                      : 'bg-theme-card border border-theme text-theme-primary hover:border-tribe-green'
-                  }`}
-                >
-                  <div className="text-lg mb-1">{level.emoji}</div>
-                  <div className="text-xs">{level.label}</div>
-                </button>
-              ))}
-            </div>
-          </div>
+          <SkillLevelChips value={formData.skill_level} onChange={(v) => setField('skill_level', v)} />
 
-          <div>
-            <Label className="mb-2 text-theme-primary">{txt.genderPref}</Label>
-            <div className="grid grid-cols-3 gap-2">
-              {[
-                { value: 'all', label: txt.allWelcome, emoji: '👥' },
-                { value: 'women_only', label: txt.womenOnly, emoji: '👩' },
-                { value: 'men_only', label: txt.menOnly, emoji: '👨' },
-              ].map((option) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  onClick={() => setFormData({ ...formData, gender_preference: option.value })}
-                  className={`p-3 rounded-lg font-medium transition-all text-center ${
-                    formData.gender_preference === option.value
-                      ? 'bg-tribe-green text-slate-900 ring-2 ring-tribe-green'
-                      : 'bg-theme-card border border-theme text-theme-primary hover:border-tribe-green'
-                  }`}
-                >
-                  <div className="text-lg mb-1">{option.emoji}</div>
-                  <div className="text-xs">{option.label}</div>
-                </button>
-              ))}
-            </div>
-          </div>
+          <WhoCanJoinChips value={formData.gender_preference} onChange={(v) => setField('gender_preference', v)} />
 
-          <div>
-            <Label className="mb-2 text-theme-primary">{txt.location}</Label>
-            <VenuePicker
-              selected={venue.selected}
-              onSelect={venue.select}
-              status={venue.status}
-              failed={venue.failed}
-              disabled={saving}
-            />
+          <LocationFields
+            venue={venue}
+            disabled={saving}
+            value={formData.location}
+            onChange={(location, coords) => {
+              clearFieldError('location');
+              setFormData((prev) => ({
+                ...prev,
+                location,
+                latitude: coords?.lat ?? prev.latitude,
+                longitude: coords?.lng ?? prev.longitude,
+              }));
+            }}
+            error={errorText(fieldErrors.location)}
+          />
 
-            <LocationPicker
-              value={formData.location}
-              onChange={(location, coords) => {
-                setFormData((prev) => ({
-                  ...prev,
-                  location,
-                  latitude: coords?.lat ?? prev.latitude,
-                  longitude: coords?.lng ?? prev.longitude,
-                }));
-              }}
-              placeholder={language === 'es' ? 'ej. Parque Lleras' : 'e.g. Central Park'}
-            />
-          </div>
+          <DateTimeFields
+            date={formData.date}
+            startTime={formData.start_time}
+            onDateChange={(v) => setField('date', v)}
+            onStartTimeChange={(v) => setField('start_time', v)}
+            dateError={errorText(fieldErrors.date)}
+            startTimeError={errorText(fieldErrors.start_time)}
+          />
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label className="mb-2 text-theme-primary">{txt.date}</Label>
-              <DateTimeInput
-                type="date"
-                value={formData.date}
-                onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                className="h-auto py-3 border-theme bg-theme-card text-theme-primary"
-                required
-              />
-            </div>
+          <DurationChips value={formData.duration} onChange={(v) => setField('duration', v)} />
 
-            <div>
-              <Label className="mb-2 text-theme-primary">{txt.time}</Label>
-              <DateTimeInput
-                type="time"
-                value={formData.start_time}
-                onChange={(e) => setFormData({ ...formData, start_time: e.target.value })}
-                className="h-auto py-3 border-theme bg-theme-card text-theme-primary"
-                required
-              />
-            </div>
-          </div>
+          <CapacityInput
+            value={formData.max_participants}
+            onChange={(v) => setField('max_participants', v)}
+            error={errorText(fieldErrors.max_participants)}
+          />
 
-          <div>
-            <Label className="mb-2 text-theme-primary">{txt.duration}</Label>
-            <div className="grid grid-cols-4 gap-2">
-              {[15, 30, 45, 60, 90, 120, 150, 180].map((mins) => (
-                <button
-                  key={mins}
-                  type="button"
-                  onClick={() => setFormData({ ...formData, duration: mins })}
-                  className={`p-3 rounded-lg font-medium transition-all ${
-                    formData.duration === mins
-                      ? 'bg-tribe-green text-slate-900 ring-2 ring-tribe-green'
-                      : 'bg-theme-card border border-theme text-theme-primary hover:border-tribe-green'
-                  }`}
-                >
-                  {mins < 60 ? `${mins}m` : `${Math.floor(mins / 60)}h${mins % 60 ? ` ${mins % 60}m` : ''}`}
-                </button>
-              ))}
-            </div>
-          </div>
+          <JoinPolicySelect value={formData.join_policy} onChange={(v) => setField('join_policy', v)} />
 
-          <div>
-            <Label className="mb-2 text-theme-primary">{txt.maxParticipants}</Label>
-            <Input
-              type="number"
-              value={formData.max_participants}
-              onChange={(e) => setFormData({ ...formData, max_participants: parseInt(e.target.value) || 10 })}
-              min="2"
-              max="100000"
-              className="h-auto py-3 border-theme bg-theme-card text-theme-primary"
-            />
-          </div>
+          <DescriptionField value={formData.description} onChange={(v) => setField('description', v)} />
 
-          <div>
-            <Label className="mb-2 text-theme-primary">{txt.joinPolicy}</Label>
-            <select
-              value={formData.join_policy}
-              onChange={(e) => setFormData({ ...formData, join_policy: e.target.value })}
-              className="w-full p-3 border border-theme rounded-lg bg-theme-card text-theme-primary"
-            >
-              <option value="open">{txt.open}</option>
-              <option value="curated">{txt.curated}</option>
-              <option value="invite_only">{txt.inviteOnly}</option>
-            </select>
-          </div>
-
-          <div>
-            <Label className="mb-2 text-theme-primary">{txt.description}</Label>
-            <Textarea
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className="py-3 border-theme bg-theme-card text-theme-primary resize-none"
-              rows={4}
-              placeholder={txt.descPlaceholder}
-            />
-          </div>
-
-          <div>
-            <Label className="mb-2 text-theme-primary">🎒 {txt.equipment}</Label>
-            <Input
-              type="text"
-              value={formData.equipment}
-              onChange={(e) => setFormData({ ...formData, equipment: e.target.value })}
-              placeholder={txt.equipmentPlaceholder}
-              className="h-auto py-3 border-theme bg-theme-card text-theme-primary"
-            />
-          </div>
+          <EquipmentField value={formData.equipment} onChange={(v) => setField('equipment', v)} />
 
           {/* ─── Paid Session (instructors only) ─── */}
           {isInstructor && <PriceSection value={priceValue} onChange={setPriceValue} error={priceError} txt={txt} />}
@@ -269,9 +156,18 @@ export default function EditSessionPage() {
               independently recurring, so it must not expose the toggle
               (T-RECUR1 Gate 2). The parent template owns the schedule. */}
           {!isSeriesChild && (
-            <div className="border border-theme rounded-lg p-4 bg-theme-card">
+            <div data-field="recurrence" className="border border-theme rounded-lg p-4 bg-theme-card">
               <Label className="mb-3 block text-theme-primary font-semibold">{txt.recurringSection}</Label>
-              <RecurringSessionToggle value={recurringValue} onChange={setRecurringValue} />
+              <RecurringSessionToggle
+                value={recurringValue}
+                onChange={(next) => {
+                  setRecurringValue(next);
+                  clearFieldError('recurrence');
+                }}
+              />
+              {fieldErrors.recurrence && (
+                <p className="text-red-500 text-sm mt-1">{errorText(fieldErrors.recurrence)}</p>
+              )}
             </div>
           )}
 
@@ -291,12 +187,7 @@ export default function EditSessionPage() {
                 photos={photos}
                 onPhotosChange={setPhotos}
               />
-              {photos.length === 0 && (
-                <p className="text-xs text-tribe-amber mt-2 flex items-center gap-1.5">
-                  <span>💡</span>
-                  <span>{txt.photoSectionHint}</span>
-                </p>
-              )}
+              {photos.length === 0 && <PhotoHint />}
             </div>
           )}
 

@@ -28,6 +28,13 @@ import type { EditSessionTranslations } from './translations';
 import { fetchPartnersByIds } from '@/lib/dal/gymVenue';
 import { useVenuePicker } from '@/hooks/useVenuePicker';
 import { useTranslations } from '@/lib/i18n/useTranslations';
+import {
+  firstErrorField,
+  serverFieldError,
+  validateSessionForm,
+  type SessionFieldErrors,
+} from '@/lib/sessions/sessionFormRules';
+import { useFieldErrorText } from '@/components/session-form/useFieldErrorText';
 
 export interface EditSessionFormData {
   sport: string;
@@ -37,7 +44,8 @@ export interface EditSessionFormData {
   date: string;
   start_time: string;
   duration: number;
-  max_participants: number;
+  /** '' while the host is clearing the box to type a new number. */
+  max_participants: number | '';
   description: string;
   skill_level: string;
   gender_preference: string;
@@ -99,6 +107,7 @@ export function useEditSession(language: 'en' | 'es', txt: EditSessionTranslatio
   const [saving, setSaving] = useState(false);
   const venue = useVenuePicker();
   const tCreate = useTranslations('create');
+  const errorText = useFieldErrorText();
   const [formData, setFormData] = useState<EditSessionFormData>(defaultFormData);
   const [recurringValue, setRecurringValue] = useState<EditRecurringValue>(defaultRecurring);
   const [photos, setPhotos] = useState<EditSessionPhotos>([]);
@@ -120,6 +129,10 @@ export function useEditSession(language: 'en' | 'es', txt: EditSessionTranslatio
   const [originalPrice, setOriginalPrice] = useState<PriceSnapshot>({ is_paid: false, price_cents: null });
   // null = count fetch failed; the price-change dialog then fails safe (shows).
   const [confirmedCount, setConfirmedCount] = useState<number | null>(0);
+  // The start the session had when the form loaded. The shared rules check a
+  // NEW start against now, never one the host left alone.
+  const [originalStart, setOriginalStart] = useState<{ date: string; start_time: string } | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<SessionFieldErrors>({});
 
   useEffect(() => {
     // RLS-H4: resolve auth BEFORE any fetch. Edit is host-only — a logged-out
@@ -194,6 +207,7 @@ export function useEditSession(language: 'en' | 'es', txt: EditSessionTranslatio
         join_policy: session.join_policy || 'open',
         is_test: !!(session as { is_test?: boolean | null }).is_test,
       });
+      setOriginalStart({ date: session.date, start_time: session.start_time });
 
       // Initialise recurrence state from the existing session values.
       // recurrence_end_date is stored as ISO timestamp; strip time part so
@@ -262,8 +276,36 @@ export function useEditSession(language: 'en' | 'es', txt: EditSessionTranslatio
     instructions_required: txt.instructionsRequired,
   };
 
+  function showFieldErrors(errors: SessionFieldErrors) {
+    setFieldErrors(errors);
+    const first = firstErrorField(errors);
+    if (!first) return;
+    const message = errorText(errors[first]);
+    if (message) showError(message);
+    document
+      .querySelector<HTMLElement>(`[name="${first}"], [data-field="${first}"]`)
+      ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  /** Clears a field's error as the host changes it. */
+  function clearFieldError(field: keyof SessionFieldErrors) {
+    setFieldErrors((prev) => (prev[field] ? { ...prev, [field]: undefined } : prev));
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+
+    // The shared rules, the same ones /create runs. A child occurrence carries
+    // no recurrence of its own (its toggle is hidden), so it is not checked.
+    const errors = validateSessionForm(formData, seriesChild ? null : recurringValue, new Date(), {
+      original: originalStart,
+      isSeriesParent: seriesParent,
+    });
+    if (Object.keys(errors).length > 0) {
+      showFieldErrors(errors);
+      return;
+    }
+    setFieldErrors({});
 
     if (isInstructor) {
       const validationError = validatePriceInput(priceValue);
@@ -320,11 +362,21 @@ export function useEditSession(language: 'en' | 'es', txt: EditSessionTranslatio
       // create-flow convention in insertSession).
       const result = await updateSessionAsHost(supabase, params.id as string, {
         ...formData,
+        // Held to a whole number from 2 to 500 by the rules above.
+        max_participants: Number(formData.max_participants),
         ...recurringFields,
         ...priceFields,
         photos: photos.length > 0 ? photos : null,
       });
-      if (!result.success) throw new Error(result.error);
+      if (!result.success) {
+        // Migration 227 refused it: put the refusal on the field it is about.
+        const refused = serverFieldError(result.error);
+        if (refused) {
+          showFieldErrors({ [refused.field]: refused.error });
+          return;
+        }
+        throw new Error(result.error);
+      }
 
       // T-GYM2: the venue is not part of the session update -- partner_status
       // is not writable by the client and partner_id is not in the
@@ -359,6 +411,8 @@ export function useEditSession(language: 'en' | 'es', txt: EditSessionTranslatio
     priceValue,
     setPriceValue,
     priceError,
+    fieldErrors,
+    clearFieldError,
     isInstructor,
     isSeriesChild: seriesChild,
     isSeriesParent: seriesParent,
