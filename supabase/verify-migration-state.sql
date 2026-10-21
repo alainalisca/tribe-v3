@@ -3206,4 +3206,35 @@ select '226_t_lang1_preferred_language_set_at',
          else 'applied'
        end
 
+
+union all
+
+-- T-POLISH1 (227). The two session-form rules hold in the database too:
+-- max_participants is CHECKed 2..500 and validated, and the start-ahead
+-- trigger is the enabled BEFORE INSERT OR UPDATE OF date, start_time row
+-- trigger calling a SECURITY INVOKER function no client role can EXECUTE. By
+-- pg_constraint and to_regprocedure, so this reads MISSING before 227 runs.
+select '227_t_polish1_session_capacity_and_start',
+       case
+         when not exists (select 1 from pg_constraint
+                           where conrelid = to_regclass('public.sessions') and conname = 'sessions_max_participants_range'
+                             and convalidated
+                             and pg_get_constraintdef(oid) = 'CHECK (((max_participants >= 2) AND (max_participants <= 500)))')
+           then 'MISSING -- sessions_max_participants_range (2..500, validated) is absent; a browser can save any capacity'
+         when to_regprocedure('public.sessions_start_ahead_guard()') is null
+           then 'MISSING -- sessions_start_ahead_guard() is absent; a browser can save a session that already started'
+         when not exists (select 1 from pg_trigger
+                           where tgrelid = to_regclass('public.sessions') and tgname = 'sessions_start_ahead_guard'
+                             and not tgisinternal and tgenabled <> 'D' and tgtype = 23
+                             and tgfoid = to_regprocedure('public.sessions_start_ahead_guard()'))
+           then 'MISSING -- the sessions_start_ahead_guard trigger is absent, disabled or not BEFORE INSERT OR UPDATE'
+         when (select prosecdef or has_function_privilege('authenticated', oid, 'EXECUTE')
+                 from pg_proc where oid = to_regprocedure('public.sessions_start_ahead_guard()'))
+           then 'MISSING -- sessions_start_ahead_guard() is SECURITY DEFINER or EXECUTE is granted to authenticated'
+         when not exists (select 1 from public.migrations_applied
+                           where migration = '227_t_polish1_session_capacity_and_start')
+           then 'MISSING -- 227 is not recorded in migrations_applied'
+         else 'applied'
+       end
+
 order by migration;
