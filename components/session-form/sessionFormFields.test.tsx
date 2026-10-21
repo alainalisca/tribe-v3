@@ -184,7 +184,7 @@ describe('copy', () => {
     expect(screen.getByText('Una foto ayuda a que la gente reconozca el lugar.')).toBeInTheDocument();
     lang.value = 'en';
     render(<PhotoHint />);
-    expect(screen.getByText('A photo helps people recognise the place.')).toBeInTheDocument();
+    expect(screen.getByText('A photo helps people recognize the place.')).toBeInTheDocument();
   });
 
   it('no session-form string, in either language, mentions bookings or reservations', () => {

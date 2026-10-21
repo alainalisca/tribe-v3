@@ -796,8 +796,8 @@
     "joinPolicyInvalid": "Choose a join policy.",
     "recurrenceDaysRequired": "Pick at least one day for the series.",
     "recurrenceEndBeforeStart": "The series can't end before its first date.",
-    "photoHint": "A photo helps people recognise the place.",
-    "noPhotoConfirm": "A photo helps people recognise the place. Continue without adding one?"
+    "photoHint": "A photo helps people recognize the place.",
+    "noPhotoConfirm": "A photo helps people recognize the place. Continue without adding one?"
   },
   "sessionDetail": {
     "book": "Book",
