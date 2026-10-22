@@ -113,6 +113,10 @@ export type EventName =
 
   // Sessions (Instructor)
   | 'session_created'
+  | 'create_step_viewed' // T-POLISH1 PR 4b: a step of /create shown
+  | 'create_step_completed' // "Siguiente" passed that step's rules
+  | 'create_draft_restored' // "Continuar" on the draft banner, or a reload mid-flow
+  | 'create_draft_discarded' // "Empezar de nuevo"
   | 'session_edited'
   | 'session_cancelled'
   | 'session_boost_purchased'
@@ -343,6 +347,11 @@ export interface EventPropertyMap {
     currency?: string; // legacy
     max_participants?: number; // legacy
   };
+  /** T-POLISH1 PR 4b: the 3-step create flow. step_name matches lib/sessions/createSteps STEP_NAMES. */
+  create_step_viewed: { step: 1 | 2 | 3; step_name: 'what' | 'when_where' | 'capacity' };
+  create_step_completed: { step: 1 | 2 | 3; step_name: 'what' | 'when_where' | 'capacity' };
+  create_draft_restored: { step: 1 | 2 | 3; age_hours: number };
+  create_draft_discarded: { age_hours: number };
   instructor_profile_viewed: { instructor_id: string; source: string };
   pass_claimed: { partner_slug: string; src: string | null; code: string | null };
   session_shared: {

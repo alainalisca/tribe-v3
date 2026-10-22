@@ -1,4 +1,11 @@
-/** Page: /create — Create a new training session with sport, location, date, and settings */
+/**
+ * Page: /create — create a session in three steps (T-POLISH1 PR 4b):
+ *   1 Qué              sport, level, photos (templates and "¿Ya pasó?" open it)
+ *   2 Cuándo y dónde   date, time, duration, place, recurrence
+ *   3 Cupos y publicar capacity, who can join, join policy, description, the
+ *                      paid block, advanced options, the summary, Publicar
+ * Equipment is set after publishing, on the edit page.
+ */
 'use client';
 import { logError } from '@/lib/logger';
 import { showSuccess, showError } from '@/lib/toast';
@@ -7,12 +14,12 @@ import { haptic } from '@/lib/haptics';
 import { celebrateSessionCreated } from '@/lib/confetti';
 import { trackEvent } from '@/lib/analytics';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import BottomNav from '@/components/BottomNav';
 import { useVenuePicker } from '@/hooks/useVenuePicker';
-import { ArrowLeft, Share2, Copy } from 'lucide-react';
+import { ArrowLeft, ChevronDown, Share2, Copy } from 'lucide-react';
 import Link from 'next/link';
 import { useLanguage } from '@/lib/LanguageContext';
 import { sportTranslations } from '@/lib/translations';
@@ -35,18 +42,40 @@ import TestSessionToggle from '@/components/session/TestSessionToggle';
 import { shareSession, getSessionShareUrl, copyToClipboard } from '@/lib/share';
 import { useTranslations } from '@/lib/i18n/useTranslations';
 import {
+  STEP_FIELDS,
   bogotaDateOf,
   firstErrorField,
   serverFieldError,
   validateSessionForm,
+  type SessionFieldErrors,
   type SessionFormField,
 } from '@/lib/sessions/sessionFormRules';
+import {
+  browserStorage,
+  clearDraft,
+  hasContent,
+  readDraft,
+  toDraft,
+  writeDraft,
+  type CreateDraft,
+} from '@/lib/sessions/createDraft';
+import {
+  STEP_NAMES,
+  clampStep,
+  errorsForStep,
+  firstFailingStep,
+  parseStep,
+  resumeStep,
+  stepOfField,
+  type CreateStep,
+} from '@/lib/sessions/createSteps';
+import { CreateStepper, DraftBanner, SessionSummary } from './CreateSteps';
 import SportSelect from '@/components/session-form/SportSelect';
 import { SkillLevelChips, WhoCanJoinChips, DurationChips } from '@/components/session-form/ChoiceChips';
 import DateTimeFields from '@/components/session-form/DateTimeFields';
 import LocationFields from '@/components/session-form/LocationFields';
 import CapacityInput from '@/components/session-form/CapacityInput';
-import { JoinPolicySelect, DescriptionField, EquipmentField } from '@/components/session-form/TextFields';
+import { JoinPolicySelect, DescriptionField } from '@/components/session-form/TextFields';
 import PhotoHint from '@/components/session-form/PhotoHint';
 import { useFieldErrorText } from '@/components/session-form/useFieldErrorText';
 
@@ -78,10 +107,21 @@ export default function CreateSessionPage() {
 function CreateSessionPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  // T-POLISH1 PR 4b: the step lives in the URL, so the phone's back button
+  // walks back through the steps instead of leaving the form.
+  const step = parseStep(searchParams.get('paso'));
+  // While the host leaves /create through an in-app link, the router hands this
+  // page the NEXT page's search params for a render before it unmounts, so
+  // `step` reads 1. The draft keeps the step the host was really on: only a
+  // render on /create moves it.
+  const onCreatePage = (usePathname() ?? '').startsWith('/create');
+  const stepOnPage = useRef<CreateStep>(step);
+  if (onCreatePage) stepOnPage.current = step;
   const supabase = createClient();
   const { t, language } = useLanguage();
   const tCreate = useTranslations('create');
   const tForm = useTranslations('sessionForm');
+  const tSteps = useTranslations('createSteps');
   const errorText = useFieldErrorText();
   const confirm = useConfirm();
   const [user, setUser] = useState<AuthUser | null>(null);
@@ -104,7 +144,6 @@ function CreateSessionPageInner() {
     join_policy: 'open',
     skill_level: 'all_levels',
     gender_preference: 'all',
-    equipment: '',
     is_paid: false,
     price_display: '', // human-readable price (e.g. "15000") — converted to price_cents on submit
     currency: 'COP' as 'COP' | 'USD',
@@ -119,6 +158,24 @@ function CreateSessionPageInner() {
     recurrence_pattern: '',
     recurrence_end_date: '',
   });
+
+  // The draft (lib/sessions/createDraft): offered on step 1 when one exists,
+  // and saved again only once the host has answered that offer, so opening
+  // /create never overwrites an unpublished form before they choose.
+  const [draftOffer, setDraftOffer] = useState<CreateDraft | null>(null);
+  const [draftReady, setDraftReady] = useState(false);
+  const [draftSaved, setDraftSaved] = useState(false);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+  // How many of OUR steps sit behind this one in the browser history, so
+  // "Atrás" can go back through history (keeping the phone's back button in
+  // step) and only replaces the URL when there is nothing of ours to go back to.
+  const navDepth = useRef(0);
+  const prevStep = useRef<CreateStep>(step);
+  const replacing = useRef(false);
+  // A field to scroll to once the step it lives on has rendered.
+  const pendingScroll = useRef<string | null>(null);
+  // The draft save waiting on its 500 ms timer, flushed if the page goes away.
+  const pendingDraftSave = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
@@ -161,6 +218,134 @@ function CreateSessionPageInner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- mount only
   }, []);
 
+  // Once the user is known: offer their draft, or carry on with it after a
+  // reload mid-flow (?paso=2 or 3), or start blank on step 1.
+  useEffect(() => {
+    if (!user) return;
+    const draft = readDraft(browserStorage(), user.id, new Date());
+    if (!draft) {
+      setDraftReady(true);
+      if (step !== 1) goToStep(1);
+      return;
+    }
+    if (step !== 1) {
+      applyDraft(draft, false);
+      return;
+    }
+    setDraftOffer(draft);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once per user
+  }, [user?.id]);
+
+  // Save the form ~500 ms after it stops changing. Never a payment field
+  // (toDraft's allow-list), never before the draft offer is answered, never
+  // after publishing. A save still waiting when the host leaves (or the tab
+  // is hidden) is written at once, so the last change is not lost.
+  useEffect(() => {
+    if (!user || !draftReady || createdSessionId) return;
+    const save = () => {
+      pendingDraftSave.current = null;
+      const draft = toDraft(
+        { form: formData, recurring: recurringValue, step: stepOnPage.current, photos, venue: venue.selected },
+        new Date()
+      );
+      writeDraft(browserStorage(), user.id, draft);
+      setDraftSaved(hasContent(draft));
+    };
+    pendingDraftSave.current = save;
+    const timer = setTimeout(save, 500);
+    return () => clearTimeout(timer);
+  }, [user, draftReady, createdSessionId, formData, recurringValue, step, photos, venue.selected]);
+
+  useEffect(() => {
+    const flush = () => pendingDraftSave.current?.();
+    window.addEventListener('pagehide', flush);
+    return () => {
+      window.removeEventListener('pagehide', flush);
+      flush();
+    };
+  }, []);
+
+  // Each step change: keep count of our history entries, report the view, and
+  // land on the field a failed publish is about (or the top of the step).
+  useEffect(() => {
+    if (!onCreatePage) return;
+    if (replacing.current) {
+      replacing.current = false;
+    } else {
+      navDepth.current = Math.max(0, navDepth.current + (step - prevStep.current));
+    }
+    prevStep.current = step;
+    trackEvent('create_step_viewed', { step, step_name: STEP_NAMES[step] });
+    const field = pendingScroll.current;
+    pendingScroll.current = null;
+    if (field) requestAnimationFrame(() => scrollToField(field));
+    else window.scrollTo({ top: 0 });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- on step change only
+  }, [step]);
+
+  function goToStep(target: CreateStep) {
+    if (target === step) return;
+    if (target > step) {
+      router.push(`/create/?paso=${target}`, { scroll: false });
+      return;
+    }
+    const back = step - target;
+    if (navDepth.current >= back) {
+      window.history.go(-back);
+    } else {
+      replacing.current = true;
+      navDepth.current = 0;
+      router.replace(`/create/?paso=${target}`, { scroll: false });
+    }
+  }
+
+  /**
+   * Puts a draft back. The host resumes on the step they were on when it was
+   * saved (clamped to 1..3), unless an earlier step no longer passes the rules
+   * (a date that had passed and was cleared): then on the first step that
+   * fails, with its errors showing.
+   *
+   * "Continuar" (navigate) also writes one history entry per step on the way,
+   * ?paso=2 then ?paso=3, so the phone's back button walks back from the
+   * resumed step exactly as if the host had pressed Siguiente. Native
+   * pushState, which the app router keeps in sync with useSearchParams, so the
+   * entries land in one go rather than as racing router navigations.
+   */
+  function applyDraft(draft: CreateDraft, navigate: boolean) {
+    // The draft holds no payment field, so a restored form starts free.
+    setFormData((prev) => ({ ...prev, ...draft.fields }));
+    setRecurringValue(draft.recurring);
+    setPhotos(draft.photos);
+    if (draft.venue) venue.select(draft.venue);
+    setDraftOffer(null);
+    setDraftReady(true);
+
+    const restoredErrors = validateSessionForm(draft.fields, draft.recurring, new Date());
+    const target = resumeStep(draft.step, restoredErrors);
+    if (target < clampStep(draft.step)) setErrors(textify(errorsForStep(restoredErrors, target)));
+    trackEvent('create_draft_restored', {
+      step: target,
+      age_hours: Math.round((Date.now() - draft.savedAt) / 3_600_000),
+    });
+
+    if (navigate) {
+      for (let s = step + 1; s <= target; s++) window.history.pushState(null, '', `/create/?paso=${s}`);
+    } else if (target !== step) {
+      goToStep(target);
+    }
+  }
+
+  function startOver() {
+    if (!user || !draftOffer) return;
+    pendingDraftSave.current = null;
+    clearDraft(browserStorage(), user.id);
+    trackEvent('create_draft_discarded', {
+      age_hours: Math.round((Date.now() - draftOffer.savedAt) / 3_600_000),
+    });
+    setDraftOffer(null);
+    setDraftReady(true);
+  }
+
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -191,15 +376,16 @@ function CreateSessionPageInner() {
     }));
   }
 
-  function validate() {
+  /** The rules' codes as text, for the fields they are about. */
+  function textify(codes: SessionFieldErrors): FormErrors {
+    const out: FormErrors = {};
+    for (const [field, code] of Object.entries(codes)) out[field as SessionFormField] = errorText(code);
+    return out;
+  }
+
+  /** The paid block's own checks, unchanged from the single-page form. */
+  function paidErrors(): FormErrors {
     const newErrors: FormErrors = {};
-    // The shared rules (lib/sessions/sessionFormRules), the same ones the edit
-    // page runs: required fields, a start still ahead in Bogotá, 2 to 500
-    // athletes, the recurrence days.
-    const fieldErrors = validateSessionForm(formData, recurringValue, new Date());
-    for (const [field, code] of Object.entries(fieldErrors)) {
-      newErrors[field as SessionFormField] = errorText(code);
-    }
     if (formData.is_paid) {
       const price = parseFloat(formData.price_display);
       if (!formData.price_display || isNaN(price) || price <= 0) {
@@ -233,22 +419,64 @@ function CreateSessionPageInner() {
             : 'Payment instructions are required for paid sessions';
       }
     }
-    setErrors(newErrors);
-    const errorFields = Object.keys(newErrors);
-    if (errorFields.length > 0) {
-      scrollToField(firstErrorField(fieldErrors) ?? errorFields[0]);
-      return false;
+    return newErrors;
+  }
+
+  /** "Siguiente": this step's rules only; a later step never blocks it. */
+  function handleNext() {
+    // Going on with the draft banner still open means starting this form fresh.
+    if (draftOffer) startOver();
+    const mine = errorsForStep(validateSessionForm(formData, recurringValue, new Date()), step);
+    setErrors((prev) => {
+      const next = { ...prev };
+      for (const field of STEP_FIELDS[STEP_NAMES[step]]) delete next[field];
+      return { ...next, ...textify(mine) };
+    });
+    const first = firstErrorField(mine);
+    if (first) {
+      scrollToField(first);
+      return;
     }
-    return true;
+    trackEvent('create_step_completed', { step, step_name: STEP_NAMES[step] });
+    goToStep((step + 1) as CreateStep);
+  }
+
+  /** Puts the host on the step that owns `field`, scrolled to it. */
+  function sendToField(field: string, target: CreateStep) {
+    showError(tSteps('checkStep', { n: target, name: tSteps(`step${target}`) }));
+    if (target === step) {
+      scrollToField(field);
+    } else {
+      pendingScroll.current = field;
+      goToStep(target);
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!validate()) return;
+    // Enter in a field on steps 1 and 2 means "Siguiente", never publish.
+    if (step !== 3) {
+      handleNext();
+      return;
+    }
 
-    // Photo nudge: warn the instructor once if they're about to create a session with no photos.
-    // A photo is how an athlete recognises the place, so this asks them to pause and reconsider.
-    // Uses sessionStorage so we only nudge once per session creation attempt (re-submit bypasses).
+    // Publicar re-checks every step (a restored draft, a clock that moved on)
+    // and lands on the first one with something to fix.
+    const fieldErrors = validateSessionForm(formData, recurringValue, new Date());
+    const paid = paidErrors();
+    setErrors({ ...textify(fieldErrors), ...paid });
+    const failing = firstFailingStep(fieldErrors, Object.keys(paid).length > 0);
+    if (failing) {
+      const field =
+        firstErrorField(errorsForStep(fieldErrors, failing)) ??
+        (paid.price_cents ? 'price_display' : 'payment_instructions');
+      sendToField(field, failing);
+      return;
+    }
+
+    // Photo nudge: ask the host once before creating a session with no photo,
+    // since a photo is how an athlete recognises the place. No claim about
+    // bookings (Al, 2026-10-21). sessionStorage, so a re-submit goes through.
     if (photos.length === 0 && !sessionStorage.getItem('tribe_photo_nudge_dismissed')) {
       // Al, 2026-10-21: say what a photo does for the athlete, no booking claim.
       const msg = tForm('noPhotoConfirm');
@@ -259,8 +487,9 @@ function CreateSessionPageInner() {
         cancelLabel: language === 'es' ? 'Agregar foto' : 'Add a photo',
       });
       if (!proceed) {
-        // Scroll the photo section into view to make the upload button obvious
-        document.querySelector('[data-photo-section]')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        // The photos are on step 1: take the host there, to the upload button.
+        pendingScroll.current = 'photos';
+        goToStep(1);
         return;
       }
       sessionStorage.setItem('tribe_photo_nudge_dismissed', '1');
@@ -314,7 +543,7 @@ function CreateSessionPageInner() {
         ...rest,
         ...paidFields,
         ...recurringFields,
-        // validate() has already held this to a whole number from 2 to 500.
+        // The rules above have held this to a whole number from 2 to 500.
         max_participants: Number(rest.max_participants),
         creator_id: user!.id,
         current_participants: 0,
@@ -324,6 +553,10 @@ function CreateSessionPageInner() {
         location_lng: rest.longitude ?? null,
       });
       if (!result.success) throw new Error(result.error);
+
+      // Published: the draft has done its job, and no waiting save may bring it back.
+      pendingDraftSave.current = null;
+      clearDraft(browserStorage(), user!.id);
 
       // The session now exists. Attaching the venue is a separate outcome from
       // creating it, and commit() never throws, so a link failure cannot fall
@@ -362,13 +595,12 @@ function CreateSessionPageInner() {
       });
       const errorMsg = (err?.message ?? err?.code ?? err?.details ?? JSON.stringify(error)) as string;
       // Migration 227 refused it (a start that passed while the form was open,
-      // or a capacity the browser check never saw): put it on the field.
+      // or a capacity the browser check never saw): put it on its field, on
+      // its step, in the host's language.
       const refused = serverFieldError(errorMsg);
       if (refused) {
-        const message = errorText(refused.error);
-        setErrors((prev) => ({ ...prev, [refused.field]: message }));
-        scrollToField(refused.field);
-        showError(message ?? errorMsg);
+        setErrors((prev) => ({ ...prev, [refused.field]: errorText(refused.error) }));
+        sendToField(refused.field, stepOfField(refused.field));
         return;
       }
       showError(`${t('sessionCreationFailed')}: ${errorMsg}`);
@@ -474,6 +706,10 @@ function CreateSessionPageInner() {
 
   // Today in Bogotá, not on the device's clock, so the picker and the rules agree.
   const today = bogotaDateOf(new Date());
+  const templateForm = {
+    ...formData,
+    max_participants: formData.max_participants === '' ? 10 : formData.max_participants,
+  };
 
   return (
     <div className="min-h-screen bg-theme-page pb-nav">
@@ -489,233 +725,303 @@ function CreateSessionPageInner() {
       </div>
 
       <div className="pt-header max-w-2xl md:max-w-4xl mx-auto px-4 py-6">
-        <TemplateSection
-          supabase={supabase}
-          userId={user.id}
-          language={language}
-          formData={{
-            ...formData,
-            max_participants: formData.max_participants === '' ? 10 : formData.max_participants,
-          }}
-          onLoadTemplate={handleLoadTemplate}
-        />
+        <CreateStepper step={step} draftSaved={draftReady && draftSaved} />
 
-        <div className="max-w-2xl md:max-w-4xl mx-auto p-4 md:p-6">
-          {/* noValidate: the shared rules decide, in the host's language, not the browser's bubble. */}
-          <form onSubmit={handleSubmit} noValidate className="space-y-4">
-            {/* T-MOM1: a session that already happened, for its photos (Moments on only). */}
-            <PastSessionLink />
-            <SportSelect value={formData.sport} onChange={(v) => setField('sport', v)} error={errors.sport} />
+        {step === 1 && draftOffer && (
+          <DraftBanner
+            sport={draftOffer.fields.sport}
+            savedAt={draftOffer.savedAt}
+            onContinue={() => applyDraft(draftOffer, true)}
+            onStartOver={startOver}
+          />
+        )}
 
-            <SkillLevelChips value={formData.skill_level} onChange={(v) => setField('skill_level', v)} />
+        {/* "Usar plantilla" fills fields on every step, so it opens the flow. */}
+        {step === 1 && (
+          <TemplateSection
+            supabase={supabase}
+            userId={user.id}
+            language={language}
+            formData={templateForm}
+            onLoadTemplate={handleLoadTemplate}
+            show="use"
+          />
+        )}
 
-            <WhoCanJoinChips value={formData.gender_preference} onChange={(v) => setField('gender_preference', v)} />
+        {/* noValidate: the shared rules decide, in the host's language, not the browser's bubble. */}
+        <form id="create-session-form" onSubmit={handleSubmit} noValidate className="space-y-4">
+          {step === 1 && (
+            <>
+              {/* T-MOM1: a session that already happened, for its photos (Moments on only). */}
+              <PastSessionLink />
+              <SportSelect value={formData.sport} onChange={(v) => setField('sport', v)} error={errors.sport} />
 
-            <DateTimeFields
-              date={formData.date}
-              startTime={formData.start_time}
-              onDateChange={(v) => setField('date', v)}
-              onStartTimeChange={(v) => setField('start_time', v)}
-              minDate={today}
-              dateError={errors.date}
-              startTimeError={errors.start_time}
-            />
+              <SkillLevelChips value={formData.skill_level} onChange={(v) => setField('skill_level', v)} />
 
-            <LocationFields
-              venue={venue}
-              disabled={loading}
-              value={formData.location}
-              onChange={(location, coords) => {
-                setErrors((prev) => ({ ...prev, location: '' }));
-                setFormData((prev) => ({
-                  ...prev,
-                  location,
-                  latitude: coords?.lat ?? null,
-                  longitude: coords?.lng ?? null,
-                }));
-              }}
-              error={errors.location}
-            />
+              {/* Photos */}
+              <div data-photo-section data-field="photos">
+                <PhotoUploadSection
+                  supabase={supabase}
+                  userId={user.id}
+                  language={language}
+                  photos={photos}
+                  onPhotosChange={setPhotos}
+                />
+                {photos.length === 0 && <PhotoHint />}
+              </div>
+            </>
+          )}
 
-            <DurationChips value={formData.duration} onChange={(v) => setField('duration', v)} />
+          {step === 2 && (
+            <>
+              <DateTimeFields
+                date={formData.date}
+                startTime={formData.start_time}
+                onDateChange={(v) => setField('date', v)}
+                onStartTimeChange={(v) => setField('start_time', v)}
+                minDate={today}
+                dateError={errors.date}
+                startTimeError={errors.start_time}
+              />
 
-            <CapacityInput
-              value={formData.max_participants}
-              onChange={(v) => setField('max_participants', v)}
-              error={errors.max_participants}
-            />
+              <DurationChips value={formData.duration} onChange={(v) => setField('duration', v)} />
 
-            <JoinPolicySelect value={formData.join_policy} onChange={(v) => setField('join_policy', v)} />
+              <LocationFields
+                venue={venue}
+                disabled={loading}
+                value={formData.location}
+                onChange={(location, coords) => {
+                  setErrors((prev) => ({ ...prev, location: '' }));
+                  setFormData((prev) => ({
+                    ...prev,
+                    location,
+                    latitude: coords?.lat ?? null,
+                    longitude: coords?.lng ?? null,
+                  }));
+                }}
+                error={errors.location}
+              />
 
-            <DescriptionField value={formData.description} onChange={(v) => setField('description', v)} />
+              {/* ─── Recurring Session Toggle ─── */}
+              <div data-field="recurrence" className="border border-theme rounded-lg p-4 bg-theme-card">
+                <RecurringSessionToggle
+                  value={recurringValue}
+                  onChange={(next) => {
+                    setRecurringValue(next);
+                    if (errors.recurrence) setErrors((prev) => ({ ...prev, recurrence: '' }));
+                  }}
+                />
+                {errors.recurrence && <p className="text-red-500 text-sm mt-1">{errors.recurrence}</p>}
+              </div>
+            </>
+          )}
 
-            <EquipmentField value={formData.equipment} onChange={(v) => setField('equipment', v)} />
+          {step === 3 && (
+            <>
+              <CapacityInput
+                value={formData.max_participants}
+                onChange={(v) => setField('max_participants', v)}
+                error={errors.max_participants}
+              />
 
-            {/* ─── Paid Session Toggle (instructors only) ─── */}
-            {isInstructor && (
-              <div className="border border-theme rounded-lg p-4 bg-theme-card space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label className="text-theme-primary font-semibold text-base">
-                      {language === 'es' ? 'Sesión de pago' : 'Paid Session'}
-                    </Label>
-                    <p className="text-xs text-theme-secondary mt-0.5">
-                      {language === 'es' ? 'Cobra a los atletas por esta sesión' : 'Charge athletes for this session'}
-                    </p>
-                    {/* Tribe.OS hint — paid sessions on the main app
-                        are one-offs; ongoing client management,
-                        attendance, and revenue tracking live in
-                        Tribe.OS. Always visible to instructors so
-                        they can discover the upgrade path even
-                        before they toggle the price on. */}
-                    <Link
-                      href="/os/dashboard"
-                      className="inline-flex items-center gap-1 text-[11px] text-tribe-green hover:underline mt-1.5 font-medium"
-                    >
-                      {language === 'es'
-                        ? 'Gestiona clientes, asistencia e ingresos en Tribe.OS →'
-                        : 'Manage clients, attendance & revenue with Tribe.OS →'}
-                    </Link>
-                  </div>
-                  <button
-                    type="button"
-                    role="switch"
-                    aria-checked={formData.is_paid}
-                    onClick={() => setFormData((prev) => ({ ...prev, is_paid: !prev.is_paid }))}
-                    className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tribe-green ${formData.is_paid ? 'bg-tribe-green' : 'bg-stone-400'}`}
-                  >
-                    <span
-                      className={`pointer-events-none inline-block h-6 w-6 rounded-full bg-white dark:bg-tribe-green shadow-lg transform transition-transform ${formData.is_paid ? 'translate-x-5' : 'translate-x-0'}`}
-                    />
-                  </button>
-                </div>
+              <WhoCanJoinChips value={formData.gender_preference} onChange={(v) => setField('gender_preference', v)} />
 
-                {formData.is_paid && (
-                  <div className="space-y-3 pt-2 border-t border-theme">
-                    {/* Currency selector */}
+              <JoinPolicySelect value={formData.join_policy} onChange={(v) => setField('join_policy', v)} />
+
+              <DescriptionField value={formData.description} onChange={(v) => setField('description', v)} />
+
+              {/* ─── Paid Session Toggle (instructors only) ─── */}
+              {isInstructor && (
+                <div className="border border-theme rounded-lg p-4 bg-theme-card space-y-4">
+                  <div className="flex items-center justify-between">
                     <div>
-                      <Label className="text-theme-primary mb-2">{language === 'es' ? 'Moneda' : 'Currency'}</Label>
-                      <div className="grid grid-cols-2 gap-2">
-                        {(['COP', 'USD'] as const).map((cur) => (
-                          <button
-                            key={cur}
-                            type="button"
-                            onClick={() => setFormData((prev) => ({ ...prev, currency: cur }))}
-                            className={`p-3 rounded-lg font-medium transition-all text-center ${formData.currency === cur ? 'bg-tribe-green text-slate-900 ring-2 ring-tribe-green' : 'bg-theme-card border border-theme text-theme-primary hover:border-tribe-green'}`}
-                          >
-                            {cur === 'COP' ? '🇨🇴 COP' : '🇺🇸 USD'}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Price input */}
-                    <div>
-                      <Label className="text-theme-primary mb-2">
-                        {language === 'es' ? 'Precio' : 'Price'} ({formData.currency}) *
+                      <Label className="text-theme-primary font-semibold text-base">
+                        {language === 'es' ? 'Sesión de pago' : 'Paid Session'}
                       </Label>
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-theme-secondary font-medium">
-                          {formData.currency === 'COP' ? '$' : '$'}
-                        </span>
-                        <Input
-                          type="number"
-                          name="price_display"
-                          value={formData.price_display}
-                          onChange={handleChange}
-                          min={formData.currency === 'COP' ? '20000' : '5'}
-                          step={formData.currency === 'COP' ? '1000' : '0.01'}
-                          placeholder={formData.currency === 'COP' ? '45000' : '15.00'}
-                          className={`h-auto py-3 pl-8 bg-theme-card text-theme-primary ${errors.price_cents ? 'border-red-500' : 'border-theme'}`}
-                        />
+                      <p className="text-xs text-theme-secondary mt-0.5">
+                        {language === 'es' ? 'Cobra a los atletas por esta sesión' : 'Charge athletes for this session'}
+                      </p>
+                      {/* Tribe.OS hint — paid sessions on the main app
+                          are one-offs; ongoing client management,
+                          attendance, and revenue tracking live in
+                          Tribe.OS. Always visible to instructors so
+                          they can discover the upgrade path even
+                          before they toggle the price on. */}
+                      <Link
+                        href="/os/dashboard"
+                        className="inline-flex items-center gap-1 text-[11px] text-tribe-green hover:underline mt-1.5 font-medium"
+                      >
+                        {language === 'es'
+                          ? 'Gestiona clientes, asistencia e ingresos en Tribe.OS →'
+                          : 'Manage clients, attendance & revenue with Tribe.OS →'}
+                      </Link>
+                    </div>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={formData.is_paid}
+                      onClick={() => setFormData((prev) => ({ ...prev, is_paid: !prev.is_paid }))}
+                      className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tribe-green ${formData.is_paid ? 'bg-tribe-green' : 'bg-stone-400'}`}
+                    >
+                      <span
+                        className={`pointer-events-none inline-block h-6 w-6 rounded-full bg-white dark:bg-tribe-green shadow-lg transform transition-transform ${formData.is_paid ? 'translate-x-5' : 'translate-x-0'}`}
+                      />
+                    </button>
+                  </div>
+
+                  {formData.is_paid && (
+                    <div className="space-y-3 pt-2 border-t border-theme">
+                      {/* Currency selector */}
+                      <div>
+                        <Label className="text-theme-primary mb-2">{language === 'es' ? 'Moneda' : 'Currency'}</Label>
+                        <div className="grid grid-cols-2 gap-2">
+                          {(['COP', 'USD'] as const).map((cur) => (
+                            <button
+                              key={cur}
+                              type="button"
+                              onClick={() => setFormData((prev) => ({ ...prev, currency: cur }))}
+                              className={`p-3 rounded-lg font-medium transition-all text-center ${formData.currency === cur ? 'bg-tribe-green text-slate-900 ring-2 ring-tribe-green' : 'bg-theme-card border border-theme text-theme-primary hover:border-tribe-green'}`}
+                            >
+                              {cur === 'COP' ? '🇨🇴 COP' : '🇺🇸 USD'}
+                            </button>
+                          ))}
+                        </div>
                       </div>
-                      {errors.price_cents && <p className="text-red-500 text-sm mt-1">{errors.price_cents}</p>}
-                      {formData.price_display &&
-                        !isNaN(parseFloat(formData.price_display)) &&
-                        parseFloat(formData.price_display) > 0 && (
-                          <div className="mt-2 p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-200 dark:border-emerald-800">
-                            <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 mb-2">
-                              {language === 'es' ? 'Desglose de pago' : 'Payment Breakdown'}
-                            </p>
-                            <div className="space-y-1">
-                              {/* Fee/payout lines intentionally hidden: Tribe takes no
-                                  platform fee, so a "Platform fee (15%) / you earn 85%"
-                                  split misstates the instructor's actual take (100%).
-                                  Only the price the athlete pays is shown. Display-only
-                                  change; no submission or validation math touched. */}
-                              <div className="flex justify-between text-sm">
-                                <span className="text-emerald-800 dark:text-emerald-300">
-                                  {language === 'es' ? 'Precio del atleta' : 'Athlete pays'}
-                                </span>
-                                <span className="font-medium text-emerald-800 dark:text-emerald-300">
-                                  {formatDisplayAmount(Number(formData.price_display), formData.currency as Currency)}
-                                </span>
+
+                      {/* Price input */}
+                      <div>
+                        <Label className="text-theme-primary mb-2">
+                          {language === 'es' ? 'Precio' : 'Price'} ({formData.currency}) *
+                        </Label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-theme-secondary font-medium">
+                            {formData.currency === 'COP' ? '$' : '$'}
+                          </span>
+                          <Input
+                            type="number"
+                            name="price_display"
+                            value={formData.price_display}
+                            onChange={handleChange}
+                            min={formData.currency === 'COP' ? '20000' : '5'}
+                            step={formData.currency === 'COP' ? '1000' : '0.01'}
+                            placeholder={formData.currency === 'COP' ? '45000' : '15.00'}
+                            className={`h-auto py-3 pl-8 bg-theme-card text-theme-primary ${errors.price_cents ? 'border-red-500' : 'border-theme'}`}
+                          />
+                        </div>
+                        {errors.price_cents && <p className="text-red-500 text-sm mt-1">{errors.price_cents}</p>}
+                        {formData.price_display &&
+                          !isNaN(parseFloat(formData.price_display)) &&
+                          parseFloat(formData.price_display) > 0 && (
+                            <div className="mt-2 p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-200 dark:border-emerald-800">
+                              <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 mb-2">
+                                {language === 'es' ? 'Desglose de pago' : 'Payment Breakdown'}
+                              </p>
+                              <div className="space-y-1">
+                                {/* Fee/payout lines intentionally hidden: Tribe takes no
+                                    platform fee, so a "Platform fee (15%) / you earn 85%"
+                                    split misstates the instructor's actual take (100%).
+                                    Only the price the athlete pays is shown. Display-only
+                                    change; no submission or validation math touched. */}
+                                <div className="flex justify-between text-sm">
+                                  <span className="text-emerald-800 dark:text-emerald-300">
+                                    {language === 'es' ? 'Precio del atleta' : 'Athlete pays'}
+                                  </span>
+                                  <span className="font-medium text-emerald-800 dark:text-emerald-300">
+                                    {formatDisplayAmount(Number(formData.price_display), formData.currency as Currency)}
+                                  </span>
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        )}
-                    </div>
+                          )}
+                      </div>
 
-                    {/* Payment instructions */}
-                    <div>
-                      <Label className="text-theme-primary mb-2">
-                        {language === 'es' ? 'Instrucciones de pago' : 'Payment Instructions'} *
-                      </Label>
-                      <Textarea
-                        name="payment_instructions"
-                        value={formData.payment_instructions}
-                        onChange={handleChange}
-                        rows={3}
-                        placeholder={
-                          language === 'es'
-                            ? 'Ej: Nequi: 300-123-4567 o efectivo en el lugar'
-                            : 'E.g. Nequi: 300-123-4567, Venmo: @coach-maria, or cash at venue'
-                        }
-                        className={`py-3 bg-theme-card text-theme-primary resize-none ${errors.payment_instructions ? 'border-red-500' : 'border-theme'}`}
-                      />
-                      {errors.payment_instructions && (
-                        <p className="text-red-500 text-sm mt-1">{errors.payment_instructions}</p>
-                      )}
+                      {/* Payment instructions */}
+                      <div>
+                        <Label className="text-theme-primary mb-2">
+                          {language === 'es' ? 'Instrucciones de pago' : 'Payment Instructions'} *
+                        </Label>
+                        <Textarea
+                          name="payment_instructions"
+                          value={formData.payment_instructions}
+                          onChange={handleChange}
+                          rows={3}
+                          placeholder={
+                            language === 'es'
+                              ? 'Ej: Nequi: 300-123-4567 o efectivo en el lugar'
+                              : 'E.g. Nequi: 300-123-4567, Venmo: @coach-maria, or cash at venue'
+                          }
+                          className={`py-3 bg-theme-card text-theme-primary resize-none ${errors.payment_instructions ? 'border-red-500' : 'border-theme'}`}
+                        />
+                        {errors.payment_instructions && (
+                          <p className="text-red-500 text-sm mt-1">{errors.payment_instructions}</p>
+                        )}
+                      </div>
                     </div>
+                  )}
+                </div>
+              )}
+              {/* ─── Opciones avanzadas: Sesión de prueba (T-JOIN1b) ─── */}
+              <div className="rounded-lg border border-theme bg-theme-card">
+                <button
+                  type="button"
+                  aria-expanded={advancedOpen || formData.is_test}
+                  onClick={() => setAdvancedOpen((open) => !open)}
+                  className="w-full flex items-center justify-between p-4 text-sm font-semibold text-theme-primary"
+                >
+                  {tSteps('advanced')}
+                  <ChevronDown
+                    className={`w-4 h-4 text-theme-secondary transition-transform ${advancedOpen || formData.is_test ? 'rotate-180' : ''}`}
+                  />
+                </button>
+                {(advancedOpen || formData.is_test) && (
+                  <div className="px-4 pb-4">
+                    <TestSessionToggle
+                      value={formData.is_test}
+                      onChange={(next) => setFormData((prev) => ({ ...prev, is_test: next }))}
+                    />
                   </div>
                 )}
               </div>
-            )}
 
-            {/* ─── Recurring Session Toggle ─── */}
-            <div data-field="recurrence" className="border border-theme rounded-lg p-4 bg-theme-card">
-              <RecurringSessionToggle
-                value={recurringValue}
-                onChange={(next) => {
-                  setRecurringValue(next);
-                  if (errors.recurrence) setErrors((prev) => ({ ...prev, recurrence: '' }));
-                }}
-              />
-              {errors.recurrence && <p className="text-red-500 text-sm mt-1">{errors.recurrence}</p>}
-            </div>
+              <SessionSummary values={formData} venueName={venue.selected?.business_name ?? null} />
+            </>
+          )}
+        </form>
 
-            {/* ─── Sesión de prueba (T-JOIN1b) ─── */}
-            <TestSessionToggle
-              value={formData.is_test}
-              onChange={(next) => setFormData((prev) => ({ ...prev, is_test: next }))}
+        {/* Outside the form, so Enter in the template name never publishes. */}
+        {step === 3 && (
+          <div className="mt-4">
+            <TemplateSection
+              supabase={supabase}
+              userId={user.id}
+              language={language}
+              formData={templateForm}
+              onLoadTemplate={handleLoadTemplate}
+              show="save"
             />
+          </div>
+        )}
 
-            {/* Photos */}
-            <div data-photo-section>
-              <PhotoUploadSection
-                supabase={supabase}
-                userId={user.id}
-                language={language}
-                photos={photos}
-                onPhotosChange={setPhotos}
-              />
-              {photos.length === 0 && <PhotoHint />}
-            </div>
-
-            <Button type="submit" disabled={loading} className="w-full py-3 font-bold">
-              {loading ? t('creating') : t('createSession')}
+        <div className="flex gap-3 pt-2">
+          {step > 1 && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => goToStep((step - 1) as CreateStep)}
+              className="flex-1 py-3 font-semibold"
+            >
+              {tSteps('back')}
             </Button>
-          </form>
+          )}
+          {step < 3 ? (
+            <Button type="button" onClick={handleNext} className="flex-[2] py-3 font-bold">
+              {tSteps('next')}
+            </Button>
+          ) : (
+            <Button type="submit" form="create-session-form" disabled={loading} className="flex-[2] py-3 font-bold">
+              {loading ? tSteps('publishing') : tSteps('publish')}
+            </Button>
+          )}
         </div>
       </div>
 

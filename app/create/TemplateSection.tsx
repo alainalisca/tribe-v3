@@ -21,6 +21,12 @@ interface TemplateSectionProps {
   language: 'en' | 'es';
   formData: { sport: string; location: string; duration: number; max_participants: number; description: string };
   onLoadTemplate: (template: SessionTemplateRow) => void;
+  /**
+   * T-POLISH1 PR 4b: which half to show. The 3-step create flow puts "Usar
+   * plantilla" on step 1 (it fills fields on every step) and "Guardar
+   * plantilla" on step 3, where the whole form is known.
+   */
+  show?: 'use' | 'save' | 'both';
 }
 
 export default function TemplateSection({
@@ -29,6 +35,7 @@ export default function TemplateSection({
   language,
   formData,
   onLoadTemplate,
+  show = 'both',
 }: TemplateSectionProps) {
   const { t } = useLanguage();
   const [templates, setTemplates] = useState<SessionTemplateRow[]>([]);
@@ -117,21 +124,25 @@ export default function TemplateSection({
   return (
     <>
       <div className="flex gap-3 mb-4">
-        <button
-          type="button"
-          onClick={() => setShowTemplates(!showTemplates)}
-          className="flex-1 py-3 px-3 bg-stone-200 dark:bg-tribe-mid text-theme-primary font-medium rounded-lg hover:bg-stone-300 dark:hover:bg-tribe-card transition text-sm"
-        >
-          📋 {t('useTemplate')} ({templates.length})
-        </button>
-        <Button
-          type="button"
-          onClick={startSaveAsTemplate}
-          disabled={savingTemplate}
-          className="flex-1 py-3 px-3 font-medium text-sm"
-        >
-          {savingTemplate ? '...' : `💾 ${t('saveTemplate')}`}
-        </Button>
+        {show !== 'save' && (
+          <button
+            type="button"
+            onClick={() => setShowTemplates(!showTemplates)}
+            className="flex-1 py-3 px-3 bg-stone-200 dark:bg-tribe-mid text-theme-primary font-medium rounded-lg hover:bg-stone-300 dark:hover:bg-tribe-card transition text-sm"
+          >
+            📋 {t('useTemplate')} ({templates.length})
+          </button>
+        )}
+        {show !== 'use' && (
+          <Button
+            type="button"
+            onClick={startSaveAsTemplate}
+            disabled={savingTemplate}
+            className="flex-1 py-3 px-3 font-medium text-sm"
+          >
+            {savingTemplate ? '...' : `💾 ${t('saveTemplate')}`}
+          </Button>
+        )}
       </div>
 
       {showNameInput && (
