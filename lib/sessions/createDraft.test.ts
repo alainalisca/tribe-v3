@@ -8,7 +8,7 @@ import {
   writeDraft,
   type DraftSource,
 } from './createDraft';
-import { errorsForStep, firstFailingStep, parseStep, stepOfField } from './createSteps';
+import { clampStep, errorsForStep, firstFailingStep, parseStep, resumeStep, stepOfField } from './createSteps';
 
 /** A Storage over a Map, with a switch to make every call throw. */
 function memoryStorage() {
@@ -236,5 +236,24 @@ describe('steps', () => {
     expect(errorsForStep(all, 1)).toEqual({ sport: 'sport_required' });
     expect(errorsForStep(all, 2)).toEqual({ location: 'location_required' });
     expect(errorsForStep(all, 3)).toEqual({ max_participants: 'max_participants_range' });
+  });
+
+  it('a restored draft resumes on its saved step, clamped to 1..3', () => {
+    expect(resumeStep(2, {})).toBe(2);
+    expect(resumeStep(3, {})).toBe(3);
+    expect(resumeStep(9, {})).toBe(3);
+    expect(resumeStep(-1, {})).toBe(1);
+    expect(resumeStep(undefined, {})).toBe(1);
+    expect(clampStep(2.4)).toBe(2);
+  });
+
+  it('...or on an earlier step that no longer passes', () => {
+    expect(resumeStep(3, { date: 'date_required' })).toBe(2);
+    expect(resumeStep(3, { sport: 'sport_required', date: 'date_required' })).toBe(1);
+  });
+
+  it('a failure on the saved step itself does not move it', () => {
+    expect(resumeStep(2, { start_time: 'start_time_required' })).toBe(2);
+    expect(resumeStep(3, { max_participants: 'max_participants_range' })).toBe(3);
   });
 });

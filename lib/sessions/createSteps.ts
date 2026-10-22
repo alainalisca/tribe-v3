@@ -41,3 +41,20 @@ export function errorsForStep(errors: SessionFieldErrors, step: CreateStep): Ses
   for (const field of STEP_FIELDS[STEP_NAMES[step]]) if (errors[field]) out[field] = errors[field];
   return out;
 }
+
+/** Any saved step, as 1, 2 or 3 (a missing, fractional or out-of-range value never leaves the flow). */
+export function clampStep(value: unknown): CreateStep {
+  const n = Math.round(Number(value));
+  return n >= 3 ? 3 : n === 2 ? 2 : 1;
+}
+
+/**
+ * Where a restored draft resumes: the saved step, unless an EARLIER step now
+ * fails its rules (a passed date the restore cleared), then that step. A
+ * failure on the saved step itself is left for its own "Siguiente".
+ */
+export function resumeStep(saved: unknown, errors: SessionFieldErrors): CreateStep {
+  const target = clampStep(saved);
+  const failing = firstFailingStep(errors, false);
+  return failing !== null && failing < target ? failing : target;
+}

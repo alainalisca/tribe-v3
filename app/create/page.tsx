@@ -16,7 +16,7 @@ import { trackEvent } from '@/lib/analytics';
 
 import { useState, useEffect, useRef, Suspense } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import BottomNav from '@/components/BottomNav';
 import { useVenuePicker } from '@/hooks/useVenuePicker';
 import { ArrowLeft, ChevronDown, Share2, Copy } from 'lucide-react';
@@ -61,9 +61,11 @@ import {
 } from '@/lib/sessions/createDraft';
 import {
   STEP_NAMES,
+  clampStep,
   errorsForStep,
   firstFailingStep,
   parseStep,
+  resumeStep,
   stepOfField,
   type CreateStep,
 } from '@/lib/sessions/createSteps';
@@ -108,6 +110,13 @@ function CreateSessionPageInner() {
   // T-POLISH1 PR 4b: the step lives in the URL, so the phone's back button
   // walks back through the steps instead of leaving the form.
   const step = parseStep(searchParams.get('paso'));
+  // While the host leaves /create through an in-app link, the router hands this
+  // page the NEXT page's search params for a render before it unmounts, so
+  // `step` reads 1. The draft keeps the step the host was really on: only a
+  // render on /create moves it.
+  const onCreatePage = (usePathname() ?? '').startsWith('/create');
+  const stepOnPage = useRef<CreateStep>(step);
+  if (onCreatePage) stepOnPage.current = step;
   const supabase = createClient();
   const { t, language } = useLanguage();
   const tCreate = useTranslations('create');
@@ -236,7 +245,7 @@ function CreateSessionPageInner() {
     const save = () => {
       pendingDraftSave.current = null;
       const draft = toDraft(
-        { form: formData, recurring: recurringValue, step, photos, venue: venue.selected },
+        { form: formData, recurring: recurringValue, step: stepOnPage.current, photos, venue: venue.selected },
         new Date()
       );
       writeDraft(browserStorage(), user.id, draft);
@@ -259,6 +268,7 @@ function CreateSessionPageInner() {
   // Each step change: keep count of our history entries, report the view, and
   // land on the field a failed publish is about (or the top of the step).
   useEffect(() => {
+    if (!onCreatePage) return;
     if (replacing.current) {
       replacing.current = false;
     } else {
@@ -289,6 +299,18 @@ function CreateSessionPageInner() {
     }
   }
 
+  /**
+   * Puts a draft back. The host resumes on the step they were on when it was
+   * saved (clamped to 1..3), unless an earlier step no longer passes the rules
+   * (a date that had passed and was cleared): then on the first step that
+   * fails, with its errors showing.
+   *
+   * "Continuar" (navigate) also writes one history entry per step on the way,
+   * ?paso=2 then ?paso=3, so the phone's back button walks back from the
+   * resumed step exactly as if the host had pressed Siguiente. Native
+   * pushState, which the app router keeps in sync with useSearchParams, so the
+   * entries land in one go rather than as racing router navigations.
+   */
   function applyDraft(draft: CreateDraft, navigate: boolean) {
     // The draft holds no payment field, so a restored form starts free.
     setFormData((prev) => ({ ...prev, ...draft.fields }));
@@ -297,14 +319,19 @@ function CreateSessionPageInner() {
     if (draft.venue) venue.select(draft.venue);
     setDraftOffer(null);
     setDraftReady(true);
+
+    const restoredErrors = validateSessionForm(draft.fields, draft.recurring, new Date());
+    const target = resumeStep(draft.step, restoredErrors);
+    if (target < clampStep(draft.step)) setErrors(textify(errorsForStep(restoredErrors, target)));
     trackEvent('create_draft_restored', {
-      step: draft.step,
+      step: target,
       age_hours: Math.round((Date.now() - draft.savedAt) / 3_600_000),
     });
-    if (navigate && draft.step !== step) {
-      replacing.current = true;
-      navDepth.current = 0;
-      router.replace(`/create/?paso=${draft.step}`, { scroll: false });
+
+    if (navigate) {
+      for (let s = step + 1; s <= target; s++) window.history.pushState(null, '', `/create/?paso=${s}`);
+    } else if (target !== step) {
+      goToStep(target);
     }
   }
 

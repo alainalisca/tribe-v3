@@ -52,6 +52,16 @@ vi.mock('next/navigation', async () => {
       replace: (u: string) => nav.replace(u),
       back: () => nav.go(-1),
     }),
+    usePathname: () => {
+      const url = React.useSyncExternalStore(
+        (cb: () => void) => {
+          nav.listeners.add(cb);
+          return () => nav.listeners.delete(cb);
+        },
+        () => nav.stack[nav.i]
+      );
+      return url.split('?')[0];
+    },
     useSearchParams: () => {
       const url = React.useSyncExternalStore(
         (cb: () => void) => {
@@ -211,6 +221,9 @@ beforeEach(() => {
   mocks.trackEvent.mockReset();
   mocks.showError.mockReset();
   vi.spyOn(window.history, 'go').mockImplementation((n?: number) => nav.go(n ?? 0));
+  vi.spyOn(window.history, 'pushState').mockImplementation((_d: unknown, _t: string, url?: string | URL | null) =>
+    nav.push(String(url))
+  );
   window.scrollTo = vi.fn() as unknown as typeof window.scrollTo;
   Element.prototype.scrollIntoView = vi.fn();
 });
@@ -298,15 +311,30 @@ describe('validation per step', () => {
 });
 
 describe('Publicar', () => {
-  it('re-checks every step and lands on the first that fails (a restored draft missing its place)', async () => {
-    storedDraft({ location: '' }, 3);
+  it('re-checks every step and lands on the first that fails (the start passed while on step 3)', async () => {
+    // A start two minutes ahead in Bogotá: valid when the draft is restored.
+    const soon = new Date(Date.now() + 2 * 60e3 - 5 * 3600e3).toISOString();
+    storedDraft({ date: soon.slice(0, 10), start_time: soon.slice(11, 16) }, 3);
     await renderPage('/create/?paso=3');
     await onStep(3);
-    fireEvent.click(screen.getByRole('button', { name: 'Publicar sesión' }));
+    vi.useFakeTimers({ toFake: ['Date'] });
+    try {
+      vi.setSystemTime(Date.now() + 10 * 60e3);
+      fireEvent.click(screen.getByRole('button', { name: 'Publicar sesión' }));
+      await onStep(2);
+      expect(screen.getByText('Elige una hora que aún no haya pasado.')).toBeInTheDocument();
+      expect(mocks.showError).toHaveBeenCalledWith('Revisa el paso 2: Cuándo y dónde.');
+      expect(mocks.insertSession).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('a reload on step 3 whose draft lost its place lands on step 2', async () => {
+    storedDraft({ location: '' }, 3);
+    await renderPage('/create/?paso=3');
     await onStep(2);
     expect(screen.getByText('La ubicación es obligatoria')).toBeInTheDocument();
-    expect(mocks.showError).toHaveBeenCalledWith('Revisa el paso 2: Cuándo y dónde.');
-    expect(mocks.insertSession).not.toHaveBeenCalled();
   });
 
   it("routes the paid block's errors to step 3", async () => {
@@ -456,6 +484,76 @@ describe('the draft', () => {
     await renderPage('/create/?paso=3');
     await onStep(3);
     expect(screen.getByRole('spinbutton')).toHaveValue(14);
+  });
+});
+
+describe('resuming a draft (Continuar)', () => {
+  it('resumes on step 2, with ?paso=2 in the address', async () => {
+    storedDraft({}, 2);
+    await renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: 'Continuar' }));
+    await onStep(2);
+    expect(nav.stack[nav.i]).toBe('/create/?paso=2');
+  });
+
+  it('resumes on step 3, with a history entry for each step on the way', async () => {
+    storedDraft({}, 3);
+    await renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: 'Continuar' }));
+    await onStep(3);
+    expect(nav.stack).toEqual(['/create/', '/create/?paso=2', '/create/?paso=3']);
+    expect(screen.getByRole('spinbutton')).toHaveValue(14);
+    expect(mocks.trackEvent).toHaveBeenCalledWith('create_draft_restored', expect.objectContaining({ step: 3 }));
+  });
+
+  it('a stale date sends the host to step 2, not the saved step 3, with the error showing', async () => {
+    storedDraft({ date: inDays(-3) }, 3);
+    await renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: 'Continuar' }));
+    await onStep(2);
+    expect(screen.getByText('La fecha es obligatoria')).toBeInTheDocument();
+    expect(nav.stack).toEqual(['/create/', '/create/?paso=2']);
+  });
+
+  it("the phone's back button walks back from the resumed step, values intact", async () => {
+    storedDraft({}, 3);
+    await renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: 'Continuar' }));
+    await onStep(3);
+    backButton();
+    await onStep(2);
+    expect(screen.getByLabelText('lugar')).toHaveValue('Laureles');
+    backButton();
+    await onStep(1);
+    expect(screen.getByRole('combobox')).toHaveValue('Boxing');
+  });
+
+  it('"Atrás" after resuming goes back through those entries too', async () => {
+    storedDraft({}, 3);
+    await renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: 'Continuar' }));
+    await onStep(3);
+    fireEvent.click(screen.getByRole('button', { name: 'Atrás' }));
+    await onStep(2);
+    expect(nav.i).toBe(1);
+  });
+
+  it('a saved step outside 1..3 resumes on 1 or 3, never outside the flow', async () => {
+    const { clampStep } = await import('@/lib/sessions/createSteps');
+    expect(clampStep(7)).toBe(3);
+    expect(clampStep(0)).toBe(1);
+    expect(clampStep('x')).toBe(1);
+  });
+
+  it('leaving through an in-app link keeps the step the host was on', async () => {
+    await renderPage();
+    await fillStep1();
+    await fillStep2();
+    // The router shows the next page's URL to this page before it unmounts.
+    act(() => nav.push('/sessions/'));
+    await new Promise((r) => setTimeout(r, 700));
+    const raw = window.localStorage.getItem(KEY) as string;
+    expect(raw).toContain('"step":3');
   });
 });
 
