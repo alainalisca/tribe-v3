@@ -63,6 +63,7 @@ const BUCKETS = [
 describe.skipIf(!ENABLED)('deleteAccount on the local stack (T-DEL1)', () => {
   let db: SupabaseClient;
   let x = '';
+  let sharedLogo = '';
   let o = '';
   const ids: Record<string, string> = {};
   const xFiles: Array<[string, string]> = [];
@@ -107,6 +108,7 @@ describe.skipIf(!ENABLED)('deleteAccount on the local stack (T-DEL1)', () => {
     });
     if (created.error || !created.data.user) throw new Error(created.error?.message ?? 'no user');
     x = created.data.user.id;
+    sharedLogo = `avatars/${x}-logo.jpg`;
     await db
       .from('users')
       .upsert({ id: x, email: created.data.user.email }, { onConflict: 'id', ignoreDuplicates: true });
@@ -460,6 +462,16 @@ describe.skipIf(!ENABLED)('deleteAccount on the local stack (T-DEL1)', () => {
     await put('profile-images', `community-covers/${ids.community}/cover.jpg`, x, keptFiles);
     await put('community-banners', `${ids.community}/banner.jpg`, x, keptFiles);
     await put('moments', oMoment, null, keptFiles);
+    // T-DEL2 (230): X's upload that Y's partner listing uses as its logo, the
+    // shape that took /g/bullbox's logo on 2026-10-23. It must stay.
+    await put('profile-images', sharedLogo, x, keptFiles);
+    await one(
+      db
+        .from('featured_partners')
+        .update({ logo_url: `http://127.0.0.1:54321/storage/v1/object/public/profile-images/${sharedLogo}` })
+        .eq('id', ids.partner)
+        .select('id')
+    );
   }, 120_000);
 
   afterAll(async () => {
@@ -491,9 +503,19 @@ describe.skipIf(!ENABLED)('deleteAccount on the local stack (T-DEL1)', () => {
     // No push secret on the local stack, so the notice is skipped, not sent;
     // which sessions and athletes it goes to is pinned by deleteAccount.test.ts.
     expect(out).toMatchObject({ ok: true, filesDeleted: xFiles.length, notified: { failed: 0 } });
+    // T-DEL2: the shared logo is reported as kept, with the row that uses it.
+    expect(out.ok && out.filesKept).toEqual([
+      {
+        bucket: 'profile-images',
+        path: sharedLogo,
+        table: 'featured_partners',
+        column: 'logo_url',
+        rowId: ids.partner,
+      },
+    ]);
   }, 120_000);
 
-  it("each of their files is gone from storage; the community cover, banner and O's Moment stay", async () => {
+  it("each of their files is gone from storage; the community cover, banner, O's Moment and the shared logo stay", async () => {
     for (const [bucket, name] of xFiles) expect(await exists(bucket, name), `${bucket}/${name}`).toBe(false);
     for (const [bucket, name] of keptFiles) expect(await exists(bucket, name), `${bucket}/${name}`).toBe(true);
   });
