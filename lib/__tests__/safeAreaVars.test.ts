@@ -81,6 +81,9 @@ export function rawReads(files: string[]): string[] {
   const found: string[] = [];
   for (const f of files) {
     const src = readFileSync(f, 'utf8');
+    // Every read names safe-area-inset; skipping the rest skips their parse,
+    // which is what made this whole-tree scan time out on a loaded CI runner.
+    if (!src.includes('safe-area-inset')) continue;
     const rel = path.relative(ROOT, f);
     if (f.endsWith('.css')) {
       for (const line of stripCssComments(src).split('\n')) {

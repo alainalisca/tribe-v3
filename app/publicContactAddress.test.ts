@@ -52,7 +52,11 @@ describe('visitor-facing pages show info@tribelatam.com, never the old address',
   });
 
   it(`no rendered string under app/ (outside app/api) or components/ contains "${OLD}"`, () => {
-    const offenders = files.filter((f) => textOf(f).some((t) => t.includes(OLD)));
+    // A string holding OLD holds it whole, so a file whose text lacks it is not
+    // parsed; the parse is what made this whole-tree scan time out on CI.
+    const offenders = files.filter(
+      (f) => fs.readFileSync(f, 'utf-8').includes(OLD) && textOf(f).some((t) => t.includes(OLD))
+    );
     expect(offenders.map((f) => path.relative(ROOT, f))).toEqual([]);
   });
 

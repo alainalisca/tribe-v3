@@ -17,7 +17,7 @@
 import { describe, it, expect } from 'vitest';
 import { readdirSync, statSync } from 'node:fs';
 import path from 'node:path';
-import { sourceWithoutComments } from '@/lib/testing/sourceWithoutComments';
+import { sourceWithoutCommentsIfMentions } from '@/lib/testing/sourceWithoutComments';
 
 const ROOT = path.resolve(__dirname, '..', '..');
 
@@ -38,7 +38,7 @@ describe('pass_leads.contacted_at has one writer', () => {
   it('only leadContact.ts calls set_pass_lead_contacted', () => {
     const callers = ['app', 'lib', 'components', 'hooks']
       .flatMap((d) => sources(path.join(ROOT, d)))
-      .filter((f) => CALL.test(sourceWithoutComments(f)))
+      .filter((f) => CALL.test(sourceWithoutCommentsIfMentions(f, 'set_pass_lead_contacted')))
       .map((f) => path.relative(ROOT, f));
     expect(callers).toEqual(['lib/dal/leadContact.ts']);
   });
@@ -52,7 +52,7 @@ describe('pass_leads.contacted_at has one writer', () => {
     ];
     expect(files.length).toBeGreaterThan(5);
     const touching = files
-      .filter((f) => /from\(\s*['"`]pass_leads['"`]\s*\)/.test(sourceWithoutComments(f)))
+      .filter((f) => /from\(\s*['"`]pass_leads['"`]\s*\)/.test(sourceWithoutCommentsIfMentions(f, 'pass_leads')))
       .map((f) => path.relative(ROOT, f));
     expect(touching).toEqual([]);
   });

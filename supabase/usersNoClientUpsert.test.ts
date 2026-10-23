@@ -102,9 +102,13 @@ describe('no code upserts into public.users (T-AUTH3)', () => {
   });
 
   it('finds no .from("users")...upsert() anywhere', () => {
-    const offenders = files.flatMap((f) =>
-      usersUpsertLines(f, fs.readFileSync(f, 'utf-8')).map((line) => `${path.relative(ROOT, f)}:${line}`)
-    );
+    const offenders = files.flatMap((f) => {
+      const text = fs.readFileSync(f, 'utf-8');
+      // A file that never says upsert cannot call it, and is not parsed: the
+      // parse is what made this whole-tree scan time out on a loaded CI runner.
+      if (!text.includes('upsert')) return [];
+      return usersUpsertLines(f, text).map((line) => `${path.relative(ROOT, f)}:${line}`);
+    });
     expect(
       offenders,
       'An upsert on users reads EXCLUDED.<col> for every column it sends; any column without SELECT ' +

@@ -54,10 +54,20 @@ async function renderProvider() {
       <p>child</p>
     </PostHogProvider>
   );
-  await act(async () => {
-    await vi.runAllTimersAsync();
-  });
+  await subscribed();
   return result;
+}
+
+/**
+ * Wait for the listener itself, not for the timers. The provider subscribes
+ * after two dynamic imports, which settle through vitest's module loader, not
+ * through timers: running the timers alone left authCallback null on a loaded
+ * CI runner, the first emit went nowhere and identify was "called 0 times".
+ */
+async function subscribed() {
+  await act(async () => {
+    await vi.waitFor(() => expect(authCallback).not.toBeNull(), { timeout: 5000 });
+  });
 }
 
 /** Fire an auth event and let the deferred identify run. */
@@ -166,7 +176,7 @@ describe('PostHogProvider, part B: identity follows auth', () => {
     await act(async () => {
       await vi.runAllTimersAsync();
     });
-    expect(authCallback).not.toBeNull();
+    await subscribed();
   });
 
   it('unsubscribes from auth on unmount', async () => {
