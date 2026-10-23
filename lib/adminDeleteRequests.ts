@@ -82,8 +82,12 @@ const USER_ERRORS: Record<string, { en: string; es: string }> = {
     es: 'Esa cuenta ya no existe.',
   },
   owns_gym: {
-    en: 'This account owns a gym. Transfer the gym first, then delete the account.',
-    es: 'Esta cuenta es dueña de un gimnasio. Transfiere primero el gimnasio y luego elimina la cuenta.',
+    en: 'This account owns a gym, with its coaches and clients. Transfer the gym to someone else or close it first, then delete the account.',
+    es: 'Esta cuenta es dueña de un gimnasio, con sus coaches y clientes. Transfiere el gimnasio a otra persona o ciérralo primero, y luego elimina la cuenta.',
+  },
+  owns_partner: {
+    en: 'This account owns a partner listing, with its pass and the leads who requested it. Transfer the listing to someone else or close it first, then delete the account.',
+    es: 'Esta cuenta tiene un perfil de aliado, con su pase y los contactos que lo pidieron. Transfiere el perfil a otra persona o ciérralo primero, y luego elimina la cuenta.',
   },
   // T-DEL1: deletion runs in steps and a failure can come after some of them,
   // so this must not say "nothing was deleted". Every step is safe to repeat.

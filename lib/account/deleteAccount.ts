@@ -17,8 +17,9 @@ import {
  * Steps, in order. Each checks its error and the first failure stops the run,
  * naming its step. Every step is safe to run again, so a run that stopped
  * partway is finished by running it again:
- *   check         the users row exists and owns no gym (gyms.owner_user_id
- *                 refuses the login delete; the gym is transferred first),
+ *   check         the users row exists, owns no gym and no partner listing
+ *                 (owns_gym, owns_partner: the clients or leads under it are
+ *                 other people's, so it is transferred or closed first),
  *                 and the confirmed athletes of their upcoming active sessions
  *                 are noted, because after the scrub nothing says which
  *                 sessions it cancelled
@@ -67,6 +68,13 @@ export async function deleteAccount(service: SupabaseClient, userId: string): Pr
   const { data: gyms, error: gymErr } = await service.from('gyms').select('id').eq('owner_user_id', userId).limit(1);
   if (gymErr) return fail('check', gymErr.message);
   if (gyms && gyms.length > 0) return fail('check', 'owns_gym');
+  const { data: partners, error: partnerErr } = await service
+    .from('featured_partners')
+    .select('id')
+    .eq('user_id', userId)
+    .limit(1);
+  if (partnerErr) return fail('check', partnerErr.message);
+  if (partners && partners.length > 0) return fail('check', 'owns_partner');
   const upcoming = await upcomingAthletes(service, userId);
   if ('error' in upcoming) return fail('check', upcoming.error);
 

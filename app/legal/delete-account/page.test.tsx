@@ -58,4 +58,9 @@ describe('/legal/delete-account', () => {
     expect(textIn('es')).not.toMatch(/teléfono/);
     expect(textIn('en')).not.toMatch(/phone/);
   });
+
+  it('T-DEL1: tells gym and partner-listing owners to transfer or close first', () => {
+    expect(textIn('es')).toContain('dueña de un gimnasio o de un perfil de aliado');
+    expect(textIn('en')).toContain('owns a gym or a partner listing');
+  });
 });

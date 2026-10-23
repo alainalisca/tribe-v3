@@ -48,12 +48,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const result = await deleteAccount(service, user.id);
     if (!result.ok) {
       logError(new Error(result.error), { route: '/api/account/delete', step: result.step, userId: user.id });
-      // A coach who owns a gym is told why; anything else is a stop partway.
-      const error = result.error === 'owns_gym' ? 'owns_gym' : 'delete_failed';
-      return NextResponse.json(
-        { success: false, error, step: result.step },
-        { status: error === 'owns_gym' ? 409 : 500 }
-      );
+      // A gym or partner-listing owner is told why; anything else is a stop partway.
+      const refused = result.error === 'owns_gym' || result.error === 'owns_partner';
+      const error = refused ? result.error : 'delete_failed';
+      return NextResponse.json({ success: false, error, step: result.step }, { status: refused ? 409 : 500 });
     }
 
     return NextResponse.json({ success: true });

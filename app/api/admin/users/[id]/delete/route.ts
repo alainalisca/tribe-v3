@@ -80,7 +80,9 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
     if (!result.ok) {
       logError(new Error(result.error), { action: 'adminDeleteUser', step: result.step, targetUserId });
       if (result.error === 'user_not_found') return NextResponse.json({ error: 'user_not_found' }, { status: 404 });
-      if (result.error === 'owns_gym') return NextResponse.json({ error: 'owns_gym' }, { status: 409 });
+      if (result.error === 'owns_gym' || result.error === 'owns_partner') {
+        return NextResponse.json({ error: result.error }, { status: 409 });
+      }
       return NextResponse.json({ error: 'delete_failed', step: result.step }, { status: 500 });
     }
 

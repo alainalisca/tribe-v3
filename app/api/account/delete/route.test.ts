@@ -58,6 +58,13 @@ describe('POST /api/account/delete', () => {
     expect(await res.json()).toEqual({ success: false, error: 'delete_failed', step: 'delete_files' });
   });
 
+  it('tells a partner-listing owner why', async () => {
+    vi.mocked(deleteAccount).mockResolvedValue({ ok: false, step: 'check', error: 'owns_partner' });
+    const res = await call('Bearer good');
+    expect(res.status).toBe(409);
+    expect(await res.json()).toEqual({ success: false, error: 'owns_partner', step: 'check' });
+  });
+
   it('tells a coach who owns a gym why', async () => {
     vi.mocked(deleteAccount).mockResolvedValue({ ok: false, step: 'check', error: 'owns_gym' });
     const res = await call('Bearer good');

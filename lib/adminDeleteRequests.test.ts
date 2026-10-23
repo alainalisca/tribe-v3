@@ -61,4 +61,11 @@ describe('error wording', () => {
     expect(deleteUserErrorMessage('cannot_delete_self', false)).toMatch(/your own account/);
     expect(deleteUserErrorMessage('target_is_admin', false)).toMatch(/Admin accounts/);
   });
+
+  it('T-DEL1: says what to transfer or close when a gym or partner owner is refused', () => {
+    expect(deleteUserErrorMessage('owns_gym', true)).toMatch(/gimnasio.*(transfiere|ciérralo)/i);
+    expect(deleteUserErrorMessage('owns_partner', true)).toMatch(/perfil de aliado.*(transfiere|ciérralo)/i);
+    expect(deleteUserErrorMessage('owns_partner', false)).toMatch(/partner listing.*(transfer|close)/i);
+    expect(deleteUserErrorMessage('delete_failed', false)).toMatch(/stopped partway/);
+  });
 });

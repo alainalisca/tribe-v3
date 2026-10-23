@@ -25,6 +25,7 @@ function fakeService(
   over: Partial<{
     user: { data: unknown; error: Err };
     gyms: { data: unknown; error: Err };
+    partners: { data: unknown; error: Err };
     lists: Array<{ data: unknown; error: Err }>;
     remove: { error: Err };
     scrub: { error: Err };
@@ -73,7 +74,8 @@ function fakeService(
         },
         limit: () => {
           calls.push(`read ${table}`);
-          return Promise.resolve(over.gyms ?? { data: [], error: null });
+          const owned = table === 'featured_partners' ? over.partners : over.gyms;
+          return Promise.resolve(owned ?? { data: [], error: null });
         },
         maybeSingle: () => {
           calls.push(`read ${table}`);
@@ -123,6 +125,7 @@ describe('deleteAccount', () => {
     expect(f.calls).toEqual([
       'read users',
       'read gyms',
+      'read featured_partners',
       'read upcoming sessions',
       'rpc account_deletion_files',
       'remove profile-images',
@@ -156,6 +159,12 @@ describe('deleteAccount', () => {
     ['no users row', { user: { data: null, error: null } }, 'check', 'read users'],
     ['the users read fails', { user: { data: null, error: { message: 'boom' } } }, 'check', 'read users'],
     ['the account owns a gym', { gyms: { data: [{ id: 'g1' }], error: null } }, 'check', 'read gyms'],
+    [
+      'the account owns a partner listing',
+      { partners: { data: [{ id: 'p1' }], error: null } },
+      'check',
+      'read featured_partners',
+    ],
     [
       'the listing fails',
       { lists: [{ data: null, error: { message: 'boom' } }] },
@@ -195,6 +204,12 @@ describe('deleteAccount', () => {
   it('says owns_gym, so the routes can tell the person why', async () => {
     const out = await deleteAccount(fakeService({ gyms: { data: [{ id: 'g1' }], error: null } }).service, USER);
     expect(out).toEqual({ ok: false, step: 'check', error: 'owns_gym' });
+  });
+
+  it('says owns_partner for a partner-listing owner, and deletes nothing', async () => {
+    const f = fakeService({ partners: { data: [{ id: 'p1' }], error: null } });
+    expect(await deleteAccount(f.service, USER)).toEqual({ ok: false, step: 'check', error: 'owns_partner' });
+    expect(f.calls).not.toContain('rpc account_deletion_files');
   });
 
   it('a login that is already gone counts as done: a rerun finishes a delete that stopped there', async () => {

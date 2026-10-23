@@ -110,6 +110,10 @@ describe('POST /api/admin/users/[id]/delete', () => {
     let res = await call(TARGET);
     expect(res.status).toBe(409);
     expect(await res.json()).toEqual({ error: 'owns_gym' });
+    vi.mocked(deleteAccount).mockResolvedValue({ ok: false, step: 'check', error: 'owns_partner' });
+    res = await call(TARGET);
+    expect(res.status).toBe(409);
+    expect(await res.json()).toEqual({ error: 'owns_partner' });
     vi.mocked(deleteAccount).mockResolvedValue({ ok: false, step: 'check', error: 'user_not_found' });
     res = await call(TARGET);
     expect(res.status).toBe(404);
