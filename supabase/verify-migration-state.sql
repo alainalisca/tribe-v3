@@ -1925,7 +1925,8 @@ select 'GUARD_184_mirror_matches_applied_table',
     ('225_t_cancel1_drop_instructor_stats_trigger'),
     ('226_t_lang1_preferred_language_set_at'),
     ('227_t_polish1_session_capacity_and_start'),
-    ('228_t_del1_account_deletion')
+    ('228_t_del1_account_deletion'),
+    ('230_t_del2_keep_shared_files')
     -- <<<END_MIRROR_LIST>>>
            ) as mirror(migration)
            where not exists (select 1 from public.migrations_applied a
@@ -1985,7 +1986,8 @@ select 'GUARD_184_mirror_matches_applied_table',
     ('225_t_cancel1_drop_instructor_stats_trigger'),
     ('226_t_lang1_preferred_language_set_at'),
     ('227_t_polish1_session_capacity_and_start'),
-    ('228_t_del1_account_deletion')
+    ('228_t_del1_account_deletion'),
+    ('230_t_del2_keep_shared_files')
     -- <<<END_MIRROR_LIST>>>
            ))
            then 'MISSING -- this database has recorded a migration the JSON mirror omits; re-sync it'
