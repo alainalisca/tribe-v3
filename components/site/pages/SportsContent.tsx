@@ -9,6 +9,7 @@ import { translateSport } from '@/lib/sportTranslationData';
 import { fixtureFromWeekRow, fixtureLabels } from '@/lib/site/fixture';
 import FixtureRow from '../FixtureRow';
 import { ArrowRight } from '../icons';
+import Dotted from '../Dotted';
 import b from '../base.module.css';
 import w from '../week.module.css';
 import p from './pages.module.css';
@@ -46,9 +47,11 @@ export default function SportsContent({
       <span className={`${b.mono} ${b.kick}`}>{t('kicker')}</span>
       <div className={b.sh}>
         <h1 id="pagina-titulo" className={`${b.disp} ${p.hTitle}`}>
-          {t('title1', { n: SITE_SPORT_COUNT })}
+          <Dotted text={t('title1', { n: SITE_SPORT_COUNT })} />
           <br />
-          <em>{t('title2')}</em>
+          <em>
+            <Dotted text={t('title2')} />
+          </em>
         </h1>
         <p>{t('lede')}</p>
       </div>
@@ -93,7 +96,9 @@ export default function SportsContent({
                 );
               })}
             </ul>
-            {g.img ? (
+            {/* Team and racket, street: no photo of Al's yet, so no box at all
+                (site polish: an empty "sin foto todavía" box read as broken). */}
+            {g.img && (
               <div className={p.pic}>
                 <Image
                   src={photo(g.img)}
@@ -103,12 +108,6 @@ export default function SportsContent({
                   {...faceProps(g.img)}
                 />
                 <span className={b.capTag}>{tr(`site.cap.${g.img}`)}</span>
-              </div>
-            ) : (
-              // Team and racket, street: no photo of Al's yet (T-SITE1.1 Part B).
-              <div className={`${p.pic} ${p.noPic}`} aria-hidden="true">
-                <b>{t(g.key)}</b>
-                <span className={b.mono}>{t('noPhoto')}</span>
               </div>
             )}
           </div>

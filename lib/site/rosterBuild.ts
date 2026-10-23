@@ -23,6 +23,16 @@ export const ROSTER_WINDOW_DAYS = 60;
 export const ROSTER_ACTIVITY_DAYS = 30;
 export const ROSTER_HOME_MAX = 12;
 
+/**
+ * Site polish (Al, 2026-10-23). Columns for n cards that leave the last row as
+ * full as possible: the fewest rows that fit `max` per row, then as few
+ * columns as fill them. 9 coaches at 6 across is 6 + 3; balanced it is 5 + 4.
+ */
+export function balancedColumns(n: number, max: number): number {
+  if (n <= 0) return 1;
+  return Math.ceil(n / Math.ceil(n / max));
+}
+
 /** The columns lib/site/roster.ts selects. */
 export type RosterSessionRow = {
   sport: string | null;

@@ -39,20 +39,34 @@
   color: #fff;
   opacity: 0.85;
 }
+/* Site polish (Al, 2026-10-23): the headline is one line on desktop and two
+   on phones, sized to the content width so it never overflows and leaves no
+   empty block beside it. --k is the line's width per pixel of font size in
+   Big Shoulders 900 (measured in Chrome), per language. */
 .h1 {
   position: relative;
   z-index: 3;
-  margin: -0.62em 0 0 !important;
-  font-size: clamp(84px, 17vw, 268px);
+  margin: -0.5em 0 0 !important;
+  font-size: min(230px, calc((100vw - 2 * clamp(16px, 3.2vw, 48px)) / var(--k)));
   color: var(--white);
+  white-space: nowrap;
+}
+.en {
+  --k: 7.5;
+  --k1: 4.75;
+}
+.es {
+  --k: 8.75;
+  --k1: 6.45;
 }
 .h1 em {
   font-style: normal;
   color: var(--lime);
 }
 .ln {
-  display: block;
+  display: inline-block;
   overflow: hidden;
+  vertical-align: top;
 }
 .ln i {
   display: block;
@@ -97,19 +111,18 @@
    Every mark is --mark tall: the logos by height, the Zona de Combate wordmark
    by cap height (Big Shoulders' caps are --cap of the font size, measured
    in Chrome at weight 800). */
+/* Site polish (Al, 2026-10-23): centered at every width; on phones it wraps
+   into centered rows instead of scrolling Fruta Vida off screen. */
 .partners {
   --mark: 40px;
   --cap: 0.81;
   display: flex;
   align-items: center;
-  gap: clamp(18px, 3vw, 40px);
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 12px clamp(18px, 3vw, 40px);
   padding-block: 20px;
   border-bottom: 1px solid var(--rule);
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-.partners::-webkit-scrollbar {
-  display: none;
 }
 .partners .label {
   flex: none;
@@ -117,9 +130,10 @@
 }
 .marks {
   display: flex;
-  flex: none;
+  flex-wrap: wrap;
+  justify-content: center;
   align-items: center;
-  gap: clamp(24px, 4vw, 56px);
+  gap: 12px clamp(24px, 4vw, 56px);
 }
 .pgroup {
   display: flex;
@@ -166,8 +180,14 @@
   .credit {
     display: none;
   }
+  /* Phones: "Nunca entrenes" / "solo.", the first line filling the width. */
   .h1 {
-    font-size: 76px;
+    font-size: calc((100vw - 32px) / var(--k1));
+    white-space: normal;
+  }
+  .ln:nth-child(3) {
+    display: block;
+    width: max-content;
   }
   .hrow {
     padding-block: 18px 28px;
@@ -177,7 +197,25 @@
     font-size: 17px;
   }
   .partners {
-    --mark: 32px;
+    --mark: 28px;
     padding-block: 14px;
+  }
+  .partners .label {
+    flex-basis: 100%;
+    text-align: center;
+  }
+  .marks {
+    flex-basis: 100%;
+  }
+  .pgroup {
+    flex: 0 1 100%;
+    flex-wrap: wrap;
+    justify-content: center;
+    row-gap: 8px;
+    white-space: normal;
+  }
+  .glabel {
+    flex-basis: 100%;
+    text-align: center;
   }
 }

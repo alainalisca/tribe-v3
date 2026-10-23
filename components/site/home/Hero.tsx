@@ -1,5 +1,6 @@
 import Image from 'next/image';
 import Link from 'next/link';
+import Dotted from '../Dotted';
 import { ArrowRight } from '../icons';
 import { siteT, type SiteLanguage } from '@/lib/site/i18n';
 import { backgroundBoxStyle, photo } from '@/lib/site/photos';
@@ -17,16 +18,20 @@ export default function Hero({ lang }: { lang: SiteLanguage }) {
         <span className={`${h.credit} ${b.mono}`}>Zona de Combate · Ciudad del Río</span>
       </div>
       <div className={b.g}>
-        <h1 id="inicio-titulo" className={`${b.disp} ${h.h1}`}>
+        {/* Site polish (Al, 2026-10-23): one line on desktop, two on phones
+            ("Nunca entrenes" / "solo."), sized to the width (hero.module.css). */}
+        <h1 id="inicio-titulo" className={`${b.disp} ${h.h1} ${lang === 'es' ? h.es : h.en}`}>
           <span className={h.ln}>
             <i>{t('site.home.h1a')}</i>
-          </span>
+          </span>{' '}
           <span className={h.ln}>
             <i>{t('site.home.h1b')}</i>
-          </span>
+          </span>{' '}
           <span className={h.ln}>
             <i>
-              <em>{t('site.home.h1c')}</em>
+              <em>
+                <Dotted text={t('site.home.h1c')} />
+              </em>
             </i>
           </span>
         </h1>
@@ -43,9 +48,9 @@ export default function Hero({ lang }: { lang: SiteLanguage }) {
             </Link>
           </div>
         </div>
-        {/* "Aliados": gyms that train on Tribe, then partner brands, one row that
-            scrolls sideways on phones and never wraps. Zona de Combate has no logo
-            file, so it is set as a wordmark at the marks' cap height. */}
+        {/* "Aliados": gyms that train on Tribe, then partner brands, centered;
+            on phones the groups wrap into centered rows. Zona de Combate has no
+            logo file, so it is set as a wordmark at the marks' cap height. */}
         <div className={h.partners}>
           <span className={`${b.mono} ${h.label}`}>{t('site.home.partnersLabel')}</span>
           <div className={h.marks}>

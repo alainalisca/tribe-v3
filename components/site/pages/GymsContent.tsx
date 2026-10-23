@@ -28,7 +28,8 @@ export default function GymsContent({ lang }: { lang: SiteLanguage }) {
   const ALLIES = [
     { key: 'bb', name: 'BullBox', img: 'al_bb', logo: false },
     { key: 'zona', name: 'Zona de Combate', img: 'al_zona', logo: false },
-    { key: 'fv', name: 'Fruta Vida', img: 'fv_w', logo: true },
+    // Site polish: Fruta Vida's colored logo, on a paper tile (Al, 2026-10-23).
+    { key: 'fv', name: 'Fruta Vida', img: 'fv_c', logo: true },
   ] as const;
 
   return (

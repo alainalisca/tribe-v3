@@ -2,6 +2,7 @@ import Image from 'next/image';
 import { siteT, type SiteLanguage } from '@/lib/site/i18n';
 import { SITE_SPORT_COUNT } from '@/lib/site/sportCount';
 import { faceProps, photo, type PhotoKey } from '@/lib/site/photos';
+import Dotted from '../Dotted';
 import b from '../base.module.css';
 import s from './story.module.css';
 
@@ -25,7 +26,9 @@ export default function Essay({ lang }: { lang: SiteLanguage }) {
         <h2 id="gente-titulo" className={b.disp}>
           {t('site.home.essayTitle1')}
           <br />
-          <em>{t('site.home.essayTitle2')}</em>
+          <em>
+            <Dotted text={t('site.home.essayTitle2')} outline />
+          </em>
         </h2>
         <p>{t('site.home.essayLede')}</p>
       </div>

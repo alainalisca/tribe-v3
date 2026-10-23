@@ -11,6 +11,7 @@ import { expect, test, type Locator, type Page } from '@playwright/test';
  *
  * Inicio covers the hero, the doors, the roster, the essay and the closing;
  * Gimnasios covers the page hero and the partner photos.
+ * Site polish adds Coaches (its phone cut), Para atletas and Deportes.
  *
  * Run against a production build: PLAYWRIGHT_BASE_URL=http://localhost:3006
  * npx playwright test e2e/faces.spec.ts
@@ -21,7 +22,7 @@ const VIEWPORTS = [
   { width: 1920, height: 900 },
   { width: 2560, height: 1000 },
 ];
-const PAGES = ['/', '/gimnasios/'];
+const PAGES = ['/', '/gimnasios/', '/coaches/', '/para-atletas/', '/deportes/'];
 
 type Miss = { src: string; anchor: string; point: [number, number]; box: [number, number, number, number] };
 

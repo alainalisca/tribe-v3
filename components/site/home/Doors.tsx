@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { siteT, type SiteLanguage } from '@/lib/site/i18n';
 import { faceProps, photo } from '@/lib/site/photos';
 import { ArrowRight } from '../icons';
+import Dotted from '../Dotted';
 import b from '../base.module.css';
 import d from './doors.module.css';
 
@@ -25,9 +26,9 @@ export default function Doors({ lang }: { lang: SiteLanguage }) {
         <div>
           <span className={`${b.mono} ${b.kick}`}>{t('site.home.doorsKick')}</span>
           <h2 id="puertas-titulo" className={b.disp}>
-            {t('site.home.doorsTitle1')}
+            <Dotted text={t('site.home.doorsTitle1')} />
             <br />
-            {t('site.home.doorsTitle2')}
+            <Dotted text={t('site.home.doorsTitle2')} />
           </h2>
         </div>
         <p className={b.phoneHide}>{t('site.home.doorsLede')}</p>

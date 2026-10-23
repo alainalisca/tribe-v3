@@ -36,6 +36,7 @@ export default function CoachesContent({ lang, roster }: { lang: SiteLanguage; r
     <>
       <PageHero
         img="hero_coach"
+        imgPhone="hero_coach_m"
         alt={tr('site.alt.hero_coach')}
         tag={t('tag')}
         title1={t('title1')}

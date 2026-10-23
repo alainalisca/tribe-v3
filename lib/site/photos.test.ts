@@ -2,7 +2,7 @@ import { existsSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, it, expect } from 'vitest';
 import { siteKeys, siteMessage } from './messages';
-import { FACE_ANCHORS, SITE_MARKS, SITE_PHOTOS, faceProps, type PhotoKey } from './photos';
+import { COACH_SITE_PHOTOS, FACE_ANCHORS, SITE_MARKS, SITE_PHOTOS, faceProps, type PhotoKey } from './photos';
 
 /** T-SITE1 Part C: the site's photos are keyed, present, light and described. */
 const KEYS = Object.keys(SITE_PHOTOS) as PhotoKey[];
@@ -11,8 +11,9 @@ const file = (key: PhotoKey) => join(process.cwd(), 'public', SITE_PHOTOS[key]);
 describe('site photos (Part C)', () => {
   it('has every key of the photo map (T-SITE1.1 Part B), minus the two Al dropped', () => {
     // 32 photos + door_os, bb_w, fv_w, tv_wod, tv_wil, logo_w, hero_full. The four
-    // hand-picked roster portraits left in Part C (the roster is live).
-    expect(KEYS).toHaveLength(39);
+    // hand-picked roster portraits left in Part C (the roster is live). Site
+    // polish adds hero_coach_m (the phone cut), coach_andres and fv_c.
+    expect(KEYS).toHaveLength(42);
     expect(KEYS).not.toContain('hero_tall');
     expect(KEYS).not.toContain('rowers');
   });
@@ -64,8 +65,8 @@ describe('face anchors (T-SITE1.1 Part A)', () => {
 
   it('positions the photo on its faces and tags it for the face test', () => {
     expect(faceProps('close_team')).toEqual({
-      style: { objectPosition: '47% 30%' },
-      'data-face-anchor': '47 30',
+      style: { objectPosition: '47% 36%' },
+      'data-face-anchor': '47 36',
     });
     expect(faceProps('door_gym')).toEqual({});
   });
@@ -127,6 +128,17 @@ describe('alt text style', () => {
     }
     for (const k of siteKeys('es').filter((k) => k.startsWith('alt.'))) {
       expect(siteMessage('es', 'site.alt', k.slice(4)), k).not.toMatch(/\b(Coach|coach|Profe) Wil\b/);
+    }
+  });
+});
+
+describe('coach site photos (site polish)', () => {
+  it('maps coach ids to registered people photos, never a mark', () => {
+    for (const [id, key] of Object.entries(COACH_SITE_PHOTOS)) {
+      expect(id).toMatch(/^[0-9a-f-]{36}$/);
+      expect(KEYS, id).toContain(key);
+      expect(SITE_MARKS, id).not.toContain(key);
+      expect(FACE_ANCHORS[key], key).toBeDefined();
     }
   });
 });
