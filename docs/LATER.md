@@ -272,3 +272,23 @@ lib/join/guestRateLimit.ts) and import it in the route and its test.
 **Trigger to revisit:** any switch to webpack builds, a Next upgrade that
 type-checks route exports under Turbopack too, or the next change to the
 guest join route.
+
+## 2026-10-23 — Delete a community's cover and banner when the community is deleted
+
+**Source:** claude (T-DEL1, cleanup of the 36 half-deleted accounts), logged at Al's ask.
+
+**Description:** account deletion (`lib/account/deleteAccount`, migration 228)
+keeps a community's cover (`profile-images/community-covers/...`) and banner
+(`community-banners/...`) on purpose: they belong to the community, not to
+whoever uploaded them. But nothing removes them when the community itself is
+deleted, so they are left as orphans. The cleanup on 2026-10-23 found one:
+Sincere's cover, whose community no longer existed. Al had that one file
+removed by hand through the Storage API. The fix: when a community is deleted,
+delete its cover and banner too; or have the deletion listing take a cover or
+banner whose community is gone.
+
+**Why deferred:** a migration for one orphan file was not worth it, and 229 is
+reserved for the T-PLAN1 renumber.
+
+**Trigger to revisit:** the next change to community deletion, or the next
+storage audit finding an orphaned cover or banner.
