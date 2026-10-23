@@ -3302,6 +3302,11 @@ select '230_t_del2_keep_shared_files',
            then 'MISSING -- account_deletion_files still lists every upload, shared or not (228''s body)'
          when exists (select 1 from pg_proc
                        where oid in (to_regprocedure('public.account_file_references(uuid)'),
+                                     to_regprocedure('public.account_deletion_files(uuid)'))
+                         and not coalesce('statement_timeout=20s' = any (proconfig), false))
+           then 'MISSING -- the deletion scan has no statement_timeout; a deletion could hang on it'
+         when exists (select 1 from pg_proc
+                       where oid in (to_regprocedure('public.account_file_references(uuid)'),
                                      to_regprocedure('public.account_deletion_candidates(uuid)'),
                                      to_regprocedure('public.account_deletion_files(uuid)'))
                          and (not prosecdef

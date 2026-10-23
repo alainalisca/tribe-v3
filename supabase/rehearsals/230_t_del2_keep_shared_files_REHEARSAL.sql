@@ -38,6 +38,8 @@
 --   K4  THE MIRROR: after account_scrub(X) runs as service_role, the candidates
 --       any row still references are exactly K2's files.
 --   K5  a user with no uploads gets nothing from either function.
+--   K6  the two functions the route calls carry statement_timeout=20s, and the
+--       scan keeps its own 15 s budget.
 
 \set ON_ERROR_STOP 1
 BEGIN;
@@ -242,8 +244,10 @@ LANGUAGE plpgsql
 STABLE
 SECURITY DEFINER
 SET search_path = ''
+SET statement_timeout = '20s'
 AS $fn$
 DECLARE
+  v_started timestamptz := clock_timestamp();
   v_buckets text[];
   v_paths text[];
   v_col record;
@@ -269,6 +273,11 @@ BEGIN
                           'pg_catalog._text'::pg_catalog.regtype, 'pg_catalog._varchar'::pg_catalog.regtype)
      ORDER BY 1, 2
   LOOP
+    -- Its own budget, for a caller that is not PostgREST (see the header).
+    IF clock_timestamp() - v_started > interval '15 seconds' THEN
+      RAISE EXCEPTION 'account_file_references: scan stopped after 15 s at %.%', v_col.t, v_col.c
+        USING ERRCODE = 'query_canceled';
+    END IF;
     -- Rows the scrub deletes or clears for this person (the mirror of 228's
     -- account_scrub; see the header). Their references do not count.
     v_theirs := CASE v_col.t
@@ -318,6 +327,7 @@ LANGUAGE sql
 STABLE
 SECURITY DEFINER
 SET search_path = ''
+SET statement_timeout = '20s'
 AS $fn$
   SELECT c.bucket, c.path
     FROM public.account_deletion_candidates(p_user) c
@@ -357,6 +367,12 @@ BEGIN
             'account_file_references') = 0 THEN
     RAISE EXCEPTION '230 ABORTED: account_deletion_files does not leave out the files account_file_references reports.';
   END IF;
+  IF EXISTS (SELECT 1 FROM pg_proc
+              WHERE oid IN (to_regprocedure('public.account_file_references(uuid)'),
+                            to_regprocedure('public.account_deletion_files(uuid)'))
+                AND NOT coalesce('statement_timeout=20s' = ANY (proconfig), false)) THEN
+    RAISE EXCEPTION '230 ABORTED: account_file_references and account_deletion_files must carry statement_timeout=20s.';
+  END IF;
   RAISE NOTICE '230: account_deletion_files leaves out files a remaining row references; all three functions service_role only.';
 END $$;
 
@@ -375,6 +391,14 @@ SELECT pg_temp.arm('K0 the three functions: SECURITY DEFINER, search_path empty,
                    string_agg(proname || ' ' || coalesce(array_to_string(proconfig, ','), '-'), '; '))
   FROM pg_proc WHERE oid IN ('public.account_deletion_candidates(uuid)'::regprocedure,
                              'public.account_file_references(uuid)'::regprocedure,
+                             'public.account_deletion_files(uuid)'::regprocedure);
+
+SELECT pg_temp.arm('K6 the two the route calls carry statement_timeout=20s; the scan has its own 15 s budget',
+                   count(*) = 2 AND bool_and('statement_timeout=20s' = ANY (proconfig))
+                   AND strpos((SELECT prosrc FROM pg_proc WHERE oid = 'public.account_file_references(uuid)'::regprocedure),
+                              'interval ''15 seconds''') > 0,
+                   string_agg(proname || ' ' || array_to_string(proconfig, ','), '; '))
+  FROM pg_proc WHERE oid IN ('public.account_file_references(uuid)'::regprocedure,
                              'public.account_deletion_files(uuid)'::regprocedure);
 
 -- The three functions as the route calls them: service_role, no signed-in user.
@@ -462,11 +486,12 @@ INSERT INTO reh_230_manifest VALUES
   (1, 'E0 ENV session_user and current_user'),
   (2, 'T0 the body did not commit (same transaction before and after)'),
   (3, 'K0 the three functions: SECURITY DEFINER, search_path empty, service_role only'),
-  (4, 'K1 account_deletion_files(X) is exactly the eight files of X''s own'),
-  (5, 'K2 account_file_references(X) is exactly S, S2 and H, each with its table and column'),
-  (6, 'K3 the candidates are K1 plus K2''s files, with no overlap'),
-  (7, 'K5 a user with no uploads gets nothing from either function'),
-  (8, 'K4 after account_scrub(X), the files any row still references are exactly the ones 230 kept');
+  (4, 'K6 the two the route calls carry statement_timeout=20s; the scan has its own 15 s budget'),
+  (5, 'K1 account_deletion_files(X) is exactly the eight files of X''s own'),
+  (6, 'K2 account_file_references(X) is exactly S, S2 and H, each with its table and column'),
+  (7, 'K3 the candidates are K1 plus K2''s files, with no overlap'),
+  (8, 'K5 a user with no uploads gets nothing from either function'),
+  (9, 'K4 after account_scrub(X), the files any row still references are exactly the ones 230 kept');
 
 SELECT seq, arm, verdict, detail FROM reh_230 ORDER BY seq;
 SELECT count(*) FILTER (WHERE verdict = 'PASS') AS pass, count(*) FILTER (WHERE verdict <> 'PASS') AS not_pass FROM reh_230;
@@ -474,6 +499,6 @@ SELECT CASE WHEN (SELECT array_agg(arm ORDER BY seq) FROM reh_230)
                  = (SELECT array_agg(arm ORDER BY seq) FROM reh_230_manifest)
             THEN 'manifest matches: every arm ran, in order' ELSE 'MANIFEST MISMATCH' END AS manifest;
 
--- The one result set for the transaction. Every row must read PASS. 8 of 8.
+-- The one result set for the transaction. Every row must read PASS. 9 of 9.
 
 ROLLBACK;

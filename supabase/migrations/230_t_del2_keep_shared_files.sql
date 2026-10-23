@@ -53,6 +53,20 @@
 --   All three are SECURITY DEFINER with an empty search_path, executable by
 --   service_role only.
 --
+-- A DELETION CANNOT HANG ON THE SCAN. account_file_references and
+-- account_deletion_files carry SET statement_timeout = '20s'. PostgREST (the
+-- route's rpc() calls) applies a function's statement_timeout before it runs
+-- the call, so the request is cancelled at 20 s. A Postgres SET clause does not
+-- cap a call already running when it comes from plain SQL, so the scan also
+-- keeps its own budget: past 15 s it stops with query_canceled. Either way
+-- list_files fails and nothing is deleted.
+--
+-- THE DYNAMIC SQL. Table and column names go into the query only through
+-- format('%I'); they are also returned as labels through format('%L'). The
+-- user id and the file paths are bound parameters ($1, $2, $3), never text in
+-- the query. The two %s fragments are fixed code chosen from a CASE in this
+-- function, never a value.
+--
 -- KEEP IN STEP WITH account_scrub. The exclusions above mirror what 228's
 -- account_scrub deletes or clears. The pre-flight aborts if any table or
 -- column they name is missing, and the rehearsal proves the mirror: after the
@@ -66,8 +80,9 @@
 --
 -- GUARDS. Pre-flight: 228's two functions exist, and every table and column
 -- the exclusions name exists. After: the three functions exist as SECURITY
--- DEFINER with search_path '', executable by service_role only, and
--- account_deletion_files reads from account_file_references.
+-- DEFINER with search_path '', executable by service_role only;
+-- account_deletion_files reads from account_file_references; the two the
+-- route calls carry statement_timeout=20s.
 
 BEGIN;
 
@@ -143,8 +158,10 @@ LANGUAGE plpgsql
 STABLE
 SECURITY DEFINER
 SET search_path = ''
+SET statement_timeout = '20s'
 AS $fn$
 DECLARE
+  v_started timestamptz := clock_timestamp();
   v_buckets text[];
   v_paths text[];
   v_col record;
@@ -170,6 +187,11 @@ BEGIN
                           'pg_catalog._text'::pg_catalog.regtype, 'pg_catalog._varchar'::pg_catalog.regtype)
      ORDER BY 1, 2
   LOOP
+    -- Its own budget, for a caller that is not PostgREST (see the header).
+    IF clock_timestamp() - v_started > interval '15 seconds' THEN
+      RAISE EXCEPTION 'account_file_references: scan stopped after 15 s at %.%', v_col.t, v_col.c
+        USING ERRCODE = 'query_canceled';
+    END IF;
     -- Rows the scrub deletes or clears for this person (the mirror of 228's
     -- account_scrub; see the header). Their references do not count.
     v_theirs := CASE v_col.t
@@ -219,6 +241,7 @@ LANGUAGE sql
 STABLE
 SECURITY DEFINER
 SET search_path = ''
+SET statement_timeout = '20s'
 AS $fn$
   SELECT c.bucket, c.path
     FROM public.account_deletion_candidates(p_user) c
@@ -257,6 +280,12 @@ BEGIN
   IF strpos((SELECT prosrc FROM pg_proc WHERE oid = to_regprocedure('public.account_deletion_files(uuid)')),
             'account_file_references') = 0 THEN
     RAISE EXCEPTION '230 ABORTED: account_deletion_files does not leave out the files account_file_references reports.';
+  END IF;
+  IF EXISTS (SELECT 1 FROM pg_proc
+              WHERE oid IN (to_regprocedure('public.account_file_references(uuid)'),
+                            to_regprocedure('public.account_deletion_files(uuid)'))
+                AND NOT coalesce('statement_timeout=20s' = ANY (proconfig), false)) THEN
+    RAISE EXCEPTION '230 ABORTED: account_file_references and account_deletion_files must carry statement_timeout=20s.';
   END IF;
   RAISE NOTICE '230: account_deletion_files leaves out files a remaining row references; all three functions service_role only.';
 END $$;
