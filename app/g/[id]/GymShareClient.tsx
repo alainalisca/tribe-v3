@@ -36,6 +36,7 @@ import UserAvatar from '@/components/UserAvatar';
 import PublicProfileActions from '@/components/site/PublicProfileActions';
 import PublicPassLink from '@/components/site/PublicPassLink';
 import SignedInTabBar from '@/components/site/SignedInTabBar';
+import { useSignedIn } from '@/hooks/useSignedIn';
 import type { GymExtras } from '@/lib/site/publicProfileData';
 
 interface VenueSession {
@@ -67,6 +68,7 @@ export default function GymShareClient({
   const t = useTranslations('gymPage');
   const tPartner = useTranslations('partner');
   const tCard = useTranslations('sessionCard');
+  const signedIn = useSignedIn();
   const supabase = createClient();
 
   const [sessions, setSessions] = useState<VenueSession[]>([]);
@@ -281,15 +283,33 @@ export default function GymShareClient({
               actually matters, which is booking. The label follows the
               destination.
 
-              Identical for a signed-in and a signed-out visitor: this page is
-              built for strangers arriving from a bio link, and an auth-dependent
-              primary CTA would make the two renders differ for no gain. */}
-            <Link
-              href="/auth/"
-              className="block w-full text-center mt-6 py-4 bg-tribe-green text-slate-900 font-bold text-lg rounded-xl hover:brightness-110 transition"
-            >
-              {t('joinCta')}
-            </Link>
+              The SERVER renders this for everyone: the page is built for
+              strangers arriving from a bio link, and its HTML must not depend
+              on who is viewing (it is cached).
+
+              T-POLISH1 PR 3b-2 (Al): a signed-in viewer is already in Tribe, so
+              once the browser knows that, the same button (same classes, so
+              nothing moves when it swaps) takes them to this gym's upcoming
+              sessions instead. With none, it lands on the "no sessions yet"
+              card, which says so. Signed out it stays "Únete a Tribe". */}
+            {signedIn ? (
+              <button
+                type="button"
+                onClick={() =>
+                  document.getElementById('proximas-sesiones')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                }
+                className="block w-full text-center mt-6 py-4 bg-tribe-green text-slate-900 font-bold text-lg rounded-xl hover:brightness-110 transition"
+              >
+                {t('seeUpcoming')}
+              </button>
+            ) : (
+              <Link
+                href="/auth/"
+                className="block w-full text-center mt-6 py-4 bg-tribe-green text-slate-900 font-bold text-lg rounded-xl hover:brightness-110 transition"
+              >
+                {t('joinCta')}
+              </Link>
+            )}
 
             {extras?.pass && (
               <div className="mt-3">
@@ -328,7 +348,7 @@ export default function GymShareClient({
           </Card>
         )}
 
-        <Card className="bg-theme-card border-theme">
+        <Card id="proximas-sesiones" className="bg-theme-card border-theme scroll-mt-4">
           <CardContent className="p-4">
             <h2 className="text-lg font-bold text-theme-primary mb-4">{t('upcomingSessions')}</h2>
 

@@ -123,6 +123,7 @@ export default async function PublicInstructorPage({ params }: PageProps) {
       fontClassName={SITE_FONT_CLASS}
       // T-POLISH1 PR 3b-2: the app's tab bar for a signed-in viewer (client-side only).
       afterFooter={<SignedInTabBar spacer />}
+      hideDownloadWhenSignedIn
     >
       <ViewTracker coachId={coach.id} />
       <CoachProfile

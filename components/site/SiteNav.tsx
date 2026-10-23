@@ -14,7 +14,13 @@ import c from './chrome.module.css';
  * Labels are looked up here, on the server; the client pieces only mark the
  * current page and swap in the avatar.
  */
-export default function SiteNav({ lang }: { lang: SiteLanguage }) {
+export default function SiteNav({
+  lang,
+  hideDownloadWhenSignedIn = false,
+}: {
+  lang: SiteLanguage;
+  hideDownloadWhenSignedIn?: boolean;
+}) {
   const t = siteT(lang);
   const pages: NavItem[] = SITE_PAGES.map((p) => ({ href: p.href, label: t(`site.nav.${p.key}`) }));
   const home: NavItem = { href: '/', label: t('site.nav.home') };
@@ -27,7 +33,12 @@ export default function SiteNav({ lang }: { lang: SiteLanguage }) {
         <nav aria-label={t('site.nav.mainAria')}>
           <NavLinks variant="main" items={pages} />
         </nav>
-        <NavActions signIn={t('site.nav.signIn')} download={t('site.nav.download')} myFeed={t('site.nav.myFeed')} />
+        <NavActions
+          signIn={t('site.nav.signIn')}
+          download={t('site.nav.download')}
+          myFeed={t('site.nav.myFeed')}
+          hideDownloadWhenSignedIn={hideDownloadWhenSignedIn}
+        />
       </div>
       <nav className={c.subnav} aria-label={t('site.nav.subAria')}>
         <div className={b.g}>

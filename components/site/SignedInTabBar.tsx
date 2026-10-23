@@ -1,8 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import BottomNav from '@/components/BottomNav';
-import { createClient } from '@/lib/supabase/client';
+import { useSignedIn } from '@/hooks/useSignedIn';
 
 /**
  * T-POLISH1 PR 3b-2 (Al's call 5): the app's tab bar on the public coach (/i)
@@ -17,21 +16,7 @@ import { createClient } from '@/lib/supabase/client';
  * the bar never covers the end of it (the site footer on /i).
  */
 export default function SignedInTabBar({ spacer = false }: { spacer?: boolean }) {
-  const [signedIn, setSignedIn] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    createClient()
-      .auth.getUser()
-      .then(({ data }) => {
-        if (!cancelled) setSignedIn(!!data.user);
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
+  const signedIn = useSignedIn();
   if (!signedIn) return null;
   return (
     <>
