@@ -81,6 +81,16 @@ const USER_ERRORS: Record<string, { en: string; es: string }> = {
     en: 'That account no longer exists.',
     es: 'Esa cuenta ya no existe.',
   },
+  owns_gym: {
+    en: 'This account owns a gym. Transfer the gym first, then delete the account.',
+    es: 'Esta cuenta es dueña de un gimnasio. Transfiere primero el gimnasio y luego elimina la cuenta.',
+  },
+  // T-DEL1: deletion runs in steps and a failure can come after some of them,
+  // so this must not say "nothing was deleted". Every step is safe to repeat.
+  delete_failed: {
+    en: 'The delete stopped partway. Try again to finish it.',
+    es: 'La eliminación se detuvo a medias. Inténtalo de nuevo para terminarla.',
+  },
   forbidden: SESSION_ERRORS.forbidden,
 };
 

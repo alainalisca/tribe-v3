@@ -19,16 +19,25 @@
  *   - an admin cannot delete their own account from here (one mis-tap would
  *     lock them out of the panel they are using), and
  *   - an admin account cannot be deleted from here at all. Demote it first.
+ *
+ * T-DEL1 (2026-10-23): admin_delete_user hard-deleted chat messages, spots and
+ * hosted sessions and only set deleted_at: no profile scrub, the login left in
+ * place. The route now runs lib/account/deleteAccount, the in-app path, so an
+ * admin delete removes exactly what a self-delete removes. A target whose
+ * deleted_at is already set is run again rather than refused: every step is
+ * safe to repeat, and that is how a delete that stopped partway is finished.
+ * A failure names its step ({ error: 'delete_failed', step }).
  */
 import { NextResponse } from 'next/server';
 import { requireApiAdmin } from '@/lib/auth/adminApi';
 import { logError, log } from '@/lib/logger';
+import { deleteAccount } from '@/lib/account/deleteAccount';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export async function POST(_req: Request, { params }: { params: Promise<{ id: string }> }) {
-  // Gate first: nothing is read until the caller is a confirmed admin. The RPC
-  // itself does NOT re-check admin; it is fenced by this handler.
+  // Gate first: nothing is read until the caller is a confirmed admin. The
+  // deletion itself does NOT re-check admin; it is fenced by this handler.
   const gate = await requireApiAdmin();
   if (!gate.ok) return gate.response;
 
@@ -46,48 +55,30 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
     // Refuse admin targets. Fail closed: if this read errors, nothing is deleted.
     const { data: target, error: targetErr } = await service
       .from('users')
-      .select('id, is_admin, deleted_at')
+      .select('id, is_admin')
       .eq('id', targetUserId)
       .maybeSingle();
     if (targetErr) {
       logError(targetErr, { action: 'adminDeleteUser.target', targetUserId });
       return NextResponse.json({ error: 'check_failed' }, { status: 500 });
     }
-    if (!target || target.deleted_at) {
+    if (!target) {
       return NextResponse.json({ error: 'user_not_found' }, { status: 404 });
     }
     if (target.is_admin === true) {
       return NextResponse.json({ error: 'target_is_admin' }, { status: 409 });
     }
 
-    // Single atomic cascade via the admin_delete_user RPC (migration 050).
-    const { data, error } = await service.rpc('admin_delete_user', {
-      p_target_user_id: targetUserId,
-    });
-
-    if (error) {
-      logError(error, { action: 'adminDeleteUser.rpc', targetUserId });
-      return NextResponse.json({ error: 'delete_failed' }, { status: 500 });
-    }
-
-    // The RPC returns a jsonb body: { success, error?, code?, id? }.
-    const result = data as { success: boolean; error?: string; code?: string; id?: string } | null;
-
-    if (!result?.success) {
-      logError(new Error(result?.error ?? 'admin_delete_user failed'), {
-        action: 'adminDeleteUser.rpcResult',
-        targetUserId,
-        code: result?.code,
-      });
-      const status = result?.error === 'user_not_found' ? 404 : 500;
-      return NextResponse.json(
-        { error: result?.error === 'user_not_found' ? 'user_not_found' : 'delete_failed' },
-        { status }
-      );
+    const result = await deleteAccount(service, targetUserId);
+    if (!result.ok) {
+      logError(new Error(result.error), { action: 'adminDeleteUser', step: result.step, targetUserId });
+      if (result.error === 'user_not_found') return NextResponse.json({ error: 'user_not_found' }, { status: 404 });
+      if (result.error === 'owns_gym') return NextResponse.json({ error: 'owns_gym' }, { status: 409 });
+      return NextResponse.json({ error: 'delete_failed', step: result.step }, { status: 500 });
     }
 
     log('info', 'admin deleted user', { action: 'adminDeleteUser', actorUserId: gate.userId, targetUserId });
-    return NextResponse.json({ success: true, id: result.id ?? targetUserId });
+    return NextResponse.json({ success: true, id: targetUserId });
   } catch (error) {
     logError(error, { action: 'adminDeleteUser.route' });
     return NextResponse.json({ error: 'internal_error' }, { status: 500 });

@@ -129,8 +129,8 @@ export async function fetchAdminUsersWithCounts(
         // signup from a seeded one, which is the first question asked of this list.
         'id, name, email, avatar_url, bio, location, sports, preferred_sports, specialties, is_instructor, is_verified_instructor, is_admin, is_test_account, banned, created_at, updated_at, last_login_at, sessions_completed, average_rating, total_reviews, follower_count, following_count'
       )
-      // Exclude soft-deleted users. The admin delete button calls the
-      // admin_delete_user RPC which sets deleted_at = NOW() (migration 050).
+      // Exclude deleted accounts. The admin delete button runs
+      // lib/account/deleteAccount, which sets deleted_at (T-DEL1).
       // Without this filter the "deleted" user reappeared on the next list
       // reload — the row was gone optimistically, then re-fetched.
       .is('deleted_at', null);

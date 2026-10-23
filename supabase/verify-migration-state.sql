@@ -3239,4 +3239,35 @@ select '227_t_polish1_session_capacity_and_start',
          else 'applied'
        end
 
+
+union all
+
+-- T-DEL1 (228). One deletion path: the users row outlives its login (no
+-- users_id_fkey), and the two functions the route calls exist as SECURITY
+-- DEFINER with an empty search_path, executable by service_role only. By
+-- pg_constraint and to_regprocedure, so this reads MISSING before 228 runs.
+select '228_t_del1_account_deletion',
+       case
+         when exists (select 1 from pg_constraint
+                       where conrelid = to_regclass('public.users') and conname = 'users_id_fkey')
+           then 'MISSING -- users_id_fkey is still there; deleting a login cascades away the profile and its history'
+         when to_regprocedure('public.account_deletion_files(uuid)') is null
+           then 'MISSING -- account_deletion_files(uuid) is absent; the route cannot find the files to delete'
+         when to_regprocedure('public.account_scrub(uuid)') is null
+           then 'MISSING -- account_scrub(uuid) is absent; the route cannot clear the profile'
+         when exists (select 1 from pg_proc
+                       where oid in (to_regprocedure('public.account_deletion_files(uuid)'),
+                                     to_regprocedure('public.account_scrub(uuid)'))
+                         and (not prosecdef
+                              or not coalesce('search_path=""' = any (proconfig), false)
+                              or has_function_privilege('anon', oid, 'EXECUTE')
+                              or has_function_privilege('authenticated', oid, 'EXECUTE')
+                              or not has_function_privilege('service_role', oid, 'EXECUTE')))
+           then 'MISSING -- a deletion function is not SECURITY DEFINER with an empty search_path, or is not service_role only'
+         when not exists (select 1 from public.migrations_applied
+                           where migration = '228_t_del1_account_deletion')
+           then 'MISSING -- 228 is not recorded in migrations_applied'
+         else 'applied'
+       end
+
 order by migration;

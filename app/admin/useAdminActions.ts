@@ -173,8 +173,8 @@ export function useAdminActions(
       title: t('deleteUserBtn'),
       message:
         language === 'es'
-          ? `Se eliminará la cuenta de ${who}${target.email && target.name ? ` (${target.email})` : ''}, junto con sus mensajes, inscripciones y las sesiones que creó. Esto no se puede deshacer.`
-          : `This deletes ${who}${target.email && target.name ? ` (${target.email})` : ''}, along with their messages, bookings and the sessions they created. This cannot be undone.`,
+          ? `Se eliminará la cuenta de ${who}${target.email && target.name ? ` (${target.email})` : ''}: sus datos personales, fotos y publicaciones, y su inicio de sesión. Sus sesiones futuras se cancelan; su historial y sus mensajes quedan como "Usuario eliminado". Esto no se puede deshacer.`
+          : `This deletes ${who}${target.email && target.name ? ` (${target.email})` : ''}: their personal data, photos and posts, and their login. Their upcoming sessions are cancelled; their history and messages stay as "Usuario eliminado". This cannot be undone.`,
       confirmLabel: t('delete'),
       variant: 'danger',
       onConfirm: async () => {
