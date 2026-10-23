@@ -1,4 +1,3 @@
-import { Plus_Jakarta_Sans } from 'next/font/google';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { Toaster } from 'react-hot-toast';
 import AppChrome from '@/components/AppChrome';
@@ -10,20 +9,13 @@ import PageTransition from '@/components/PageTransition';
 import ReducedMotionProvider from '@/components/ReducedMotionProvider';
 import { ConfirmProvider } from '@/components/ConfirmProvider';
 import DeepLinkRouter from '@/components/DeepLinkRouter';
+import { APP_FONT_CLASS } from '@/lib/fonts/app';
 import './globals.css';
 import type { Metadata, Viewport } from 'next';
 
 // T-SITE1 Part F: not preloaded. The root layout wraps the marketing site too,
 // which never uses Jakarta, and the preload sent ~50 KB at high priority ahead of
 // every site page's hero image. App pages still load it from their CSS, with swap.
-const jakartaSans = Plus_Jakarta_Sans({
-  subsets: ['latin', 'latin-ext'],
-  weight: ['400', '500', '600', '700', '800'],
-  variable: '--font-jakarta',
-  display: 'swap',
-  preload: false,
-});
-
 // Title and description mirror ACTIVE_CITY in lib/city-config.ts (Medellín)
 /**
  * T-AUD6. This MUST be the Next viewport export, never a hand-written
@@ -121,7 +113,7 @@ export const metadata: Metadata = {
  */
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="es" className={jakartaSans.variable} suppressHydrationWarning>
+    <html lang="es" className={APP_FONT_CLASS} suppressHydrationWarning>
       <head>
         {/* Theme FOUC guard — runs before paint/hydration. Reads the
             saved preference (default light), resolves "system", and sets

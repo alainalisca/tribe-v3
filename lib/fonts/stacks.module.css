@@ -1,0 +1,55 @@
+/*
+ * Joins each face's per-block variables (lib/fonts/app.ts, lib/site/fonts.ts)
+ * back into the one variable the styles read. Latin comes first: where Google's
+ * blocks overlap (U+0131, U+0152-0153 ...) its CSS let the latin face win.
+ *
+ * The fallback faces are the ones next/font/google generated, with its own
+ * metrics, so text set in the fallback while a face loads takes the same room
+ * it did before. These classes sit on the same element as the block variables;
+ * a custom property can only read variables set on its own element or above.
+ */
+.jakarta {
+  --font-jakarta:
+    var(--font-jakarta-latin), var(--font-jakarta-latin-ext), var(--font-jakarta-vietnamese),
+    var(--font-jakarta-cyrillic-ext), 'Plus Jakarta Sans Fallback';
+}
+
+.site {
+  --font-site-disp:
+    var(--font-site-disp-latin), var(--font-site-disp-latin-ext), var(--font-site-disp-vietnamese), Arial Narrow,
+    Impact, sans-serif;
+  --font-site-body:
+    var(--font-site-body-latin), var(--font-site-body-latin-ext), 'Instrument Sans Fallback', Helvetica Neue, Arial,
+    sans-serif;
+  --font-site-mono:
+    var(--font-site-mono-latin), var(--font-site-mono-latin-ext), var(--font-site-mono-vietnamese),
+    var(--font-site-mono-greek), var(--font-site-mono-cyrillic), var(--font-site-mono-cyrillic-ext),
+    'JetBrains Mono Fallback', ui-monospace, Menlo, monospace;
+}
+
+@font-face {
+  font-family: 'Plus Jakarta Sans Fallback';
+  src: local('Arial');
+  ascent-override: 98.88%;
+  descent-override: 21.15%;
+  line-gap-override: 0%;
+  size-adjust: 104.98%;
+}
+
+@font-face {
+  font-family: 'Instrument Sans Fallback';
+  src: local('Arial');
+  ascent-override: 94.42%;
+  descent-override: 24.33%;
+  line-gap-override: 0%;
+  size-adjust: 102.74%;
+}
+
+@font-face {
+  font-family: 'JetBrains Mono Fallback';
+  src: local('Arial');
+  ascent-override: 75.79%;
+  descent-override: 22.29%;
+  line-gap-override: 0%;
+  size-adjust: 134.59%;
+}
