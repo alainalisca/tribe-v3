@@ -122,6 +122,7 @@ describe('T-JOIN1b: test and cancelled sessions', () => {
 
   it('a test session tells a scraper nothing and is noindex', async () => {
     await withRow({ is_test: true }, async () => {
+      access.canSee = false;
       const m = await generateMetadata(params);
       expect(m.title).toBe('Entrenamiento no disponible | Tribe');
       expect(JSON.stringify(m)).not.toContain('Salomon');
@@ -149,9 +150,23 @@ describe('T-JOIN1b: test and cancelled sessions', () => {
 
   it('a test session keeps the neutral metadata, cancelled or not', async () => {
     await withRow({ is_test: true, status: 'cancelled' }, async () => {
+      access.canSee = false;
       const m = await generateMetadata(params);
       expect(m.title).toBe('Entrenamiento no disponible | Tribe');
       expect(JSON.stringify(m)).not.toMatch(/cancelada|Salomon/);
+    });
+  });
+
+  it("its host and the admins see the session's own title in the tab, and nothing else", async () => {
+    await withRow({ is_test: true }, async () => {
+      access.canSee = true;
+      const m = await generateMetadata(params);
+      expect(m.title).toBe('Boxeo con Salomon | Tribe');
+      // Still no description, card or index: the metadata is the tab title only.
+      expect(m.description).toBeUndefined();
+      expect(m.openGraph).toBeUndefined();
+      expect(m.twitter).toBeUndefined();
+      expect(m.robots).toEqual({ index: false, follow: false });
     });
   });
 });
