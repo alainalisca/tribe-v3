@@ -27,6 +27,13 @@
  * deleted_at is already set is run again rather than refused: every step is
  * safe to repeat, and that is how a delete that stopped partway is finished.
  * A failure names its step ({ error: 'delete_failed', step }).
+ *
+ * ACCOUNTS ARE DELETED ONLY HERE (the app's Settings or the admin page), never
+ * from the Supabase Auth dashboard. Since migration 228 the profile no longer
+ * cascades from the login: deleting a user in the dashboard removes the login
+ * and leaves the profile, their files and their personal data behind, with
+ * nothing to show it happened. To finish one deleted that way, run the admin
+ * delete on the profile: every step is safe to repeat.
  */
 import { NextResponse } from 'next/server';
 import { requireApiAdmin } from '@/lib/auth/adminApi';

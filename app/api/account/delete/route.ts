@@ -14,6 +14,13 @@
  * T-DEL1: the deletion itself is lib/account/deleteAccount, the same path the
  * admin route runs. A failure names its step ({ success: false, step }); every
  * step is safe to run again, so trying again finishes a delete that stopped.
+ *
+ * ACCOUNTS ARE DELETED ONLY HERE (the app's Settings or the admin page), never
+ * from the Supabase Auth dashboard. Since migration 228 the profile no longer
+ * cascades from the login: deleting a user in the dashboard removes the login
+ * and leaves the profile, their files and their personal data behind, with
+ * nothing to show it happened. To finish one deleted that way, run the admin
+ * delete on the profile: every step is safe to repeat.
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { logError } from '@/lib/logger';

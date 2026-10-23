@@ -38,6 +38,13 @@ import {
  *
  * Files go before the data: the listing finds Moments through session_media
  * rows, which the scrub deletes.
+ *
+ * ACCOUNTS ARE DELETED ONLY HERE (the app's Settings or the admin page), never
+ * from the Supabase Auth dashboard. Since migration 228 the profile no longer
+ * cascades from the login: deleting a user in the dashboard removes the login
+ * and leaves the profile, their files and their personal data behind, with
+ * nothing to show it happened. To finish one deleted that way, run the admin
+ * delete on the profile: every step is safe to repeat.
  */
 export const DELETION_STEPS = ['check', 'list_files', 'delete_files', 'scrub_data', 'notify', 'delete_login'] as const;
 export type DeletionStep = (typeof DELETION_STEPS)[number];
