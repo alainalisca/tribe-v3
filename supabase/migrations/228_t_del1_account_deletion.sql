@@ -55,6 +55,25 @@
 --   service_role may execute them. The users guards let them through: each
 --   one passes when auth.uid() is NULL, which it is for the service role, and
 --   guard_signup_attribution allows exactly this erasure (every column NULL).
+--   4. Other people's data the person controls (Al, 2026-10-23):
+--        - a gym owner or a partner-listing owner is refused (the route checks
+--          first; account_scrub refuses too): the gym or listing, and the
+--          clients and leads under it, are transferred or closed first;
+--        - a coach on someone else's gym: clients.instructor_user_id becomes
+--          NULL (the column loses its NOT NULL for this), so the gym's coaches
+--          still see those clients through gym_coaches and can reassign them.
+--          A client with no gym would be visible to nobody, so it is deleted
+--          with the person (none on production on 2026-10-23);
+--        - training_interest, session_subscriptions and lead_reaches rows on
+--          either side are deleted;
+--        - invite links: invite_tokens still live (not expired) and
+--          media_invites never claimed are deleted; the used ones stay as
+--          history (invite_tokens records no use, so "used" is "expired");
+--        - tips and subscription_payments are money records: their references
+--          to auth.users (ON DELETE CASCADE, so deleting the login erased them)
+--          move to public.users, which survives a deletion, with the same
+--          ON DELETE CASCADE. Captured before the change, aborted on any other
+--          definition or on a row with no users row.
 --
 -- NOT CHANGED: admin_delete_user. The admin route stops calling it in the same
 -- PR (it now runs the in-app path); dropping it is a separate migration, so the
@@ -62,13 +81,20 @@
 --
 -- ROLLBACK: DROP both functions. Re-adding users_id_fkey fails once any account
 -- has been deleted (its users row has no login any more), by design; add it
--- back NOT VALID if it is ever needed.
+-- back NOT VALID if it is ever needed. The three money references go back to
+-- auth.users the same way (NOT VALID once a login is gone). The clients NOT
+-- NULL comes back only after every unassigned client is reassigned.
 --
 -- GUARDS. pg_temp.m228_fk() names the state of users_id_fkey or aborts:
 --   'captured'  exactly FOREIGN KEY (id) REFERENCES auth.users(id) ON DELETE CASCADE
 --   'absent'    gone (a re-run)
 --   ABORT       anything else; read it before dropping it.
--- After: the constraint is gone, users still has its primary key, both
+-- pg_temp.m228_money() does the same for tips_tipper_id_fkey,
+-- tips_instructor_id_fkey and subscription_payments_user_id_fkey ('captured' on
+-- auth.users, 'repointed' on public.users), and aborts on a money row whose
+-- person has no users row.
+-- After: users_id_fkey is gone, users still has its primary key, the money
+-- references are on public.users, clients.instructor_user_id takes NULL, both
 -- functions exist as SECURITY DEFINER with search_path '', and only
 -- service_role can execute them.
 
@@ -96,6 +122,66 @@ BEGIN
 END $$;
 
 ALTER TABLE public.users DROP CONSTRAINT IF EXISTS users_id_fkey;
+
+-- ── 1b. Money records follow the users row, not the login
+-- 'captured': all three exactly as read on 2026-10-23 (auth.users, CASCADE);
+-- 'repointed': all three on public.users already (a re-run). Anything else, or
+-- a row whose person has no users row, aborts.
+CREATE FUNCTION pg_temp.m228_money() RETURNS text LANGUAGE plpgsql AS $shape$
+DECLARE
+  v_defs text[];
+  v_orphans bigint;
+BEGIN
+  SELECT array_agg(conname || ' ' || pg_get_constraintdef(oid) ORDER BY conname) INTO v_defs
+    FROM pg_constraint
+   WHERE conname IN ('tips_tipper_id_fkey', 'tips_instructor_id_fkey', 'subscription_payments_user_id_fkey');
+  IF v_defs = ARRAY[
+       'subscription_payments_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE',
+       'tips_instructor_id_fkey FOREIGN KEY (instructor_id) REFERENCES auth.users(id) ON DELETE CASCADE',
+       'tips_tipper_id_fkey FOREIGN KEY (tipper_id) REFERENCES auth.users(id) ON DELETE CASCADE'] THEN
+    SELECT (SELECT count(*) FROM public.tips t
+             WHERE NOT EXISTS (SELECT 1 FROM public.users u WHERE u.id = t.tipper_id)
+                OR NOT EXISTS (SELECT 1 FROM public.users u WHERE u.id = t.instructor_id))
+         + (SELECT count(*) FROM public.subscription_payments p
+             WHERE NOT EXISTS (SELECT 1 FROM public.users u WHERE u.id = p.user_id))
+      INTO v_orphans;
+    IF v_orphans > 0 THEN
+      RAISE EXCEPTION '228 ABORTED: % tips or subscription_payments row(s) name a person with no users row; read them first.', v_orphans;
+    END IF;
+    RETURN 'captured';
+  END IF;
+  IF v_defs = ARRAY[
+       'subscription_payments_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE',
+       'tips_instructor_id_fkey FOREIGN KEY (instructor_id) REFERENCES users(id) ON DELETE CASCADE',
+       'tips_tipper_id_fkey FOREIGN KEY (tipper_id) REFERENCES users(id) ON DELETE CASCADE'] THEN
+    RETURN 'repointed';
+  END IF;
+  RAISE EXCEPTION '228 ABORTED: the tips / subscription_payments references are not the ones captured on 2026-10-23: %', v_defs;
+END $shape$;
+
+DO $$
+BEGIN
+  RAISE NOTICE '228 pre-flight: money references %', pg_temp.m228_money();
+END $$;
+
+ALTER TABLE public.tips
+  DROP CONSTRAINT tips_tipper_id_fkey,
+  ADD CONSTRAINT tips_tipper_id_fkey FOREIGN KEY (tipper_id) REFERENCES public.users(id) ON DELETE CASCADE,
+  DROP CONSTRAINT tips_instructor_id_fkey,
+  ADD CONSTRAINT tips_instructor_id_fkey FOREIGN KEY (instructor_id) REFERENCES public.users(id) ON DELETE CASCADE;
+ALTER TABLE public.subscription_payments
+  DROP CONSTRAINT subscription_payments_user_id_fkey,
+  ADD CONSTRAINT subscription_payments_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+-- ── 1c. A deleted coach's gym clients stay with the gym, unassigned
+DO $$
+BEGIN
+  IF (SELECT is_nullable FROM information_schema.columns
+       WHERE table_schema = 'public' AND table_name = 'clients' AND column_name = 'instructor_user_id') IS NULL THEN
+    RAISE EXCEPTION '228 ABORTED: clients.instructor_user_id is missing.';
+  END IF;
+END $$;
+ALTER TABLE public.clients ALTER COLUMN instructor_user_id DROP NOT NULL;
 
 -- ── 2. The person's uploads, for the route to delete through the Storage API
 CREATE OR REPLACE FUNCTION public.account_deletion_files(p_user uuid)
@@ -147,6 +233,13 @@ DECLARE
 BEGIN
   IF p_user IS NULL OR NOT EXISTS (SELECT 1 FROM public.users WHERE id = p_user) THEN
     RAISE EXCEPTION 'account_scrub: no users row for %', p_user USING ERRCODE = 'no_data_found';
+  END IF;
+  -- The route refuses these first; this is the same refusal for any other caller.
+  IF EXISTS (SELECT 1 FROM public.gyms WHERE owner_user_id = p_user) THEN
+    RAISE EXCEPTION 'account_scrub: owns_gym' USING ERRCODE = 'check_violation';
+  END IF;
+  IF EXISTS (SELECT 1 FROM public.featured_partners WHERE user_id = p_user) THEN
+    RAISE EXCEPTION 'account_scrub: owns_partner' USING ERRCODE = 'check_violation';
   END IF;
 
   -- The profile first, so anything a later step sends says "Usuario eliminado".
@@ -235,6 +328,20 @@ BEGIN
   DELETE FROM public.user_follows WHERE follower_id = p_user OR following_id = p_user;
   DELETE FROM public.connections WHERE requester_id = p_user OR recipient_id = p_user;
 
+  -- Interest, subscriptions and reach-outs between them and a coach, either side.
+  DELETE FROM public.training_interest WHERE athlete_id = p_user OR instructor_id = p_user;
+  DELETE FROM public.session_subscriptions WHERE user_id = p_user OR instructor_id = p_user;
+  DELETE FROM public.lead_reaches WHERE athlete_id = p_user OR instructor_id = p_user;
+
+  -- Their gym clients stay with the gym, unassigned; a client with no gym is
+  -- seen by nobody else, so it goes with them.
+  UPDATE public.clients SET instructor_user_id = NULL WHERE instructor_user_id = p_user AND gym_id IS NOT NULL;
+  DELETE FROM public.clients WHERE instructor_user_id = p_user AND gym_id IS NULL;
+
+  -- Invite links: still live or never claimed go; used ones stay as history.
+  DELETE FROM public.invite_tokens WHERE created_by = p_user AND (expires_at IS NULL OR expires_at >= now());
+  DELETE FROM public.media_invites WHERE created_by = p_user AND claimed_by IS NULL;
+
   -- What they posted and uploaded (comments, likes, reports and tags on it cascade).
   DELETE FROM public.community_posts WHERE author_id = p_user;
   DELETE FROM public.instructor_posts WHERE author_id = p_user;
@@ -280,6 +387,13 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_constraint
                   WHERE conrelid = to_regclass('public.users') AND conname = 'users_pkey' AND contype = 'p') THEN
     RAISE EXCEPTION '228 ABORTED: users has lost its primary key; 228 drops one foreign key and nothing else.';
+  END IF;
+  IF pg_temp.m228_money() <> 'repointed' THEN
+    RAISE EXCEPTION '228 ABORTED: tips and subscription_payments do not reference public.users after the change.';
+  END IF;
+  IF (SELECT is_nullable FROM information_schema.columns
+       WHERE table_schema = 'public' AND table_name = 'clients' AND column_name = 'instructor_user_id') <> 'YES' THEN
+    RAISE EXCEPTION '228 ABORTED: clients.instructor_user_id is still NOT NULL.';
   END IF;
   FOREACH v_fn IN ARRAY ARRAY[to_regprocedure('public.account_deletion_files(uuid)'),
                               to_regprocedure('public.account_scrub(uuid)')] LOOP
