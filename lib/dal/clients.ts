@@ -39,7 +39,8 @@ export type ClientStatus = 'active' | 'inactive' | 'lead' | 'lapsed';
 /** Mirror of the clients table columns. */
 export interface ClientRow {
   id: string;
-  instructor_user_id: string;
+  /** NULL once the assigned coach deleted their account (T-DEL1, migration 228): the gym keeps the client. */
+  instructor_user_id: string | null;
   /**
    * Owning gym. Nullable during the Path B transition (migration 068):
    * existing rows are backfilled by migration 069; new rows created
