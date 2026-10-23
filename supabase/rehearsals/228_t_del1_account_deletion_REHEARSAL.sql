@@ -15,8 +15,9 @@
 -- FIXTURE (inside the transaction): X, a new account with a login, every
 -- personal column filled, a row in every side table, files in every bucket
 -- the listing covers, past and upcoming sessions both ways, a chat message, a
--- review, Moments and tags; O, an existing non-admin account that must come
--- through untouched. Storage rows are inserted directly; the Storage API
+-- review, Moments and tags, gym clients, tips, a subscription payment, invites;
+-- O, an existing non-admin account that must come through untouched and owns
+-- a gym; Y, a new account that owns a partner listing. Storage rows are inserted directly; the Storage API
 -- delete itself is proved by lib/account/deleteAccount.local.test.ts.
 --
 -- ARMS
@@ -28,7 +29,13 @@
 --       empties every side table, cancels only what is still to come, keeps the
 --       history and the consent records, leaves O untouched; and deleting X's
 --       login now leaves the anonymous users row.
---   G   the constraint check, against shapes built to fail.
+--       Other people's data (A16-A20): X's gym client is unassigned and X's
+--       gym-less client deleted; live invites go, used ones stay; the scrub
+--       refuses a gym owner (O) and a partner-listing owner (Y); the money
+--       references are on public.users, so X's tips and subscription payment
+--       outlive X's login.
+--   G   the constraint check and the money-reference check, against shapes
+--       built to fail.
 
 \set ON_ERROR_STOP 1
 BEGIN;
@@ -71,7 +78,10 @@ SELECT pg_temp.arm('E0 ENV session_user and current_user', true, format('session
 DO $f$
 DECLARE
   x uuid := gen_random_uuid();
+  y uuid := gen_random_uuid();
   o uuid;
+  g uuid;
+  cl_gym uuid; cl_own uuid;
   c uuid;
   s_past uuid; s_future uuid; s_o_past uuid; s_o_future uuid;
   m_x uuid; m_o uuid;
@@ -187,7 +197,31 @@ BEGIN
     ('profile-images', 'avatars/' || o || '/rehearsal-o.jpg', o, o::text),
     ('moments', (SELECT storage_path FROM public.session_media WHERE id = m_o), NULL, NULL);
 
-  INSERT INTO reh_228_ids VALUES ('X', x), ('O', o), ('C', c), ('S_past', s_past), ('S_future', s_future),
+  -- Other people's data X controls: a gym client (O's gym) and a gym-less one,
+  -- money both ways, interest, a subscription, a reach-out, invites.
+  INSERT INTO auth.users (id, instance_id, aud, role, email, encrypted_password, email_confirmed_at, created_at, updated_at,
+                          raw_app_meta_data, raw_user_meta_data)
+  VALUES (y, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'reh228y-' || y || '@test.local', '',
+          now(), now(), now(), '{"provider":"email","providers":["email"]}', '{}');
+  INSERT INTO public.users (id, email) VALUES (y, 'reh228y-' || y || '@test.local') ON CONFLICT (id) DO NOTHING;
+  INSERT INTO public.featured_partners (user_id, business_name, slug) VALUES (y, 'Rehearsal 228 partner', 'reh228-' || left(y::text, 8));
+  INSERT INTO public.gyms (name, slug, owner_user_id) VALUES ('Rehearsal 228 gym', 'reh228-' || left(o::text, 8), o) RETURNING id INTO g;
+  INSERT INTO public.clients (instructor_user_id, name, gym_id) VALUES (x, 'Gym client', g) RETURNING id INTO cl_gym;
+  INSERT INTO public.clients (instructor_user_id, name) VALUES (x, 'Own client') RETURNING id INTO cl_own;
+  INSERT INTO public.tips (tipper_id, instructor_id, amount_cents, currency, gateway) VALUES (x, o, 1000, 'COP', 'wompi'), (o, x, 2000, 'COP', 'wompi');
+  INSERT INTO public.subscription_payments (user_id, tier, amount_cents, currency, gateway, status, period_start, period_end)
+  VALUES (x, 'plus', 5000, 'COP', 'wompi', 'approved', current_date - 30, current_date);
+  INSERT INTO public.training_interest (athlete_id, instructor_id) VALUES (x, o), (o, x);
+  INSERT INTO public.session_subscriptions (user_id, session_id, instructor_id, status) VALUES (x, s_o_future, o, 'active');
+  INSERT INTO public.lead_reaches (instructor_id, athlete_id) VALUES (o, x);
+  INSERT INTO public.invite_tokens (session_id, token, created_by, expires_at)
+  VALUES (s_future, 'reh228-live-' || x, x, now() + interval '7 days'), (s_past, 'reh228-used-' || x, x, now() - interval '7 days');
+  INSERT INTO public.media_invites (session_id, display_name, token, created_by, expires_at, claimed_by, claimed_at)
+  VALUES (s_past, 'Nadie', md5('reh228-open-' || x), x, now() + interval '7 days', NULL, NULL),
+         (s_past, 'O', md5('reh228-claimed-' || x), x, now() + interval '7 days', o, now());
+
+  INSERT INTO reh_228_ids VALUES ('X', x), ('O', o), ('Y', y), ('G', g), ('CL_gym', cl_gym), ('CL_own', cl_own),
+    ('C', c), ('S_past', s_past), ('S_future', s_future),
     ('S_o_past', s_o_past), ('S_o_future', s_o_future), ('M_x', m_x), ('M_o', m_o);
   INSERT INTO reh_228_before VALUES
     ('o_row', (SELECT md5(row(name, email, avatar_url, bio)::text) FROM public.users WHERE id = o)),
@@ -691,7 +725,10 @@ SELECT pg_temp.arm('A7 ' || t || ' has no row of X''s', n = 0, n || ' row(s)')
     ('session_recap_photos', (SELECT count(*) FROM public.session_recap_photos WHERE user_id = pg_temp.id('X'))),
     ('session_media', (SELECT count(*) FROM public.session_media WHERE uploader_id = pg_temp.id('X'))),
     ('session_media_tags (X tagged)', (SELECT count(*) FROM public.session_media_tags WHERE user_id = pg_temp.id('X'))),
-    ('session_media_tags (on X''s media)', (SELECT count(*) FROM public.session_media_tags WHERE media_id = pg_temp.id('M_x')))
+    ('session_media_tags (on X''s media)', (SELECT count(*) FROM public.session_media_tags WHERE media_id = pg_temp.id('M_x'))),
+    ('training_interest', (SELECT count(*) FROM public.training_interest WHERE pg_temp.id('X') IN (athlete_id, instructor_id))),
+    ('session_subscriptions', (SELECT count(*) FROM public.session_subscriptions WHERE pg_temp.id('X') IN (user_id, instructor_id))),
+    ('lead_reaches', (SELECT count(*) FROM public.lead_reaches WHERE pg_temp.id('X') IN (athlete_id, instructor_id)))
   ) v(t, n);
 
 SELECT pg_temp.arm('A8 the bulletin flyer keeps its post and loses its image',
@@ -729,6 +766,53 @@ SELECT pg_temp.arm('A13 O is untouched: O''s row, O''s community post, O''s Mome
                    AND EXISTS (SELECT 1 FROM public.session_media WHERE id = pg_temp.id('M_o')),
                    'users, community_posts, session_media');
 
+SELECT pg_temp.arm('A16 X''s gym client stays with the gym, unassigned; X''s gym-less client is gone',
+                   (SELECT instructor_user_id IS NULL AND gym_id = pg_temp.id('G') FROM public.clients WHERE id = pg_temp.id('CL_gym'))
+                   AND NOT EXISTS (SELECT 1 FROM public.clients WHERE id = pg_temp.id('CL_own')),
+                   'clients');
+
+SELECT pg_temp.arm('A17 live invite links and unclaimed media invites are gone; used ones stay',
+                   NOT EXISTS (SELECT 1 FROM public.invite_tokens WHERE token = 'reh228-live-' || pg_temp.id('X'))
+                   AND EXISTS (SELECT 1 FROM public.invite_tokens WHERE token = 'reh228-used-' || pg_temp.id('X'))
+                   AND NOT EXISTS (SELECT 1 FROM public.media_invites WHERE token = md5('reh228-open-' || pg_temp.id('X')))
+                   AND EXISTS (SELECT 1 FROM public.media_invites WHERE token = md5('reh228-claimed-' || pg_temp.id('X'))),
+                   'invite_tokens, media_invites');
+
+DO $r$
+DECLARE
+  v_o uuid := pg_temp.id('O');
+  v_y uuid := pg_temp.id('Y');
+  v_gym text;
+  v_partner text;
+BEGIN
+  PERFORM set_config('request.jwt.claims', '', true);
+  PERFORM set_config('request.jwt.claim.sub', '', true);
+  BEGIN
+    EXECUTE 'SET LOCAL ROLE service_role';
+    PERFORM public.account_scrub(v_o);
+    v_gym := 'scrubbed';
+  EXCEPTION WHEN others THEN v_gym := SQLERRM;
+  END;
+  EXECUTE 'RESET ROLE';
+  BEGIN
+    EXECUTE 'SET LOCAL ROLE service_role';
+    PERFORM public.account_scrub(v_y);
+    v_partner := 'scrubbed';
+  EXCEPTION WHEN others THEN v_partner := SQLERRM;
+  END;
+  EXECUTE 'RESET ROLE';
+  PERFORM pg_temp.arm('A18 the scrub refuses a gym owner and a partner-listing owner, and changes nothing of theirs',
+                      v_gym = 'account_scrub: owns_gym' AND v_partner = 'account_scrub: owns_partner'
+                      AND (SELECT name FROM public.users WHERE id = v_y) IS DISTINCT FROM 'Usuario eliminado',
+                      format('gym owner: %s; partner owner: %s', v_gym, v_partner));
+END $r$;
+
+SELECT pg_temp.arm('A19 tips and subscription_payments reference public.users; clients.instructor_user_id takes NULL',
+                   pg_temp.m228_money() = 'repointed'
+                   AND (SELECT is_nullable FROM information_schema.columns
+                         WHERE table_schema = 'public' AND table_name = 'clients' AND column_name = 'instructor_user_id') = 'YES',
+                   'pg_constraint, information_schema');
+
 DO $d$
 DECLARE
   v_kept boolean;
@@ -745,6 +829,11 @@ BEGIN
                       coalesce(v_err, format('users row kept: %s', v_kept)));
 END $d$;
 
+SELECT pg_temp.arm('A20 after the login is deleted, X''s money records are still there',
+                   (SELECT count(*) FROM public.tips WHERE pg_temp.id('X') IN (tipper_id, instructor_id)) = 2
+                   AND (SELECT count(*) FROM public.subscription_payments WHERE user_id = pg_temp.id('X')) = 1,
+                   'tips, subscription_payments');
+
 SELECT pg_temp.arm('A15 anon and authenticated cannot run either function',
                    NOT has_function_privilege('anon', 'public.account_scrub(uuid)', 'EXECUTE')
                    AND NOT has_function_privilege('authenticated', 'public.account_scrub(uuid)', 'EXECUTE')
@@ -760,6 +849,40 @@ SELECT pg_temp.reh_shape('G2 the captured cascade reads captured', 'captured',
   'INSERT INTO auth.users (id, instance_id, aud, role, email) SELECT u.id, ''00000000-0000-0000-0000-000000000000'', ''authenticated'', ''authenticated'', u.email FROM public.users u WHERE NOT EXISTS (SELECT 1 FROM auth.users a WHERE a.id = u.id); ALTER TABLE public.users ADD CONSTRAINT users_id_fkey FOREIGN KEY (id) REFERENCES auth.users(id) ON DELETE CASCADE');
 SELECT pg_temp.reh_shape('G3 a reference that is not the captured cascade aborts', 'error=228 ABORTED%',
   'ALTER TABLE public.users ADD CONSTRAINT users_id_fkey FOREIGN KEY (id) REFERENCES auth.users(id) NOT VALID');
+
+-- The money check. Captured shape first: every users row gets its login back
+-- (A14 deleted X's), and the three references go back to auth.users.
+CREATE FUNCTION pg_temp.money_on_auth(p_tipper_rule text) RETURNS text LANGUAGE sql AS $f$
+  SELECT 'INSERT INTO auth.users (id, instance_id, aud, role, email) SELECT u.id, ''00000000-0000-0000-0000-000000000000'', ''authenticated'', ''authenticated'', u.email FROM public.users u WHERE NOT EXISTS (SELECT 1 FROM auth.users a WHERE a.id = u.id); '
+      || 'ALTER TABLE public.tips DROP CONSTRAINT tips_tipper_id_fkey, ADD CONSTRAINT tips_tipper_id_fkey FOREIGN KEY (tipper_id) REFERENCES auth.users(id) ' || p_tipper_rule || ', '
+      || 'DROP CONSTRAINT tips_instructor_id_fkey, ADD CONSTRAINT tips_instructor_id_fkey FOREIGN KEY (instructor_id) REFERENCES auth.users(id) ON DELETE CASCADE; '
+      || 'ALTER TABLE public.subscription_payments DROP CONSTRAINT subscription_payments_user_id_fkey, ADD CONSTRAINT subscription_payments_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;';
+$f$;
+
+CREATE FUNCTION pg_temp.reh_money(p_arm text, p_expect text, p_build text)
+RETURNS void LANGUAGE plpgsql AS $f$
+DECLARE
+  v_got text;
+BEGIN
+  BEGIN
+    EXECUTE p_build;
+    v_got := pg_temp.m228_money();
+    RAISE EXCEPTION 'reh_228 undo' USING ERRCODE = 'P0228';
+  EXCEPTION
+    WHEN SQLSTATE 'P0228' THEN NULL;
+    WHEN others THEN v_got := 'error=' || SQLERRM;
+  END;
+  PERFORM pg_temp.arm(p_arm, v_got LIKE p_expect, format('expected %s, got %s', p_expect, coalesce(v_got, '<null>')));
+END $f$;
+
+SELECT pg_temp.reh_money('G4 after the change, a re-run reads repointed', 'repointed', 'SELECT 1');
+SELECT pg_temp.reh_money('G5 the captured money references read captured', 'captured', pg_temp.money_on_auth('ON DELETE CASCADE'));
+SELECT pg_temp.reh_money('G6 a money reference that is not the captured one aborts', 'error=228 ABORTED%', pg_temp.money_on_auth('ON DELETE NO ACTION'));
+SELECT pg_temp.reh_money('G7 a tip whose person has no users row aborts', 'error=228 ABORTED: 1 tips%',
+  pg_temp.money_on_auth('ON DELETE CASCADE')
+  || ' INSERT INTO auth.users (id, instance_id, aud, role, email) VALUES (''00000000-0000-4000-8000-000000000228'', ''00000000-0000-0000-0000-000000000000'', ''authenticated'', ''authenticated'', ''reh228z@test.local'');'
+  || ' DELETE FROM public.users WHERE id = ''00000000-0000-4000-8000-000000000228'';'
+  || ' INSERT INTO public.tips (tipper_id, instructor_id, amount_cents, currency, gateway) VALUES (''00000000-0000-4000-8000-000000000228'', (SELECT v FROM reh_228_ids WHERE k = ''O''), 100, ''COP'', ''wompi'');');
 
 -- ── Result ─────────────────────────────────────────────────────────────────
 CREATE TEMP TABLE reh_228_manifest (seq int, arm text) ON COMMIT DROP;
@@ -787,17 +910,29 @@ INSERT INTO reh_228_manifest VALUES
   (21, 'A7 session_media has no row of X''s'),
   (22, 'A7 session_media_tags (X tagged) has no row of X''s'),
   (23, 'A7 session_media_tags (on X''s media) has no row of X''s'),
-  (24, 'A8 the bulletin flyer keeps its post and loses its image'),
-  (25, 'A9 sessions lose only the links into X''s folder'),
-  (26, 'A10 what is still to come is cancelled: X''s future session and X''s future spot'),
-  (27, 'A11 what happened stays: X''s past session, X''s past spot, O''s spot on X''s session'),
-  (28, 'A12 X''s chat message and review stay, under the anonymous row'),
-  (29, 'A13 O is untouched: O''s row, O''s community post, O''s Moment'),
-  (30, 'A14 after 228: deleting the login leaves the anonymous users row and its history'),
-  (31, 'A15 anon and authenticated cannot run either function'),
-  (32, 'G1 after the drop, a re-run reads absent'),
-  (33, 'G2 the captured cascade reads captured'),
-  (34, 'G3 a reference that is not the captured cascade aborts');
+  (24, 'A7 training_interest has no row of X''s'),
+  (25, 'A7 session_subscriptions has no row of X''s'),
+  (26, 'A7 lead_reaches has no row of X''s'),
+  (27, 'A8 the bulletin flyer keeps its post and loses its image'),
+  (28, 'A9 sessions lose only the links into X''s folder'),
+  (29, 'A10 what is still to come is cancelled: X''s future session and X''s future spot'),
+  (30, 'A11 what happened stays: X''s past session, X''s past spot, O''s spot on X''s session'),
+  (31, 'A12 X''s chat message and review stay, under the anonymous row'),
+  (32, 'A13 O is untouched: O''s row, O''s community post, O''s Moment'),
+  (33, 'A16 X''s gym client stays with the gym, unassigned; X''s gym-less client is gone'),
+  (34, 'A17 live invite links and unclaimed media invites are gone; used ones stay'),
+  (35, 'A18 the scrub refuses a gym owner and a partner-listing owner, and changes nothing of theirs'),
+  (36, 'A19 tips and subscription_payments reference public.users; clients.instructor_user_id takes NULL'),
+  (37, 'A14 after 228: deleting the login leaves the anonymous users row and its history'),
+  (38, 'A20 after the login is deleted, X''s money records are still there'),
+  (39, 'A15 anon and authenticated cannot run either function'),
+  (40, 'G1 after the drop, a re-run reads absent'),
+  (41, 'G2 the captured cascade reads captured'),
+  (42, 'G3 a reference that is not the captured cascade aborts'),
+  (43, 'G4 after the change, a re-run reads repointed'),
+  (44, 'G5 the captured money references read captured'),
+  (45, 'G6 a money reference that is not the captured one aborts'),
+  (46, 'G7 a tip whose person has no users row aborts');
 
 SELECT seq, arm, verdict, detail FROM reh_228 ORDER BY seq;
 SELECT count(*) FILTER (WHERE verdict = 'PASS') AS pass, count(*) FILTER (WHERE verdict <> 'PASS') AS not_pass FROM reh_228;
@@ -805,6 +940,6 @@ SELECT CASE WHEN (SELECT array_agg(arm ORDER BY seq) FROM reh_228)
                  = (SELECT array_agg(arm ORDER BY seq) FROM reh_228_manifest)
             THEN 'manifest matches: every arm ran, in order' ELSE 'MANIFEST MISMATCH' END AS manifest;
 
--- The one result set for the transaction. Every row must read PASS. 34 of 34.
+-- The one result set for the transaction. Every row must read PASS. 46 of 46.
 
 ROLLBACK;
