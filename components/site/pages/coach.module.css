@@ -123,3 +123,66 @@
   padding: 6px 10px;
   box-shadow: inset 0 0 0 1px var(--ink);
 }
+
+/* T-POLISH1 PR 3b-1: what the page brings over from the storefront. */
+.tagline {
+  margin-top: 12px;
+  max-width: 52ch;
+  color: var(--soft);
+  font-size: 17px;
+  line-height: 1.45;
+}
+.passWrap {
+  margin-top: 18px;
+}
+.verified {
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+.reviewsHead {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 20px;
+}
+.ratingNum {
+  font-family: var(--disp);
+  font-weight: 900;
+  font-size: 44px;
+  line-height: 1;
+}
+.ratingOf {
+  color: #4a5058;
+  font-size: 15px;
+}
+.stars {
+  color: var(--ink);
+  letter-spacing: 1px;
+  font-size: 15px;
+}
+.starsOff {
+  color: rgba(18, 20, 23, 0.22);
+}
+.reviews {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-width: 62ch;
+}
+.reviews li + li {
+  border-top: 1px solid var(--rule-d);
+}
+.reviews li {
+  padding-block: 14px;
+}
+.reviewMeta {
+  color: #4a5058;
+}
+.reviewText {
+  margin-top: 6px;
+  font-size: 16px;
+  line-height: 1.55;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}

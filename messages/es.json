@@ -329,6 +329,9 @@
     "aSession": "una sesión"
   },
   "gymPage": {
+    "message": "Enviar mensaje",
+    "follow": "Seguir",
+    "following": "Siguiendo",
     "call": "Llamar",
     "copyLink": "Copiar enlace público",
     "copyLinkDone": "Enlace copiado",

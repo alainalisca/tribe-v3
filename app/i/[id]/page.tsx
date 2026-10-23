@@ -17,6 +17,8 @@ import { shareImageOrigin } from '@/lib/http/shareImageOrigin';
 import { isMomentsEnabled } from '@/lib/features/moments';
 import { loadCoachStrip } from '@/lib/moments/coachStrip';
 import { getServiceRoleClient } from '@/lib/supabase/admin';
+import { fetchCoachExtras } from '@/lib/site/publicProfileData';
+import { siteT } from '@/lib/site/i18n';
 
 const BASE_URL = SITE_URL;
 
@@ -102,13 +104,15 @@ export default async function PublicInstructorPage({ params }: PageProps) {
   if (!coach || !isListedCoach(coach)) notFound();
 
   const lang = languageFromCookie((await cookies()).get(LANGUAGE_COOKIE)?.value);
-  const [gym, photo, sessions, board, momentos] = await Promise.all([
+  const [gym, photo, sessions, board, momentos, extras] = await Promise.all([
     coachGym(coach.id),
     coachHeroPhoto(coach),
     fetchCoachSessions(coach.id),
     fetchWeekBoard(),
     // T-MOM1 Part D: the athletes' opted-in photos; a failure only drops the strip.
     isMomentsEnabled() ? loadCoachStrip(getServiceRoleClient(), coach.id, lang).catch(() => null) : null,
+    // T-POLISH1 PR 3b-1: tagline, credentials, video, reviews, an independent coach's pass.
+    fetchCoachExtras(coach.id, siteT(lang)('site.coachPage.athlete')),
   ]);
 
   return (
@@ -127,6 +131,9 @@ export default async function PublicInstructorPage({ params }: PageProps) {
         sessions={sessions}
         weekEnd={bogotaDateOffset(6)}
         momentos={momentos}
+        coachId={coach.id}
+        pagePath={`/i/${coach.handle || coach.id}/`}
+        extras={extras}
       />
     </SiteLayout>
   );
