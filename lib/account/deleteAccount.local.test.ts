@@ -317,6 +317,133 @@ describe.skipIf(!ENABLED)('deleteAccount on the local stack (T-DEL1)', () => {
     );
     ids.oMedia = oMedia.id;
 
+    // Other people's data X controls (Al's seven calls). Z owns the gym X
+    // coaches at and Y owns a partner listing: two throwaway accounts, so a
+    // refusal that failed could never delete a real local user.
+    const throwaway = async (label: string) => {
+      const made = await db.auth.admin.createUser({
+        email: `tdel1-${label}-${Date.now()}@test.local`,
+        password: crypto.randomUUID(),
+        email_confirm: true,
+      });
+      if (made.error || !made.data.user) throw new Error(made.error?.message ?? 'no user');
+      await db
+        .from('users')
+        .upsert({ id: made.data.user.id, email: made.data.user.email }, { onConflict: 'id', ignoreDuplicates: true });
+      return made.data.user.id;
+    };
+    ids.z = await throwaway('z');
+    ids.y = await throwaway('y');
+    ids.gym = (
+      await one<{ id: string }>(
+        db
+          .from('gyms')
+          .insert({ name: 'T-DEL1 gym', slug: `tdel1-${ids.z.slice(0, 8)}`, owner_user_id: ids.z })
+          .select('id')
+          .single()
+      )
+    ).id;
+    ids.partner = (
+      await one<{ id: string }>(
+        db
+          .from('featured_partners')
+          .insert({ user_id: ids.y, business_name: 'T-DEL1 partner', slug: `tdel1-${ids.y.slice(0, 8)}` })
+          .select('id')
+          .single()
+      )
+    ).id;
+    ids.gymClient = (
+      await one<{ id: string }>(
+        db.from('clients').insert({ instructor_user_id: x, name: 'Gym client', gym_id: ids.gym }).select('id').single()
+      )
+    ).id;
+    ids.ownClient = (
+      await one<{ id: string }>(
+        db.from('clients').insert({ instructor_user_id: x, name: 'Own client' }).select('id').single()
+      )
+    ).id;
+    await one(
+      db
+        .from('tips')
+        .insert([
+          { tipper_id: x, instructor_id: o, amount_cents: 1000, currency: 'COP', gateway: 'wompi' },
+          { tipper_id: o, instructor_id: x, amount_cents: 2000, currency: 'COP', gateway: 'wompi' },
+        ])
+        .select('id')
+    );
+    await one(
+      db
+        .from('subscription_payments')
+        .insert({
+          user_id: x,
+          tier: 'plus',
+          amount_cents: 5000,
+          currency: 'COP',
+          gateway: 'wompi',
+          status: 'approved',
+          period_start: day(-30),
+          period_end: day(0),
+        })
+        .select('id')
+    );
+    await one(
+      db
+        .from('training_interest')
+        .insert([
+          { athlete_id: x, instructor_id: o },
+          { athlete_id: o, instructor_id: x },
+        ])
+        .select('id')
+    );
+    await one(
+      db
+        .from('session_subscriptions')
+        .insert({ user_id: x, session_id: ids.oFuture, instructor_id: o, status: 'active' })
+        .select('id')
+    );
+    await one(db.from('lead_reaches').insert({ instructor_id: o, athlete_id: x }).select('id'));
+    ids.liveInvite = `tdel1-live-${x}`;
+    ids.usedInvite = `tdel1-used-${x}`;
+    await one(
+      db
+        .from('invite_tokens')
+        .insert([
+          {
+            session_id: ids.future,
+            token: ids.liveInvite,
+            created_by: x,
+            expires_at: new Date(Date.now() + 7 * 86400000).toISOString(),
+          },
+          {
+            session_id: ids.past,
+            token: ids.usedInvite,
+            created_by: x,
+            expires_at: new Date(Date.now() - 7 * 86400000).toISOString(),
+          },
+        ])
+        .select('id')
+    );
+    ids.openMediaInvite = crypto.randomUUID().replace(/-/g, '');
+    ids.claimedMediaInvite = crypto.randomUUID().replace(/-/g, '');
+    const week = new Date(Date.now() + 7 * 86400000).toISOString();
+    await one(
+      db
+        .from('media_invites')
+        .insert([
+          { session_id: ids.past, display_name: 'Nadie', token: ids.openMediaInvite, created_by: x, expires_at: week },
+          {
+            session_id: ids.past,
+            display_name: 'O',
+            token: ids.claimedMediaInvite,
+            created_by: x,
+            expires_at: week,
+            claimed_by: o,
+            claimed_at: new Date().toISOString(),
+          },
+        ])
+        .select('id')
+    );
+
     // Their files, one per way the listing finds them, and files that must stay.
     await put('profile-images', `avatars/${x}/a.jpg`, x, xFiles);
     await put('profile-images', `banners/banner${x.slice(0, 8)}.jpg`, x, xFiles);
@@ -339,6 +466,23 @@ describe.skipIf(!ENABLED)('deleteAccount on the local stack (T-DEL1)', () => {
     if (!db) return;
     for (const [bucket, name] of keptFiles) await db.storage.from(bucket).remove([name]);
     if (ids.community) await db.from('communities').delete().eq('id', ids.community);
+    if (ids.gymClient) await db.from('clients').delete().eq('id', ids.gymClient);
+    if (ids.gym) await db.from('gyms').delete().eq('id', ids.gym);
+    if (ids.partner) await db.from('featured_partners').delete().eq('id', ids.partner);
+    for (const id of [ids.z, ids.y].filter(Boolean)) {
+      await db.auth.admin.deleteUser(id);
+      await db.from('users').delete().eq('id', id);
+    }
+  });
+
+  it('refuses a gym owner and a partner-listing owner, and deletes nothing of theirs', async () => {
+    expect(await deleteAccount(db, ids.z)).toEqual({ ok: false, step: 'check', error: 'owns_gym' });
+    expect(await deleteAccount(db, ids.y)).toEqual({ ok: false, step: 'check', error: 'owns_partner' });
+    const names = await one<Array<{ id: string; deleted_at: string | null }>>(
+      db.from('users').select('id, deleted_at').in('id', [ids.z, ids.y])
+    );
+    expect(names.map((u) => u.deleted_at)).toEqual([null, null]);
+    expect((await db.auth.admin.getUserById(ids.y)).data.user).not.toBeNull();
   });
 
   it('runs every step and reports the files it deleted', async () => {
@@ -444,6 +588,12 @@ describe.skipIf(!ENABLED)('deleteAccount on the local stack (T-DEL1)', () => {
       session_recap_photos: await count('session_recap_photos', 'user_id'),
       session_media: await count('session_media', 'uploader_id'),
       session_media_tags: await count('session_media_tags', 'user_id'),
+      training_interest_athlete: await count('training_interest', 'athlete_id'),
+      training_interest_coach: await count('training_interest', 'instructor_id'),
+      session_subscriptions_user: await count('session_subscriptions', 'user_id'),
+      session_subscriptions_coach: await count('session_subscriptions', 'instructor_id'),
+      lead_reaches_athlete: await count('lead_reaches', 'athlete_id'),
+      lead_reaches_coach: await count('lead_reaches', 'instructor_id'),
     }).toEqual({
       user_private: 0,
       push_subscriptions: 0,
@@ -459,6 +609,12 @@ describe.skipIf(!ENABLED)('deleteAccount on the local stack (T-DEL1)', () => {
       session_recap_photos: 0,
       session_media: 0,
       session_media_tags: 0,
+      training_interest_athlete: 0,
+      training_interest_coach: 0,
+      session_subscriptions_user: 0,
+      session_subscriptions_coach: 0,
+      lead_reaches_athlete: 0,
+      lead_reaches_coach: 0,
     });
   });
 
@@ -483,6 +639,36 @@ describe.skipIf(!ENABLED)('deleteAccount on the local stack (T-DEL1)', () => {
     expect(review).toEqual({ rating: 5, comment: 'Gran clase' });
     expect(
       (await db.from('session_media').select('id', { count: 'exact', head: true }).eq('id', ids.oMedia)).count
+    ).toBe(1);
+  });
+
+  it('their gym client stays with the gym, unassigned; their gym-less client is gone', async () => {
+    const gymClient = await one<{ instructor_user_id: string | null; gym_id: string }>(
+      db.from('clients').select('instructor_user_id, gym_id').eq('id', ids.gymClient).single()
+    );
+    expect(gymClient).toEqual({ instructor_user_id: null, gym_id: ids.gym });
+    expect((await db.from('clients').select('id', { count: 'exact', head: true }).eq('id', ids.ownClient)).count).toBe(
+      0
+    );
+  });
+
+  it('live invite links and unclaimed media invites are gone; the used ones stay', async () => {
+    const tokens = await one<Array<{ token: string }>>(
+      db.from('invite_tokens').select('token').in('token', [ids.liveInvite, ids.usedInvite])
+    );
+    expect(tokens.map((t) => t.token)).toEqual([ids.usedInvite]);
+    const media = await one<Array<{ token: string }>>(
+      db.from('media_invites').select('token').in('token', [ids.openMediaInvite, ids.claimedMediaInvite])
+    );
+    expect(media.map((t) => t.token)).toEqual([ids.claimedMediaInvite]);
+  });
+
+  it('their money records outlive the login: tips both ways and the subscription payment', async () => {
+    expect((await db.auth.admin.getUserById(x)).data.user).toBeNull();
+    expect((await db.from('tips').select('id', { count: 'exact', head: true }).eq('tipper_id', x)).count).toBe(1);
+    expect((await db.from('tips').select('id', { count: 'exact', head: true }).eq('instructor_id', x)).count).toBe(1);
+    expect(
+      (await db.from('subscription_payments').select('id', { count: 'exact', head: true }).eq('user_id', x)).count
     ).toBe(1);
   });
 
