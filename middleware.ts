@@ -5,6 +5,7 @@ import { athletesGateAllows, isAthletesGatedPath, GATED_NOT_FOUND_PATH } from '@
 import { isMomentsEnabled, isMomentsPagePath } from '@/lib/features/moments';
 import { canonicalLinkHeader } from '@/lib/seo/canonicalLink';
 import { hasAuthCookieName } from '@/lib/site/authCookie';
+import { signedOutStorefrontDestination, storefrontIdFor } from '@/lib/site/storefrontRedirect';
 import { LANGUAGE_COOKIE, languageFromCookie } from '@/lib/languageCookie';
 import { internalSitePath, isSiteCardPath, publicPathForInternal, siteSlugOf } from '@/lib/site/paths';
 import {
@@ -440,6 +441,33 @@ export async function middleware(request: NextRequest) {
       NextResponse.rewrite(new URL(GATED_NOT_FOUND_PATH, request.url), { status: 404 }),
       pathname
     );
+  }
+
+  // T-POLISH1 PR 3b-0: a SIGNED-OUT visitor to /storefront/<id>/ goes to its
+  // public twin (/g/<slug>/ or /i/<id>/) with the query string whole, so a
+  // printed QR's ?src=&code= reaches AttributionCapture instead of a sign-in
+  // wall (lib/site/storefrontRedirect.ts). With any Supabase auth cookie the
+  // request falls through to today's auth-gated storefront, untouched; so does
+  // a lookup that fails. Neither answer may be cached for anyone else.
+  const storefrontId = storefrontIdFor(pathname);
+  if (storefrontId !== null && !hasAuthCookieName(request.cookies.getAll().map((c) => c.name))) {
+    const destination = await signedOutStorefrontDestination(storefrontId, {
+      url: process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      anonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    });
+    if (destination.kind !== 'error') {
+      let res: NextResponse;
+      if (destination.kind === 'redirect') {
+        // A plain URL, not nextUrl.clone(): NextURL re-formats the pathname to the
+        // request's own trailing-slash form, and /g/ and /i/ live with the slash.
+        res = NextResponse.redirect(new URL(`${destination.path}${request.nextUrl.search}`, request.url), 307);
+      } else {
+        res = NextResponse.rewrite(new URL(GATED_NOT_FOUND_PATH, request.url), { status: 404 });
+      }
+      res.headers.set('Cache-Control', 'private, no-store');
+      res.headers.set('Vary', 'Cookie');
+      return applySecurityHeaders(res, pathname);
+    }
   }
 
   const gateTarget = gateTargetFor(pathname);
