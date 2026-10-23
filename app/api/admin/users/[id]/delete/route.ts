@@ -86,8 +86,14 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
       return NextResponse.json({ error: 'delete_failed', step: result.step }, { status: 500 });
     }
 
-    log('info', 'admin deleted user', { action: 'adminDeleteUser', actorUserId: gate.userId, targetUserId });
-    return NextResponse.json({ success: true, id: targetUserId });
+    log('info', 'admin deleted user', {
+      action: 'adminDeleteUser',
+      actorUserId: gate.userId,
+      targetUserId,
+      filesKept: result.filesKept.length,
+    });
+    // T-DEL2: files another row still uses were left in place; the admin sees which.
+    return NextResponse.json({ success: true, id: targetUserId, filesKept: result.filesKept });
   } catch (error) {
     logError(error, { action: 'adminDeleteUser.route' });
     return NextResponse.json({ error: 'internal_error' }, { status: 500 });

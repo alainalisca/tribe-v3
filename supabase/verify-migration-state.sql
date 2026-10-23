@@ -3282,4 +3282,38 @@ select '228_t_del1_account_deletion',
          else 'applied'
        end
 
+union all
+
+-- T-DEL2 (230). An account deletion keeps any file a remaining row still
+-- references: account_file_references(uuid) names them, account_deletion_files
+-- leaves them out (its body reads account_file_references), and 228's listing
+-- lives on as account_deletion_candidates(uuid). All three SECURITY DEFINER
+-- with an empty search_path, service_role only. By to_regprocedure and
+-- pg_proc, so this reads MISSING before 230.
+select '230_t_del2_keep_shared_files',
+       case
+         when to_regprocedure('public.account_file_references(uuid)') is null
+           then 'MISSING -- account_file_references(uuid) is absent; a deletion can remove a file another row still uses'
+         when to_regprocedure('public.account_deletion_candidates(uuid)') is null
+           then 'MISSING -- account_deletion_candidates(uuid) is absent'
+         when strpos((select prosrc from pg_proc
+                       where oid = to_regprocedure('public.account_deletion_files(uuid)')),
+                     'account_file_references') = 0
+           then 'MISSING -- account_deletion_files still lists every upload, shared or not (228''s body)'
+         when exists (select 1 from pg_proc
+                       where oid in (to_regprocedure('public.account_file_references(uuid)'),
+                                     to_regprocedure('public.account_deletion_candidates(uuid)'),
+                                     to_regprocedure('public.account_deletion_files(uuid)'))
+                         and (not prosecdef
+                              or not coalesce('search_path=""' = any (proconfig), false)
+                              or has_function_privilege('anon', oid, 'EXECUTE')
+                              or has_function_privilege('authenticated', oid, 'EXECUTE')
+                              or not has_function_privilege('service_role', oid, 'EXECUTE')))
+           then 'MISSING -- a deletion function is not SECURITY DEFINER with an empty search_path, or is not service_role only'
+         when not exists (select 1 from public.migrations_applied
+                           where migration = '230_t_del2_keep_shared_files')
+           then 'MISSING -- 230 is not recorded in migrations_applied'
+         else 'applied'
+       end
+
 order by migration;

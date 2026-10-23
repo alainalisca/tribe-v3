@@ -28,6 +28,7 @@ beforeEach(() => {
   vi.mocked(deleteAccount).mockResolvedValue({
     ok: true,
     filesDeleted: 0,
+    filesKept: [],
     notified: { sent: 0, suppressed: 0, no_token: 0, failed: 0 },
   });
 });

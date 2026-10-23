@@ -33,6 +33,7 @@ function fakeService(
     upcoming: { data: unknown; error: Err };
     spots: { data: unknown; error: Err };
     nowCancelled: { data: unknown; error: Err };
+    refs: { data: unknown; error: Err };
   }> = {}
 ) {
   const calls: string[] = [];
@@ -87,6 +88,7 @@ function fakeService(
     rpc: (fn: string) => {
       calls.push(`rpc ${fn}`);
       if (fn === 'account_deletion_files') return Promise.resolve(lists[Math.min(listCall++, lists.length - 1)]);
+      if (fn === 'account_file_references') return Promise.resolve(over.refs ?? { data: [], error: null });
       return Promise.resolve(over.scrub ?? { error: null });
     },
     storage: {
@@ -121,12 +123,13 @@ beforeEach(() => {
 describe('deleteAccount', () => {
   it('runs check, list, delete, list again, scrub, login, in that order', async () => {
     const f = fakeService();
-    expect(await deleteAccount(f.service, USER)).toEqual({ ok: true, filesDeleted: 2, notified: ZERO });
+    expect(await deleteAccount(f.service, USER)).toEqual({ ok: true, filesDeleted: 2, filesKept: [], notified: ZERO });
     expect(f.calls).toEqual([
       'read users',
       'read gyms',
       'read featured_partners',
       'read upcoming sessions',
+      'rpc account_file_references',
       'rpc account_deletion_files',
       'remove profile-images',
       'remove session-photos',
@@ -151,8 +154,32 @@ describe('deleteAccount', () => {
         { data: [], error: null },
       ],
     });
-    expect(await deleteAccount(f.service, USER)).toEqual({ ok: true, filesDeleted: 250, notified: ZERO });
+    expect(await deleteAccount(f.service, USER)).toEqual({
+      ok: true,
+      filesDeleted: 250,
+      filesKept: [],
+      notified: ZERO,
+    });
     expect(f.removed.map(([, p]) => p.length)).toEqual([100, 100, 50]);
+  });
+
+  it('T-DEL2: a file another row still uses is reported as kept and never removed', async () => {
+    const shared = { bucket: 'profile-images', path: `avatars/${USER}-logo.jpeg` };
+    const f = fakeService({
+      // 230: the listing already leaves the shared file out; the references name it.
+      refs: {
+        data: [{ ...shared, ref_table: 'featured_partners', ref_column: 'logo_url', ref_id: 'p1' }],
+        error: null,
+      },
+    });
+    const out = await deleteAccount(f.service, USER);
+    expect(out).toEqual({
+      ok: true,
+      filesDeleted: 2,
+      filesKept: [{ ...shared, table: 'featured_partners', column: 'logo_url', rowId: 'p1' }],
+      notified: ZERO,
+    });
+    expect(f.removed.flatMap(([, p]) => p)).not.toContain(shared.path);
   });
 
   const stops: Array<[string, Parameters<typeof fakeService>[0], string, string]> = [
@@ -164,6 +191,12 @@ describe('deleteAccount', () => {
       { partners: { data: [{ id: 'p1' }], error: null } },
       'check',
       'read featured_partners',
+    ],
+    [
+      'the shared-file check fails',
+      { refs: { data: null, error: { message: 'boom' } } },
+      'list_files',
+      'rpc account_file_references',
     ],
     [
       'the listing fails',
@@ -214,7 +247,7 @@ describe('deleteAccount', () => {
 
   it('a login that is already gone counts as done: a rerun finishes a delete that stopped there', async () => {
     const f = fakeService({ login: { error: { message: 'User not found', status: 404 } } });
-    expect(await deleteAccount(f.service, USER)).toEqual({ ok: true, filesDeleted: 2, notified: ZERO });
+    expect(await deleteAccount(f.service, USER)).toEqual({ ok: true, filesDeleted: 2, filesKept: [], notified: ZERO });
   });
   describe('notify: the athletes of upcoming sessions the deletion cancels', () => {
     const S1 = { id: 's1', creator_id: USER, title: null, sport: 'Boxing', date: '2099-01-01', is_paid: false };
@@ -237,7 +270,7 @@ describe('deleteAccount', () => {
         nowCancelled: { data: [{ id: 's1' }], error: null },
       });
       const out = await deleteAccount(f.service, USER);
-      expect(out).toEqual({ ok: true, filesDeleted: 2, notified: { ...ZERO, sent: 2 } });
+      expect(out).toEqual({ ok: true, filesDeleted: 2, filesKept: [], notified: { ...ZERO, sent: 2 } });
       expect(sendSessionCancelledPush).toHaveBeenCalledTimes(1);
       expect(sendSessionCancelledPush).toHaveBeenCalledWith(f.service, S1, ['ana', 'ben'], 'account-deletion');
       const order = f.calls;
@@ -262,7 +295,12 @@ describe('deleteAccount', () => {
 
     it('a rerun tells nobody twice: the sessions are no longer active, so nothing is noted', async () => {
       const f = fakeService({ upcoming: { data: [], error: null } });
-      expect(await deleteAccount(f.service, USER)).toEqual({ ok: true, filesDeleted: 2, notified: ZERO });
+      expect(await deleteAccount(f.service, USER)).toEqual({
+        ok: true,
+        filesDeleted: 2,
+        filesKept: [],
+        notified: ZERO,
+      });
       expect(sendSessionCancelledPush).not.toHaveBeenCalled();
       expect(f.calls).not.toContain('read spots');
     });

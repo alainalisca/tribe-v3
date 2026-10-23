@@ -1,5 +1,6 @@
 import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { log } from '@/lib/logger';
 import { bogotaToday } from '@/lib/time/bogotaDate';
 import {
   NO_CANCEL_PUSHES,
@@ -23,7 +24,11 @@ import {
  *                 and the confirmed athletes of their upcoming active sessions
  *                 are noted, because after the scrub nothing says which
  *                 sessions it cancelled
- *   list_files    account_deletion_files (migration 228): their uploads
+ *   list_files    account_deletion_files (228, 230): their uploads that no
+ *                 remaining row uses. account_file_references (230) names the
+ *                 ones another row still uses (someone's partner logo, a
+ *                 profile cover, a chat message): those stay, and are logged
+ *                 and returned as filesKept, never deleted
  *   delete_files  removed through the Storage API, then listed again: any file
  *                 still there is a failure, never a silent leftover
  *   scrub_data    account_scrub (228), one transaction: the profile cleared,
@@ -51,10 +56,13 @@ export const DELETION_STEPS = ['check', 'list_files', 'delete_files', 'scrub_dat
 export type DeletionStep = (typeof DELETION_STEPS)[number];
 
 export type DeletionResult =
-  | { ok: true; filesDeleted: number; notified: CancelPushSummary }
+  | { ok: true; filesDeleted: number; filesKept: KeptFile[]; notified: CancelPushSummary }
   | { ok: false; step: DeletionStep; error: string };
 
 type StoredFile = { bucket: string; path: string };
+
+/** One of their uploads that a remaining row still uses, and that row (230). */
+export type KeptFile = StoredFile & { table: string; column: string; rowId: string | null };
 
 /** Storage removes at most this many paths per call. */
 const REMOVE_BATCH = 100;
@@ -78,6 +86,15 @@ export async function deleteAccount(service: SupabaseClient, userId: string): Pr
   const upcoming = await upcomingAthletes(service, userId);
   if ('error' in upcoming) return fail('check', upcoming.error);
 
+  const kept = await keptFiles(service, userId);
+  if ('error' in kept) return fail('list_files', kept.error);
+  if (kept.files.length > 0) {
+    log('warn', 'account deletion kept files that other rows still use', {
+      action: 'deleteAccount',
+      userId,
+      kept: kept.files,
+    });
+  }
   const listed = await listFiles(service, userId);
   if ('error' in listed) return fail('list_files', listed.error);
 
@@ -118,7 +135,7 @@ export async function deleteAccount(service: SupabaseClient, userId: string): Pr
   const { error: loginErr } = await service.auth.admin.deleteUser(userId);
   if (loginErr && !isUserNotFound(loginErr)) return fail('delete_login', loginErr.message);
 
-  return { ok: true, filesDeleted: listed.files.length, notified };
+  return { ok: true, filesDeleted: listed.files.length, filesKept: kept.files, notified };
 }
 
 /**
@@ -163,6 +180,21 @@ async function listFiles(
   const { data, error } = await service.rpc('account_deletion_files', { p_user: userId });
   if (error) return { error: error.message };
   return { files: (data ?? []) as StoredFile[] };
+}
+
+async function keptFiles(service: SupabaseClient, userId: string): Promise<{ files: KeptFile[] } | { error: string }> {
+  const { data, error } = await service.rpc('account_file_references', { p_user: userId });
+  if (error) return { error: error.message };
+  type Row = { bucket: string; path: string; ref_table: string; ref_column: string; ref_id: string | null };
+  return {
+    files: ((data ?? []) as Row[]).map((r) => ({
+      bucket: r.bucket,
+      path: r.path,
+      table: r.ref_table,
+      column: r.ref_column,
+      rowId: r.ref_id,
+    })),
+  };
 }
 
 function byBucket(files: StoredFile[]): Map<string, string[]> {
