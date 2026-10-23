@@ -12,6 +12,7 @@ import { fetchWeekBoard } from '@/lib/site/week';
 import { tickerLead } from '@/lib/site/weekBoard';
 import { bogotaDateOffset } from '@/lib/time/bogotaDate';
 import ViewTracker from './ViewTracker';
+import SignedInTabBar from '@/components/site/SignedInTabBar';
 import { SITE_URL } from '@/lib/http/siteUrl';
 import { shareImageOrigin } from '@/lib/http/shareImageOrigin';
 import { isMomentsEnabled } from '@/lib/features/moments';
@@ -116,7 +117,14 @@ export default async function PublicInstructorPage({ params }: PageProps) {
   ]);
 
   return (
-    <SiteLayout lang={lang} lead={tickerLead(board, lang)} fontClassName={SITE_FONT_CLASS}>
+    <SiteLayout
+      lang={lang}
+      lead={tickerLead(board, lang)}
+      fontClassName={SITE_FONT_CLASS}
+      // T-POLISH1 PR 3b-2: the app's tab bar for a signed-in viewer (client-side only).
+      afterFooter={<SignedInTabBar spacer />}
+      hideDownloadWhenSignedIn
+    >
       <ViewTracker coachId={coach.id} />
       <CoachProfile
         lang={lang}

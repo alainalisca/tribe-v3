@@ -20,11 +20,17 @@ export default function SiteLayout({
   lang,
   fontClassName,
   lead = [],
+  afterFooter = null,
+  hideDownloadWhenSignedIn = false,
 }: {
   children: ReactNode;
   lang: SiteLanguage;
   fontClassName: string;
   lead?: TickerItem[];
+  /** T-POLISH1 PR 3b-2: what follows the footer inside the frame (the signed-in tab bar on /i). */
+  afterFooter?: ReactNode;
+  /** T-POLISH1 PR 3b-2: no "Descarga la app" for a signed-in viewer (decided in the browser). */
+  hideDownloadWhenSignedIn?: boolean;
 }) {
   const t = siteT(lang);
   const plans = coachPlansEnabled();
@@ -41,9 +47,10 @@ export default function SiteLayout({
     <div className={`${b.site} ${fontClassName}`} lang={lang}>
       <MarketingSurfaceMarker />
       <Ticker items={ticker} />
-      <SiteNav lang={lang} />
+      <SiteNav lang={lang} hideDownloadWhenSignedIn={hideDownloadWhenSignedIn} />
       <main id="contenido">{children}</main>
       <SiteFooter lang={lang} plansEnabled={plans} />
+      {afterFooter}
     </div>
   );
 }

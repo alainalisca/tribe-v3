@@ -72,3 +72,30 @@ export function publicPassHref(slug: string, pageSearch: string): string {
 export function signInHref(path: string): string {
   return `/auth/?returnTo=${encodeURIComponent(path)}`;
 }
+
+/**
+ * T-POLISH1 PR 3b-2: where an in-app link to a coach or a gym goes, now that
+ * /storefront lives on the public pages (it still redirects there, for links
+ * already printed or sent).
+ */
+export function coachPath(userId: string): string {
+  return `/i/${userId}/`;
+}
+
+/**
+ * A featured partner's public page: a gym or studio is /g/<slug>/ (its id when
+ * it has no slug, which /g also accepts); an independent trainer is a person,
+ * so /i/<their account>/ -- partners_public, which /g reads, leaves
+ * independents out. null when there is nowhere to go.
+ */
+export function partnerPath(partner: {
+  id: string;
+  slug?: string | null;
+  business_type?: string | null;
+  user_id?: string | null;
+}): string | null {
+  if (partner.business_type === 'gym' || partner.business_type === 'studio') {
+    return `/g/${encodeURIComponent(partner.slug || partner.id)}/`;
+  }
+  return partner.user_id ? coachPath(partner.user_id) : null;
+}

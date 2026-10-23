@@ -97,8 +97,8 @@ const CONSENT =
   'Autorizo a Tribe a compartir mi nombre, WhatsApp y correo con CrossFit BullBox para que me contacte sobre mi clase gratis.';
 const WHATSAPP_URL =
   'https://wa.me/573001112233?text=Hola%2C%20tengo%20el%20pase%20BB-4F7K%20de%20Tribe%20para%20mi%20clase%20gratis';
-const storefront = (tag: string) =>
-  `/storefront/0df617e9-7547-4a8d-a0b1-8be4d52a673a/?src=pase&code=${encodeURIComponent(tag)}`;
+// T-POLISH1 PR 3b-2: the gym's public page (the config is a gym with slug bullbox).
+const storefront = (tag: string) => `/g/bullbox/?src=pase&code=${encodeURIComponent(tag)}`;
 
 const CASES = [
   { label: 'no attribution in the link', src: null, code: null, storefrontTag: 'bullbox' },

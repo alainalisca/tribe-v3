@@ -9,6 +9,7 @@ import { createClient } from '@/lib/supabase/client';
 import { getCurrentSpotlight, type SpotlightWithInstructor } from '@/lib/dal/spotlight';
 import { trackEvent } from '@/lib/analytics';
 import { sportTranslations } from '@/lib/translations';
+import { coachPath } from '@/lib/site/publicProfile';
 
 interface SpotlightBannerProps {
   language: 'en' | 'es';
@@ -102,14 +103,14 @@ export default function SpotlightBanner({ language }: SpotlightBannerProps) {
 
         <div className="mt-4 flex gap-2">
           <Link
-            href={`/storefront/${instructor.id}`}
+            href={coachPath(instructor.id)}
             onClick={onClick}
             className="flex-1 py-2 rounded-lg bg-[#84cc16] hover:bg-[#A3E635] text-slate-900 text-sm font-bold text-center"
           >
             {language === 'es' ? 'Ver Perfil' : 'View Profile'}
           </Link>
           <Link
-            href={`/storefront/${instructor.id}?tab=sessions`}
+            href={`${coachPath(instructor.id)}#coach-sessions`}
             onClick={onClick}
             className="flex-1 py-2 rounded-lg bg-theme-surface text-theme-secondary hover:text-theme-primary text-sm font-semibold text-center"
           >

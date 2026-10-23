@@ -42,6 +42,7 @@ import { useVisibilityTier } from './useVisibilityTier';
 import ProfileUpcomingSessions from './ProfileUpcomingSessions';
 
 import TribeWordmark from '@/components/TribeWordmark';
+import { coachPath } from '@/lib/site/publicProfile';
 type UserProfile = Database['public']['Tables']['users']['Row'];
 
 export interface ProfileStats {
@@ -361,17 +362,17 @@ export default function ProfilePageClient({ userId, initialProfile, statsSlot }:
               ES copy is provisional and goes to Ana before launch. */}
           {profile?.is_instructor && (
             <a
-              href={`/storefront/${userId}`}
+              href={coachPath(userId)}
               className="mt-6 flex items-center justify-between gap-3 rounded-2xl bg-tribe-green px-5 py-4 transition-opacity hover:opacity-90"
             >
               <span className="min-w-0">
                 <span className="block text-sm font-bold text-tribe-dark">
-                  {language === 'es' ? 'Ver la tienda' : 'Visit the storefront'}
+                  {language === 'es' ? 'Ver su página' : 'Visit their page'}
                 </span>
                 <span className="mt-0.5 block text-xs text-tribe-dark/80">
                   {language === 'es'
-                    ? 'Sesiones, paquetes y reseñas en un solo lugar.'
-                    : 'Sessions, packages and reviews in one place.'}
+                    ? 'Sesiones, reseñas y mensajes en un solo lugar.'
+                    : 'Sessions, reviews and messages in one place.'}
                 </span>
               </span>
               <span aria-hidden className="shrink-0 text-lg text-tribe-dark">
@@ -386,10 +387,10 @@ export default function ProfilePageClient({ userId, initialProfile, statsSlot }:
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-sm font-bold text-theme-primary">{language === 'es' ? 'Reseñas' : 'Reviews'}</h3>
                 <a
-                  href={`/storefront/${userId}`}
+                  href={coachPath(userId)}
                   className="text-xs font-medium text-theme-primary underline hover:no-underline"
                 >
-                  {language === 'es' ? 'Ver en la tienda →' : 'See all on storefront →'}
+                  {language === 'es' ? 'Ver todas →' : 'See all →'}
                 </a>
               </div>
               <ReviewsList
@@ -397,7 +398,7 @@ export default function ProfilePageClient({ userId, initialProfile, statsSlot }:
                 limit={3}
                 showAll={false}
                 language={language}
-                seeAllHref={`/storefront/${userId}`}
+                seeAllHref={coachPath(userId)}
               />
             </div>
           )}

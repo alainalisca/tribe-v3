@@ -17,6 +17,7 @@ import { haptic } from '@/lib/haptics';
 import { trackEvent } from '@/lib/analytics';
 import { sportTranslations } from '@/lib/translations';
 import { formatRelative } from '@/lib/time/formatRelative';
+import { coachPath } from '@/lib/site/publicProfile';
 
 interface InstructorPostCardProps {
   post: PostWithAuthor;
@@ -152,7 +153,7 @@ export default function InstructorPostCard({ post, viewerId, language }: Instruc
         </div>
         <div className="flex-1 min-w-0">
           <Link
-            href={`/storefront/${post.author?.id}`}
+            href={post.author?.id ? coachPath(post.author.id) : '/'}
             className="flex items-center gap-1 font-semibold text-sm text-theme-primary hover:text-[#A3E635]"
           >
             {post.author?.name}

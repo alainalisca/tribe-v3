@@ -156,22 +156,33 @@ describe('signed out: a 404 wherever /i would 404 (and for an athlete, who has n
   });
 });
 
-describe("signed in: today's storefront, untouched", () => {
-  it('a visitor with a Supabase auth cookie is not redirected and reaches the page', async () => {
-    getUser.mockResolvedValue({ data: { user: { id: 'viewer' } } });
+describe('signed in: the same public page (T-POLISH1 PR 3b-2)', () => {
+  it('a visitor with a Supabase auth cookie goes to the same destination, query whole, no auth round trip', async () => {
     const res = await middleware(req(`/storefront/${COACH}/?src=test&code=TEST`, signedInCookie));
-    expect(res.status).toBe(200);
-    expect(res.headers.get('location')).toBeNull();
-    expect(res.headers.get('x-middleware-rewrite')).toBeNull();
-    // No storefront lookups for a signed-in visitor.
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(res.status).toBe(307);
+    expect(locationOf(res).pathname).toBe(`/i/${COACH}/`);
+    expect(locationOf(res).search).toBe('?src=test&code=TEST');
+    expect(res.headers.get('cache-control')).toBe('private, no-store');
+    expect(getUser).not.toHaveBeenCalled();
   });
 
-  it("an expired session cookie keeps today's behaviour too (the auth gate decides)", async () => {
-    getUser.mockResolvedValue({ data: { user: null } });
-    const res = await middleware(req(`/storefront/${COACH}/?src=test`, signedInCookie));
-    expect(res.headers.get('location')).toContain('/auth?returnTo=');
-    expect(fetchMock).not.toHaveBeenCalled();
+  it('a gym owner, signed in, goes to /g', async () => {
+    const res = await middleware(req(`/storefront/${GYM_OWNER}/`, signedInCookie));
+    expect(locationOf(res).pathname).toBe('/g/bullbox/');
+  });
+
+  it('the 404 cases are 404s signed in too', async () => {
+    const res = await middleware(req(`/storefront/${ATHLETE}/`, signedInCookie));
+    expect(res.status).toBe(404);
+    expect(res.headers.get('location')).toBeNull();
+  });
+
+  it('a signed-in visitor whose lookup fails still reaches the old page', async () => {
+    failReads = true;
+    getUser.mockResolvedValue({ data: { user: { id: 'viewer' } } });
+    const res = await middleware(req(`/storefront/${COACH}/`, signedInCookie));
+    expect(res.status).toBe(200);
+    expect(res.headers.get('location')).toBeNull();
   });
 });
 

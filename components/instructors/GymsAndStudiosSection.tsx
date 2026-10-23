@@ -29,6 +29,7 @@ import { neighborhoodFromAddress } from '@/lib/sessionLocation';
 import { partnerMonogram } from '@/lib/partnerIdentity';
 import type { GymDirectoryEntry } from '@/lib/dal/gymDirectory';
 import { PASS_ENTRY_CODES, hasClaimablePass, passEntryUrl } from '@/lib/pase/entryPoint';
+import { partnerPath } from '@/lib/site/publicProfile';
 
 interface Props {
   gyms: GymDirectoryEntry[];
@@ -126,7 +127,7 @@ export default function GymsAndStudiosSection({ gyms, showHeading = true }: Prop
                 )}
 
                 <Link
-                  href={`/storefront/${gym.user_id}`}
+                  href={partnerPath(gym) ?? `/g/${gym.id}/`}
                   onClick={() =>
                     trackEvent('gym_tile_tapped', { partner_id: gym.id, business_type: gym.business_type })
                   }

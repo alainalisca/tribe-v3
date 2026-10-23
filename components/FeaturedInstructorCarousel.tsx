@@ -7,6 +7,7 @@ import { logError } from '@/lib/logger';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Star, CheckCircle, Zap, TrendingUp } from 'lucide-react';
 import type { InstructorProfile } from '@/lib/dal/instructors';
+import { coachPath } from '@/lib/site/publicProfile';
 
 interface Props {
   language: 'en' | 'es';
@@ -116,7 +117,7 @@ export default function FeaturedInstructorCarousel({ language }: Props) {
 
       <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 snap-x snap-mandatory">
         {featured.map((inst) => (
-          <Link key={`featured-${inst.id}`} href={`/storefront/${inst.id}`} className="snap-start shrink-0 w-44">
+          <Link key={`featured-${inst.id}`} href={coachPath(inst.id)} className="snap-start shrink-0 w-44">
             <div className="relative bg-gradient-to-br from-tribe-green/10 to-tribe-green/5 border border-tribe-green/30 rounded-xl p-3 hover:border-tribe-green transition h-full">
               <div className="absolute -top-2 -right-2 bg-tribe-green text-slate-900 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
                 <TrendingUp className="w-3 h-3" />

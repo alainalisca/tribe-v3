@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client';
 import { sportTranslations } from '@/lib/translations';
 import { trackEvent } from '@/lib/analytics';
 import { formatSessionDate } from '@/lib/utils';
+import { coachPath } from '@/lib/site/publicProfile';
 
 interface RebookingStepProps {
   instructorId: string;
@@ -211,7 +212,7 @@ export default function RebookingStep({ instructorId, instructorName, sport, lan
           </div>
         )}
         <Link
-          href={`/storefront/${instructorId}`}
+          href={coachPath(instructorId)}
           className="mt-2 block text-center text-xs font-semibold text-[#84cc16] hover:text-[#A3E635]"
         >
           {t.seeAll}

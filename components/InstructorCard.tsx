@@ -7,6 +7,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Star, CheckCircle, Users, Award, MapPin } from 'lucide-react';
 import { formatDistance } from '@/lib/distance';
 import type { InstructorProfile } from '@/lib/dal/instructors';
+import { coachPath } from '@/lib/site/publicProfile';
 
 interface InstructorCardProps {
   instructor: InstructorProfile & { distanceKm?: number | null };
@@ -154,7 +155,7 @@ export default function InstructorCard({ instructor, language }: InstructorCardP
         </div>
 
         {/* CTA */}
-        <Link href={`/storefront/${instructor.id}`} className="w-full">
+        <Link href={coachPath(instructor.id)} className="w-full">
           <Button className="w-full bg-tribe-green text-slate-900 hover:bg-tribe-green font-semibold rounded-lg">
             {labels.viewStorefront}
           </Button>

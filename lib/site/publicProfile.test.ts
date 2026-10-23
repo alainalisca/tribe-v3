@@ -1,5 +1,13 @@
 import { describe, it, expect } from 'vitest';
-import { MIN_REVIEWS_FOR_RATING, publicPassHref, ratingToShow, reviewerDisplayName, signInHref } from './publicProfile';
+import {
+  MIN_REVIEWS_FOR_RATING,
+  coachPath,
+  partnerPath,
+  publicPassHref,
+  ratingToShow,
+  reviewerDisplayName,
+  signInHref,
+} from './publicProfile';
 
 describe('a reviewer on a public page: first name + last initial (Al, 2026-10-22)', () => {
   it.each([
@@ -60,5 +68,22 @@ describe('sign-in links', () => {
   it('return to the path they came from', () => {
     expect(signInHref('/messages/?user=abc')).toBe('/auth/?returnTo=%2Fmessages%2F%3Fuser%3Dabc');
     expect(signInHref('/i/andres/')).toBe('/auth/?returnTo=%2Fi%2Fandres%2F');
+  });
+});
+
+describe('in-app links to a coach or a gym (T-POLISH1 PR 3b-2)', () => {
+  it('a coach is /i/<account>/', () => {
+    expect(coachPath('11111111-1111-4111-8111-111111111111')).toBe('/i/11111111-1111-4111-8111-111111111111/');
+  });
+
+  it('a gym or studio is /g/<slug>/, or /g/<id>/ without one', () => {
+    expect(partnerPath({ id: 'p1', slug: 'bullbox', business_type: 'gym', user_id: 'u1' })).toBe('/g/bullbox/');
+    expect(partnerPath({ id: 'p2', slug: 'zen', business_type: 'studio', user_id: 'u2' })).toBe('/g/zen/');
+    expect(partnerPath({ id: 'p3', slug: null, business_type: 'gym', user_id: 'u3' })).toBe('/g/p3/');
+  });
+
+  it('an independent trainer is a person: /i/<account>/ (partners_public leaves independents out of /g)', () => {
+    expect(partnerPath({ id: 'p4', slug: 'salo', business_type: 'independent', user_id: 'u4' })).toBe('/i/u4/');
+    expect(partnerPath({ id: 'p5', slug: 'x', business_type: 'independent', user_id: null })).toBeNull();
   });
 });

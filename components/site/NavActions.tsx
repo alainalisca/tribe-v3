@@ -18,7 +18,23 @@ type Me = { name: string; avatarUrl: string | null };
  * supabase-js is imported only when an auth cookie exists (lib/site/authCookie),
  * so a first-time visitor never downloads it.
  */
-export default function NavActions({ signIn, download, myFeed }: { signIn: string; download: string; myFeed: string }) {
+export default function NavActions({
+  signIn,
+  download,
+  myFeed,
+  hideDownloadWhenSignedIn = false,
+}: {
+  signIn: string;
+  download: string;
+  myFeed: string;
+  /**
+   * T-POLISH1 PR 3b-2 (Al): on the public coach page a signed-in viewer is
+   * already in the app, so "Descarga la app" goes. It goes in the same render
+   * that swaps "Entrar" for the avatar, so the header changes once, and the
+   * bar's height (and everything under it) never moves.
+   */
+  hideDownloadWhenSignedIn?: boolean;
+}) {
   const [me, setMe] = useState<Me | null>(null);
 
   useEffect(() => {
@@ -65,10 +81,12 @@ export default function NavActions({ signIn, download, myFeed }: { signIn: strin
           {signIn}
         </Link>
       )}
-      <StoreButton className={c.join}>
-        {download}
-        <ArrowUpRight />
-      </StoreButton>
+      {!(hideDownloadWhenSignedIn && me) && (
+        <StoreButton className={c.join}>
+          {download}
+          <ArrowUpRight />
+        </StoreButton>
+      )}
     </div>
   );
 }

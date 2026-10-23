@@ -2,19 +2,21 @@ import { isUserId } from '@/lib/coachLink';
 import { GATE_TIMEOUT_MS } from '@/lib/site/publicPageGate';
 
 /**
- * T-POLISH1 PR 3b-0: where a SIGNED-OUT visitor to /storefront/<user id>/ goes.
+ * T-POLISH1 PR 3b-0 (signed out) and 3b-2 (everyone): where a visitor to
+ * /storefront/<user id>/ goes.
  *
- * /storefront is an auth-gated app page, so today a signed-out visitor is sent
- * to /auth with the whole URL folded into returnTo. The printed QR codes and the
- * pass links (`/storefront/<uuid>/?src=…&code=…`, lib/growth/trackedLink.ts and
- * app/api/pase/route.ts) therefore land on a sign-in wall, and their src and
- * code never reach AttributionCapture, which reads only the top-level query.
+ * /storefront was an auth-gated app page, so a signed-out visitor was sent to
+ * /auth with the whole URL folded into returnTo. The printed QR codes and the
+ * pass links (`/storefront/<uuid>/?src=…&code=…`) therefore landed on a sign-in
+ * wall, and their src and code never reached AttributionCapture, which reads
+ * only the top-level query.
  *
- * Signed out, the storefront has a public twin: the gym's /g/<slug>/ or the
- * coach's /i/<id>/. middleware.ts sends the visitor there with a 307 and the
- * query string copied whole, so the tags arrive where the root layout captures
- * them. A signed-in visitor never gets here: middleware only asks when there is
- * no Supabase auth cookie, and falls through to today's storefront otherwise.
+ * The storefront now lives on its public pages: the gym's /g/<slug>/ or the
+ * coach's /i/<id>/, which carry its actions, reviews and pass (PR 3b-1) and,
+ * for a signed-in viewer, the app's tab bar (PR 3b-2). middleware.ts sends
+ * every visitor there with a 307 and the query string copied whole, so the tags
+ * arrive where the root layout captures them, and a link printed or emailed
+ * with /storefront keeps working.
  *
  * The rule is /i's (publicPageGate coachVerdict): the account must exist and not
  * be a test account, banned or deleted, or the answer is a 404. Then an active
@@ -84,8 +86,8 @@ async function readOne<T>(url: string, anonKey: string, fetcher: Fetcher): Promi
   }
 }
 
-/** Where a signed-out visitor to /storefront/<id>/ goes. */
-export async function signedOutStorefrontDestination(
+/** Where a visitor to /storefront/<id>/ goes. */
+export async function storefrontRedirectDestination(
   id: string,
   env: { url: string; anonKey: string },
   fetcher: Fetcher = fetch

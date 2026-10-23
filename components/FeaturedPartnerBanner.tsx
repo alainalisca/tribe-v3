@@ -10,6 +10,7 @@ import Image from 'next/image';
 import { Star, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useTranslations } from '@/lib/i18n/useTranslations';
 import PartnerCard from '@/components/partner/FeaturedPartnerCard';
+import { partnerPath } from '@/lib/site/publicProfile';
 
 export default function FeaturedPartnerBanner() {
   const { language } = useLanguage();
@@ -62,7 +63,8 @@ export default function FeaturedPartnerBanner() {
 
   function handleClick(partner: FeaturedPartner) {
     incrementPartnerMetric(supabase, partner.id, 'total_clicks');
-    router.push(`/storefront/${partner.user_id}`);
+    const path = partnerPath(partner);
+    if (path) router.push(path);
   }
 
   if (partners.length === 0) {

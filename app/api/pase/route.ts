@@ -33,6 +33,7 @@ import { resolveAthleteAttribution, consentForAttribution, renderVoucherQr } fro
 import { sendPartnerLeadNotification, sendLeadPassEmail } from '@/lib/email/passLead';
 import { claimLeadNotification } from '@/lib/dal/athleteNotify';
 import { publicOrigin } from '@/lib/http/publicOrigin';
+import { partnerPath } from '@/lib/site/publicProfile';
 import { deliverNotifications } from '@/lib/atletas/athleteNotifications';
 import {
   sanitizeTag,
@@ -148,10 +149,24 @@ function buildWhatsappUrl(config: PassConfig, passCode: string): string | null {
   return `https://wa.me/${digits}?text=${text}`;
 }
 
+/**
+ * The "Reserva tu clase en Tribe" link the success screen and the lead email
+ * carry (the response still calls it storefront_url). T-POLISH1 PR 3b-2: the
+ * partner's public page -- /g/<slug>/ for a gym or studio, /i/<account>/ for an
+ * independent trainer -- with the pass's own src and code, instead of
+ * /storefront/<account>/, which only redirects there now (links already sent
+ * keep working through that redirect).
+ */
 function buildStorefrontUrl(config: PassConfig, code: string | null): string | null {
-  if (!config.storefrontUserId) return null;
+  const path = partnerPath({
+    id: config.slug,
+    slug: config.slug,
+    business_type: config.businessType,
+    user_id: config.storefrontUserId,
+  });
+  if (!path) return null;
   const attribution = code ?? config.slug;
-  return `/storefront/${config.storefrontUserId}/?src=pase&code=${encodeURIComponent(attribution)}`;
+  return `${path}?src=pase&code=${encodeURIComponent(attribution)}`;
 }
 
 export async function POST(request: NextRequest) {

@@ -104,7 +104,8 @@ describe('POST /api/pase', () => {
       'https://wa.me/573001112233?text=' +
         encodeURIComponent('Hola, tengo el pase BB-4F7K de Tribe para mi clase gratis')
     );
-    expect(json.storefront_url).toBe(`/storefront/${CONFIG.storefrontUserId}/?src=pase&code=BULLBOX-01`);
+    // T-POLISH1 PR 3b-2: the gym's public page, not /storefront (which only redirects there).
+    expect(json.storefront_url).toBe('/g/bullbox/?src=pase&code=BULLBOX-01');
   });
 
   it('normalises the phone before storing it', async () => {
@@ -310,7 +311,7 @@ describe('POST /api/pase', () => {
     it('falls back to the slug for storefront attribution when code was dropped', async () => {
       const res = await POST(request(validBody({ code: 'not valid!' })));
       const json = await res.json();
-      expect(json.storefront_url).toBe(`/storefront/${CONFIG.storefrontUserId}/?src=pase&code=bullbox`);
+      expect(json.storefront_url).toBe('/g/bullbox/?src=pase&code=bullbox');
     });
 
     it('discards a choice that is not one the partner offered', async () => {

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import UserAvatar from '@/components/UserAvatar';
 import type { PartnerInstructor } from '@/lib/dal/featuredPartners';
 import { useTranslations } from '@/lib/i18n/useTranslations';
+import { coachPath } from '@/lib/site/publicProfile';
 
 interface Props {
   instructors: PartnerInstructor[];
@@ -18,7 +19,7 @@ export default function PartnerInstructorRoster({ instructors }: Props) {
       <h3 className="text-sm font-bold text-stone-900 dark:text-white mb-2">{t('ourCoaches')}</h3>
       <div className="flex gap-3 overflow-x-auto pb-2">
         {instructors.map((inst) => (
-          <Link key={inst.id} href={`/storefront/${inst.instructor_id}`} className="flex-shrink-0 w-24 text-center">
+          <Link key={inst.id} href={coachPath(inst.instructor_id)} className="flex-shrink-0 w-24 text-center">
             <UserAvatar
               src={inst.user?.avatar_url}
               name={inst.user?.name || 'Instructor'}

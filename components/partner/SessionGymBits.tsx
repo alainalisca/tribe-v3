@@ -14,6 +14,7 @@ import Link from 'next/link';
 import { partnerMonogram } from '@/lib/partnerIdentity';
 import { useTranslations } from '@/lib/i18n/useTranslations';
 import type { SessionGymSource } from '@/lib/sessionGym';
+import { partnerPath } from '@/lib/site/publicProfile';
 
 /**
  * "Pendiente · {gym}" — the creator's own view while the gym decides.
@@ -71,11 +72,12 @@ export function PresenterGymTag({ gym, asCoach }: { gym: SessionGymSource; asCoa
 
   const className = 'inline-flex items-center gap-1 min-w-0 text-[11px] font-semibold text-theme-secondary';
 
-  if (!gym.user_id) {
+  const href = partnerPath(gym);
+  if (!href) {
     return <span className={className}>{body}</span>;
   }
   return (
-    <Link href={`/storefront/${gym.user_id}`} onClick={(e) => e.stopPropagation()} className={className}>
+    <Link href={href} onClick={(e) => e.stopPropagation()} className={className}>
       {body}
     </Link>
   );

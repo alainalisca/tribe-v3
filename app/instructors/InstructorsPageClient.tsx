@@ -237,7 +237,7 @@ export default function InstructorsPageClient({
               <strong>${inst.name || ''}</strong>${inst.verified ? ' &#10003;' : ''}
               ${inst.average_rating ? `<div style="color:#65a30d;font-size:12px;">&#9733; ${inst.average_rating.toFixed(1)} (${inst.total_reviews})</div>` : ''}
               ${inst.location ? `<div style="font-size:11px;color:#666;">${inst.location}${distText}</div>` : ''}
-              <a href="/storefront/${inst.id}" style="display:inline-block;margin-top:6px;font-size:12px;color:#A3E635;font-weight:600;">
+              <a href="/i/${inst.id}/" style="display:inline-block;margin-top:6px;font-size:12px;color:#A3E635;font-weight:600;">
                 ${language === 'es' ? 'Ver Perfil &rarr;' : 'View Profile &rarr;'}</a>
             </div>`,
           });

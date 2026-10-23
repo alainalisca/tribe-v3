@@ -57,6 +57,7 @@ import { useTranslations } from '@/lib/i18n/useTranslations';
 import { firstName } from '@/lib/text/firstName';
 
 import TribeWordmark from '@/components/TribeWordmark';
+import { coachPath } from '@/lib/site/publicProfile';
 export default function SessionDetailPage({
   hostHero = null,
   momentsEnabled = false,
@@ -494,7 +495,7 @@ export default function SessionDetailPage({
               limit={3}
               showAll={false}
               language={language}
-              seeAllHref={`/storefront/${d.creator.id}`}
+              seeAllHref={coachPath(d.creator.id)}
             />
           </div>
         )}
