@@ -44,7 +44,11 @@ let f: ReturnType<typeof fakeService>;
 beforeEach(() => {
   vi.clearAllMocks();
   f = asAdminWith({ data: { id: TARGET, is_admin: false }, error: null });
-  vi.mocked(deleteAccount).mockResolvedValue({ ok: true, filesDeleted: 3 });
+  vi.mocked(deleteAccount).mockResolvedValue({
+    ok: true,
+    filesDeleted: 3,
+    notified: { sent: 0, suppressed: 0, no_token: 0, failed: 0 },
+  });
 });
 
 describe('POST /api/admin/users/[id]/delete', () => {

@@ -25,7 +25,11 @@ function call(auth?: string) {
 beforeEach(() => {
   vi.clearAllMocks();
   getUser.mockResolvedValue({ data: { user: { id: ME } }, error: null });
-  vi.mocked(deleteAccount).mockResolvedValue({ ok: true, filesDeleted: 0 });
+  vi.mocked(deleteAccount).mockResolvedValue({
+    ok: true,
+    filesDeleted: 0,
+    notified: { sent: 0, suppressed: 0, no_token: 0, failed: 0 },
+  });
 });
 
 describe('POST /api/account/delete', () => {
