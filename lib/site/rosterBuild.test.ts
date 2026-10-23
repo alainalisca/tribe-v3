@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildRoster, initialsOf, type RosterSessionRow } from './rosterBuild';
+import { balancedColumns, buildRoster, initialsOf, type RosterSessionRow } from './rosterBuild';
 import { addDays } from './rosterDates';
 
 /** T-SITE1.1 Part C: who is on the live roster, what each card says, in what order. */
@@ -122,5 +122,31 @@ describe('the order', () => {
       ['future-new', 0],
       ['future-old', 0],
     ]);
+  });
+});
+
+describe('balanced columns (site polish)', () => {
+  it.each([
+    [0, 6, 1],
+    [3, 6, 3],
+    [6, 6, 6],
+    [7, 6, 4],
+    [8, 6, 4],
+    [9, 6, 5],
+    [12, 6, 6],
+    [13, 6, 5],
+    [9, 4, 3],
+    [5, 4, 3],
+  ])('%i cards, at most %i across: %i columns', (n, max, cols) => {
+    expect(balancedColumns(n, max)).toBe(cols);
+  });
+
+  it('never leaves the last row less than half full when it can be avoided', () => {
+    for (let n = 1; n <= 24; n++) {
+      const cols = balancedColumns(n, 6);
+      expect(cols).toBeLessThanOrEqual(6);
+      const last = n % cols || cols;
+      expect(last * 2, `n=${n}`).toBeGreaterThanOrEqual(cols - 1);
+    }
   });
 });

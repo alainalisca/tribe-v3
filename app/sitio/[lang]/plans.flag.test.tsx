@@ -36,7 +36,7 @@ const PLAN_CONTENT = [
   '490.000',
   '250.000',
   // Inicio's plan hook. Not "¿Das clases?" alone: that is also the Coaches page title.
-  '¿Das clases? Llena tu grupo.',
+  '¿Das clases? Arma tu grupo.',
 ];
 
 /** Each page inside the site frame (ticker, nav, footer), as HTML, by name. */
@@ -104,7 +104,7 @@ describe('plan hooks behind COACH_PLANS_ENABLED (Part D)', () => {
     vi.stubEnv('NEXT_PUBLIC_WA_SALES', '3001112233');
     const html = await renderSite('es');
     for (const s of [
-      '¿Das clases? Llena tu grupo.',
+      '¿Das clases? Arma tu grupo.',
       'Ver planes',
       'Coach Pro',
       '89.000 COP / mes',

@@ -2,6 +2,7 @@ import Image from 'next/image';
 import { siteT, type SiteLanguage } from '@/lib/site/i18n';
 import { faceProps, photo } from '@/lib/site/photos';
 import WaitlistForm from '../WaitlistForm';
+import Dotted from '../Dotted';
 import b from '../base.module.css';
 import p from './pages.module.css';
 
@@ -31,7 +32,12 @@ export default function OsContent({ lang }: { lang: SiteLanguage }) {
         </div>
         {/* T-SITE1.1 Part D: the first line smaller, the lime line at full size; three lines at most on a phone. */}
         <h1 id="pagina-titulo" className={b.disp}>
-          <span className={p.osFirst}>{t('title1')}</span> <em>{t('title2')}</em>
+          <span className={p.osFirst}>
+            <Dotted text={t('title1')} />
+          </span>{' '}
+          <em>
+            <Dotted text={t('title2')} />
+          </em>
         </h1>
         <p className={p.lead}>{t('lead')}</p>
       </section>
@@ -107,9 +113,9 @@ export default function OsContent({ lang }: { lang: SiteLanguage }) {
           <div>
             <span className={`${b.mono} ${b.kick}`}>{t('waitKick')}</span>
             <h2 id="lista-titulo" className={b.disp}>
-              {t('waitTitle1')}
+              <Dotted text={t('waitTitle1')} />
               <br />
-              {t('waitTitle2')}
+              <Dotted text={t('waitTitle2')} />
             </h2>
             <p className={p.waitNote}>{t('waitNote')}</p>
           </div>

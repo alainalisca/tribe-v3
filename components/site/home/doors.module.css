@@ -127,7 +127,8 @@
     font-size: 13px;
   }
   .osLock {
-    --lh: 34px;
+    /* Shrinks under ~380px so "OS" never leaves its tile (320px overflowed). */
+    --lh: clamp(24px, 9vw, 34px);
   }
   .badge {
     font-size: 9px;

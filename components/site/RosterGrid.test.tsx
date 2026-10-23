@@ -61,4 +61,19 @@ describe('RosterGrid', () => {
     expect(cards[1].textContent).toContain('Boxeo');
     expect(cards[5].textContent).not.toMatch(/Yoga|Boxeo/);
   });
+
+  it("site polish: Andrés shows Al's photo of him, not his avatar", () => {
+    const list = coaches(3);
+    list[1] = { ...list[1], id: '34d56f30-f8d2-4588-beaa-07ee53d13d1d' };
+    const { container } = render(<RosterGrid lang="es" coaches={list} />);
+    const img = container.querySelectorAll('li')[1].querySelector('img');
+    expect(img?.getAttribute('src')).toContain('coach_andres');
+  });
+
+  it('site polish: balances the columns for the count', () => {
+    const { container } = render(<RosterGrid lang="es" coaches={coaches(9)} />);
+    const ul = container.querySelector('ul') as HTMLElement;
+    expect(ul.style.getPropertyValue('--cols')).toBe('5');
+    expect(ul.style.getPropertyValue('--cols-md')).toBe('3');
+  });
 });

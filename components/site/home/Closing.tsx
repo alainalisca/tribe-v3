@@ -3,6 +3,7 @@ import { APP_STORE_URL, PLAY_STORE_URL } from '@/lib/site/links';
 import { ArrowRight } from '../icons';
 import { siteT, type SiteLanguage } from '@/lib/site/i18n';
 import { backgroundBoxStyle, faceProps, photo } from '@/lib/site/photos';
+import Dotted from '../Dotted';
 import b from '../base.module.css';
 import StoreButton from '../StoreButton';
 import s from './story.module.css';
@@ -26,7 +27,9 @@ export default function Closing({ lang }: { lang: SiteLanguage }) {
         <h2 id="cierre-titulo" className={b.disp}>
           {t('site.home.closeTitle1')}
           <br />
-          <em>{t('site.home.closeTitle2')}</em>
+          <em>
+            <Dotted text={t('site.home.closeTitle2')} />
+          </em>
         </h2>
         <div className={`${b.acts} ${s.acts}`}>
           <StoreButton className={b.cta}>

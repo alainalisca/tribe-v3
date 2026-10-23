@@ -17,6 +17,11 @@ import type { CSSProperties } from 'react';
  * - al_bb: n_9632 (rowing at BullBox), resized to 900x600 (Al, 2026-10-17).
  * - tv_wod, tv_wil: Tribe.TV posters (tv_wil from the camera original, no
  *   baked-in text); logo_w: the white wordmark.
+ * - Site polish (2026-10-23, Al delegated the picks): essay_bb, essay_zona,
+ *   close_team and hero_ath are whole 3:2 frames now; gym_pass, al_zona,
+ *   hero_coach (+ hero_coach_m, its phone cut) and coach_andres (Andrés's
+ *   roster card, website only) are new jobs in the same jobs.json. fv_c is
+ *   Fruta Vida's colored logo from its brand file, for the Aliados card.
  * - Never Zona de Combate IMG_9764-9766, 9776-9777: a person who asked not to
  *   appear in Tribe media (Al, 2026-10-17). n_j0590.jpg is not placed until Al
  *   says "use it".
@@ -25,6 +30,7 @@ export const SITE_PHOTOS = {
   hero_full: '/site/hero_full.jpg',
   hero_ath: '/site/hero_ath.jpg',
   hero_coach: '/site/hero_coach.jpg',
+  hero_coach_m: '/site/hero_coach_m.jpg',
   gym_hero: '/site/gym_hero.jpg',
   door_ath: '/site/door_ath.jpg',
   door_coach: '/site/door_coach.jpg',
@@ -56,8 +62,10 @@ export const SITE_PHOTOS = {
   sp_mente: '/site/sp_mente.jpg',
   al_bb: '/site/al_bb.jpg',
   al_zona: '/site/al_zona.jpg',
+  coach_andres: '/site/coach_andres.jpg',
   bb_w: '/site/bb_w.png',
   fv_w: '/site/fv_w.png',
+  fv_c: '/site/fv_c.png',
   tv_wod: '/tribe-tv/ep-wod-bullbox.jpg',
   tv_wil: '/tribe-tv/ep-mma-zona.jpg',
   logo_w: '/tribe-wordmark.png',
@@ -65,13 +73,23 @@ export const SITE_PHOTOS = {
 
 export type PhotoKey = keyof typeof SITE_PHOTOS;
 
+/**
+ * Site polish (Al, 2026-10-23). A coach whose app photo does not work on the
+ * site gets one of Al's photos on the roster instead, by user id. Website
+ * only: the coach's app avatar is never touched.
+ */
+export const COACH_SITE_PHOTOS: Readonly<Record<string, PhotoKey>> = {
+  // Andrés: his avatar is a group shot.
+  '34d56f30-f8d2-4588-beaa-07ee53d13d1d': 'coach_andres',
+};
+
 /** The public path for a photo key. */
 export function photo(key: PhotoKey): string {
   return SITE_PHOTOS[key];
 }
 
 /** Marks whose alt is the brand name itself, not a site.alt.<key> description. */
-export const SITE_MARKS: readonly PhotoKey[] = ['bb_w', 'fv_w', 'logo_w'];
+export const SITE_MARKS: readonly PhotoKey[] = ['bb_w', 'fv_w', 'fv_c', 'logo_w'];
 
 /**
  * T-SITE1.1 Part A. Where the faces are in each people photo: [x, y] as
@@ -83,28 +101,31 @@ export const SITE_MARKS: readonly PhotoKey[] = ['bb_w', 'fv_w', 'logo_w'];
  */
 export const FACE_ANCHORS: Partial<Record<PhotoKey, readonly [number, number]>> = {
   hero_full: [55, 35],
-  hero_coach: [52, 25],
-  // T-SITE1.1 Part B: written by scripts/site-crops.mjs into jobs.json.
-  hero_ath: [56, 30],
+  // T-SITE1.1 Part B and the site polish: written by scripts/site-crops.mjs into jobs.json.
+  hero_coach: [51, 29],
+  hero_coach_m: [50, 22],
+  hero_ath: [47, 55],
   door_ath: [46, 38],
   door_coach: [43, 35],
-  essay_bb: [28, 35],
-  essay_zona: [57, 30],
+  essay_bb: [49, 21],
+  essay_zona: [36, 21],
   essay_wil: [32, 31],
   essay_yoga: [64, 30],
-  close_team: [47, 30],
+  close_team: [47, 36],
   ath_1: [54, 30],
   ath_2: [50, 28],
   ath_3: [62, 36],
   coach_group: [50, 22],
   gym_coaches: [50, 19],
-  gym_pass: [30, 35],
+  gym_pass: [58, 24],
   os_photo: [64, 35],
   sp_fuerza: [50, 18],
   sp_combate: [32, 33],
   sp_resist: [82, 33],
   sp_mente: [62, 35],
   tv_wil: [42, 26],
+  al_zona: [40, 24],
+  coach_andres: [50, 18],
   // Read off a 10% grid (T-SITE1.1 Part A).
   row_hyrox: [56, 24],
   row_cf: [51, 26],
@@ -113,7 +134,6 @@ export const FACE_ANCHORS: Partial<Record<PhotoKey, readonly [number, number]>> 
   row_run: [55, 34],
   strip2: [71, 20],
   al_bb: [85, 32],
-  al_zona: [21, 22],
 };
 
 /**
@@ -130,10 +150,10 @@ export function faceProps(key: PhotoKey): { style?: CSSProperties; 'data-face-an
 /** Pixel size of the photos that fill a section's background, for aspect-tied min-heights. */
 export const BACKGROUND_SIZES: Partial<Record<PhotoKey, readonly [number, number]>> = {
   hero_full: [1600, 1067],
-  hero_ath: [1600, 667],
+  hero_ath: [1600, 1067],
   hero_coach: [1800, 750],
   gym_hero: [1600, 667],
-  close_team: [1600, 696],
+  close_team: [1600, 1067],
 };
 
 /**

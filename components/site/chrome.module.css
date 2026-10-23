@@ -168,46 +168,57 @@
 }
 
 /* footer */
+/* Site polish (Al, 2026-10-23): one compact band. The two link groups are
+   rows (label, then links in a line), not tall columns, so the band is short
+   and the gap between the brand and the links is gone. */
 .footer {
   background: var(--char2);
   overflow: hidden;
-  padding-top: 46px;
+  padding-top: 32px;
 }
 .fTop {
   display: flex;
   justify-content: space-between;
-  gap: 32px;
+  align-items: flex-start;
+  gap: 18px 40px;
   flex-wrap: wrap;
-  padding-bottom: 30px;
+  padding-bottom: 22px;
   border-bottom: 1px solid var(--rule);
 }
 .fBrand p {
-  margin-top: 12px;
+  margin-top: 8px;
   color: var(--mute);
   font-size: 14px;
   max-width: 22em;
 }
 .fCols {
-  display: flex;
-  gap: clamp(32px, 6vw, 88px);
-  flex-wrap: wrap;
+  display: grid;
+  gap: 10px;
   font-size: 14px;
 }
+.fCols > div {
+  display: flex;
+  align-items: baseline;
+  gap: 6px 18px;
+}
 .fCols h3 {
+  flex: none;
+  width: 76px;
   font-family: var(--mono);
   font-size: 11px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--mute);
   font-weight: 700;
-  margin-bottom: 12px;
+  margin: 0;
 }
 .fCols ul {
   list-style: none;
   margin: 0;
   padding: 0;
-  display: grid;
-  gap: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
 }
 .fCols a {
   color: var(--soft);
@@ -221,7 +232,7 @@
   align-items: center;
   gap: 20px;
   flex-wrap: wrap;
-  padding-top: 22px;
+  padding-block: 16px 20px;
   color: var(--mute);
   font-size: 13px;
 }
@@ -250,10 +261,14 @@
 }
 @media (max-width: 600px) {
   .footer {
-    padding-top: 32px;
+    padding-top: 24px;
   }
   .fTop {
-    gap: 22px;
-    padding-bottom: 22px;
+    gap: 16px;
+    padding-bottom: 16px;
+  }
+  .fCols > div {
+    flex-direction: column;
+    gap: 6px;
   }
 }
