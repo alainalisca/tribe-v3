@@ -195,9 +195,13 @@ BEGIN
 END $f$;
 
 -- ── B. Before 228 ──────────────────────────────────────────────────────────
+-- Either outcome is the bug: the cascade takes the profile and its history, or
+-- a NO ACTION reference to users (X's bulletin post, community_bulletin.author_id)
+-- refuses the delete, which is how the route came to answer "Failed to remove login".
 DO $b$
 DECLARE
   v_gone boolean;
+  v_err text;
 BEGIN
   BEGIN
     DELETE FROM auth.users WHERE id = pg_temp.id('X');
@@ -205,10 +209,11 @@ BEGIN
     RAISE EXCEPTION 'undo' USING ERRCODE = 'P0228';
   EXCEPTION
     WHEN SQLSTATE 'P0228' THEN NULL;
-    WHEN others THEN v_gone := NULL;
+    WHEN foreign_key_violation THEN v_err := SQLERRM;
   END;
-  PERFORM pg_temp.arm('B1 before 228: deleting the login cascades away the profile', v_gone IS TRUE,
-                      format('users row gone with the login: %s', coalesce(v_gone::text, 'the delete errored')));
+  PERFORM pg_temp.arm('B1 before 228: deleting the login takes the profile, or is refused',
+                      v_gone IS TRUE OR v_err IS NOT NULL,
+                      coalesce('refused: ' || v_err, format('users row gone with the login: %s', v_gone)));
 END $b$;
 
 INSERT INTO reh_228_tx VALUES ('before', txid_current());
@@ -490,12 +495,14 @@ END $l$;
 DO $s$
 DECLARE
   v_err text;
+  -- Read before the role switch: service_role cannot read this session's temp tables.
+  v_x uuid := pg_temp.id('X');
 BEGIN
   PERFORM set_config('request.jwt.claims', '', true);
   PERFORM set_config('request.jwt.claim.sub', '', true);
   BEGIN
     EXECUTE 'SET LOCAL ROLE service_role';
-    PERFORM public.account_scrub(pg_temp.id('X'));
+    PERFORM public.account_scrub(v_x);
     EXECUTE 'RESET ROLE';
   EXCEPTION WHEN others THEN
     v_err := SQLSTATE || ' ' || SQLERRM;
@@ -511,68 +518,68 @@ DECLARE
   v_left text[] := '{}';
 BEGIN
   SELECT * INTO r FROM public.users WHERE id = x;
-  IF r.email <> 'deleted-' || x || '@deleted.invalid' THEN v_left := v_left || 'email'; END IF;
-  IF r.name <> 'Usuario eliminado' THEN v_left := v_left || 'name'; END IF;
-  IF r.username IS NOT NULL THEN v_left := v_left || 'username'; END IF;
-  IF r.handle IS NOT NULL THEN v_left := v_left || 'handle'; END IF;
-  IF r.bio IS NOT NULL THEN v_left := v_left || 'bio'; END IF;
-  IF r.instructor_bio IS NOT NULL THEN v_left := v_left || 'instructor_bio'; END IF;
-  IF r.instagram_username IS NOT NULL THEN v_left := v_left || 'instagram_username'; END IF;
-  IF r.facebook_url IS NOT NULL THEN v_left := v_left || 'facebook_url'; END IF;
-  IF r.website_url IS NOT NULL THEN v_left := v_left || 'website_url'; END IF;
-  IF r.location IS NOT NULL THEN v_left := v_left || 'location'; END IF;
-  IF r.location_lat IS NOT NULL THEN v_left := v_left || 'location_lat'; END IF;
-  IF r.location_lng IS NOT NULL THEN v_left := v_left || 'location_lng'; END IF;
-  IF r.timezone <> 'America/Bogota' THEN v_left := v_left || 'timezone'; END IF;
-  IF r.avatar_url IS NOT NULL THEN v_left := v_left || 'avatar_url'; END IF;
-  IF r.banner_url IS NOT NULL THEN v_left := v_left || 'banner_url'; END IF;
-  IF r.photos <> '{}' THEN v_left := v_left || 'photos'; END IF;
-  IF r.cover_image_url IS NOT NULL THEN v_left := v_left || 'cover_image_url'; END IF;
-  IF r.card_photo_url IS NOT NULL THEN v_left := v_left || 'card_photo_url'; END IF;
-  IF r.card_photo_box IS NOT NULL THEN v_left := v_left || 'card_photo_box'; END IF;
-  IF r.card_photo_rejects <> '{}' THEN v_left := v_left || 'card_photo_rejects'; END IF;
-  IF r.storefront_banner_url IS NOT NULL THEN v_left := v_left || 'storefront_banner_url'; END IF;
-  IF r.storefront_video_url IS NOT NULL THEN v_left := v_left || 'storefront_video_url'; END IF;
-  IF r.storefront_tagline IS NOT NULL THEN v_left := v_left || 'storefront_tagline'; END IF;
-  IF r.specialties <> '{}' THEN v_left := v_left || 'specialties'; END IF;
-  IF r.certifications <> '{}' THEN v_left := v_left || 'certifications'; END IF;
-  IF r.years_experience IS NOT NULL THEN v_left := v_left || 'years_experience'; END IF;
-  IF r.verified_credentials <> '{}' THEN v_left := v_left || 'verified_credentials'; END IF;
-  IF r.sports IS NOT NULL THEN v_left := v_left || 'sports'; END IF;
-  IF r.preferred_sports <> '{}' THEN v_left := v_left || 'preferred_sports'; END IF;
-  IF r.seeking_trainer THEN v_left := v_left || 'seeking_trainer'; END IF;
-  IF r.seeking_trainer_sports <> '{}' THEN v_left := v_left || 'seeking_trainer_sports'; END IF;
-  IF r.seeking_trainer_budget IS NOT NULL THEN v_left := v_left || 'seeking_trainer_budget'; END IF;
-  IF r.seeking_trainer_schedule IS NOT NULL THEN v_left := v_left || 'seeking_trainer_schedule'; END IF;
-  IF r.seeking_trainer_note IS NOT NULL THEN v_left := v_left || 'seeking_trainer_note'; END IF;
-  IF r.push_subscription IS NOT NULL THEN v_left := v_left || 'push_subscription'; END IF;
-  IF r.fcm_token IS NOT NULL THEN v_left := v_left || 'fcm_token'; END IF;
-  IF r.fcm_platform IS NOT NULL THEN v_left := v_left || 'fcm_platform'; END IF;
-  IF r.fcm_updated_at IS NOT NULL THEN v_left := v_left || 'fcm_updated_at'; END IF;
-  IF r.wompi_merchant_id IS NOT NULL THEN v_left := v_left || 'wompi_merchant_id'; END IF;
-  IF r.stripe_account_id IS NOT NULL THEN v_left := v_left || 'stripe_account_id'; END IF;
-  IF r.tribe_os_stripe_customer_id IS NOT NULL THEN v_left := v_left || 'tribe_os_stripe_customer_id'; END IF;
-  IF r.tribe_os_stripe_subscription_id IS NOT NULL THEN v_left := v_left || 'tribe_os_stripe_subscription_id'; END IF;
-  IF r.subscription_gateway_id IS NOT NULL THEN v_left := v_left || 'subscription_gateway_id'; END IF;
-  IF r.signup_src IS NOT NULL THEN v_left := v_left || 'signup_src'; END IF;
-  IF r.signup_code IS NOT NULL THEN v_left := v_left || 'signup_code'; END IF;
-  IF r.signup_ref IS NOT NULL THEN v_left := v_left || 'signup_ref'; END IF;
-  IF r.signup_utm_source IS NOT NULL THEN v_left := v_left || 'signup_utm_source'; END IF;
-  IF r.signup_utm_medium IS NOT NULL THEN v_left := v_left || 'signup_utm_medium'; END IF;
-  IF r.signup_utm_campaign IS NOT NULL THEN v_left := v_left || 'signup_utm_campaign'; END IF;
-  IF r.signup_utm_content IS NOT NULL THEN v_left := v_left || 'signup_utm_content'; END IF;
-  IF r.signup_landing_path IS NOT NULL THEN v_left := v_left || 'signup_landing_path'; END IF;
-  IF r.signup_first_touch IS NOT NULL THEN v_left := v_left || 'signup_first_touch'; END IF;
-  IF r.signup_attributed_at IS NOT NULL THEN v_left := v_left || 'signup_attributed_at'; END IF;
-  IF r.referral_code IS NOT NULL THEN v_left := v_left || 'referral_code'; END IF;
-  IF r.referred_by IS NOT NULL THEN v_left := v_left || 'referred_by'; END IF;
-  IF r.preferred_language IS NOT NULL THEN v_left := v_left || 'preferred_language'; END IF;
-  IF r.preferred_language_set_at IS NOT NULL THEN v_left := v_left || 'preferred_language_set_at'; END IF;
-  IF r.last_login_at IS NOT NULL THEN v_left := v_left || 'last_login_at'; END IF;
-  IF r.last_seen_release IS NOT NULL THEN v_left := v_left || 'last_seen_release'; END IF;
-  IF r.deleted_at IS NULL THEN v_left := v_left || 'deleted_at (not set)'; END IF;
-  IF r.is_active THEN v_left := v_left || 'is_active'; END IF;
-  IF r.is_admin THEN v_left := v_left || 'is_admin'; END IF;
+  IF r.email <> 'deleted-' || x || '@deleted.invalid' THEN v_left := array_append(v_left, 'email'); END IF;
+  IF r.name <> 'Usuario eliminado' THEN v_left := array_append(v_left, 'name'); END IF;
+  IF r.username IS NOT NULL THEN v_left := array_append(v_left, 'username'); END IF;
+  IF r.handle IS NOT NULL THEN v_left := array_append(v_left, 'handle'); END IF;
+  IF r.bio IS NOT NULL THEN v_left := array_append(v_left, 'bio'); END IF;
+  IF r.instructor_bio IS NOT NULL THEN v_left := array_append(v_left, 'instructor_bio'); END IF;
+  IF r.instagram_username IS NOT NULL THEN v_left := array_append(v_left, 'instagram_username'); END IF;
+  IF r.facebook_url IS NOT NULL THEN v_left := array_append(v_left, 'facebook_url'); END IF;
+  IF r.website_url IS NOT NULL THEN v_left := array_append(v_left, 'website_url'); END IF;
+  IF r.location IS NOT NULL THEN v_left := array_append(v_left, 'location'); END IF;
+  IF r.location_lat IS NOT NULL THEN v_left := array_append(v_left, 'location_lat'); END IF;
+  IF r.location_lng IS NOT NULL THEN v_left := array_append(v_left, 'location_lng'); END IF;
+  IF r.timezone <> 'America/Bogota' THEN v_left := array_append(v_left, 'timezone'); END IF;
+  IF r.avatar_url IS NOT NULL THEN v_left := array_append(v_left, 'avatar_url'); END IF;
+  IF r.banner_url IS NOT NULL THEN v_left := array_append(v_left, 'banner_url'); END IF;
+  IF r.photos <> '{}' THEN v_left := array_append(v_left, 'photos'); END IF;
+  IF r.cover_image_url IS NOT NULL THEN v_left := array_append(v_left, 'cover_image_url'); END IF;
+  IF r.card_photo_url IS NOT NULL THEN v_left := array_append(v_left, 'card_photo_url'); END IF;
+  IF r.card_photo_box IS NOT NULL THEN v_left := array_append(v_left, 'card_photo_box'); END IF;
+  IF r.card_photo_rejects <> '{}' THEN v_left := array_append(v_left, 'card_photo_rejects'); END IF;
+  IF r.storefront_banner_url IS NOT NULL THEN v_left := array_append(v_left, 'storefront_banner_url'); END IF;
+  IF r.storefront_video_url IS NOT NULL THEN v_left := array_append(v_left, 'storefront_video_url'); END IF;
+  IF r.storefront_tagline IS NOT NULL THEN v_left := array_append(v_left, 'storefront_tagline'); END IF;
+  IF r.specialties <> '{}' THEN v_left := array_append(v_left, 'specialties'); END IF;
+  IF r.certifications <> '{}' THEN v_left := array_append(v_left, 'certifications'); END IF;
+  IF r.years_experience IS NOT NULL THEN v_left := array_append(v_left, 'years_experience'); END IF;
+  IF r.verified_credentials <> '{}' THEN v_left := array_append(v_left, 'verified_credentials'); END IF;
+  IF r.sports IS NOT NULL THEN v_left := array_append(v_left, 'sports'); END IF;
+  IF r.preferred_sports <> '{}' THEN v_left := array_append(v_left, 'preferred_sports'); END IF;
+  IF r.seeking_trainer THEN v_left := array_append(v_left, 'seeking_trainer'); END IF;
+  IF r.seeking_trainer_sports <> '{}' THEN v_left := array_append(v_left, 'seeking_trainer_sports'); END IF;
+  IF r.seeking_trainer_budget IS NOT NULL THEN v_left := array_append(v_left, 'seeking_trainer_budget'); END IF;
+  IF r.seeking_trainer_schedule IS NOT NULL THEN v_left := array_append(v_left, 'seeking_trainer_schedule'); END IF;
+  IF r.seeking_trainer_note IS NOT NULL THEN v_left := array_append(v_left, 'seeking_trainer_note'); END IF;
+  IF r.push_subscription IS NOT NULL THEN v_left := array_append(v_left, 'push_subscription'); END IF;
+  IF r.fcm_token IS NOT NULL THEN v_left := array_append(v_left, 'fcm_token'); END IF;
+  IF r.fcm_platform IS NOT NULL THEN v_left := array_append(v_left, 'fcm_platform'); END IF;
+  IF r.fcm_updated_at IS NOT NULL THEN v_left := array_append(v_left, 'fcm_updated_at'); END IF;
+  IF r.wompi_merchant_id IS NOT NULL THEN v_left := array_append(v_left, 'wompi_merchant_id'); END IF;
+  IF r.stripe_account_id IS NOT NULL THEN v_left := array_append(v_left, 'stripe_account_id'); END IF;
+  IF r.tribe_os_stripe_customer_id IS NOT NULL THEN v_left := array_append(v_left, 'tribe_os_stripe_customer_id'); END IF;
+  IF r.tribe_os_stripe_subscription_id IS NOT NULL THEN v_left := array_append(v_left, 'tribe_os_stripe_subscription_id'); END IF;
+  IF r.subscription_gateway_id IS NOT NULL THEN v_left := array_append(v_left, 'subscription_gateway_id'); END IF;
+  IF r.signup_src IS NOT NULL THEN v_left := array_append(v_left, 'signup_src'); END IF;
+  IF r.signup_code IS NOT NULL THEN v_left := array_append(v_left, 'signup_code'); END IF;
+  IF r.signup_ref IS NOT NULL THEN v_left := array_append(v_left, 'signup_ref'); END IF;
+  IF r.signup_utm_source IS NOT NULL THEN v_left := array_append(v_left, 'signup_utm_source'); END IF;
+  IF r.signup_utm_medium IS NOT NULL THEN v_left := array_append(v_left, 'signup_utm_medium'); END IF;
+  IF r.signup_utm_campaign IS NOT NULL THEN v_left := array_append(v_left, 'signup_utm_campaign'); END IF;
+  IF r.signup_utm_content IS NOT NULL THEN v_left := array_append(v_left, 'signup_utm_content'); END IF;
+  IF r.signup_landing_path IS NOT NULL THEN v_left := array_append(v_left, 'signup_landing_path'); END IF;
+  IF r.signup_first_touch IS NOT NULL THEN v_left := array_append(v_left, 'signup_first_touch'); END IF;
+  IF r.signup_attributed_at IS NOT NULL THEN v_left := array_append(v_left, 'signup_attributed_at'); END IF;
+  IF r.referral_code IS NOT NULL THEN v_left := array_append(v_left, 'referral_code'); END IF;
+  IF r.referred_by IS NOT NULL THEN v_left := array_append(v_left, 'referred_by'); END IF;
+  IF r.preferred_language IS NOT NULL THEN v_left := array_append(v_left, 'preferred_language'); END IF;
+  IF r.preferred_language_set_at IS NOT NULL THEN v_left := array_append(v_left, 'preferred_language_set_at'); END IF;
+  IF r.last_login_at IS NOT NULL THEN v_left := array_append(v_left, 'last_login_at'); END IF;
+  IF r.last_seen_release IS NOT NULL THEN v_left := array_append(v_left, 'last_seen_release'); END IF;
+  IF r.deleted_at IS NULL THEN v_left := array_append(v_left, 'deleted_at (not set)'); END IF;
+  IF r.is_active THEN v_left := array_append(v_left, 'is_active'); END IF;
+  IF r.is_admin THEN v_left := array_append(v_left, 'is_admin'); END IF;
   PERFORM pg_temp.arm('A5 every personal users column is cleared (68 checked)', cardinality(v_left) = 0,
                       CASE WHEN cardinality(v_left) = 0 THEN 'none left' ELSE 'left: ' || array_to_string(v_left, ', ') END);
   PERFORM pg_temp.arm('A6 kept: the consent records, the counters, the instructor flag',
@@ -659,8 +666,10 @@ SELECT pg_temp.arm('A15 anon and authenticated cannot run either function',
 
 -- ── G. The constraint check, against shapes built to fail ───────────────────
 SELECT pg_temp.reh_shape('G1 after the drop, a re-run reads absent', 'absent', 'SELECT 1');
+-- A14 deleted X's login, so X's row is put back under a login first: the
+-- constraint is added exactly as captured, validated, as production has it.
 SELECT pg_temp.reh_shape('G2 the captured cascade reads captured', 'captured',
-  'ALTER TABLE public.users ADD CONSTRAINT users_id_fkey FOREIGN KEY (id) REFERENCES auth.users(id) ON DELETE CASCADE NOT VALID');
+  'INSERT INTO auth.users (id, instance_id, aud, role, email) SELECT u.id, ''00000000-0000-0000-0000-000000000000'', ''authenticated'', ''authenticated'', u.email FROM public.users u WHERE NOT EXISTS (SELECT 1 FROM auth.users a WHERE a.id = u.id); ALTER TABLE public.users ADD CONSTRAINT users_id_fkey FOREIGN KEY (id) REFERENCES auth.users(id) ON DELETE CASCADE');
 SELECT pg_temp.reh_shape('G3 a reference that is not the captured cascade aborts', 'error=228 ABORTED%',
   'ALTER TABLE public.users ADD CONSTRAINT users_id_fkey FOREIGN KEY (id) REFERENCES auth.users(id) NOT VALID');
 
@@ -668,7 +677,7 @@ SELECT pg_temp.reh_shape('G3 a reference that is not the captured cascade aborts
 CREATE TEMP TABLE reh_228_manifest (seq int, arm text) ON COMMIT DROP;
 INSERT INTO reh_228_manifest VALUES
   (1, 'E0 ENV session_user and current_user'),
-  (2, 'B1 before 228: deleting the login cascades away the profile'),
+  (2, 'B1 before 228: deleting the login takes the profile, or is refused'),
   (3, 'T0 the body did not commit (same transaction before and after)'),
   (4, 'A1 users_id_fkey is gone, the primary key is not'),
   (5, 'A2 both functions: SECURITY DEFINER, search_path empty, service_role only'),

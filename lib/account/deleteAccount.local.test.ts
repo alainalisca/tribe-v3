@@ -1,3 +1,4 @@
+// @vitest-environment node
 /**
  * T-DEL1 on the LOCAL stack, end to end: a seeded account goes through
  * deleteAccount, the path both routes run, against a real database, real
@@ -13,7 +14,8 @@
  * local stack first. Files are uploaded with the service role, which leaves
  * storage.objects.owner empty, so the owner a real upload would carry is set
  * with psql in the local database container (TDEL1_DB_CONTAINER, default
- * supabase_db_tribe-v3-athlete).
+ * supabase_db_tribe-v3-athlete). Node, not jsdom: it talks to real servers,
+ * and jsdom's Blob does not go through Node's fetch.
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { execFileSync } from 'node:child_process';
@@ -67,9 +69,11 @@ describe.skipIf(!ENABLED)('deleteAccount on the local stack (T-DEL1)', () => {
   const keptFiles: Array<[string, string]> = [];
 
   async function put(bucket: string, name: string, owner: string | null, list: Array<[string, string]>) {
+    // The Moments bucket takes JPEG and WebP only, by the Blob's own type.
+    const type = name.endsWith('.webp') ? 'image/webp' : 'image/jpeg';
     const { error } = await db.storage
       .from(bucket)
-      .upload(name, new Blob(['t-del1']), { upsert: true, contentType: 'image/jpeg' });
+      .upload(name, new Blob(['t-del1'], { type }), { upsert: true, contentType: type });
     if (error) throw new Error(`${bucket}/${name}: ${error.message}`);
     if (owner)
       psql(
