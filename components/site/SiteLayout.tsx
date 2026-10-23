@@ -20,11 +20,14 @@ export default function SiteLayout({
   lang,
   fontClassName,
   lead = [],
+  afterFooter = null,
 }: {
   children: ReactNode;
   lang: SiteLanguage;
   fontClassName: string;
   lead?: TickerItem[];
+  /** T-POLISH1 PR 3b-2: what follows the footer inside the frame (the signed-in tab bar on /i). */
+  afterFooter?: ReactNode;
 }) {
   const t = siteT(lang);
   const plans = coachPlansEnabled();
@@ -44,6 +47,7 @@ export default function SiteLayout({
       <SiteNav lang={lang} />
       <main id="contenido">{children}</main>
       <SiteFooter lang={lang} plansEnabled={plans} />
+      {afterFooter}
     </div>
   );
 }

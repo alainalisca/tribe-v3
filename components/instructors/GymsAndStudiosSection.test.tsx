@@ -99,11 +99,11 @@ describe('GymsAndStudiosSection', () => {
     expect(container.textContent).not.toMatch(/\d\.\d/);
   });
 
-  it('links to the storefront with a Ver gimnasio button', () => {
+  it('links to the gym page (/g/<slug>/, T-POLISH1 PR 3b-2) with a Ver gimnasio button', () => {
     // querySelector('a') would have meant "the first anchor", which the pass
     // pill becomes the moment a gym has a pass. Select the one under test.
     const { container } = render(<GymsAndStudiosSection gyms={[BULLBOX]} />);
-    const link = container.querySelector('a[href="/storefront/gym-user"]');
+    const link = container.querySelector('a[href^="/g/bullbox"]');
     expect(link).toBeTruthy();
     expect(link!.textContent).toBe('Ver gimnasio');
   });
@@ -141,7 +141,7 @@ describe('GymsAndStudiosSection', () => {
     // Witness: the two renders differ at all, so the comparison below is not
     // trivially true against an unchanged component.
     expect(withPass.container.innerHTML).not.toBe(withoutPass.container.innerHTML);
-    expect(withoutPass.container.querySelector('a[href="/storefront/gym-user"]')).toBeTruthy();
+    expect(withoutPass.container.querySelector('a[href^="/g/bullbox"]')).toBeTruthy();
     expect(withoutPass.container.textContent).not.toContain('Clase gratis');
   });
 
@@ -151,8 +151,8 @@ describe('GymsAndStudiosSection', () => {
     const { container } = render(<GymsAndStudiosSection gyms={[{ ...BULLBOX, pass_active: true }]} />);
     const pill = container.querySelector('a[href^="/pase/"]')!;
     expect(pill.querySelector('a')).toBeNull();
-    expect(pill.closest('a[href="/storefront/gym-user"]')).toBeNull();
-    expect(container.querySelector('a[href="/storefront/gym-user"]')).toBeTruthy();
+    expect(pill.closest('a[href^="/g/bullbox"]')).toBeNull();
+    expect(container.querySelector('a[href^="/g/bullbox"]')).toBeTruthy();
   });
 
   it('hides itself when there are no gyms', () => {

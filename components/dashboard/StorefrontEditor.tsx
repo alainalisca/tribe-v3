@@ -10,6 +10,7 @@ import { updateStorefrontProfile } from '@/lib/dal/instructorDashboard';
 import { showSuccess, showError } from '@/lib/toast';
 import VideoUploadSection from '@/components/dashboard/VideoUploadSection';
 import { SPORTS_LIST, getSportTranslation } from '@/lib/sports';
+import { coachPath } from '@/lib/site/publicProfile';
 
 /**
  * The sport chips, from the canonical SPORTS_LIST. `Other` is excluded: it is a
@@ -91,10 +92,9 @@ export default function StorefrontEditor({
     changeBanner: language === 'es' ? 'Cambiar Portada' : 'Change Banner',
     uploadBanner: language === 'es' ? 'Sube tu foto de portada' : 'Upload your banner photo',
     bannerHint: language === 'es' ? '1200×400 recomendado · JPG, PNG, WebP' : '1200×400 recommended · JPG, PNG, WebP',
-    preview: language === 'es' ? 'Ver Vitrina' : 'Preview Storefront',
+    preview: language === 'es' ? 'Ver mi página' : 'View my page',
     // T-POLISH1 PR 3b-1: the tagline, the banner (as the cover), the video and
     // the credentials also show on the public coach page.
-    publicPage: language === 'es' ? 'Ver mi página pública' : 'View my public page',
     publicPageHint:
       language === 'es'
         ? 'Tu eslogan, portada, video y credenciales también se ven en tu página pública.'
@@ -334,19 +334,14 @@ export default function StorefrontEditor({
           {saving ? <Loader className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
           {txt.save}
         </Button>
-        <Link href={`/storefront/${userId}`}>
+        <Link href={coachPath(userId)}>
           <Button variant="outline" className="py-3">
             <Eye className="w-4 h-4 mr-2" />
             {txt.preview}
           </Button>
         </Link>
       </div>
-      <p className="text-xs text-theme-secondary">
-        {txt.publicPageHint}{' '}
-        <Link href={`/i/${userId}/`} className="font-semibold text-theme-primary underline">
-          {txt.publicPage}
-        </Link>
-      </p>
+      <p className="text-xs text-theme-secondary">{txt.publicPageHint}</p>
     </div>
   );
 }

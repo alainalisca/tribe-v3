@@ -35,6 +35,7 @@ import { gymTimetable, gymTimetableWindow } from '@/lib/gymTimetable';
 import UserAvatar from '@/components/UserAvatar';
 import PublicProfileActions from '@/components/site/PublicProfileActions';
 import PublicPassLink from '@/components/site/PublicPassLink';
+import SignedInTabBar from '@/components/site/SignedInTabBar';
 import type { GymExtras } from '@/lib/site/publicProfileData';
 
 interface VenueSession {
@@ -136,10 +137,11 @@ export default function GymShareClient({
       // dark-ink variant onto near-black. Following the document theme also
       // means this page and its own 404 stop being different products.
       className="min-h-screen bg-theme-page"
-      // The one number for nav height, defined once in globals.css. No BottomNav
-      // is mounted on this route (it is a share page, like /i/[id]), but the
-      // same custom property also carries the iOS safe-area floor, which is what
-      // pushed the storefront's CTA under Safari's toolbar in T-GYM2.
+      // The one number for nav height, defined once in globals.css. BottomNav
+      // mounts here only for a signed-in viewer (SignedInTabBar, T-POLISH1 PR
+      // 3b-2); the space is kept for everyone, and the same custom property also
+      // carries the iOS safe-area floor, which is what pushed the storefront's
+      // CTA under Safari's toolbar in T-GYM2.
       style={{ paddingBottom: 'calc(var(--bottom-nav-h) + 1rem)' }}
     >
       <div className="px-6 pt-10 pb-4 text-center">
@@ -394,6 +396,11 @@ export default function GymShareClient({
           </CardContent>
         </Card>
       </div>
+
+      {/* T-POLISH1 PR 3b-2: the app's tab bar for a signed-in viewer. The page
+          already keeps --bottom-nav-h free at its foot (paddingBottom above),
+          so nothing needs to move when it mounts. */}
+      <SignedInTabBar />
     </div>
   );
 }

@@ -27,7 +27,10 @@ describe('destinationPath', () => {
     // be lost. The query string is the entire point of the link.
     expect(destinationPath('home')).toBe('/');
     expect(destinationPath('pase', 'bullbox')).toBe('/pase/bullbox/');
-    expect(destinationPath('storefront', UUID)).toBe(`/storefront/${UUID}/`);
+    expect(destinationPath('coach', UUID)).toBe(`/i/${UUID}/`);
+    expect(destinationPath('coach', 'SaloTaba')).toBe('/i/salotaba/');
+    expect(destinationPath('gym', 'bullbox')).toBe('/g/bullbox/');
+    expect(destinationPath('gym', UUID)).toBe(`/g/${UUID}/`);
     expect(destinationPath('session', UUID)).toBe(`/session/${UUID}/`);
   });
 
@@ -44,7 +47,9 @@ describe('destinationPath', () => {
     expect(destinationPath('pase')).toBeNull();
     expect(destinationPath('pase', '')).toBeNull();
     expect(destinationPath('pase', '   ')).toBeNull();
-    expect(destinationPath('storefront')).toBeNull();
+    expect(destinationPath('coach')).toBeNull();
+    expect(destinationPath('coach', 'no spaces!')).toBeNull();
+    expect(destinationPath('gym', 'bull box')).toBeNull();
     expect(destinationPath('session', 'not-a-uuid')).toBeNull();
   });
 
@@ -55,7 +60,9 @@ describe('destinationPath', () => {
   });
 
   it('validates a destination arriving over the wire', () => {
-    for (const d of ['pase', 'storefront', 'session', 'home']) expect(isLinkDestination(d)).toBe(true);
+    for (const d of ['pase', 'coach', 'gym', 'session', 'home']) expect(isLinkDestination(d)).toBe(true);
+    // Retired in T-POLISH1 PR 3b-2: printed /storefront links still redirect, new ones go straight to /i or /g.
+    expect(isLinkDestination('storefront')).toBe(false);
     for (const bad of ['instructor', '', null, 1, 'PASE']) expect(isLinkDestination(bad)).toBe(false);
   });
 });
@@ -76,9 +83,11 @@ describe('buildTrackedLink', () => {
     expect(link?.url).toBe(`${ORIGIN}/pase/bullbox/?src=ig&code=IG-REEL-01&utm_campaign=hyrox-oct`);
   });
 
-  it('keeps the storefront shape the programme rules froze', () => {
-    const link = buildTrackedLink(ORIGIN, { destination: 'storefront', target: UUID, src: 'pase', code: 'BULLBOX-01' });
-    expect(link?.relative).toBe(`/storefront/${UUID}/?src=pase&code=BULLBOX-01`);
+  it('points a coach or a gym at its public page, tags in the fixed order', () => {
+    const coach = buildTrackedLink(ORIGIN, { destination: 'coach', target: UUID, src: 'pase', code: 'BULLBOX-01' });
+    expect(coach?.relative).toBe(`/i/${UUID}/?src=pase&code=BULLBOX-01`);
+    const gym = buildTrackedLink(ORIGIN, { destination: 'gym', target: 'bullbox', src: 'pase', code: 'BULLBOX-01' });
+    expect(gym?.relative).toBe('/g/bullbox/?src=pase&code=BULLBOX-01');
   });
 
   it('EVERY tag it mints survives the capture path unchanged', () => {

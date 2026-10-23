@@ -183,9 +183,11 @@ export default function TrackedLinkBuilder() {
   const targetLabel =
     destination === 'pase'
       ? t('targetPase')
-      : destination === 'storefront'
-        ? t('targetStorefront')
-        : t('targetSession');
+      : destination === 'coach'
+        ? t('targetCoach')
+        : destination === 'gym'
+          ? t('targetGym')
+          : t('targetSession');
 
   return (
     <section className="rounded-xl border border-stone-200 bg-white p-4 dark:border-tribe-mid dark:bg-tribe-surface">
@@ -203,7 +205,8 @@ export default function TrackedLinkBuilder() {
             className={FIELD}
           >
             <option value="pase">{t('destPase')}</option>
-            <option value="storefront">{t('destStorefront')}</option>
+            <option value="coach">{t('destCoach')}</option>
+            <option value="gym">{t('destGym')}</option>
             <option value="session">{t('destSession')}</option>
             <option value="home">{t('destHome')}</option>
           </select>

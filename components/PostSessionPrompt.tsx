@@ -11,6 +11,7 @@ import { logError } from '@/lib/logger';
 import { showSuccess, showError } from '@/lib/toast';
 import { shareSession, type SessionShareData } from '@/lib/share';
 import { trackEvent } from '@/lib/analytics';
+import { coachPath } from '@/lib/site/publicProfile';
 
 interface PostSessionPromptProps {
   sessionId: string;
@@ -364,7 +365,7 @@ export default function PostSessionPrompt({
 
             {/* Book Again button */}
             <a
-              href={`/storefront/${instructorId}`}
+              href={coachPath(instructorId)}
               className="block w-full py-3 px-4 rounded-xl font-semibold text-sm transition-all duration-200
                 bg-stone-100 dark:bg-stone-800 text-stone-900 dark:text-white border border-stone-200 dark:border-stone-700
                 hover:bg-stone-200 dark:hover:bg-stone-700 hover:scale-[1.02] active:scale-95 text-center"

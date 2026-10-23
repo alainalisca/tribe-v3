@@ -7,6 +7,7 @@ import { fetchFeaturedInstructors } from '@/lib/dal/instructors';
 import type { FeaturedInstructor } from '@/lib/dal/instructors';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Star, ChevronRight, BadgeCheck } from 'lucide-react';
+import { coachPath } from '@/lib/site/publicProfile';
 
 interface FeaturedInstructorsProps {
   language: string;
@@ -75,7 +76,7 @@ export default function FeaturedInstructors({ language }: FeaturedInstructorsPro
           {instructors.map((instructor) => (
             <Link
               key={instructor.id}
-              href={`/storefront/${instructor.id}`}
+              href={coachPath(instructor.id)}
               className="flex-shrink-0 w-40 bg-theme-card rounded-xl border border-theme p-3 hover:border-tribe-green transition active:scale-[0.98]"
             >
               {/* Avatar */}

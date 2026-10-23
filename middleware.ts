@@ -5,7 +5,7 @@ import { athletesGateAllows, isAthletesGatedPath, GATED_NOT_FOUND_PATH } from '@
 import { isMomentsEnabled, isMomentsPagePath } from '@/lib/features/moments';
 import { canonicalLinkHeader } from '@/lib/seo/canonicalLink';
 import { hasAuthCookieName } from '@/lib/site/authCookie';
-import { signedOutStorefrontDestination, storefrontIdFor } from '@/lib/site/storefrontRedirect';
+import { storefrontRedirectDestination, storefrontIdFor } from '@/lib/site/storefrontRedirect';
 import { LANGUAGE_COOKIE, languageFromCookie } from '@/lib/languageCookie';
 import { internalSitePath, isSiteCardPath, publicPathForInternal, siteSlugOf } from '@/lib/site/paths';
 import {
@@ -443,15 +443,15 @@ export async function middleware(request: NextRequest) {
     );
   }
 
-  // T-POLISH1 PR 3b-0: a SIGNED-OUT visitor to /storefront/<id>/ goes to its
-  // public twin (/g/<slug>/ or /i/<id>/) with the query string whole, so a
-  // printed QR's ?src=&code= reaches AttributionCapture instead of a sign-in
-  // wall (lib/site/storefrontRedirect.ts). With any Supabase auth cookie the
-  // request falls through to today's auth-gated storefront, untouched; so does
-  // a lookup that fails. Neither answer may be cached for anyone else.
+  // T-POLISH1 PR 3b-0/3b-2: /storefront/<id>/ goes to its public page
+  // (/g/<slug>/ or /i/<id>/) for EVERYONE, signed in or not, with the query
+  // string whole, so a printed QR's ?src=&code= reaches AttributionCapture and
+  // the old links keep working forever (lib/site/storefrontRedirect.ts). A
+  // lookup that fails falls through to the old auth-gated storefront page. The
+  // answer is never cached: it depends on data that changes.
   const storefrontId = storefrontIdFor(pathname);
-  if (storefrontId !== null && !hasAuthCookieName(request.cookies.getAll().map((c) => c.name))) {
-    const destination = await signedOutStorefrontDestination(storefrontId, {
+  if (storefrontId !== null) {
+    const destination = await storefrontRedirectDestination(storefrontId, {
       url: process.env.NEXT_PUBLIC_SUPABASE_URL!,
       anonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     });

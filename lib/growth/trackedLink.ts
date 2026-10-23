@@ -34,15 +34,21 @@
  * ═══════════════════════════════════════════════════════════════════════════
  *
  * The programme's global rules say so explicitly: `/storefront/{uuid}/?src=&code=`
- * and `/pase/{slug}/?src=&code=` are already on printed material. This builder
- * produces exactly those shapes and adds utm_campaign as an extra parameter,
- * never a different path.
+ * and `/pase/{slug}/?src=&code=` are already on printed material, and both keep
+ * working: /pase is unchanged, and /storefront/{uuid}/ answers a 307 to the
+ * coach's or gym's public page with the query string whole (middleware.ts,
+ * T-POLISH1 PR 3b-0/3b-2).
+ *
+ * New links point at the public pages directly (T-POLISH1 PR 3b-2): a coach is
+ * /i/{handle or account id}/, a gym or studio /g/{slug}/. Two destinations
+ * rather than one "storefront", because the builder is pure and cannot look up
+ * whether an id is a coach or a gym -- the person making the poster knows.
  */
 
 import { ATTR_MAX_LEN, sanitizeTag } from '@/lib/attribution';
 
 /** Where a tracked link can point. */
-export const LINK_DESTINATIONS = ['pase', 'storefront', 'session', 'home'] as const;
+export const LINK_DESTINATIONS = ['pase', 'coach', 'gym', 'session', 'home'] as const;
 export type LinkDestination = (typeof LINK_DESTINATIONS)[number];
 
 export function isLinkDestination(value: unknown): value is LinkDestination {
@@ -51,7 +57,7 @@ export function isLinkDestination(value: unknown): value is LinkDestination {
 
 export interface TrackedLinkInput {
   destination: LinkDestination;
-  /** Pass slug, storefront user id, or session id. Unused for `home`. */
+  /** Pass slug, coach handle or account id, gym slug, or session id. Unused for `home`. */
   target?: string;
   src?: string;
   code?: string;
@@ -75,8 +81,16 @@ export function destinationPath(destination: LinkDestination, target?: string): 
       // The same shape /api/pase accepts for a slug, so a link this builder emits
       // cannot point at a slug the route would reject.
       return /^[a-z0-9-]{1,80}$/.test(t.toLowerCase()) ? `/pase/${t.toLowerCase()}/` : null;
-    case 'storefront':
-      return isUuid(t) ? `/storefront/${t}/` : null;
+    case 'coach':
+      // /i/ takes a handle (a-z, 0-9, _; lib/coachLink) or the account id.
+      return isUuid(t)
+        ? `/i/${t.toLowerCase()}/`
+        : /^[a-z0-9_]{3,24}$/.test(t.toLowerCase())
+          ? `/i/${t.toLowerCase()}/`
+          : null;
+    case 'gym':
+      // /g/ takes the partner's slug (the same shape as a pass slug) or its id.
+      return isUuid(t) || /^[a-z0-9-]{1,80}$/.test(t.toLowerCase()) ? `/g/${t.toLowerCase()}/` : null;
     case 'session':
       return isUuid(t) ? `/session/${t}/` : null;
   }
