@@ -15,7 +15,7 @@ vi.mock('server-only', () => ({})); // the real module throws outside a server b
 
 import { renderQrSvg, QR_QUIET_ZONE } from './renderQrSvg';
 import { isVoucherSvg } from '@/app/pase/[slug]/VoucherQr';
-import { sourceWithoutComments } from '@/lib/testing/sourceWithoutComments';
+import { sourceWithoutComments, sourceWithoutCommentsIfMentions } from '@/lib/testing/sourceWithoutComments';
 
 const URL_IN = 'https://tribe-v3.vercel.app/pase/verificar/BU-4F7K/';
 
@@ -89,7 +89,9 @@ describe('renderQrSvg never reaches a client component', () => {
       return []; // a directory this repo does not have
     }
   });
-  const clientFiles = files.filter((f) => /^\s*['"]use client['"]/.test(sourceWithoutComments(f)));
+  const clientFiles = files.filter((f) =>
+    /^\s*['"]use client['"]/.test(sourceWithoutCommentsIfMentions(f, 'use client'))
+  );
 
   it('NON-VACUITY: the scan sees client components, including the pass form', () => {
     expect(clientFiles.length).toBeGreaterThan(50);
@@ -98,7 +100,7 @@ describe('renderQrSvg never reaches a client component', () => {
 
   it('no "use client" file imports lib/qr or qrcode-generator', () => {
     const offenders = clientFiles.filter((f) =>
-      /from ['"](@\/lib\/qr|\.\.?\/[^'"]*qr\/|qrcode-generator)/.test(sourceWithoutComments(f))
+      /from ['"](@\/lib\/qr|\.\.?\/[^'"]*qr\/|qrcode-generator)/.test(sourceWithoutCommentsIfMentions(f, 'qr'))
     );
     expect(offenders).toEqual([]);
   });

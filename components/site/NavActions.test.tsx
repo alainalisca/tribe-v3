@@ -27,6 +27,18 @@ const clearCookies = () =>
     document.cookie = `${c.split('=')[0].trim()}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`;
   });
 
+/**
+ * Wait for the signed-in header, then check it is a link named "Mi feed".
+ * waitFor reruns its callback every 50 ms within 1 s, and getByRole with a
+ * name costs ~110 ms per call in jsdom (~480 ms with other files running), so
+ * polling it ran out of time when the suite ran back to back. The label query
+ * costs nothing; the role is checked once the link is there.
+ */
+async function signedInLink() {
+  await waitFor(() => expect(screen.getByLabelText('Mi feed')).toBeInTheDocument());
+  return screen.getByRole('link', { name: 'Mi feed' });
+}
+
 beforeEach(() => {
   clearCookies();
   auth.userId = null;
@@ -37,7 +49,7 @@ describe('NavActions and "Descarga la app"', () => {
     document.cookie = 'sb-ref-auth-token=x; path=/';
     auth.userId = 'viewer-1';
     render(<NavActions {...labels} hideDownloadWhenSignedIn />);
-    await waitFor(() => expect(screen.getByRole('link', { name: 'Mi feed' })).toBeInTheDocument());
+    expect(await signedInLink()).toBeInTheDocument();
     expect(screen.queryByText('Descarga la app')).toBeNull();
     expect(screen.queryByText('Entrar')).toBeNull();
   });
@@ -52,7 +64,7 @@ describe('NavActions and "Descarga la app"', () => {
     document.cookie = 'sb-ref-auth-token=x; path=/';
     auth.userId = 'viewer-1';
     render(<NavActions {...labels} />);
-    await waitFor(() => expect(screen.getByRole('link', { name: 'Mi feed' })).toBeInTheDocument());
+    expect(await signedInLink()).toBeInTheDocument();
     expect(screen.getByText('Descarga la app')).toBeInTheDocument();
   });
 

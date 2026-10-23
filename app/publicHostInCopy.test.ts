@@ -75,7 +75,12 @@ describe('copy never sends a user to tribe-v3.vercel.app', () => {
 
   it('no rendered sentence in app/, components/, lib/ or messages/ names the old host', () => {
     const offenders = [
-      ...sources.filter((f) => renderableText(f, fs.readFileSync(f, 'utf-8')).some(isCopyNamingOldHost)),
+      ...sources.filter((f) => {
+        const text = fs.readFileSync(f, 'utf-8');
+        // Copy naming the host holds it whole, so a file without it is not
+        // parsed; the parse is what made this scan time out on a loaded CI runner.
+        return text.includes(OLD_HOST) && renderableText(f, text).some(isCopyNamingOldHost);
+      }),
       ...messages.filter((f) => jsonStrings(JSON.parse(fs.readFileSync(f, 'utf-8'))).some(isCopyNamingOldHost)),
     ];
     expect(offenders.map((f) => path.relative(ROOT, f))).toEqual([]);

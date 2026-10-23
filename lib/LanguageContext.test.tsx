@@ -99,6 +99,17 @@ function renderProvider() {
 
 const lang = () => screen.getByTestId('lang').textContent;
 
+/**
+ * Wait for the account write a toggle starts. setLanguage saves the choice in
+ * the background and deliberately does not cancel it on unmount (the choice
+ * must reach the account even if the page changes), so a test that toggles and
+ * ends at once leaves it running: under CI load its getUser landed two tests
+ * later, in "skips the query entirely", after that test had cleared the mocks.
+ */
+async function settledSave() {
+  await waitFor(() => expect(mockUpdateUser).toHaveBeenCalled());
+}
+
 /** A stored value counts only when the person chose it (T-LANG1, preferred_language_set_at). */
 const CHOSE = '2026-10-20T12:00:00Z';
 
@@ -185,6 +196,22 @@ describe('priority 2: the stored account preference', () => {
   });
 });
 
+describe('unmounting', () => {
+  it('a provider unmounted while the client loads never queries', async () => {
+    // The flake this guards: the read used to check `cancelled` only once it
+    // had finished, so a provider from an earlier test, unmounted while the
+    // supabase client was still being imported (slow under CI load), went on
+    // to call maybeSingle after the next test had cleared the mocks.
+    const { unmount } = renderProvider();
+    unmount();
+
+    await new Promise((r) => setTimeout(r, 50));
+    expect(mockGetUser).not.toHaveBeenCalled();
+    expect(mockFrom).not.toHaveBeenCalled();
+    expect(mockMaybeSingle).not.toHaveBeenCalled();
+  });
+});
+
 describe('priority 1: an explicit choice outranks the account', () => {
   it('the tribe_lang cookie (the site toggle) wins over localStorage and skips the query', async () => {
     document.cookie = 'tribe_lang=es; Path=/';
@@ -215,6 +242,7 @@ describe('priority 1: an explicit choice outranks the account', () => {
 
     expect(document.cookie).toContain('tribe_lang=en');
     expect(localStorage.getItem('language')).toBe('en');
+    await settledSave();
   });
 
   it('does not write the cookie for a browser-locale guess', async () => {
@@ -262,6 +290,7 @@ describe('priority 1: an explicit choice outranks the account', () => {
     });
 
     expect(lang()).toBe('en');
+    await settledSave();
   });
 });
 

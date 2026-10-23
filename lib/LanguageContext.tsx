@@ -105,14 +105,19 @@ function applyDocumentLanguage(lang: Language) {
  * returning user costs no query at all. Returns null on any failure: an
  * unreachable database must leave the browser-locale answer standing rather
  * than throwing inside a provider that wraps the whole app.
+ *
+ * `isCancelled` is checked after every await: a provider that unmounted while
+ * the client was still loading must not go on to query for an answer nobody
+ * will read.
  */
-async function fetchStoredPreference(): Promise<Language | null> {
+async function fetchStoredPreference(isCancelled: () => boolean): Promise<Language | null> {
   if (!mightBeSignedIn()) return null;
   try {
     const { createClient } = await import('@/lib/supabase/client');
+    if (isCancelled()) return null;
     const supabase = createClient();
     const { data } = await supabase.auth.getUser();
-    if (!data.user) return null;
+    if (isCancelled() || !data.user) return null;
     // T-LANG1: the stored value counts only when the person chose it
     // (preferred_language_set_at). The column used to default to 'en' for
     // everyone, so an unstamped 'en' is not a choice; the browser decides.
@@ -154,7 +159,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     setLanguageState(browserLanguage);
     applyDocumentLanguage(browserLanguage);
 
-    void fetchStoredPreference().then((preferred) => {
+    void fetchStoredPreference(() => cancelled).then((preferred) => {
       if (cancelled || !preferred) return;
       if (explicitChoiceRef.current) return;
       setLanguageState(preferred);

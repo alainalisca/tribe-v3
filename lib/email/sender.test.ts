@@ -73,7 +73,11 @@ describe('the sender address has one home (lib/email/sender.ts)', () => {
       hardcodedSenders(f, fs.readFileSync(f, 'utf-8')).map((l) => `${path.relative(ROOT, f)}:${l}`)
     );
     expect(offenders, 'Import TRIBE_FROM / TRIBE_FEEDBACK_FROM from @/lib/email/sender instead.').toEqual([]);
-  });
+    // Every file is parsed: a sender is any string with an "@" in it, and most
+    // files hold one (every "@/lib" import), so no text check can skip the
+    // parse. Half a second on a quiet machine; it ran past the 5s default on a
+    // loaded CI runner.
+  }, 30_000);
 
   it('sends from the verified tribelatam.com domain, as "Tribe"', () => {
     expect(TRIBE_SENDER_ADDRESS).toBe('info@tribelatam.com');

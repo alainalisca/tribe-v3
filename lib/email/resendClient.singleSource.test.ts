@@ -122,7 +122,11 @@ describe('Resend is constructed in exactly one place', () => {
     const offences = files
       .filter((f) => !f.endsWith(FACTORY))
       .filter((f) => !(path.relative(ROOT, f) in KNOWN_DIRECT_CONSTRUCTION))
-      .flatMap((f) => findResendConstruction(path.relative(ROOT, f), readFileSync(f, 'utf8')));
+      .map((f) => [f, readFileSync(f, 'utf8')] as const)
+      // Both shapes name Resend or the 'resend' module, so a file that never
+      // says it is not parsed; the parse is what made this scan time out on CI.
+      .filter(([, src]) => /resend/i.test(src))
+      .flatMap(([f, src]) => findResendConstruction(path.relative(ROOT, f), src));
     expect(offences.map((o) => `${o.file}:${o.line} ${o.what}`)).toEqual([]);
   });
 

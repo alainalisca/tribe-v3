@@ -37,7 +37,7 @@
 import { describe, it, expect } from 'vitest';
 import { readdirSync, statSync } from 'node:fs';
 import path from 'node:path';
-import { sourceWithoutComments } from '@/lib/testing/sourceWithoutComments';
+import { sourceWithoutCommentsIfMentions } from '@/lib/testing/sourceWithoutComments';
 
 const ROOT = path.resolve(__dirname, '..', '..');
 
@@ -61,10 +61,11 @@ function sources(dir: string): string[] {
 const TOGGLE_CALL = /\.rpc\(\s*['"`]set_pass_lead_attended['"`]/;
 const DOOR_CALL = /\.rpc\(\s*['"`]av_confirm_pass_attendance['"`]/;
 
-function callersOf(re: RegExp): string[] {
+/** `rpc` is the function's name, which every call to it contains. */
+function callersOf(re: RegExp, rpc: string): string[] {
   return ['app', 'lib', 'components', 'hooks']
     .flatMap((d) => sources(path.join(ROOT, d)))
-    .filter((f) => re.test(sourceWithoutComments(f)))
+    .filter((f) => re.test(sourceWithoutCommentsIfMentions(f, rpc)))
     .map((f) => path.relative(ROOT, f))
     .sort();
 }
@@ -78,14 +79,14 @@ describe('pass_leads attendance has exactly two writers', () => {
   });
 
   it('only leadAttendance.ts calls set_pass_lead_attended', () => {
-    expect(callersOf(TOGGLE_CALL)).toEqual(['lib/dal/leadAttendance.ts']);
+    expect(callersOf(TOGGLE_CALL, 'set_pass_lead_attended')).toEqual(['lib/dal/leadAttendance.ts']);
   });
 
   it('only passDoor.ts calls av_confirm_pass_attendance', () => {
     // Asserted here rather than left to T-AV's own tests, because the two RPCs
     // write the same three columns and this file is where that fact is written
     // down. A new caller of either one is a second place attendance can be set.
-    expect(callersOf(DOOR_CALL)).toEqual(['lib/dal/passDoor.ts']);
+    expect(callersOf(DOOR_CALL, 'av_confirm_pass_attendance')).toEqual(['lib/dal/passDoor.ts']);
   });
 
   it('no module UPDATES pass_leads directly', () => {
@@ -96,7 +97,7 @@ describe('pass_leads attendance has exactly two writers', () => {
     const offenders = ['app', 'lib', 'components', 'hooks']
       .flatMap((d) => sources(path.join(ROOT, d)))
       .filter((f) => {
-        const src = sourceWithoutComments(f);
+        const src = sourceWithoutCommentsIfMentions(f, 'pass_leads');
         // from('pass_leads') ... .update( within the same statement-ish window.
         return /from\(\s*['"`]pass_leads['"`]\s*\)[\s\S]{0,200}?\.update\(/.test(src);
       })

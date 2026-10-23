@@ -144,6 +144,16 @@ const KEY = draftKey('host-1');
 const inDays = (n: number) => new Date(Date.now() - 5 * 3600e3 + n * 86400e3).toISOString().slice(0, 10);
 
 /** The step the stepper shows ("Paso N de 3 · …"). */
+/**
+ * A button by its own text. getByRole with a name costs ~235 ms a call on this
+ * page in jsdom (it computes every element's role and accessible name), the
+ * text query ~0: "walks 1 → 2 → 3" spent most of its time in four of them and
+ * passed 5 s when the suite ran back to back, and findByRole polls the same
+ * cost inside a 1 s limit. The selector keeps it to <button> elements.
+ */
+const button = (name: string) => screen.getByText(name, { selector: 'button' });
+const findButton = (name: string) => screen.findByText(name, { selector: 'button' });
+
 function currentStep(): number {
   const label = screen.getByText(/^Paso \d de 3/, { selector: 'span' }).textContent ?? '';
   return Number(/Paso (\d)/.exec(label)?.[1]);
@@ -164,7 +174,7 @@ async function renderPage(url = '/create/') {
 }
 
 async function next() {
-  fireEvent.click(screen.getByRole('button', { name: 'Siguiente' }));
+  fireEvent.click(button('Siguiente'));
 }
 
 async function fillStep1(sport = 'Boxing') {
@@ -236,10 +246,10 @@ describe('step navigation', () => {
     expect(nav.stack[nav.i]).toBe('/create/?paso=2');
     await fillStep2();
     expect(nav.stack[nav.i]).toBe('/create/?paso=3');
-    fireEvent.click(screen.getByRole('button', { name: 'Atrás' }));
+    fireEvent.click(button('Atrás'));
     await onStep(2);
     expect((document.querySelector('input[name="start_time"]') as HTMLInputElement).value).toBe('07:30');
-    fireEvent.click(screen.getByRole('button', { name: 'Atrás' }));
+    fireEvent.click(button('Atrás'));
     await onStep(1);
     expect(screen.getByRole('combobox')).toHaveValue('Boxing');
     // Back went through history, not over it.
@@ -320,7 +330,7 @@ describe('Publicar', () => {
     vi.useFakeTimers({ toFake: ['Date'] });
     try {
       vi.setSystemTime(Date.now() + 10 * 60e3);
-      fireEvent.click(screen.getByRole('button', { name: 'Publicar sesión' }));
+      fireEvent.click(button('Publicar sesión'));
       await onStep(2);
       expect(screen.getByText('Elige una hora que aún no haya pasado.')).toBeInTheDocument();
       expect(mocks.showError).toHaveBeenCalledWith('Revisa el paso 2: Cuándo y dónde.');
@@ -346,7 +356,7 @@ describe('Publicar', () => {
     fireEvent.change(document.querySelector('input[name="price_display"]') as HTMLInputElement, {
       target: { value: '1000' },
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Publicar sesión' }));
+    fireEvent.click(button('Publicar sesión'));
     expect(await screen.findByText('El precio mínimo es 20.000 COP')).toBeInTheDocument();
     expect(screen.getByText('Las instrucciones de pago son obligatorias')).toBeInTheDocument();
     expect(currentStep()).toBe(3);
@@ -358,7 +368,7 @@ describe('Publicar', () => {
     await fillStep1();
     await fillStep2();
     await waitFor(() => expect(window.localStorage.getItem(KEY)).not.toBeNull(), { timeout: 2000 });
-    fireEvent.click(screen.getByRole('button', { name: 'Publicar sesión' }));
+    fireEvent.click(button('Publicar sesión'));
     await waitFor(() => expect(mocks.insertSession).toHaveBeenCalledTimes(1));
     const payload = mocks.insertSession.mock.calls[0][1] as Record<string, unknown>;
     expect(payload).toMatchObject({ sport: 'Boxing', location: 'Laureles', max_participants: 10, start_time: '07:30' });
@@ -372,7 +382,7 @@ describe('Publicar', () => {
     await renderPage();
     await fillStep1();
     await fillStep2();
-    fireEvent.click(screen.getByRole('button', { name: 'Publicar sesión' }));
+    fireEvent.click(button('Publicar sesión'));
     await onStep(2);
     expect(screen.getByText('Elige una hora que aún no haya pasado.')).toBeInTheDocument();
   });
@@ -385,7 +395,7 @@ describe('Publicar', () => {
     await renderPage();
     await fillStep1();
     await fillStep2();
-    fireEvent.click(screen.getByRole('button', { name: 'Publicar sesión' }));
+    fireEvent.click(button('Publicar sesión'));
     expect(await screen.findByText('Elige entre 2 y 500 atletas.')).toBeInTheDocument();
     expect(currentStep()).toBe(3);
   });
@@ -396,7 +406,7 @@ describe('Publicar', () => {
     await renderPage();
     await fillStep1();
     await fillStep2();
-    fireEvent.click(screen.getByRole('button', { name: 'Publicar sesión' }));
+    fireEvent.click(button('Publicar sesión'));
     await onStep(1);
     expect(screen.getByTestId('photos')).toBeInTheDocument();
     expect(mocks.insertSession).not.toHaveBeenCalled();
@@ -445,7 +455,7 @@ describe('the draft', () => {
     storedDraft({}, 2);
     await renderPage();
     expect(await screen.findByText('Tienes un borrador sin publicar')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
+    fireEvent.click(button('Continuar'));
     await onStep(2);
     expect((document.querySelector('input[name="date"]') as HTMLInputElement).value).toBe(inDays(4));
     expect(screen.getByLabelText('lugar')).toHaveValue('Laureles');
@@ -455,7 +465,7 @@ describe('the draft', () => {
   it('"Empezar de nuevo" removes it', async () => {
     storedDraft({}, 2);
     await renderPage();
-    fireEvent.click(await screen.findByRole('button', { name: 'Empezar de nuevo' }));
+    fireEvent.click(await findButton('Empezar de nuevo'));
     expect(screen.queryByText('Tienes un borrador sin publicar')).toBeNull();
     expect(window.localStorage.getItem(KEY)).toBeNull();
     expect(screen.getByRole('combobox')).toHaveValue('');
@@ -472,7 +482,7 @@ describe('the draft', () => {
   it('with a date that has passed comes back without the date or the time', async () => {
     storedDraft({ date: inDays(-2) }, 2);
     await renderPage();
-    fireEvent.click(await screen.findByRole('button', { name: 'Continuar' }));
+    fireEvent.click(await findButton('Continuar'));
     await onStep(2);
     expect((document.querySelector('input[name="date"]') as HTMLInputElement).value).toBe('');
     expect((document.querySelector('input[name="start_time"]') as HTMLInputElement).value).toBe('');
@@ -491,7 +501,7 @@ describe('resuming a draft (Continuar)', () => {
   it('resumes on step 2, with ?paso=2 in the address', async () => {
     storedDraft({}, 2);
     await renderPage();
-    fireEvent.click(await screen.findByRole('button', { name: 'Continuar' }));
+    fireEvent.click(await findButton('Continuar'));
     await onStep(2);
     expect(nav.stack[nav.i]).toBe('/create/?paso=2');
   });
@@ -499,7 +509,7 @@ describe('resuming a draft (Continuar)', () => {
   it('resumes on step 3, with a history entry for each step on the way', async () => {
     storedDraft({}, 3);
     await renderPage();
-    fireEvent.click(await screen.findByRole('button', { name: 'Continuar' }));
+    fireEvent.click(await findButton('Continuar'));
     await onStep(3);
     expect(nav.stack).toEqual(['/create/', '/create/?paso=2', '/create/?paso=3']);
     expect(screen.getByRole('spinbutton')).toHaveValue(14);
@@ -509,7 +519,7 @@ describe('resuming a draft (Continuar)', () => {
   it('a stale date sends the host to step 2, not the saved step 3, with the error showing', async () => {
     storedDraft({ date: inDays(-3) }, 3);
     await renderPage();
-    fireEvent.click(await screen.findByRole('button', { name: 'Continuar' }));
+    fireEvent.click(await findButton('Continuar'));
     await onStep(2);
     expect(screen.getByText('La fecha es obligatoria')).toBeInTheDocument();
     expect(nav.stack).toEqual(['/create/', '/create/?paso=2']);
@@ -518,7 +528,7 @@ describe('resuming a draft (Continuar)', () => {
   it("the phone's back button walks back from the resumed step, values intact", async () => {
     storedDraft({}, 3);
     await renderPage();
-    fireEvent.click(await screen.findByRole('button', { name: 'Continuar' }));
+    fireEvent.click(await findButton('Continuar'));
     await onStep(3);
     backButton();
     await onStep(2);
@@ -531,9 +541,9 @@ describe('resuming a draft (Continuar)', () => {
   it('"Atrás" after resuming goes back through those entries too', async () => {
     storedDraft({}, 3);
     await renderPage();
-    fireEvent.click(await screen.findByRole('button', { name: 'Continuar' }));
+    fireEvent.click(await findButton('Continuar'));
     await onStep(3);
-    fireEvent.click(screen.getByRole('button', { name: 'Atrás' }));
+    fireEvent.click(button('Atrás'));
     await onStep(2);
     expect(nav.i).toBe(1);
   });
@@ -560,12 +570,12 @@ describe('resuming a draft (Continuar)', () => {
 describe('templates', () => {
   it('"Usar plantilla" on step 1 fills fields on steps 1, 2 and 3', async () => {
     await renderPage();
-    fireEvent.click(screen.getByRole('button', { name: 'Usar plantilla' }));
+    fireEvent.click(button('Usar plantilla'));
     expect(screen.getByRole('combobox')).toHaveValue('Yoga');
     await next();
     await onStep(2);
     expect(screen.getByLabelText('lugar')).toHaveValue('Parque de la plantilla');
-    expect(screen.getByRole('button', { name: '1h 30m' })).toHaveAttribute('aria-pressed', 'true');
+    expect(button('1h 30m')).toHaveAttribute('aria-pressed', 'true');
     fireEvent.change(document.querySelector('input[name="date"]') as HTMLInputElement, {
       target: { value: inDays(5) },
     });
@@ -576,6 +586,6 @@ describe('templates', () => {
     await onStep(3);
     expect(screen.getByRole('spinbutton')).toHaveValue(25);
     expect(screen.getByDisplayValue('Desde la plantilla')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Guardar plantilla' })).toBeInTheDocument();
+    expect(button('Guardar plantilla')).toBeInTheDocument();
   });
 });
