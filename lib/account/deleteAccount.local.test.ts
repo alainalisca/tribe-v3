@@ -254,6 +254,8 @@ describe.skipIf(!ENABLED)('deleteAccount on the local stack (T-DEL1)', () => {
         .insert([
           { session_id: ids.oPast, user_id: x, status: 'confirmed' },
           { session_id: ids.oFuture, user_id: x, status: 'confirmed' },
+          // O is booked on X's upcoming session: the notify step reads them.
+          { session_id: ids.future, user_id: o, status: 'confirmed' },
         ])
         .select('id')
     );
@@ -342,7 +344,9 @@ describe.skipIf(!ENABLED)('deleteAccount on the local stack (T-DEL1)', () => {
   it('runs every step and reports the files it deleted', async () => {
     for (const [bucket, name] of xFiles) expect(await exists(bucket, name), `${bucket}/${name} seeded`).toBe(true);
     const out = await deleteAccount(db, x);
-    expect(out).toEqual({ ok: true, filesDeleted: xFiles.length });
+    // No push secret on the local stack, so the notice is skipped, not sent;
+    // which sessions and athletes it goes to is pinned by deleteAccount.test.ts.
+    expect(out).toMatchObject({ ok: true, filesDeleted: xFiles.length, notified: { failed: 0 } });
   }, 120_000);
 
   it("each of their files is gone from storage; the community cover, banner and O's Moment stay", async () => {
@@ -485,6 +489,6 @@ describe.skipIf(!ENABLED)('deleteAccount on the local stack (T-DEL1)', () => {
   it('the login is gone, and a second run finishes cleanly', async () => {
     const { data } = await db.auth.admin.getUserById(x);
     expect(data.user).toBeNull();
-    expect(await deleteAccount(db, x)).toEqual({ ok: true, filesDeleted: 0 });
+    expect(await deleteAccount(db, x)).toMatchObject({ ok: true, filesDeleted: 0 });
   });
 });
