@@ -41,16 +41,25 @@ function placeOf(row: SessionCardRow, partnerName: string | null) {
   });
 }
 
+/** What a missing session, or a test session seen by anyone else, tells a scraper. */
+const UNAVAILABLE: Metadata = {
+  title: 'Entrenamiento no disponible | Tribe',
+  description: 'Este entrenamiento ya no está disponible en Tribe.',
+  robots: { index: false, follow: false },
+};
+
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;
   const loaded = await load(id);
-  // T-JOIN1b: a test session tells a scraper nothing, not even its title.
-  if (!loaded || loaded.row.is_test) {
-    return {
-      title: 'Entrenamiento no disponible | Tribe',
-      description: 'Este entrenamiento ya no está disponible en Tribe.',
-      robots: { index: false, follow: false },
-    };
+  if (!loaded) return UNAVAILABLE;
+  if (loaded.row.is_test) {
+    // T-JOIN1b: a test session tells a scraper nothing, not even its title.
+    // Its host and the admins, the only people the layout lets in, see its
+    // real title in the tab; still no description, card or index.
+    if (!(await viewerCanSeeTestSession(loaded.row.creator_id))) return UNAVAILABLE;
+    const { row } = loaded;
+    const title = publicSessionTitle({ title: row.title, sport: row.sport, creatorName: row.creator_name }, 'es');
+    return { title: `${title} | Tribe`, robots: { index: false, follow: false } };
   }
   const { row, partnerName, host } = loaded;
   const cancelled = row.status === 'cancelled';
