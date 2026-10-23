@@ -619,6 +619,21 @@
     "momentos": "Momentos",
     "momentosClose": "Cerrar",
     "momentosPhotoOf": "Foto {n} de {total}",
-    "momentosOpen": "Ver la foto: {caption}"
+    "momentosOpen": "Ver la foto: {caption}",
+    "message": "Enviar mensaje",
+    "follow": "Seguir",
+    "following": "Siguiendo",
+    "interested": "Estoy interesado",
+    "credentials": "Credenciales",
+    "verified": "Coach verificado",
+    "video": "Video",
+    "reviews": "Reseñas",
+    "reviewsCount": "{n} reseñas",
+    "reviewsOne": "1 reseña",
+    "outOf": "de 5",
+    "starsAlt": "{n} de 5 estrellas",
+    "athlete": "Atleta",
+    "pass": "Primera clase gratis",
+    "passSub": "Deja tu WhatsApp y {name} te escribe"
   }
 }

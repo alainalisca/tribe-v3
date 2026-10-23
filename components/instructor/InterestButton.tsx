@@ -16,6 +16,11 @@ interface InterestButtonProps {
   instructorName: string;
   specialties: string[];
   language: 'en' | 'es';
+  /**
+   * T-POLISH1 PR 3b-1: just the trigger (and the same modal), styled by the
+   * caller, for the public coach page where the storefront's card does not fit.
+   */
+  bare?: { className: string; sentClassName: string };
 }
 
 const MAX_MESSAGE = 200;
@@ -26,6 +31,7 @@ export default function InterestButton({
   instructorName,
   specialties,
   language,
+  bare,
 }: InterestButtonProps) {
   const supabase = createClient();
   const [hasInterest, setHasInterest] = useState<boolean>(false);
@@ -137,39 +143,54 @@ export default function InterestButton({
     return <div className="h-10" aria-hidden="true" />;
   }
 
+  const trigger = bare ? (
+    hasInterest ? (
+      <button type="button" onClick={handleWithdraw} disabled={saving} className={bare.sentClassName}>
+        <Check className="w-4 h-4" aria-hidden="true" /> {t.interestSent} · {t.withdraw}
+      </button>
+    ) : (
+      <button type="button" onClick={handleOpen} className={bare.className}>
+        {t.interested}
+      </button>
+    )
+  ) : null;
+
   return (
     <>
-      <div className="bg-theme-card rounded-2xl p-4">
-        <div className="flex items-center gap-2 mb-1">
-          <Dumbbell className="w-4 h-4 text-[#A3E635]" />
-          <h3 className="text-sm font-semibold text-white">{t.title}</h3>
-        </div>
-        <p className="text-xs text-theme-tertiary mb-3">{t.subtext}</p>
+      {trigger}
+      {!bare && (
+        <div className="bg-theme-card rounded-2xl p-4">
+          <div className="flex items-center gap-2 mb-1">
+            <Dumbbell className="w-4 h-4 text-[#A3E635]" />
+            <h3 className="text-sm font-semibold text-theme-primary">{t.title}</h3>
+          </div>
+          <p className="text-xs text-theme-tertiary mb-3">{t.subtext}</p>
 
-        {hasInterest ? (
-          <div className="space-y-1">
-            <div className="flex items-center justify-center gap-2 w-full py-2 px-4 rounded-lg bg-theme-surface text-theme-tertiary text-sm font-semibold">
-              <Check className="w-4 h-4" /> {t.interestSent}
+          {hasInterest ? (
+            <div className="space-y-1">
+              <div className="flex items-center justify-center gap-2 w-full py-2 px-4 rounded-lg bg-theme-surface text-theme-tertiary text-sm font-semibold">
+                <Check className="w-4 h-4" /> {t.interestSent}
+              </div>
+              <button
+                type="button"
+                onClick={handleWithdraw}
+                disabled={saving}
+                className="w-full text-xs text-gray-500 hover:text-gray-300 disabled:opacity-50"
+              >
+                {t.withdraw}
+              </button>
             </div>
+          ) : (
             <button
               type="button"
-              onClick={handleWithdraw}
-              disabled={saving}
-              className="w-full text-xs text-gray-500 hover:text-gray-300 disabled:opacity-50"
+              onClick={handleOpen}
+              className="w-full py-2.5 px-4 rounded-lg bg-[#84cc16] hover:bg-[#A3E635] text-slate-900 text-sm font-bold transition-colors"
             >
-              {t.withdraw}
+              {t.interested}
             </button>
-          </div>
-        ) : (
-          <button
-            type="button"
-            onClick={handleOpen}
-            className="w-full py-2.5 px-4 rounded-lg bg-[#84cc16] hover:bg-[#A3E635] text-slate-900 text-sm font-bold transition-colors"
-          >
-            {t.interested}
-          </button>
-        )}
-      </div>
+          )}
+        </div>
+      )}
 
       {open && (
         <div
@@ -192,7 +213,7 @@ export default function InterestButton({
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 className="text-lg font-bold text-white mb-4">{t.modalTitle}</h2>
+            <h2 className="text-lg font-bold text-theme-primary mb-4">{t.modalTitle}</h2>
 
             <label className="block text-xs text-theme-tertiary mb-1" htmlFor="interest-sport">
               {t.sportLabel}

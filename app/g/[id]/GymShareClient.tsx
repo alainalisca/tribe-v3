@@ -32,6 +32,10 @@ import { Card, CardContent } from '@/components/ui/card';
 import { translateSport } from '@/lib/sportTranslationData';
 import { sessionDisplayTitle } from '@/lib/sessionTitle';
 import { gymTimetable, gymTimetableWindow } from '@/lib/gymTimetable';
+import UserAvatar from '@/components/UserAvatar';
+import PublicProfileActions from '@/components/site/PublicProfileActions';
+import PublicPassLink from '@/components/site/PublicPassLink';
+import type { GymExtras } from '@/lib/site/publicProfileData';
 
 interface VenueSession {
   id: string;
@@ -46,7 +50,18 @@ interface VenueSession {
   creator_name: string | null;
 }
 
-export default function GymShareClient({ partner }: { partner: PublicPartner }) {
+export default function GymShareClient({
+  partner,
+  extras = null,
+}: {
+  partner: PublicPartner;
+  /**
+   * T-POLISH1 PR 3b-1, read on the server (app/g/[id]/page.tsx): the gym
+   * account the actions act on, its free-class pass (pass_active is not in
+   * partners_public) and its coaches.
+   */
+  extras?: GymExtras | null;
+}) {
   const { language } = useLanguage();
   const t = useTranslations('gymPage');
   const tPartner = useTranslations('partner');
@@ -227,6 +242,28 @@ export default function GymShareClient({ partner }: { partner: PublicPartner }) 
               </div>
             )}
 
+            {/* T-POLISH1 PR 3b-1: the storefront's actions for a gym (no "Estoy
+                interesado": that is a coach's lead). Signed out these are
+                sign-in links; signed in they act on the gym's account. */}
+            {extras?.ownerId && (
+              <div className="mt-5">
+                <PublicProfileActions
+                  targetId={extras.ownerId}
+                  targetName={partner.business_name}
+                  pagePath={`/g/${partner.slug}/`}
+                  showInterest={false}
+                  language={language}
+                  variant="app"
+                  labels={{
+                    message: t('message'),
+                    follow: t('follow'),
+                    following: t('following'),
+                    interested: '',
+                  }}
+                />
+              </div>
+            )}
+
             {/* /auth/, NOT /download/.
 
               This button pointed at /download/, and public/download/index.html
@@ -251,8 +288,43 @@ export default function GymShareClient({ partner }: { partner: PublicPartner }) 
             >
               {t('joinCta')}
             </Link>
+
+            {extras?.pass && (
+              <div className="mt-3">
+                <PublicPassLink
+                  slug={extras.pass.slug}
+                  label={tPartner('passCta')}
+                  sub={tPartner('passCtaSub', { partner: partner.business_name })}
+                  surface="gym_page"
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl border-2 border-tribe-green bg-transparent px-4 py-3 text-sm font-bold text-theme-primary transition hover:bg-tribe-green/10"
+                  subClassName="mt-1 text-center text-xs text-theme-tertiary"
+                />
+              </div>
+            )}
           </CardContent>
         </Card>
+
+        {extras && extras.roster.length > 0 && (
+          <Card className="bg-theme-card border-theme">
+            <CardContent className="p-4">
+              <h2 className="text-lg font-bold text-theme-primary mb-4">{tPartner('ourCoaches')}</h2>
+              <div className="flex gap-3 overflow-x-auto pb-1" data-testid="gym-roster">
+                {extras.roster.map((coach) => (
+                  <Link key={coach.id} href={`/i/${coach.id}/`} className="flex-shrink-0 w-20 text-center">
+                    <UserAvatar
+                      src={coach.avatarUrl}
+                      name={coach.name}
+                      alt={coach.name}
+                      className="flex w-14 h-14 border-2 border-tribe-green mx-auto mb-1.5"
+                      textClassName="text-lg"
+                    />
+                    <p className="text-xs font-semibold text-theme-primary truncate">{coach.name}</p>
+                  </Link>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         <Card className="bg-theme-card border-theme">
           <CardContent className="p-4">

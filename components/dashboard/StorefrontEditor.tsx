@@ -92,6 +92,13 @@ export default function StorefrontEditor({
     uploadBanner: language === 'es' ? 'Sube tu foto de portada' : 'Upload your banner photo',
     bannerHint: language === 'es' ? '1200×400 recomendado · JPG, PNG, WebP' : '1200×400 recommended · JPG, PNG, WebP',
     preview: language === 'es' ? 'Ver Vitrina' : 'Preview Storefront',
+    // T-POLISH1 PR 3b-1: the tagline, the banner (as the cover), the video and
+    // the credentials also show on the public coach page.
+    publicPage: language === 'es' ? 'Ver mi página pública' : 'View my public page',
+    publicPageHint:
+      language === 'es'
+        ? 'Tu eslogan, portada, video y credenciales también se ven en tu página pública.'
+        : 'Your tagline, cover, video and credentials also show on your public page.',
     save: language === 'es' ? 'Guardar Cambios' : 'Save Changes',
     saved: language === 'es' ? 'Guardado' : 'Saved!',
     saveError: language === 'es' ? 'Error al guardar' : 'Failed to save',
@@ -334,6 +341,12 @@ export default function StorefrontEditor({
           </Button>
         </Link>
       </div>
+      <p className="text-xs text-theme-secondary">
+        {txt.publicPageHint}{' '}
+        <Link href={`/i/${userId}/`} className="font-semibold text-theme-primary underline">
+          {txt.publicPage}
+        </Link>
+      </p>
     </div>
   );
 }

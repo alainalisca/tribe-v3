@@ -1,0 +1,85 @@
+/*
+ * T-POLISH1 PR 3b-1: the storefront's actions in the Jornada frame (/i). Paper
+ * ground, ink text; lime only as a fill, never as text on paper (coach.module).
+ */
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.row {
+  display: flex;
+  gap: 10px;
+}
+.primary,
+.secondary,
+.tertiary,
+.sent {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-family: var(--body);
+  font-weight: 700;
+  font-size: 15px;
+  padding: 14px 16px;
+  border: 0;
+  cursor: pointer;
+  text-align: center;
+}
+.primary {
+  flex: 1;
+  background: var(--lime);
+  color: var(--ink) !important;
+}
+.secondary {
+  flex: 1;
+  background: var(--ink);
+  color: var(--paper) !important;
+}
+.secondary[aria-pressed='true'] {
+  background: transparent;
+  color: var(--ink) !important;
+  box-shadow: inset 0 0 0 2px var(--ink);
+}
+.tertiary {
+  width: 100%;
+  background: transparent;
+  color: var(--ink) !important;
+  box-shadow: inset 0 0 0 2px var(--ink);
+}
+.sent {
+  width: 100%;
+  background: transparent;
+  color: #4a5058;
+  font-weight: 600;
+}
+.primary:disabled,
+.secondary:disabled,
+.tertiary:disabled,
+.sent:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.report {
+  margin-top: 4px;
+}
+.pass {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 14px 16px;
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--ink) !important;
+  box-shadow: inset 0 0 0 2px var(--lime);
+  background: var(--lime-wash);
+}
+.passSub {
+  margin-top: 6px;
+  text-align: center;
+  font-size: 13px;
+  color: #4a5058;
+}
