@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { showSuccess, showError } from '@/lib/toast';
@@ -134,6 +134,15 @@ export function useEditSession(language: 'en' | 'es', txt: EditSessionTranslatio
   const [originalStart, setOriginalStart] = useState<{ date: string; start_time: string } | null>(null);
   const [fieldErrors, setFieldErrors] = useState<SessionFieldErrors>({});
 
+  // The loader below starts once, on mount, and a child's effects run before
+  // its parent's, so it starts before LanguageProvider has applied the saved
+  // language: on a full page load `language` and `txt` are still English then.
+  // Its toasts read the language at the moment they show, from here.
+  const textNow = useRef({ language, txt });
+  useEffect(() => {
+    textNow.current = { language, txt };
+  });
+
   useEffect(() => {
     // RLS-H4: resolve auth BEFORE any fetch. Edit is host-only — a logged-out
     // visitor can't save (RLS blocks it) and shouldn't read the base table for a
@@ -178,7 +187,7 @@ export function useEditSession(language: 'en' | 'es', txt: EditSessionTranslatio
       // Owner guard: only the host may open the edit form. RLS would reject
       // the save anyway, but bouncing here beats a generic error at submit.
       if (session.creator_id !== uid) {
-        showError(txt.notOwner);
+        showError(textNow.current.txt.notOwner);
         router.replace(`/session/${params.id}`);
         return;
       }
@@ -186,7 +195,7 @@ export function useEditSession(language: 'en' | 'es', txt: EditSessionTranslatio
       // Past sessions are read only; recurring parents stay editable because
       // they define what future occurrences inherit.
       if (isEditLocked(session, new Date())) {
-        showError(txt.pastLocked);
+        showError(textNow.current.txt.pastLocked);
         router.replace(`/session/${params.id}`);
         return;
       }
@@ -262,7 +271,7 @@ export function useEditSession(language: 'en' | 'es', txt: EditSessionTranslatio
       const profileResult = await fetchUserProfile(supabase, uid);
       setIsInstructor(profileResult.success && !!profileResult.data?.is_instructor);
     } catch {
-      showError(language === 'es' ? 'Error al cargar sesión' : 'Error loading session');
+      showError(textNow.current.language === 'es' ? 'Error al cargar sesión' : 'Error loading session');
       router.back();
     } finally {
       setLoading(false);
