@@ -12,6 +12,8 @@ vi.mock('@/lib/logger', () => ({ log: vi.fn(), logError: vi.fn() }));
 vi.mock('@/lib/supabase/server', () => ({ createClient: vi.fn() }));
 vi.mock('@/lib/supabase/admin', () => ({ getServiceRoleClient: vi.fn() }));
 vi.mock('@/lib/rate-limit', () => ({ checkRateLimit: vi.fn() }));
+// The sender moved to lib/notify/sessionCancelledPush.ts (T-DEL1), a server-only module.
+vi.mock('server-only', () => ({}));
 
 import { POST } from './route';
 import { createClient } from '@/lib/supabase/server';

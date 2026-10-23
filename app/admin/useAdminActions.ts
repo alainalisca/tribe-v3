@@ -161,11 +161,20 @@ export function useAdminActions(
   }
 
   /**
-   * Deletes an account via the admin route (soft-deletes the profile and
-   * removes their messages, bookings and hosted sessions in one transaction;
-   * see migration 050). The confirmation names the account, because the list
-   * is full of near-identical test rows and a generic "delete user?" prompt
-   * does not tell you which one you are about to remove.
+   * Deletes an account via the admin route, which runs the same deletion as the
+   * app's own (lib/account/deleteAccount, T-DEL1): personal data, files and
+   * posts removed, the login deleted, upcoming sessions cancelled with their
+   * athletes told, the history kept as "Usuario eliminado". The confirmation
+   * names the account, because the list is full of near-identical test rows
+   * and a generic "delete user?" prompt does not tell you which one you are
+   * about to remove.
+   *
+   * ACCOUNTS ARE DELETED ONLY HERE (the app's Settings or the admin page), never
+   * from the Supabase Auth dashboard. Since migration 228 the profile no longer
+   * cascades from the login: deleting a user in the dashboard removes the login
+   * and leaves the profile, their files and their personal data behind, with
+   * nothing to show it happened. To finish one deleted that way, run the admin
+   * delete on the profile: every step is safe to repeat.
    */
   function deleteUser(target: { id: string; name: string | null; email: string | null }) {
     const who = target.name?.trim() || target.email || target.id;
@@ -173,8 +182,8 @@ export function useAdminActions(
       title: t('deleteUserBtn'),
       message:
         language === 'es'
-          ? `Se eliminará la cuenta de ${who}${target.email && target.name ? ` (${target.email})` : ''}, junto con sus mensajes, inscripciones y las sesiones que creó. Esto no se puede deshacer.`
-          : `This deletes ${who}${target.email && target.name ? ` (${target.email})` : ''}, along with their messages, bookings and the sessions they created. This cannot be undone.`,
+          ? `Se eliminará la cuenta de ${who}${target.email && target.name ? ` (${target.email})` : ''}: sus datos personales, fotos y publicaciones, y su inicio de sesión. Sus sesiones futuras se cancelan; su historial y sus mensajes quedan como "Usuario eliminado". Esto no se puede deshacer.`
+          : `This deletes ${who}${target.email && target.name ? ` (${target.email})` : ''}: their personal data, photos and posts, and their login. Their upcoming sessions are cancelled; their history and messages stay as "Usuario eliminado". This cannot be undone.`,
       confirmLabel: t('delete'),
       variant: 'danger',
       onConfirm: async () => {

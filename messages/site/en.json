@@ -633,6 +633,7 @@
     "outOf": "out of 5",
     "starsAlt": "{n} out of 5 stars",
     "athlete": "Athlete",
+    "deletedReviewer": "Deleted user",
     "pass": "First class free",
     "passSub": "Leave your WhatsApp and {name} will message you"
   }

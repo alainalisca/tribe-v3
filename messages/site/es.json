@@ -633,6 +633,7 @@
     "outOf": "de 5",
     "starsAlt": "{n} de 5 estrellas",
     "athlete": "Atleta",
+    "deletedReviewer": "Usuario eliminado",
     "pass": "Primera clase gratis",
     "passSub": "Deja tu WhatsApp y {name} te escribe"
   }

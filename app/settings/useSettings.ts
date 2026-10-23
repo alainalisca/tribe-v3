@@ -36,6 +36,22 @@ async function readNativeLocationPermission(): Promise<PermissionState | null> {
   }
 }
 
+/** T-DEL1: what the delete button says when the server stops a deletion. */
+const DELETE_ACCOUNT_ERRORS = {
+  owns_gym: {
+    en: 'Your account owns a gym on Tribe, with its coaches and clients. Before it can be deleted, the gym has to be transferred to someone else or closed. Write to info@tribelatam.com and we will do it with you.',
+    es: 'Tu cuenta es dueña de un gimnasio en Tribe, con sus coaches y clientes. Antes de eliminarla, hay que transferir el gimnasio a otra persona o cerrarlo. Escríbenos a info@tribelatam.com y lo hacemos contigo.',
+  },
+  owns_partner: {
+    en: 'Your account owns a partner listing on Tribe, with its free-class pass and the contacts who requested it. Before it can be deleted, the listing has to be transferred to someone else or closed. Write to info@tribelatam.com and we will do it with you.',
+    es: 'Tu cuenta tiene un perfil de aliado en Tribe, con su pase de clase gratis y los contactos que lo pidieron. Antes de eliminarla, hay que transferir ese perfil a otra persona o cerrarlo. Escríbenos a info@tribelatam.com y lo hacemos contigo.',
+  },
+  delete_failed: {
+    en: 'Your account was not fully deleted. Try again to finish.',
+    es: 'Tu cuenta no se eliminó por completo. Inténtalo de nuevo para terminar.',
+  },
+} as const;
+
 /**
  * T-LOC1 PART B: what the location section should show.
  *
@@ -50,6 +66,7 @@ async function readNativeLocationPermission(): Promise<PermissionState | null> {
  * The button now tracks STORED COORDINATES, not permission. Pure so the
  * state machine can be unit-tested without a browser.
  */
+
 export type LocationSectionState = 'unsupported' | 'denied' | 'prompt' | 'granted-unsaved' | 'saved';
 
 export function computeLocationSectionState(
@@ -271,7 +288,15 @@ export function useSettings(language: 'en' | 'es') {
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
       const result = (await res.json().catch(() => ({ success: false }))) as { success?: boolean; error?: string };
-      if (!res.ok || !result.success) throw new Error(result.error ?? 'delete_failed');
+      if (!res.ok || !result.success) {
+        // T-DEL1: a gym or partner-listing owner is told why; a delete that stopped
+        // partway is finished by trying again (every step is safe to repeat).
+        if (result.error === 'owns_gym' || result.error === 'owns_partner' || result.error === 'delete_failed') {
+          showError(DELETE_ACCOUNT_ERRORS[result.error][language === 'es' ? 'es' : 'en']);
+          return;
+        }
+        throw new Error(result.error ?? 'delete_failed');
+      }
 
       // The account is gone; the next person on this device must not inherit
       // its PostHog identity (T-ANALYTICS1 part B).

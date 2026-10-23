@@ -75,6 +75,10 @@ const BANNER_URL_ALLOWED: Record<string, { count: number; why: string }> = {
     count: 8,
     why: 'Generated from the live schema, which still HAS both old columns -- they are dropped in a later migration, not this one. 3 users (Row/Insert/Update) + 3 featured_partners + 2 hand-written FeaturedPartner types.',
   },
+  'lib/account/deleteAccount.local.test.ts': {
+    count: 4,
+    why: 'T-DEL1: seeds the old columns and proves account deletion clears them while they still exist. banner_url and storefront_banner_url, each set once and checked once. Not a read site.',
+  },
 };
 
 /** storefront_banner_url only ever existed on users, so there is no second
@@ -83,6 +87,10 @@ const STOREFRONT_BANNER_ALLOWED: Record<string, { count: number; why: string }> 
   'lib/database.types.ts': {
     count: 3,
     why: 'Generated. The column still exists in the database until the drop migration; Row/Insert/Update.',
+  },
+  'lib/account/deleteAccount.local.test.ts': {
+    count: 2,
+    why: 'T-DEL1: seeded once and checked cleared once, so deletion cannot leave it behind while it exists.',
   },
 };
 

@@ -113,7 +113,7 @@ export default async function PublicInstructorPage({ params }: PageProps) {
     // T-MOM1 Part D: the athletes' opted-in photos; a failure only drops the strip.
     isMomentsEnabled() ? loadCoachStrip(getServiceRoleClient(), coach.id, lang).catch(() => null) : null,
     // T-POLISH1 PR 3b-1: tagline, credentials, video, reviews, an independent coach's pass.
-    fetchCoachExtras(coach.id, siteT(lang)('site.coachPage.athlete')),
+    fetchCoachExtras(coach.id, siteT(lang)('site.coachPage.athlete'), siteT(lang)('site.coachPage.deletedReviewer')),
   ]);
 
   return (

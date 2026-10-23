@@ -10,28 +10,35 @@ import { useLanguage } from '@/lib/LanguageContext';
 export default function DeleteAccountPage() {
   const { language } = useLanguage();
 
+  // What deletion does (lib/account/deleteAccount and migration 228, T-DEL1),
+  // and nothing more: all of it at once. There is no 30-day purge, no recovery
+  // window and no automatic confirmation email; the page used to promise all
+  // three, while the code anonymised nothing. The page and the code ship together.
   const t =
     language === 'es'
       ? {
           title: 'Eliminar Cuenta',
           subtitle: 'Instrucciones para Eliminación de Cuenta',
-          note: 'Nota: Este documento legal está disponible en inglés.',
           intro:
-            'Respetamos tu derecho a eliminar tu cuenta y todos los datos asociados. Esta página explica qué sucede cuando eliminas tu cuenta y cómo solicitar la eliminación.',
+            'Respetamos tu derecho a eliminar tu cuenta. Esta página explica qué pasa cuando la eliminas y cómo solicitarlo.',
           whatDeleted: 'Qué Se Elimina',
-          whatDeletedDesc: 'Cuando eliminas tu cuenta de Tribe, los siguientes datos se eliminan permanentemente:',
-          profileInfo: 'Información de perfil (nombre, correo electrónico, foto de perfil, biografía)',
-          sessionData: 'Historial de sesiones de entrenamiento y participación',
-          messages: 'Mensajes y conversaciones',
-          locationData: 'Datos de ubicación e historial de búsqueda',
-          preferences: 'Preferencias y configuración de la aplicación',
-          notifications: 'Tokens de notificaciones push',
-          retention: 'Período de Retención de Datos',
-          retentionDesc: 'Después de la solicitud de eliminación:',
-          retentionDays: 'Tus datos se eliminan permanentemente dentro de 30 días',
-          retentionRecovery: 'Durante este período, puedes contactarnos para cancelar la solicitud de eliminación',
-          retentionLegal:
-            'Algunos datos pueden conservarse más tiempo si lo requiere la ley (por ejemplo, registros de transacciones)',
+          whatDeletedDesc: 'Cuando confirmas la eliminación en la app, esto ocurre de inmediato:',
+          deletedItems: [
+            'Se borra tu perfil: nombre, correo, nombre de usuario, biografía, ubicación, redes sociales, certificaciones, especialidades y video',
+            'Se borran tus datos privados: datos bancarios, documento de identidad, contacto de emergencia y fecha de nacimiento',
+            'Se borran de nuestro almacenamiento las fotos y videos que subiste: foto de perfil, portada, galería, fotos de sesiones, historias y Momentos',
+            'Se borran tus publicaciones en comunidades y tus etiquetas en fotos de otras personas',
+            'Se borra a quién sigues, quién te sigue y tus conexiones',
+            'Se elimina tu inicio de sesión: ya no podrás entrar con esa cuenta',
+            'Se cancelan las sesiones futuras que organizas y tus cupos en sesiones futuras',
+          ],
+          retention: 'Qué Se Conserva',
+          retentionDesc: 'Esto se conserva, sin tu nombre ni tus datos de contacto, bajo "Usuario eliminado":',
+          retentionItems: [
+            'El historial de sesiones pasadas y los mensajes que enviaste',
+            'Las reseñas que dejaste a entrenadores, con sus estrellas y su texto',
+            'Los registros que la ley nos obligue a conservar (por ejemplo, de pagos)',
+          ],
           howToDelete: 'Cómo Eliminar Tu Cuenta',
           option1Title: 'Opción 1: A través de la App (Recomendado)',
           option1Steps: [
@@ -39,7 +46,7 @@ export default function DeleteAccountPage() {
             'Ve a Perfil → Configuración',
             'Desplázate hacia abajo hasta "Eliminar Cuenta"',
             'Confirma tu decisión',
-            'Tu cuenta se programará para eliminación',
+            'Tu cuenta se elimina en ese momento',
           ],
           option2Title: 'Opción 2: Solicitud por Correo Electrónico',
           option2Desc: 'Si no puedes acceder a tu cuenta o prefieres solicitar la eliminación por correo electrónico:',
@@ -54,37 +61,42 @@ export default function DeleteAccountPage() {
           emailSendTo: 'Envía tu solicitud a:',
           responseTime: 'Tiempo de Respuesta',
           responseTimeDesc:
-            'Procesaremos tu solicitud dentro de 7 días hábiles y te enviaremos un correo de confirmación una vez que tu cuenta haya sido eliminada.',
+            'Procesamos las solicitudes por correo dentro de 7 días hábiles y te respondemos a ese mismo correo cuando tu cuenta esté eliminada.',
           beforeDelete: 'Antes de Eliminar',
           beforeDeleteDesc: 'Por favor considera:',
           beforeDeleteItems: [
-            'La eliminación es permanente e irreversible después del período de 30 días',
+            'La eliminación es inmediata y no se puede deshacer',
             'Perderás acceso a todas las sesiones y conversaciones',
             'Otros usuarios ya no podrán ver tu perfil',
-            'Cualquier sesión activa que estés organizando será cancelada',
+            'Las sesiones futuras que organizas se cancelarán, y avisamos a las personas inscritas',
+            'Si tu cuenta es dueña de un gimnasio o de un perfil de aliado, primero hay que transferirlo a otra persona o cerrarlo: escríbenos y lo hacemos contigo',
           ],
-          questions: 'Preguntas?',
+          questions: '¿Preguntas?',
           questionsDesc: 'Si tienes preguntas sobre la eliminación de tu cuenta o tus datos, contáctanos en:',
         }
       : {
           title: 'Delete Account',
           subtitle: 'Account Deletion Instructions',
-          note: '',
           intro:
-            'We respect your right to delete your account and all associated data. This page explains what happens when you delete your account and how to request deletion.',
+            'We respect your right to delete your account. This page explains what happens when you delete it and how to request deletion.',
           whatDeleted: 'What Gets Deleted',
-          whatDeletedDesc: 'When you delete your Tribe account, the following data is permanently removed:',
-          profileInfo: 'Profile information (name, email, profile photo, bio)',
-          sessionData: 'Workout session history and participation records',
-          messages: 'Messages and conversations',
-          locationData: 'Location data and search history',
-          preferences: 'App preferences and settings',
-          notifications: 'Push notification tokens',
-          retention: 'Data Retention Period',
-          retentionDesc: 'After deletion request:',
-          retentionDays: 'Your data is permanently deleted within 30 days',
-          retentionRecovery: 'During this period, you can contact us to cancel the deletion request',
-          retentionLegal: 'Some data may be retained longer if required by law (e.g., transaction records)',
+          whatDeletedDesc: 'When you confirm deletion in the app, this happens right away:',
+          deletedItems: [
+            'Your profile is erased: name, email, username, bio, location, social links, certifications, specialties and video',
+            'Your private data is erased: bank details, ID document, emergency contact and date of birth',
+            'The photos and videos you uploaded are erased from our storage: profile photo, cover, gallery, session photos, stories and Moments',
+            "Your community posts are erased, and so are your tags on other people's photos",
+            'Who you follow, who follows you and your connections are erased',
+            'Your login is deleted, so you can no longer sign in to that account',
+            'Upcoming sessions you host are cancelled, and so are your spots in upcoming sessions',
+          ],
+          retention: 'What We Keep',
+          retentionDesc: 'This stays, without your name or contact details, under "Usuario eliminado":',
+          retentionItems: [
+            'Your past session history and the messages you sent',
+            'The reviews you left for coaches, with their stars and text',
+            'Records the law requires us to keep (for example, payments)',
+          ],
           howToDelete: 'How to Delete Your Account',
           option1Title: 'Option 1: Through the App (Recommended)',
           option1Steps: [
@@ -92,7 +104,7 @@ export default function DeleteAccountPage() {
             'Go to Profile → Settings',
             'Scroll down to "Delete Account"',
             'Confirm your decision',
-            'Your account will be scheduled for deletion',
+            'Your account is deleted right away',
           ],
           option2Title: 'Option 2: Email Request',
           option2Desc: 'If you cannot access your account or prefer to request deletion via email:',
@@ -107,14 +119,15 @@ export default function DeleteAccountPage() {
           emailSendTo: 'Send your request to:',
           responseTime: 'Response Time',
           responseTimeDesc:
-            'We will process your request within 7 business days and send you a confirmation email once your account has been deleted.',
+            'We process email requests within 7 business days and reply to that same email once your account has been deleted.',
           beforeDelete: 'Before You Delete',
           beforeDeleteDesc: 'Please consider:',
           beforeDeleteItems: [
-            'Deletion is permanent and irreversible after the 30-day period',
+            'Deletion is immediate and cannot be undone',
             'You will lose access to all sessions and conversations',
             'Other users will no longer be able to see your profile',
-            'Any active sessions you are hosting will be cancelled',
+            'Upcoming sessions you host will be cancelled, and the people booked on them are told',
+            'If your account owns a gym or a partner listing, it has to be transferred to someone else or closed first: write to us and we will do it with you',
           ],
           questions: 'Questions?',
           questionsDesc: 'If you have questions about deleting your account or your data, contact us at:',
@@ -138,12 +151,6 @@ export default function DeleteAccountPage() {
       <div className="max-w-4xl mx-auto p-6">
         <Card className="dark:bg-tribe-dark shadow-none border-none">
           <CardContent className="p-8">
-            {language === 'es' && (
-              <div className="bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500 p-4 mb-6">
-                <p className="text-blue-800 dark:text-blue-200">{t.note}</p>
-              </div>
-            )}
-
             <h2 className="text-2xl font-bold text-stone-900 dark:text-white mb-4">{t.subtitle}</h2>
             <p className="text-stone-700 dark:text-gray-300 mb-8">{t.intro}</p>
 
@@ -156,16 +163,13 @@ export default function DeleteAccountPage() {
                 </div>
                 <p className="mb-3">{t.whatDeletedDesc}</p>
                 <ul className="list-disc pl-6 space-y-2">
-                  <li>{t.profileInfo}</li>
-                  <li>{t.sessionData}</li>
-                  <li>{t.messages}</li>
-                  <li>{t.locationData}</li>
-                  <li>{t.preferences}</li>
-                  <li>{t.notifications}</li>
+                  {t.deletedItems.map((item, index) => (
+                    <li key={index}>{item}</li>
+                  ))}
                 </ul>
               </section>
 
-              {/* Data Retention */}
+              {/* What We Keep */}
               <section>
                 <div className="flex items-center gap-2 mb-3">
                   <Clock className="w-6 h-6 text-tribe-green" />
@@ -173,9 +177,9 @@ export default function DeleteAccountPage() {
                 </div>
                 <p className="mb-3">{t.retentionDesc}</p>
                 <ul className="list-disc pl-6 space-y-2">
-                  <li>{t.retentionDays}</li>
-                  <li>{t.retentionRecovery}</li>
-                  <li>{t.retentionLegal}</li>
+                  {t.retentionItems.map((item, index) => (
+                    <li key={index}>{item}</li>
+                  ))}
                 </ul>
               </section>
 

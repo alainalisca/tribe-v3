@@ -11,9 +11,10 @@ import { PUBLIC_REVIEWS_SHOWN, ratingToShow, reviewerDisplayName } from './publi
  * WHAT LEAVES THE SERVER IS ONLY WHAT THE PAGE PRINTS. A review becomes a
  * rating, a comment, a date and "María G." -- no review id, no reviewer id, no
  * full name, no avatar -- so neither the HTML nor the RSC payload carries an
- * identifier a scraper could join on. A reviewer who is a test, banned or
- * deleted account is left out, the same visibility rule every public list uses
- * (lib/dal/visibleUsers.ts).
+ * identifier a scraper could join on. A reviewer who is a test or banned
+ * account is left out. T-DEL1: a deleted account's review stays, stars and
+ * text, under "Usuario eliminado" (Al's call): deletion keeps what a person
+ * wrote about someone else and removes who they were.
  *
  * Every read fails soft: a page that cannot load its reviews shows none rather
  * than a 500 on a link printed in someone's bio.
@@ -65,8 +66,15 @@ type ReviewRow = {
   } | null;
 };
 
-/** A coach's reviews for a public page. `athlete` is the label for a reviewer with no usable name. */
-export async function fetchPublicReviews(hostId: string, athlete: string): Promise<PublicReviews> {
+/**
+ * A coach's reviews for a public page. `athlete` is the label for a reviewer
+ * with no usable name, `deleted` the one for a deleted account.
+ */
+export async function fetchPublicReviews(
+  hostId: string,
+  athlete: string,
+  deleted = 'Usuario eliminado'
+): Promise<PublicReviews> {
   try {
     const { data, error } = await getServiceRoleClient()
       .from('reviews')
@@ -79,7 +87,7 @@ export async function fetchPublicReviews(hostId: string, athlete: string): Promi
       return NO_REVIEWS;
     }
     const rows = ((data ?? []) as unknown as ReviewRow[]).filter(
-      (r) => r.rating >= 1 && r.rating <= 5 && isVisibleUser(r.reviewer)
+      (r) => r.rating >= 1 && r.rating <= 5 && !!r.reviewer && !r.reviewer.is_test_account && !r.reviewer.banned
     );
     const sum = rows.reduce((acc, r) => acc + r.rating, 0);
     return {
@@ -87,7 +95,7 @@ export async function fetchPublicReviews(hostId: string, athlete: string): Promi
         rating: r.rating,
         comment: r.comment?.trim() || null,
         createdAt: r.created_at,
-        reviewer: reviewerDisplayName(r.reviewer?.name, athlete),
+        reviewer: r.reviewer?.deleted_at ? deleted : reviewerDisplayName(r.reviewer?.name, athlete),
       })),
       count: rows.length,
       rating: rows.length ? ratingToShow(rows.length, sum / rows.length) : null,
@@ -106,7 +114,7 @@ function passOf(row: PartnerPassRow | null | undefined): PublicPass | null {
 }
 
 /** Everything /i shows beyond loadCoach's row. */
-export async function fetchCoachExtras(coachId: string, athlete: string): Promise<CoachExtras> {
+export async function fetchCoachExtras(coachId: string, athlete: string, deleted?: string): Promise<CoachExtras> {
   const admin = getServiceRoleClient();
   const [userRes, passRes, reviews] = await Promise.all([
     admin
@@ -124,7 +132,7 @@ export async function fetchCoachExtras(coachId: string, athlete: string): Promis
       .eq('pass_active', true)
       .limit(1)
       .maybeSingle(),
-    fetchPublicReviews(coachId, athlete),
+    fetchPublicReviews(coachId, athlete, deleted),
   ]);
   if (userRes.error) logError(userRes.error, { action: 'site.fetchCoachExtras', coachId });
   if (passRes.error) logError(passRes.error, { action: 'site.fetchCoachExtras.pass', coachId });

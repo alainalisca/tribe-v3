@@ -57,19 +57,32 @@ describe('reviews for a public page', () => {
     expect(Object.keys(out.items[0]).sort()).toEqual(['comment', 'createdAt', 'rating', 'reviewer']);
   });
 
-  it('leave out reviewers who are test, banned or deleted accounts', async () => {
+  it('leave out reviewers who are test or banned accounts', async () => {
     answers.reviews = {
       data: [
         review(5, 'Visible Uno'),
         review(1, 'Prueba Test', { is_test_account: true }),
         review(1, 'Baneado X', { banned: true }),
-        review(1, 'Borrado Y', { deleted_at: '2026-01-01' }),
       ],
       error: null,
     };
     const out = await fetchPublicReviews('coach-1', 'Atleta');
     expect(out.count).toBe(1);
     expect(out.items.map((r) => r.reviewer)).toEqual(['Visible U.']);
+  });
+
+  it("T-DEL1: keep a deleted account's review, stars and text, under the deleted label and never the name", async () => {
+    answers.reviews = {
+      data: [review(4, 'Borrado Ybarra', { deleted_at: '2026-10-23' }), review(5, 'Visible Uno')],
+      error: null,
+    };
+    const out = await fetchPublicReviews('coach-1', 'Atleta', 'Usuario eliminado');
+    expect(out.count).toBe(2);
+    expect(out.items.map((r) => [r.reviewer, r.rating])).toEqual([
+      ['Usuario eliminado', 4],
+      ['Visible U.', 5],
+    ]);
+    expect(JSON.stringify(out)).not.toMatch(/Borrado|Ybarra/);
   });
 
   it('show no star average below 3 reviews, and the average from 3', async () => {
