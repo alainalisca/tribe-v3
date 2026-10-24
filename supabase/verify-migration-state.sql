@@ -1044,7 +1044,13 @@ where a.attrelid = 'public.users'::regclass
     'signup_landing_path', 'signup_first_touch', 'signup_attributed_at',
     -- 220: images an admin ruled out of a coach's share card. A moderation
     -- list; the card route reads it with the service role.
-    'card_photo_rejects'
+    'card_photo_rejects',
+    -- 231: coach-plan billing state. coach_plan itself IS granted (the badge);
+    -- these would publish each coach's Stripe ids, status and renewal date to
+    -- every signed-in user. The server reads them with the service role.
+    'coach_plan_status', 'coach_plan_source', 'coach_plan_stripe_customer_id',
+    'coach_plan_stripe_subscription_id', 'coach_plan_current_period_end',
+    'coach_plan_granted_by', 'coach_plan_granted_at'
   )
   and not has_column_privilege('authenticated', a.attrelid, a.attnum, 'SELECT')
 union all
@@ -1071,7 +1077,10 @@ from (values
     ('signup_src'), ('signup_code'), ('signup_ref'), ('signup_utm_source'),
     ('signup_utm_medium'), ('signup_utm_campaign'), ('signup_utm_content'),
     ('signup_landing_path'), ('signup_first_touch'), ('signup_attributed_at'),
-    ('card_photo_rejects')
+    ('card_photo_rejects'),
+    ('coach_plan_status'), ('coach_plan_source'), ('coach_plan_stripe_customer_id'),
+    ('coach_plan_stripe_subscription_id'), ('coach_plan_current_period_end'),
+    ('coach_plan_granted_by'), ('coach_plan_granted_at')
 ) as r(column_name)
 where exists (
         select 1 from information_schema.columns c
@@ -3320,6 +3329,85 @@ select '230_t_del2_keep_shared_files',
          when not exists (select 1 from public.migrations_applied
                            where migration = '230_t_del2_keep_shared_files')
            then 'MISSING -- 230 is not recorded in migrations_applied'
+         else 'applied'
+       end
+
+union all
+
+-- T-PLAN1. The eight coach_plan columns exist; coach_plan is readable by
+-- signed-in users and nothing else is readable by any client; the server-only
+-- guard trigger is attached and enabled; one Stripe customer per account; and
+-- sessions_public carries creator_coach_plan as its last column. Every lookup
+-- by to_regclass and (oid, attnum), so this reads MISSING (not an error) before
+-- 231 runs.
+select '231_t_plan1_coach_plans',
+       case
+         when (select count(*) from pg_attribute
+                where attrelid = to_regclass('public.users') and attnum > 0 and not attisdropped
+                  and attname in ('coach_plan', 'coach_plan_status', 'coach_plan_source',
+                                  'coach_plan_stripe_customer_id', 'coach_plan_stripe_subscription_id',
+                                  'coach_plan_current_period_end', 'coach_plan_granted_by',
+                                  'coach_plan_granted_at')) <> 8
+           then 'MISSING -- not all eight users.coach_plan* columns exist'
+         when not coalesce((select has_column_privilege('authenticated', a.attrelid, a.attnum, 'SELECT')
+                              from pg_attribute a
+                             where a.attrelid = to_regclass('public.users')
+                               and a.attname = 'coach_plan' and not a.attisdropped), false)
+           then 'MISSING -- authenticated cannot read users.coach_plan; every signed-in badge query fails with 42501'
+         when exists (select 1 from pg_attribute a
+                       where a.attrelid = to_regclass('public.users') and a.attnum > 0 and not a.attisdropped
+                         and a.attname like 'coach\_plan\_%'
+                         and (has_column_privilege('anon', a.attrelid, a.attnum, 'SELECT')
+                              or has_column_privilege('authenticated', a.attrelid, a.attnum, 'SELECT')))
+           then 'MISSING -- a client role can read a coach_plan billing column; Stripe ids and renewal dates would be public'
+         when not exists (select 1 from pg_trigger t
+                           where t.tgrelid = to_regclass('public.users')
+                             and t.tgname = 'users_coach_plan_guard'
+                             and not t.tgisinternal and t.tgenabled = 'O'
+                             and (t.tgtype & 2) <> 0 and (t.tgtype & 4) <> 0 and (t.tgtype & 16) <> 0)
+           then 'MISSING -- users_coach_plan_guard is absent, disabled, or not BEFORE INSERT OR UPDATE; any coach could make themselves Pro'
+         when not exists (select 1 from pg_index i
+                           where i.indexrelid = to_regclass('public.users_coach_plan_stripe_customer_id_key')
+                             and i.indisunique and i.indisvalid)
+           then 'MISSING -- coach-plan Stripe customer ids are not unique; the webhook could match two accounts'
+         when coalesce((select a.attname::text from pg_attribute a
+                         where a.attrelid = to_regclass('public.sessions_public') and a.attnum > 0
+                           and not a.attisdropped
+                         order by a.attnum desc limit 1), '') <> 'creator_coach_plan'
+           then 'MISSING -- sessions_public does not end with creator_coach_plan; signed-out session pages show no badge'
+         when not exists (select 1 from pg_attribute a
+                           where a.attrelid = to_regclass('public.sessions_public')
+                             and a.attname = 'is_test' and not a.attisdropped)
+           then 'MISSING -- sessions_public lost is_test (222); signed-out pages would show test sessions'
+         when not exists (select 1 from public.migrations_applied
+                           where migration = '231_t_plan1_coach_plans')
+           then 'MISSING -- 231 is not recorded in migrations_applied'
+         else 'applied'
+       end
+
+union all
+
+-- T-PLAN1. account_scrub is 232's body (228's plus the coach-plan reset), so a
+-- deleted account reads basico with every coach_plan_* column NULL; still
+-- SECURITY DEFINER, empty search_path, service_role only.
+select '232_t_plan1_account_scrub_coach_plans',
+       case
+         when to_regprocedure('public.account_scrub(uuid)') is null
+           then 'MISSING -- account_scrub(uuid) does not exist'
+         when (select md5(prosrc) from pg_proc
+                where oid = to_regprocedure('public.account_scrub(uuid)')) <> '9de0736a23065ac4b5b44a4d516e0bbd'
+           then 'MISSING -- account_scrub is not 232''s body; a deleted coach keeps their plan columns'
+         when exists (select 1 from pg_proc
+                       where oid = to_regprocedure('public.account_scrub(uuid)')
+                         and (not prosecdef
+                              or not coalesce('search_path=""' = any (proconfig), false)
+                              or has_function_privilege('anon', oid, 'EXECUTE')
+                              or has_function_privilege('authenticated', oid, 'EXECUTE')
+                              or not has_function_privilege('service_role', oid, 'EXECUTE')))
+           then 'MISSING -- account_scrub is not SECURITY DEFINER with an empty search_path, or is not service_role only'
+         when not exists (select 1 from public.migrations_applied
+                           where migration = '232_t_plan1_account_scrub_coach_plans')
+           then 'MISSING -- 232 is not recorded in migrations_applied'
          else 'applied'
        end
 
