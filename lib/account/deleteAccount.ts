@@ -2,6 +2,7 @@ import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { log } from '@/lib/logger';
 import { bogotaToday } from '@/lib/time/bogotaDate';
+import { cancelCoachPlanSubscriptionNow } from '@/lib/payments/coachPlanStripe';
 import {
   NO_CANCEL_PUSHES,
   sendSessionCancelledPush,
@@ -24,6 +25,14 @@ import {
  *                 and the confirmed athletes of their upcoming active sessions
  *                 are noted, because after the scrub nothing says which
  *                 sessions it cancelled
+ *   cancel_plan   T-PLAN1: a coach-plan subscription (users.
+ *                 coach_plan_stripe_subscription_id) is canceled in Stripe
+ *                 now, with no proration and no further invoice
+ *                 (cancelCoachPlanSubscriptionNow). If Stripe refuses, the
+ *                 deletion stops here with nothing of theirs touched, so a
+ *                 deleted account is never left paying. Already canceled
+ *                 counts as done. The scrub (232) then sets coach_plan back to
+ *                 basico and clears every coach_plan_* column
  *   list_files    account_deletion_files (228, 230): their uploads that no
  *                 remaining row uses. account_file_references (230) names the
  *                 ones another row still uses (someone's partner logo, a
@@ -31,7 +40,7 @@ import {
  *                 and returned as filesKept, never deleted
  *   delete_files  removed through the Storage API, then listed again: any file
  *                 still there is a failure, never a silent leftover
- *   scrub_data    account_scrub (228), one transaction: the profile cleared,
+ *   scrub_data    account_scrub (228, 232), one transaction: the profile cleared,
  *                 private data and their posts deleted, the future cancelled,
  *                 the past kept under "Usuario eliminado"
  *   notify        each noted session the scrub cancelled (active before, now
@@ -52,7 +61,15 @@ import {
  * nothing to show it happened. To finish one deleted that way, run the admin
  * delete on the profile: every step is safe to repeat.
  */
-export const DELETION_STEPS = ['check', 'list_files', 'delete_files', 'scrub_data', 'notify', 'delete_login'] as const;
+export const DELETION_STEPS = [
+  'check',
+  'cancel_plan',
+  'list_files',
+  'delete_files',
+  'scrub_data',
+  'notify',
+  'delete_login',
+] as const;
 export type DeletionStep = (typeof DELETION_STEPS)[number];
 
 export type DeletionResult =
@@ -70,9 +87,15 @@ const REMOVE_BATCH = 100;
 export async function deleteAccount(service: SupabaseClient, userId: string): Promise<DeletionResult> {
   const fail = (step: DeletionStep, error: string): DeletionResult => ({ ok: false, step, error });
 
-  const { data: user, error: userErr } = await service.from('users').select('id').eq('id', userId).maybeSingle();
+  const { data: user, error: userErr } = await service
+    .from('users')
+    .select('id, coach_plan_stripe_subscription_id')
+    .eq('id', userId)
+    .maybeSingle();
   if (userErr) return fail('check', userErr.message);
   if (!user) return fail('check', 'user_not_found');
+  const subscriptionId = (user as { coach_plan_stripe_subscription_id?: string | null })
+    .coach_plan_stripe_subscription_id;
   const { data: gyms, error: gymErr } = await service.from('gyms').select('id').eq('owner_user_id', userId).limit(1);
   if (gymErr) return fail('check', gymErr.message);
   if (gyms && gyms.length > 0) return fail('check', 'owns_gym');
@@ -85,6 +108,17 @@ export async function deleteAccount(service: SupabaseClient, userId: string): Pr
   if (partners && partners.length > 0) return fail('check', 'owns_partner');
   const upcoming = await upcomingAthletes(service, userId);
   if ('error' in upcoming) return fail('check', upcoming.error);
+
+  if (subscriptionId) {
+    const cancelled = await cancelCoachPlanSubscriptionNow(subscriptionId);
+    if (!cancelled.success) return fail('cancel_plan', `coach_plan_cancel_failed: ${cancelled.error}`);
+    log('info', 'account deletion canceled the coach plan subscription', {
+      action: 'deleteAccount',
+      userId,
+      subscriptionId,
+      alreadyGone: cancelled.alreadyGone,
+    });
+  }
 
   const kept = await keptFiles(service, userId);
   if ('error' in kept) return fail('list_files', kept.error);

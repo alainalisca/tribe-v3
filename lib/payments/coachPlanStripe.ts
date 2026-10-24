@@ -88,6 +88,33 @@ export async function createCoachPlanPortalSession(params: {
   }
 }
 
+/**
+ * Account deletion (lib/account/deleteAccount, step cancel_plan): end a coach's
+ * plan in Stripe NOW, not at the period end. prorate: false and invoice_now:
+ * false, so Stripe issues no credit, no final invoice and nothing after.
+ *
+ * Safe to run again, as every deletion step must be: a subscription that is
+ * already canceled (or expired before it started, or not in this Stripe
+ * account at all) has nothing left to bill, so it counts as done
+ * (alreadyGone). Any other refusal is returned as an error and the deletion
+ * stops before anything of theirs is touched.
+ */
+export async function cancelCoachPlanSubscriptionNow(
+  subscriptionId: string
+): Promise<StripeResult<{ alreadyGone: boolean }>> {
+  try {
+    const stripe = getStripeInstance();
+    const sub = await stripe.subscriptions.retrieve(subscriptionId);
+    if (sub.status === 'canceled' || sub.status === 'incomplete_expired') return { success: true, alreadyGone: true };
+    await stripe.subscriptions.cancel(subscriptionId, { prorate: false, invoice_now: false });
+    return { success: true, alreadyGone: false };
+  } catch (error: unknown) {
+    if (isRecord(error) && error.code === 'resource_missing') return { success: true, alreadyGone: true };
+    logError(error, { action: 'cancelCoachPlanSubscriptionNow', subscriptionId });
+    return { success: false, error: error instanceof Error ? error.message : 'stripe_cancel_failed' };
+  }
+}
+
 /** The subscription fields the webhook needs, whatever API version shaped the payload. */
 export interface CoachPlanSubscription {
   id: string;
