@@ -37,10 +37,11 @@ interface CreateStripeCheckoutSessionParams {
    *
    * - 'USD' — the legacy path. Amount is in USD cents (100 = $1.00).
    * - 'COP' — added so the Wompi-down emergency override can route Colombian
-   *   payments through Stripe. Stripe treats COP as a zero-decimal currency
-   *   (1500 = 1500 COP, no centavos). Callers using the app's internal
-   *   "minor units × 100" convention for COP MUST divide by 100 before
-   *   passing the amount here.
+   *   payments through Stripe. Stripe's COP is two-decimal
+   *   (docs.stripe.com/currencies: not in the zero-decimal list), the same
+   *   "value × 100" the app stores, so pass the app's amount unchanged:
+   *   89.000 COP is 8900000. (Until 2026-10-23 this said zero-decimal and
+   *   callers divided by 100, which would have charged 1/100 of the price.)
    */
   currency: 'USD' | 'COP';
   customerEmail: string;

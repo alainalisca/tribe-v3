@@ -409,6 +409,54 @@ describe('POST /api/payment/create', () => {
     );
   });
 
+  // Stripe's COP is two-decimal (docs.stripe.com/currencies), the same
+  // "value × 100" the app stores, so a COP amount reaches Stripe unchanged.
+  // Until 2026-10-23 the route divided by 100 and would have charged 1/100.
+  it('tip (COP → Stripe, gateway override) passes the app amount to Stripe unchanged', async () => {
+    vi.mocked(createServerClient).mockResolvedValue(makeAuthClient(true) as never);
+    vi.mocked(createServiceClient).mockReturnValue(makeTipServiceClient() as never);
+    vi.mocked(getPaymentGateway).mockReturnValue('stripe' as never);
+    vi.mocked(createStripeCheckoutSession).mockResolvedValue({
+      url: 'https://checkout.stripe.com/pay/cs_tip_cop',
+      sessionId: 'cs_tip_cop',
+    } as never);
+
+    const res = await POST(
+      request({ payment_type: 'tip', instructor_id: CREATOR_ID, currency: 'COP', amount_cents: 1_000_000 })
+    );
+    expect(res.status).toBe(200);
+    expect(createStripeCheckoutSession).toHaveBeenCalledWith(
+      expect.objectContaining({ currency: 'COP', amountCents: 1_000_000, applicationFeeCents: 0 })
+    );
+  });
+
+  it('session (COP → Stripe, gateway override) passes the price and the fee to Stripe unchanged', async () => {
+    vi.mocked(createServerClient).mockResolvedValue(
+      makeAuthClient(true, {
+        id: 'sess-3',
+        is_paid: true,
+        price_cents: 4500000, // 45.000 COP
+        currency: 'COP',
+        creator_id: CREATOR_ID,
+        platform_fee_percent: 10,
+      }) as never
+    );
+    vi.mocked(createServiceClient).mockReturnValue(makeServiceClient() as never);
+    vi.mocked(getPaymentGateway).mockReturnValue('stripe' as never);
+    vi.mocked(createStripeCheckoutSession).mockResolvedValue({
+      url: 'https://checkout.stripe.com/pay/cs_sess_cop',
+      sessionId: 'cs_sess_cop',
+    } as never);
+
+    const res = await POST(request({ session_id: 'sess-3' }));
+    expect(res.status).toBe(200);
+    // applicationFeeCents is the mocked calculateFeesForUser fee (100), passed
+    // through as is; the old code sent Math.round(100 / 100) = 1.
+    expect(createStripeCheckoutSession).toHaveBeenCalledWith(
+      expect.objectContaining({ currency: 'COP', amountCents: 4500000, applicationFeeCents: 100 })
+    );
+  });
+
   it('happy path (COP → Wompi) returns redirect URL', async () => {
     vi.mocked(createServerClient).mockResolvedValue(
       makeAuthClient(true, {

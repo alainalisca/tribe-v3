@@ -894,6 +894,8 @@ VERIFICADO: COP se almacena como valor x100 y cada llamada a Stripe divide por 1
 FIX: default COP para cuentas en Colombia; tipo nominal CopCents; FX desde config o API; test que cubra el x100.
 ACEPTACIÓN: un instructor nuevo en Medellín ve COP por defecto; test de redondeo COP->Stripe.
 
+> **Corrección, 2026-10-23:** lo «VERIFICADO» de arriba era falso. En Stripe COP tiene dos decimales (docs.stripe.com/currencies), igual que el x100 de la app, así que dividir por 100 habría cobrado 1/100 del precio. La división se quitó (fix/stripe-cop-two-decimal), con tests de COP→Stripe.
+
 ---
 
 ## Área: Seguridad (10)
