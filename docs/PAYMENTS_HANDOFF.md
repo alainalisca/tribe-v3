@@ -2,6 +2,8 @@
 
 **Created:** 2026-05-27 — during the Alex-session bug-fix session.
 **Status:** Temporary fix shipped. Long-term decision pending.
+
+> **Correction, 2026-10-23:** this document says Stripe treats COP as zero-decimal and that the route divides COP by 100. That was wrong. Stripe's COP is two-decimal (docs.stripe.com/currencies), the same `value × 100` the app stores, so amounts now go to Stripe unchanged (fix/stripe-cop-two-decimal).
 **Owner:** Al (alainalisca@aplusfitnessllc.com).
 
 ---
