@@ -23,7 +23,7 @@ import { ArrowLeft, ChevronDown, Share2, Copy } from 'lucide-react';
 import Link from 'next/link';
 import { useLanguage } from '@/lib/LanguageContext';
 import { sportTranslations } from '@/lib/translations';
-import { insertSession, fetchUserProfile } from '@/lib/dal';
+import { insertSession, fetchUserProfile, fetchMyLatestPaymentInstructions } from '@/lib/dal';
 import PastSessionLink from '@/components/moments/PastSessionLink';
 import { ACTIVE_CITY, locationMatchesNeighborhood } from '@/lib/city-config';
 import { formatDisplayAmount } from '@/lib/formatCurrency';
@@ -37,6 +37,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import TemplateSection from './TemplateSection';
 import PhotoUploadSection from './PhotoUploadSection';
+import { prefillPaymentInstructions } from './prefillPaymentInstructions';
 import RecurringSessionToggle from '@/components/RecurringSessionToggle';
 import TestSessionToggle from '@/components/session/TestSessionToggle';
 import { shareSession, getSessionShareUrl, copyToClipboard } from '@/lib/share';
@@ -217,6 +218,29 @@ function CreateSessionPageInner() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- mount only
   }, []);
+
+  // T-PAY2: when a paid session is on and the instructions field is empty,
+  // prefill it from this instructor's most recent session that had instructions.
+  // Tried once per visit, and re-checked when the read lands so it never
+  // overwrites anything the instructor typed (or a restored draft) meanwhile.
+  const paymentPrefillTried = useRef(false);
+  useEffect(() => {
+    if (!user || !formData.is_paid || formData.payment_instructions.trim() || paymentPrefillTried.current) return;
+    paymentPrefillTried.current = true;
+    fetchMyLatestPaymentInstructions(supabase).then((result) => {
+      if (!result.success) {
+        logError(new Error(result.error), { action: 'create.prefillPaymentInstructions' });
+        return;
+      }
+      const previous = result.data ?? null;
+      setFormData((prev) => ({
+        ...prev,
+        payment_instructions: prefillPaymentInstructions(prev.payment_instructions, previous),
+      }));
+    });
+    // supabase is a fresh client each render; the ref makes this run once anyway.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, formData.is_paid, formData.payment_instructions]);
 
   // Once the user is known: offer their draft, or carry on with it after a
   // reload mid-flow (?paso=2 or 3), or start blank on step 1.
@@ -947,8 +971,8 @@ function CreateSessionPageInner() {
                           rows={3}
                           placeholder={
                             language === 'es'
-                              ? 'Ej: Nequi: 300-123-4567 o efectivo en el lugar'
-                              : 'E.g. Nequi: 300-123-4567, Venmo: @coach-maria, or cash at venue'
+                              ? 'Ej: Nequi 300 123 4567, o pega tu link de pago de Bold, Wompi o Mercado Pago'
+                              : 'E.g. Nequi 300 123 4567, or paste your Bold, Wompi or Mercado Pago payment link'
                           }
                           className={`py-3 bg-theme-card text-theme-primary resize-none ${errors.payment_instructions ? 'border-red-500' : 'border-theme'}`}
                         />

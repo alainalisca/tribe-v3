@@ -42,6 +42,8 @@ const mocks = vi.hoisted(() => ({
   confirm: vi.fn(async () => true),
   trackEvent: vi.fn(),
   showError: vi.fn(),
+  // T-PAY2: the instructions of the host's last session that had some.
+  latestPaymentInstructions: null as string | null,
 }));
 
 vi.mock('next/navigation', async () => {
@@ -80,6 +82,7 @@ vi.mock('@/lib/supabase/client', () => ({
 vi.mock('@/lib/dal', () => ({
   fetchUserProfile: async () => ({ success: true, data: { is_instructor: mocks.isInstructor } }),
   insertSession: (...args: unknown[]) => mocks.insertSession(...args),
+  fetchMyLatestPaymentInstructions: async () => ({ success: true, data: mocks.latestPaymentInstructions }),
 }));
 vi.mock('@/lib/LanguageContext', async () => {
   const { translations } = await import('@/lib/translations');
@@ -228,6 +231,7 @@ beforeEach(() => {
   mocks.insertSession.mockReset();
   mocks.insertSession.mockResolvedValue({ success: true, data: { id: 'new-session' } });
   mocks.isInstructor = false;
+  mocks.latestPaymentInstructions = null;
   mocks.trackEvent.mockReset();
   mocks.showError.mockReset();
   vi.spyOn(window.history, 'go').mockImplementation((n?: number) => nav.go(n ?? 0));
@@ -361,6 +365,18 @@ describe('Publicar', () => {
     expect(screen.getByText('Las instrucciones de pago son obligatorias')).toBeInTheDocument();
     expect(currentStep()).toBe(3);
     expect(mocks.insertSession).not.toHaveBeenCalled();
+  });
+
+  it('T-PAY2: a paid session starts with the instructions of the last one that had some', async () => {
+    mocks.isInstructor = true;
+    mocks.latestPaymentInstructions = 'Nequi 300 123 4567 o paga aquí https://bold.co/pago';
+    await renderPage();
+    await fillStep1();
+    await fillStep2();
+    fireEvent.click(await screen.findByRole('switch', { name: '' }));
+    const field = document.querySelector('textarea[name="payment_instructions"]') as HTMLTextAreaElement;
+    await waitFor(() => expect(field.value).toBe('Nequi 300 123 4567 o paga aquí https://bold.co/pago'));
+    expect(field.placeholder).toContain('link de pago de Bold, Wompi o Mercado Pago');
   });
 
   it('publishes a whole number of athletes, no equipment, and clears the draft', async () => {

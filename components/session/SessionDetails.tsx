@@ -16,6 +16,7 @@ import { formatPriceForUser } from '@/lib/userCurrency';
 import { SessionDetailVenueLine, SessionDetailGymHost } from '@/components/session/SessionDetailVenue';
 import type { SessionGymIdentity } from '@/lib/sessionGym';
 import PaymentInstructionsText from '@/components/session/PaymentInstructionsText';
+import { PAYMENT_BOX_ID } from '@/components/session/PendingPayBar';
 
 interface CreatorInfo {
   id: string;
@@ -219,7 +220,10 @@ export default function SessionDetails({
         )}
 
         {session.is_paid && session.price_cents != null && (
-          <div className="p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-200 dark:border-emerald-800">
+          <div
+            id={PAYMENT_BOX_ID}
+            className="p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-200 dark:border-emerald-800"
+          >
             <div className="flex items-center gap-2 mb-2">
               <DollarSign className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
               <span className="font-bold text-emerald-800 dark:text-emerald-300 text-lg">

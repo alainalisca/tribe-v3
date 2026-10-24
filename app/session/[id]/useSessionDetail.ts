@@ -17,9 +17,12 @@ import {
   fetchAllRecapPhotosForSession,
   fetchActiveStoriesForSession,
   fetchUserReviewExists,
+  checkExistingParticipation,
 } from '@/lib/dal';
 import { useLiveStatus } from '@/hooks/useLiveStatus';
 import { useSessionActions } from '@/hooks/useSessionActions';
+import { usePaySheet } from './usePaySheet';
+import { resolveViewerParticipation } from './viewerParticipation';
 import type { User as AuthUser } from '@supabase/supabase-js';
 import type { RecapPhotoWithUser, SessionStoryJoined } from './types';
 import { fetchPartnersByIds, fetchRosterCount, type GymIdentity } from '@/lib/dal/gymVenue';
@@ -76,6 +79,9 @@ export function useSessionDetail(sessionId: string, language: 'en' | 'es', onNav
     language,
   });
 
+  // T-PAY2 Step 5: the post-request payment sheet (opens once per request).
+  const paySheet = usePaySheet({ isPending, paymentInstructions, language, sessionId });
+
   const sessionActions = useSessionActions({
     supabase,
     sessionId,
@@ -86,6 +92,7 @@ export function useSessionDetail(sessionId: string, language: 'en' | 'es', onNav
     onNavigate,
     setParticipants,
     setSession,
+    onPaidRequestSent: paySheet.onPaidRequestSent,
   });
 
   // --- Effects ---
@@ -237,9 +244,19 @@ export function useSessionDetail(sessionId: string, language: 'en' | 'es', onNav
       }
       setParticipants(participantsList);
       if (user) {
-        const userParticipant = participantsList.find((p) => p.user_id === user.id);
-        setHasJoined(!!userParticipant && userParticipant.status === 'confirmed');
-        setIsPending(!!userParticipant && userParticipant.status === 'pending');
+        // The viewer's own status comes from their own row. The roster above is
+        // confirmed-only, so it can never show a pending request
+        // (see viewerParticipation.ts).
+        const ownRow = await checkExistingParticipation(supabase, sessionId, user.id);
+        const viewer = resolveViewerParticipation({ ownRow, roster: participantsList, userId: user.id });
+        if (viewer.source === 'roster-fallback') {
+          logError(new Error(ownRow.error ?? 'checkExistingParticipation failed'), {
+            action: 'loadSession.own_participation',
+            sessionId,
+          });
+        }
+        setHasJoined(viewer.hasJoined);
+        setIsPending(viewer.isPending);
 
         // Paid sessions only, and only for someone entitled to see it. The DAL
         // re-checks host-or-participant itself; this just avoids a pointless
@@ -371,6 +388,7 @@ export function useSessionDetail(sessionId: string, language: 'en' | 'es', onNav
     hasJoined,
     isPending,
     paymentInstructions,
+    paySheet,
     lightboxOpen,
     currentPhotoIndex,
     photoType,

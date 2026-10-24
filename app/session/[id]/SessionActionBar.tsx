@@ -2,6 +2,7 @@
 
 import { Check, Clock, Lock, Settings2, Share2 } from 'lucide-react';
 import PaidSessionRequest from '@/components/session/PaidSessionRequest';
+import PendingPayActions from '@/components/session/PendingPayBar';
 import { useTranslations } from '@/lib/i18n/useTranslations';
 import type { AthleteBarState } from './sessionActionState';
 
@@ -13,6 +14,9 @@ import type { AthleteBarState } from './sessionActionState';
  *            cancel, Tribe.OS attendance) in a sheet.
  *   athlete  one button per state (lib: athleteBarState). "Cancelar mi cupo"
  *            and "Cancelar solicitud" go through the page's confirm dialog.
+ *            A pending request on a paid session the athlete can see the
+ *            instructions for shows T-PAY2's "Pagar ahora" (PendingPayBar.tsx)
+ *            beside "Cancelar solicitud".
  */
 const PRIMARY =
   'flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-tribe-green px-4 py-3 text-[15px] font-extrabold text-slate-900 transition hover:bg-lime-500 disabled:opacity-60';
@@ -93,17 +97,29 @@ export default function SessionActionBar(props: SessionActionBarProps) {
         ) : null;
         break;
       case 'pending':
-        content = (
-          <>
-            <span className={STATUS}>
-              <Clock className="w-5 h-5" />
-              {props.isPaid ? t('pendingPaid') : t('pending')}
-            </span>
-            <button type="button" onClick={props.onLeave} className={SECONDARY}>
-              {t('withdraw')}
-            </button>
-          </>
-        );
+        content =
+          props.isPaid && props.paid?.canViewPaymentInstructions ? (
+            <PendingPayActions
+              priceCents={props.paid.priceCents}
+              currency={props.paid.currency}
+              paymentInstructions={props.paid.paymentInstructions}
+              language={props.language}
+              onWithdraw={props.onLeave}
+              withdrawLabel={t('withdraw')}
+              primaryClassName={PRIMARY}
+              secondaryClassName={SECONDARY}
+            />
+          ) : (
+            <>
+              <span className={STATUS}>
+                <Clock className="w-5 h-5" />
+                {props.isPaid ? t('pendingPaid') : t('pending')}
+              </span>
+              <button type="button" onClick={props.onLeave} className={SECONDARY}>
+                {t('withdraw')}
+              </button>
+            </>
+          );
         break;
       case 'joined':
         content = (
