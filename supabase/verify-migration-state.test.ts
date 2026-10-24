@@ -231,6 +231,22 @@ describe('public.users columns added after 067 carry an explicit SELECT grant', 
     // A moderation list read by the card route with the service role; 220's own
     // post-flight asserts no client role can read it.
     card_photo_rejects: 'withheld from clients by design (220): a moderation list',
+    // 231 (T-PLAN1): coach-plan billing state. coach_plan itself is granted to
+    // authenticated (the public badge). These seven would publish each coach's
+    // Stripe ids, status and renewal date to every signed-in user, so they are
+    // withheld, read by the server with the service role, and listed in both
+    // users exclusion lists in verify-migration-state.sql; 231's guard asserts it.
+    ...Object.fromEntries(
+      [
+        'coach_plan_status',
+        'coach_plan_source',
+        'coach_plan_stripe_customer_id',
+        'coach_plan_stripe_subscription_id',
+        'coach_plan_current_period_end',
+        'coach_plan_granted_by',
+        'coach_plan_granted_at',
+      ].map((c) => [c, 'withheld from clients by design (231): coach billing state is not public'])
+    ),
   };
 
   /** Strip block and line comments so commented-out DDL never counts. */
