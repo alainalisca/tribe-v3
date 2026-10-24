@@ -3385,4 +3385,30 @@ select '231_t_plan1_coach_plans',
          else 'applied'
        end
 
+union all
+
+-- T-PLAN1. account_scrub is 232's body (228's plus the coach-plan reset), so a
+-- deleted account reads basico with every coach_plan_* column NULL; still
+-- SECURITY DEFINER, empty search_path, service_role only.
+select '232_t_plan1_account_scrub_coach_plans',
+       case
+         when to_regprocedure('public.account_scrub(uuid)') is null
+           then 'MISSING -- account_scrub(uuid) does not exist'
+         when (select md5(prosrc) from pg_proc
+                where oid = to_regprocedure('public.account_scrub(uuid)')) <> '9de0736a23065ac4b5b44a4d516e0bbd'
+           then 'MISSING -- account_scrub is not 232''s body; a deleted coach keeps their plan columns'
+         when exists (select 1 from pg_proc
+                       where oid = to_regprocedure('public.account_scrub(uuid)')
+                         and (not prosecdef
+                              or not coalesce('search_path=""' = any (proconfig), false)
+                              or has_function_privilege('anon', oid, 'EXECUTE')
+                              or has_function_privilege('authenticated', oid, 'EXECUTE')
+                              or not has_function_privilege('service_role', oid, 'EXECUTE')))
+           then 'MISSING -- account_scrub is not SECURITY DEFINER with an empty search_path, or is not service_role only'
+         when not exists (select 1 from public.migrations_applied
+                           where migration = '232_t_plan1_account_scrub_coach_plans')
+           then 'MISSING -- 232 is not recorded in migrations_applied'
+         else 'applied'
+       end
+
 order by migration;
