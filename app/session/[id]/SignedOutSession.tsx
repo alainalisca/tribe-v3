@@ -19,6 +19,7 @@ import { createClient } from '@/lib/supabase/client';
 import type { Session } from '@/lib/database.types';
 import GuestJoinModal from './GuestJoinModal';
 import SessionPoster, { sessionPriceLabel } from './SessionPoster';
+import CoachPlanBadge from '@/components/CoachPlanBadge';
 import s from './signedOut.module.css';
 
 /**
@@ -80,7 +81,8 @@ export default function SignedOutSession({
   photo = null,
 }: {
   session: PublicSession;
-  creator: { id: string; name: string | null; avatar_url: string | null } | null;
+  /** coach_plan: T-PLAN1's badge, only while COACH_PLANS_ENABLED. */
+  creator: { id: string; name: string | null; avatar_url: string | null; coach_plan?: string | null } | null;
   /** The partner gym's name when the session is at an approved, active partner. */
   gymName: string | null;
   language: 'es' | 'en';
@@ -331,7 +333,7 @@ export default function SignedOutSession({
                 {avatarOk ? <Image src={creator.avatar_url!} alt="" fill sizes="44px" /> : initials(coachName || 'T')}
               </span>
               <span>
-                <span className={s.coachName}>{coachName}</span>
+                <span className={s.coachName}>{coachName}</span> <CoachPlanBadge plan={creator.coach_plan} />
                 {sport && <span className={`${br.mono} ${s.coachSport}`}>{sport}</span>}
               </span>
               <span className={s.coachGo}>{t('coachProfile')}</span>

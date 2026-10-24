@@ -9,9 +9,13 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@/lib/logger', () => ({ logError: vi.fn(), log: vi.fn() }));
 vi.mock('@/lib/storage/privateMedia', () => ({ signRecapPhotoUrls: vi.fn() }));
+// The signed-out session page's server read (T-SSR1) goes through the service role.
+const serviceClient = vi.hoisted(() => ({ current: null as unknown }));
+vi.mock('@/lib/supabase/admin', () => ({ getServiceRoleClient: () => serviceClient.current }));
 
 import { fetchUpcomingSessions, fetchSessionPublicView } from './sessions';
 import { fetchUserProfile } from './users';
+import { loadSessionForCard } from '@/lib/og/sessionCard';
 
 function capture() {
   const selects: string[] = [];
@@ -43,7 +47,7 @@ describe.each([
     await fetchUpcomingSessions(client);
     expect(selects[0].includes('coach_plan')).toBe(expectPlan);
     expect(selects[0]).toContain(
-      'creator:users!sessions_creator_id_fkey(id, name, avatar_url, average_rating, total_reviews, total_sessions_hosted, cover_image_url'
+      'creator:users!sessions_creator_id_fkey!inner(id, name, avatar_url, average_rating, total_reviews, total_sessions_hosted, cover_image_url'
     );
   });
 
@@ -52,7 +56,16 @@ describe.each([
     const { client, selects } = capture();
     await fetchSessionPublicView(client, 's1');
     expect(selects[0].includes('creator_coach_plan')).toBe(expectPlan);
-    expect(selects[0].endsWith(expectPlan ? 'partner_reviewed_at, creator_coach_plan' : 'partner_reviewed_at')).toBe(
+    expect(selects[0].endsWith(expectPlan ? 'is_test, creator_coach_plan' : 'is_test')).toBe(true);
+  });
+
+  it('signed-out session page, server read (T-SSR1, sessions_public)', async () => {
+    vi.stubEnv('NEXT_PUBLIC_COACH_PLANS_ENABLED', flag);
+    const { client, selects } = capture();
+    serviceClient.current = client;
+    await loadSessionForCard('s1');
+    expect(selects[0].includes('creator_coach_plan')).toBe(expectPlan);
+    expect(selects[0].endsWith(expectPlan ? 'creator_avatar_url, creator_coach_plan' : 'creator_avatar_url')).toBe(
       true
     );
   });

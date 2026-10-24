@@ -7,7 +7,7 @@
  * Comps a plan for an ambassador (Andres and Salomon first) or removes it.
  * Admins only, via requireApiAdmin() (is_app_admin(), the DB flag; the email
  * allowlist in isAdmin() is being retired under SEC-03). The write uses the
- * service role because migration 219's guard refuses every client write to
+ * service role because migration 231's guard refuses every client write to
  * coach_plan*, admins included. granted_by is the calling admin.
  *
  *   404 coach plans are off

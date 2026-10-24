@@ -12,7 +12,7 @@ import type { Language } from '@/lib/i18n/translate';
  *
  * subscription_tier, subscription_expires_at and is_trailblazer were never in
  * this select, so the Tribe+ and Trailblazer badges in that row could not
- * render. coach_plan is migration 219's public column. All four are granted to
+ * render. coach_plan is migration 231's public column. All four are granted to
  * authenticated (checked on the local stack 2026-10-12). Behind
  * COACH_PLANS_ENABLED like every visible T-PLAN1 change, so with the flag off
  * the page reads exactly what it read before.

@@ -51,7 +51,13 @@ export function signedOutProps(loaded: LoadedSession, now: Date = new Date()) {
   return {
     session,
     creator: row.creator_id
-      ? { id: row.creator_id, name: row.creator_name ?? null, avatar_url: row.creator_avatar_url ?? null }
+      ? {
+          id: row.creator_id,
+          name: row.creator_name ?? null,
+          avatar_url: row.creator_avatar_url ?? null,
+          // T-PLAN1: only present while COACH_PLANS_ENABLED (the read selects it then).
+          coach_plan: row.creator_coach_plan ?? null,
+        }
       : null,
     gymName: partnerName,
     place,

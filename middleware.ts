@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { athletesGateAllows, isAthletesGatedPath, GATED_NOT_FOUND_PATH } from '@/lib/features/athleteValueGate';
 import { isMomentsEnabled, isMomentsPagePath } from '@/lib/features/moments';
+import { isCoachPlansEnabled } from '@/lib/subscription/coachPlans';
 import { canonicalLinkHeader } from '@/lib/seo/canonicalLink';
 import { hasAuthCookieName } from '@/lib/site/authCookie';
 import { storefrontRedirectDestination, storefrontIdFor } from '@/lib/site/storefrontRedirect';
@@ -438,6 +439,17 @@ export async function middleware(request: NextRequest) {
   // "Registrar sesión pasada") do not exist: a real 404 for everyone, before
   // the auth gate could redirect a signed-out visitor to sign-in.
   if (isMomentsPagePath(pathname) && !isMomentsEnabled()) {
+    return applySecurityHeaders(
+      NextResponse.rewrite(new URL(GATED_NOT_FOUND_PATH, request.url), { status: 404 }),
+      pathname
+    );
+  }
+
+  // T-PLAN1: while COACH_PLANS_ENABLED is off, /planes does not exist: a real
+  // 404, exactly as before the page existed. The page's own notFound() renders
+  // the not-found screen but cannot set the status (the root loading boundary
+  // has streamed a 200 by then), and its title would still read "Planes".
+  if (/^\/planes(\/|$)/.test(pathname) && !isCoachPlansEnabled()) {
     return applySecurityHeaders(
       NextResponse.rewrite(new URL(GATED_NOT_FOUND_PATH, request.url), { status: 404 }),
       pathname

@@ -1,7 +1,7 @@
 /**
- * T-PLAN1: coach plan reads and writes on public.users (migration 219).
+ * T-PLAN1: coach plan reads and writes on public.users (migration 231).
  *
- * Every WRITE here must be given the service-role client. Migration 219's
+ * Every WRITE here must be given the service-role client. Migration 231's
  * users_coach_plan_guard refuses any coach_plan* change while auth.uid() is
  * set, admins included, so a session client cannot write these columns at all.
  * Only coach_plan is client-readable; the rest is read with the service role.
@@ -73,7 +73,7 @@ export async function fetchCoachPlanRow(service: SupabaseClient, userId: string)
   }
 }
 
-/** The user holding a coach-plan Stripe customer (unique, migration 219). Service role. */
+/** The user holding a coach-plan Stripe customer (unique, migration 231). Service role. */
 export async function findUserByCoachPlanCustomer(
   service: SupabaseClient,
   customerId: string
