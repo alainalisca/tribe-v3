@@ -56,6 +56,28 @@ describe('SessionActionBar', () => {
     expect(screen.getByRole('button', { name: 'Cancelar solicitud' })).toBeInTheDocument();
   });
 
+  it('athlete, pending on a paid session with instructions: "Pagar ahora" (their own link) beside "Cancelar solicitud"', () => {
+    const onLeave = vi.fn();
+    render(
+      <SessionActionBar
+        {...athlete}
+        state="pending"
+        isPaid
+        onLeave={onLeave}
+        paid={{
+          priceCents: 2500000,
+          currency: 'COP',
+          paymentInstructions: 'Paga aquí https://bold.co/pago',
+          canViewPaymentInstructions: true,
+        }}
+      />
+    );
+    expect(screen.getByText('Pendiente de pago')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Pagar ahora/ })).toHaveAttribute('href', 'https://bold.co/pago');
+    fireEvent.click(screen.getByRole('button', { name: 'Cancelar solicitud' }));
+    expect(onLeave).toHaveBeenCalledTimes(1);
+  });
+
   it('athlete, paid: "Solicitar unirse" with no second price box (the price lives in the facts)', () => {
     render(
       <SessionActionBar

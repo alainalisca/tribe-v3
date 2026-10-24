@@ -19,6 +19,20 @@ export interface UseSessionActionsParams {
   onNavigate: (path: string) => void;
   setParticipants: React.Dispatch<React.SetStateAction<Participant[]>>;
   setSession: React.Dispatch<React.SetStateAction<Session | null>>;
+  /**
+   * T-PAY2 Step 5: a paid request was sent and the page has reloaded. When
+   * given, handleJoin calls this INSTEAD of its success toast, so the page can
+   * open the payment sheet (and fall back to paidRequestSentMessage itself).
+   * Omitted, a paid request shows the toast as before.
+   */
+  onPaidRequestSent?: () => void;
+}
+
+/** T-PAY1 toast for a sent paid request, shared with the pay sheet's fallback. */
+export function paidRequestSentMessage(language: 'en' | 'es'): string {
+  return language === 'es'
+    ? '¡Solicitud enviada! Paga al instructor directamente y confirmará tu lugar.'
+    : 'Request sent! Pay the instructor directly and they will confirm your spot.';
 }
 
 export interface ConfirmAction {

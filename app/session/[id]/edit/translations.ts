@@ -20,7 +20,7 @@ export function getEditSessionTranslations(language: 'en' | 'es') {
         platformFee: 'Tarifa de plataforma (15%)',
         youEarn: 'T\u00fa recibes (85%)',
         paymentInstructions: 'Instrucciones de pago',
-        paymentInstructionsPlaceholder: 'Ej: Nequi: 300-123-4567 o efectivo en el lugar',
+        paymentInstructionsPlaceholder: 'Ej: Nequi 300 123 4567, o pega tu link de pago de Bold, Wompi o Mercado Pago',
         priceRequired: 'El precio es obligatorio para sesiones de pago',
         minUsd: 'El precio m\u00ednimo es $5.00 USD',
         minCop: 'El precio m\u00ednimo es 20.000 COP',
@@ -52,7 +52,8 @@ export function getEditSessionTranslations(language: 'en' | 'es') {
         platformFee: 'Platform fee (15%)',
         youEarn: 'You earn (85%)',
         paymentInstructions: 'Payment Instructions',
-        paymentInstructionsPlaceholder: 'E.g. Nequi: 300-123-4567, Venmo: @coach-maria, or cash at venue',
+        paymentInstructionsPlaceholder:
+          'E.g. Nequi 300 123 4567, or paste your Bold, Wompi or Mercado Pago payment link',
         priceRequired: 'Price is required for paid sessions',
         minUsd: 'Minimum price is $5.00 USD',
         minCop: 'Minimum price is 20,000 COP',

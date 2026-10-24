@@ -131,6 +131,70 @@ describe('useSessionActions.handleJoin', () => {
     expect(params.onSessionUpdated).toHaveBeenCalled();
   });
 
+  describe('T-PAY2 Step 5: paid request hands off to the payment sheet', () => {
+    const paidSession = { ...fakeSession, is_paid: true, price_cents: 3500000 } as unknown as Session;
+
+    it('skips the toast and signals the sheet AFTER the reload', async () => {
+      vi.mocked(joinSession).mockResolvedValue({ success: true, status: 'pending' } as never);
+      const order: string[] = [];
+      const params = {
+        ...makeParams('user-1'),
+        session: paidSession,
+        onSessionUpdated: vi.fn(async () => {
+          order.push('reload');
+        }),
+        onPaidRequestSent: vi.fn(() => order.push('sheet')),
+      };
+      const { result } = renderHook(() => useSessionActions(params));
+
+      await act(async () => {
+        await result.current.handleJoin();
+      });
+
+      expect(showSuccess).not.toHaveBeenCalled();
+      expect(order).toEqual(['reload', 'sheet']);
+    });
+
+    it('keeps the T-PAY1 toast when the page does not provide the sheet', async () => {
+      vi.mocked(joinSession).mockResolvedValue({ success: true, status: 'pending' } as never);
+      const params = { ...makeParams('user-1'), session: paidSession };
+      const { result } = renderHook(() => useSessionActions(params));
+
+      await act(async () => {
+        await result.current.handleJoin();
+      });
+
+      expect(showSuccess).toHaveBeenCalledWith(
+        'Request sent! Pay the instructor directly and they will confirm your spot.'
+      );
+    });
+
+    it('never signals the sheet for a free curated request', async () => {
+      vi.mocked(joinSession).mockResolvedValue({ success: true, status: 'pending' } as never);
+      const params = { ...makeParams('user-1'), onPaidRequestSent: vi.fn() };
+      const { result } = renderHook(() => useSessionActions(params));
+
+      await act(async () => {
+        await result.current.handleJoin();
+      });
+
+      expect(params.onPaidRequestSent).not.toHaveBeenCalled();
+      expect(showSuccess).toHaveBeenCalledWith('Request sent! The host will review your profile and decide.');
+    });
+
+    it('never signals the sheet for a free confirmed join', async () => {
+      vi.mocked(joinSession).mockResolvedValue({ success: true, status: 'confirmed' } as never);
+      const params = { ...makeParams('user-1'), onPaidRequestSent: vi.fn() };
+      const { result } = renderHook(() => useSessionActions(params));
+
+      await act(async () => {
+        await result.current.handleJoin();
+      });
+
+      expect(params.onPaidRequestSent).not.toHaveBeenCalled();
+    });
+  });
+
   it('surfaces a localized error when joinSession returns a known error code', async () => {
     vi.mocked(joinSession).mockResolvedValue({ success: false, error: 'capacity_full' } as never);
     const params = makeParams('user-1');

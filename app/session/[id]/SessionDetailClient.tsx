@@ -30,6 +30,8 @@ import ConfirmDialog from '@/components/ConfirmDialog';
 import type { RecapPhotoWithUser, SessionStoryJoined } from './types';
 import PhotoLightbox from '@/components/PhotoLightbox';
 import SessionActionBar from './SessionActionBar';
+import PaymentSheet from '@/components/session/PaymentSheet';
+import { shouldShowPendingPayBar, PENDING_PAY_BAR_CLEARANCE } from '@/components/session/PendingPayBar';
 import AthleteShareButton from './AthleteShareButton';
 import ManageSessionSheet from './ManageSessionSheet';
 import { ACTION_BAR_CLEARANCE, athleteBarState } from './sessionActionState';
@@ -286,6 +288,15 @@ export default function SessionDetailPage({
   // bar on a cancelled session (nothing to book or manage).
   const showActionBar = !isCancelled;
   const isPaidSession = !!d.session.is_paid && d.session.price_cents > 0;
+  // T-PAY2: a pending athlete on a paid session gets "Pagar ahora" in the bar
+  // and, right after requesting, the pay sheet. Both drop away once the athlete
+  // is confirmed, withdraws or is declined, because isPending goes false.
+  const showPendingPay = shouldShowPendingPayBar({
+    canViewPaymentInstructions,
+    isCreator,
+    isPending: d.isPending,
+    isPaidSession,
+  });
   const isSeriesMember = !!d.session.is_recurring || d.session.recurring_parent_id != null;
   const isSeriesParent = !!d.session.is_recurring && d.session.recurring_parent_id == null;
   const hostFirstName = d.creator?.name ? firstName(d.creator.name) : '';
@@ -311,7 +322,9 @@ export default function SessionDetailPage({
   return (
     <div
       className="min-h-screen bg-theme-page pb-nav"
-      style={showActionBar ? { paddingBottom: ACTION_BAR_CLEARANCE } : undefined}
+      style={
+        showActionBar ? { paddingBottom: showPendingPay ? PENDING_PAY_BAR_CLEARANCE : ACTION_BAR_CLEARANCE } : undefined
+      }
     >
       {d.lightboxOpen && currentPhotos && (
         <PhotoLightbox photos={currentPhotos} initialIndex={d.currentPhotoIndex} onClose={() => history.back()} />
@@ -687,6 +700,19 @@ export default function SessionDetailPage({
           sessionTime={d.session.start_time}
           locationName={d.session.location}
           price={d.session.price_cents ? String(d.session.price_cents / 100) : undefined}
+        />
+      )}
+
+      {showPendingPay && d.paymentInstructions && (
+        <PaymentSheet
+          open={d.paySheet.open}
+          onClose={d.paySheet.close}
+          sport={d.session.sport}
+          date={d.session.date}
+          priceCents={d.session.price_cents}
+          currency={d.session.currency}
+          paymentInstructions={d.paymentInstructions}
+          language={language}
         />
       )}
 
