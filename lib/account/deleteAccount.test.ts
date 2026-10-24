@@ -10,6 +10,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 vi.mock('server-only', () => ({}));
 const ZERO = { sent: 0, suppressed: 0, no_token: 0, failed: 0 };
 const { sendSessionCancelledPush } = vi.hoisted(() => ({ sendSessionCancelledPush: vi.fn() }));
+const { cancelCoachPlanSubscriptionNow } = vi.hoisted(() => ({ cancelCoachPlanSubscriptionNow: vi.fn() }));
+vi.mock('@/lib/payments/coachPlanStripe', () => ({ cancelCoachPlanSubscriptionNow }));
 vi.mock('@/lib/notify/sessionCancelledPush', () => ({
   NO_CANCEL_PUSHES: { sent: 0, suppressed: 0, no_token: 0, failed: 0 },
   sendSessionCancelledPush,
@@ -139,8 +141,77 @@ describe('deleteAccount', () => {
     ]);
   });
 
-  it('names six steps, and the route reports exactly these', () => {
-    expect(DELETION_STEPS).toEqual(['check', 'list_files', 'delete_files', 'scrub_data', 'notify', 'delete_login']);
+  it('names seven steps, and the route reports exactly these', () => {
+    expect(DELETION_STEPS).toEqual([
+      'check',
+      'cancel_plan',
+      'list_files',
+      'delete_files',
+      'scrub_data',
+      'notify',
+      'delete_login',
+    ]);
+  });
+
+  describe('T-PLAN1: a coach with a paid plan', () => {
+    const PRO = { data: { id: USER, coach_plan_stripe_subscription_id: 'sub_pro_1' }, error: null };
+
+    it('cancels the subscription in Stripe before anything of theirs is touched, then scrubs', async () => {
+      const f = fakeService({ user: PRO });
+      cancelCoachPlanSubscriptionNow.mockImplementation(async (id: string) => {
+        f.calls.push(`stripe cancel ${id}`);
+        return { success: true, alreadyGone: false };
+      });
+      expect(await deleteAccount(f.service, USER)).toEqual({
+        ok: true,
+        filesDeleted: 2,
+        filesKept: [],
+        notified: ZERO,
+      });
+      expect(cancelCoachPlanSubscriptionNow).toHaveBeenCalledTimes(1);
+      expect(cancelCoachPlanSubscriptionNow).toHaveBeenCalledWith('sub_pro_1');
+      expect(f.calls).toEqual([
+        'read users',
+        'read gyms',
+        'read featured_partners',
+        'read upcoming sessions',
+        'stripe cancel sub_pro_1',
+        'rpc account_file_references',
+        'rpc account_deletion_files',
+        'remove profile-images',
+        'remove session-photos',
+        'rpc account_deletion_files',
+        'rpc account_scrub',
+        'delete login',
+      ]);
+    });
+
+    it('stops at cancel_plan with a clear error when Stripe refuses, and touches nothing', async () => {
+      const f = fakeService({ user: PRO });
+      cancelCoachPlanSubscriptionNow.mockResolvedValue({ success: false, error: 'Stripe is down' });
+      expect(await deleteAccount(f.service, USER)).toEqual({
+        ok: false,
+        step: 'cancel_plan',
+        error: 'coach_plan_cancel_failed: Stripe is down',
+      });
+      expect(f.calls).not.toContain('rpc account_deletion_files');
+      expect(f.calls).not.toContain('rpc account_scrub');
+      expect(f.calls).not.toContain('delete login');
+      expect(f.removed).toEqual([]);
+    });
+
+    it('a subscription already canceled (a rerun) counts as done', async () => {
+      const f = fakeService({ user: PRO });
+      cancelCoachPlanSubscriptionNow.mockResolvedValue({ success: true, alreadyGone: true });
+      expect((await deleteAccount(f.service, USER)).ok).toBe(true);
+      expect(f.calls).toContain('rpc account_scrub');
+    });
+
+    it('a coach with no Stripe plan (basico, or a comp) never calls Stripe', async () => {
+      const f = fakeService({ user: { data: { id: USER, coach_plan_stripe_subscription_id: null }, error: null } });
+      expect((await deleteAccount(f.service, USER)).ok).toBe(true);
+      expect(cancelCoachPlanSubscriptionNow).not.toHaveBeenCalled();
+    });
   });
 
   it('removes in batches of 100 per bucket', async () => {

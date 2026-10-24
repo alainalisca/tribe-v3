@@ -1,10 +1,25 @@
 /** DAL: users table — profile reads, updates, admin checks */
 import { SupabaseClient } from '@supabase/supabase-js';
 import { logError } from '@/lib/logger';
+import { isCoachPlansEnabled } from '@/lib/subscription/coachPlans';
 import type { DalResult, UserForNotification } from './types';
 import type { User as UserRow, UserUpdate } from '@/lib/database.types';
 import { LANGUAGE_FIELDS, recipientLanguage, type LanguagePreference } from '@/lib/i18n/recipientLanguage';
 import type { Language } from '@/lib/i18n/translate';
+
+/**
+ * T-PLAN1: the badge columns /profile/[userId] renders next to the name.
+ *
+ * subscription_tier, subscription_expires_at and is_trailblazer were never in
+ * this select, so the Tribe+ and Trailblazer badges in that row could not
+ * render. coach_plan is migration 231's public column. All four are granted to
+ * authenticated (checked on the local stack 2026-10-12). Behind
+ * COACH_PLANS_ENABLED like every visible T-PLAN1 change, so with the flag off
+ * the page reads exactly what it read before.
+ */
+function profileBadgeColumns(): string {
+  return isCoachPlansEnabled() ? ', subscription_tier, subscription_expires_at, is_trailblazer, coach_plan' : '';
+}
 
 export async function fetchUserProfile(supabase: SupabaseClient, userId: string): Promise<DalResult<UserRow>> {
   try {
@@ -36,7 +51,8 @@ export async function fetchUserProfile(supabase: SupabaseClient, userId: string)
     const { data, error } = await supabase
       .from('users')
       .select(
-        'id, name, avatar_url, bio, location, sports, preferred_sports, specialties, certifications, years_experience, instructor_bio, is_instructor, is_verified_instructor, banned, photos, username, website_url, instagram_username, facebook_url, storefront_tagline, cover_image_url, storefront_video_url, storefront_tier, storefront_pro_since, storefront_pro_expires, preferred_language, preferred_language_set_at, session_reminders_enabled, terms_accepted, terms_accepted_at, safety_waiver_accepted, safety_waiver_accepted_at, average_rating, total_reviews, rating, show_rate, sessions_completed, total_sessions_hosted, total_participants_served, earnings_currency, follower_count, following_count, verified_credentials, last_login_at, last_motivation_sent, last_motivation_message_id, last_reengagement_sent, last_weekly_recap_sent, welcome_email_sent_at, created_at, updated_at'
+        'id, name, avatar_url, bio, location, sports, preferred_sports, specialties, certifications, years_experience, instructor_bio, is_instructor, is_verified_instructor, banned, photos, username, website_url, instagram_username, facebook_url, storefront_tagline, cover_image_url, storefront_video_url, storefront_tier, storefront_pro_since, storefront_pro_expires, preferred_language, preferred_language_set_at, session_reminders_enabled, terms_accepted, terms_accepted_at, safety_waiver_accepted, safety_waiver_accepted_at, average_rating, total_reviews, rating, show_rate, sessions_completed, total_sessions_hosted, total_participants_served, earnings_currency, follower_count, following_count, verified_credentials, last_login_at, last_motivation_sent, last_motivation_message_id, last_reengagement_sent, last_weekly_recap_sent, welcome_email_sent_at, created_at, updated_at' +
+          profileBadgeColumns()
       )
       .eq('id', userId)
       .maybeSingle();

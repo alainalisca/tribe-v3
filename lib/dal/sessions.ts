@@ -9,6 +9,7 @@ import { signRecapPhotoUrls } from '@/lib/storage/privateMedia';
 import { bogotaToday } from '@/lib/time/bogotaDate';
 import { cardFieldsChanged, warmSessionCard } from '@/lib/share/warmSessionCard';
 import { visibleUsersFilter } from './visibleUsers';
+import { isCoachPlansEnabled } from '@/lib/subscription/coachPlans';
 
 import type { DalResult, SessionWithCreator } from './types';
 export type { DalResult } from './types';
@@ -53,7 +54,17 @@ export interface SessionWithRelations extends Session {
      * sport photo. Only fetched by the feed query.
      */
     cover_image_url?: string | null;
+    /** T-PLAN1 public plan, for the Pro / Embajador badge. Only read while COACH_PLANS_ENABLED. */
+    coach_plan?: string | null;
   } | null;
+}
+
+/**
+ * T-PLAN1: a column to append to a users select only while COACH_PLANS_ENABLED,
+ * so with the flag off every query reads exactly what it read before.
+ */
+function coachPlanColumn(column: string): string {
+  return isCoachPlansEnabled() ? `, ${column}` : '';
 }
 
 /**
@@ -206,7 +217,7 @@ export async function fetchSessionWithDetails(
     // participants list must NOT collapse the whole page into "not found".
     const { data: creator } = await supabase
       .from('users')
-      .select('id, name, avatar_url, average_rating, total_reviews')
+      .select('id, name, avatar_url, average_rating, total_reviews' + coachPlanColumn('coach_plan'))
       .eq('id', session.creator_id)
       .maybeSingle();
 
@@ -239,7 +250,7 @@ export async function fetchSessionWithDetails(
       success: true,
       data: {
         session,
-        creator: creator || null,
+        creator: (creator as unknown as SessionWithRelations['creator']) || null,
         participants: participants as unknown as SessionParticipantWithUser[],
       },
     };
@@ -281,7 +292,8 @@ export async function fetchSessionPublicView(
     const { data: row, error } = await supabase
       .from('sessions_public')
       .select(
-        'id, title, sport, date, start_time, end_time, duration, description, equipment, skill_level, photos, max_participants, current_participants, waitlist_count, join_policy, status, is_paid, price_cents, currency, creator_id, creator_name, creator_avatar_url, creator_average_rating, location, latitude, longitude, location_lat, location_lng, partner_id, partner_status, partner_reviewed_at, is_test'
+        'id, title, sport, date, start_time, end_time, duration, description, equipment, skill_level, photos, max_participants, current_participants, waitlist_count, join_policy, status, is_paid, price_cents, currency, creator_id, creator_name, creator_avatar_url, creator_average_rating, location, latitude, longitude, location_lat, location_lng, partner_id, partner_status, partner_reviewed_at, is_test' +
+          coachPlanColumn('creator_coach_plan')
       )
       .eq('id', sessionId)
       .maybeSingle();
@@ -292,7 +304,7 @@ export async function fetchSessionPublicView(
     }
     if (!row) return { success: false, error: 'session_not_found' };
 
-    const v = row as Record<string, unknown>;
+    const v = row as unknown as Record<string, unknown>;
     const creator = v.creator_id
       ? {
           id: v.creator_id as string,
@@ -300,6 +312,7 @@ export async function fetchSessionPublicView(
           avatar_url: (v.creator_avatar_url as string | null) ?? null,
           average_rating: (v.creator_average_rating as number | null) ?? null,
           total_reviews: null,
+          ...(isCoachPlansEnabled() ? { coach_plan: (v.creator_coach_plan as string | null | undefined) ?? null } : {}),
         }
       : null;
 
@@ -408,7 +421,7 @@ export async function fetchUpcomingSessions(supabase: SupabaseClient): Promise<D
       .select(
         `
         *,
-        creator:users!sessions_creator_id_fkey!inner(id, name, avatar_url, average_rating, total_reviews, total_sessions_hosted, cover_image_url)
+        creator:users!sessions_creator_id_fkey!inner(id, name, avatar_url, average_rating, total_reviews, total_sessions_hosted, cover_image_url${coachPlanColumn('coach_plan')})
       `
       )
       .eq('status', 'active')
@@ -422,7 +435,13 @@ export async function fetchUpcomingSessions(supabase: SupabaseClient): Promise<D
       .order('start_time', { ascending: true });
 
     if (error) return { success: false, error: error.message };
-    return { success: true, data: (data || []).map((s) => ({ ...s, participants: [] })) as SessionWithRelations[] };
+    return {
+      success: true,
+      data: (data || []).map((s) => ({
+        ...(s as unknown as Record<string, unknown>),
+        participants: [],
+      })) as unknown as SessionWithRelations[],
+    };
   } catch (error) {
     logError(error, { action: 'fetchUpcomingSessions' });
     return { success: false, error: 'Failed to fetch sessions' };

@@ -4,6 +4,7 @@ import { cardPriceLabel } from '@/lib/share/cardCopy';
 import { cardWhen, hostFirstName, publicSessionPlace, publicSessionTitle } from '@/lib/share/sessionPublic';
 import { translateSport } from '@/lib/sportTranslationData';
 import { getServiceRoleClient } from '@/lib/supabase/admin';
+import { isCoachPlansEnabled } from '@/lib/subscription/coachPlans';
 import { cardResponse, type CardProps } from './card';
 import { cardPhotoCrop, chooseCardPhoto, loadCoach, type CoachRow } from './coachCard';
 import { siteCardImage } from './siteCards';
@@ -65,6 +66,8 @@ export type SessionCardRow = {
   max_participants?: number | null;
   current_participants?: number | null;
   creator_avatar_url?: string | null;
+  /** T-PLAN1 (231): the host's plan, selected only while COACH_PLANS_ENABLED. */
+  creator_coach_plan?: string | null;
 };
 
 /**
@@ -81,7 +84,10 @@ export type LoadedSession = { row: SessionCardRow; partnerName: string | null; h
 /** The session as the public view has it, its partner's name when approved and active, and its host. */
 export async function loadSessionForCard(id: string): Promise<LoadedSession | null> {
   const service = getServiceRoleClient();
-  const { data, error } = await service.from('sessions_public').select(SESSION_CARD_SELECT).eq('id', id).maybeSingle();
+  // T-PLAN1: the plan column only while COACH_PLANS_ENABLED, so with the flag
+  // off this reads exactly what it read before (and works before 231 is applied).
+  const select = SESSION_CARD_SELECT + (isCoachPlansEnabled() ? ', creator_coach_plan' : '');
+  const { data, error } = await service.from('sessions_public').select(select).eq('id', id).maybeSingle();
   if (error) logError(error, { action: 'og.loadSessionForCard', sessionId: id });
   const row = (data as SessionCardRow | null) ?? null;
   if (!row) return null;

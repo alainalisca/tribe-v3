@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { athletesGateAllows, isAthletesGatedPath, GATED_NOT_FOUND_PATH } from '@/lib/features/athleteValueGate';
 import { isMomentsEnabled, isMomentsPagePath } from '@/lib/features/moments';
+import { isCoachPlansEnabled } from '@/lib/subscription/coachPlans';
 import { canonicalLinkHeader } from '@/lib/seo/canonicalLink';
 import { hasAuthCookieName } from '@/lib/site/authCookie';
 import { storefrontRedirectDestination, storefrontIdFor } from '@/lib/site/storefrontRedirect';
@@ -74,6 +75,7 @@ const publicPaths = [
   '/i', // public instructor share pages (/i/[id]) — must be viewable + scrapable without auth
   '/g', // public gym share pages (/g/[slug]) — bio-link destination; must be viewable + scrapable without auth
   '/m', // T-MOM1 claim links (/m/<token>/): the person has no account yet; the page shows only the invite's photos
+  '/planes', // T-PLAN1 coach plans pricing: must be readable signed out (the page 404s while COACH_PLANS_ENABLED is off)
   '/pase', // T-LEAD1 digital pass (/pase/[slug]) -- the QR on a printed voucher; the visitor has no account and may never make one
   // T-SITE1: the marketing site's pages. middleware() rewrites them to their
   // prerendered app/sitio/[lang] page before this list is consulted; they are
@@ -437,6 +439,17 @@ export async function middleware(request: NextRequest) {
   // "Registrar sesión pasada") do not exist: a real 404 for everyone, before
   // the auth gate could redirect a signed-out visitor to sign-in.
   if (isMomentsPagePath(pathname) && !isMomentsEnabled()) {
+    return applySecurityHeaders(
+      NextResponse.rewrite(new URL(GATED_NOT_FOUND_PATH, request.url), { status: 404 }),
+      pathname
+    );
+  }
+
+  // T-PLAN1: while COACH_PLANS_ENABLED is off, /planes does not exist: a real
+  // 404, exactly as before the page existed. The page's own notFound() renders
+  // the not-found screen but cannot set the status (the root loading boundary
+  // has streamed a 200 by then), and its title would still read "Planes".
+  if (/^\/planes(\/|$)/.test(pathname) && !isCoachPlansEnabled()) {
     return applySecurityHeaders(
       NextResponse.rewrite(new URL(GATED_NOT_FOUND_PATH, request.url), { status: 404 }),
       pathname
